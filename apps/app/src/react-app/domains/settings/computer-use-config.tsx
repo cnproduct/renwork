@@ -110,7 +110,7 @@ export function ComputerUseConfig({
   } = useMutation({
     mutationFn: async () => {
       if (!hasDesktopBridge()) {
-        throw new Error("Computer Use is Mac only and requires the OpenWork desktop app on macOS.");
+        throw new Error("电脑控制 (Computer Use) 仅支持 Mac 系统并需要 RenWork 桌面客户端。");
       }
 
       return parsePermissionResult(await desktopBridge.openComputerUsePermissionSetup());
@@ -145,9 +145,9 @@ export function ComputerUseConfig({
   return (
     <Card variant="outline" size="sm">
       <CardHeader>
-        <CardTitle>Computer Use setup (Mac only)</CardTitle>
+        <CardTitle>电脑控制设置 (Mac 专属)</CardTitle>
         <CardDescription>
-          Computer Use only works on Mac. Connect the local MCP server and grant the macOS permissions it needs to control apps.
+          电脑控制功能仅支持 macOS。连接本地 MCP 服务并授予所需的系统权限以允许智能体操作应用程序。
         </CardDescription>
         <CardAction>
           <Button variant="ghost" size="icon-sm" onClick={() => void verify()} disabled={isBusy}>
@@ -166,8 +166,8 @@ export function ComputerUseConfig({
 
         {/* Step 1 — MCP */}
         <SetupRow
-          title="1. Connect Computer Use MCP"
-          description="Adds the local Computer Use server to this workspace so Composer can use the computer-control tools."
+          title="1. 连接电脑控制 MCP"
+          description="将本地 Computer Use MCP 服务添加到当前工作空间，以便 AI 能调用电脑操作工具。"
           complete={connected}
         >
           <Button
@@ -177,21 +177,21 @@ export function ComputerUseConfig({
           >
             {connecting ? <Loader2 className="size-4 shrink-0 animate-spin" /> : null}
             <span className="min-w-0 break-words">
-              {connected ? "Configured" : connecting ? "Connecting…" : "Connect MCP"}
+              {connected ? "已配置" : connecting ? "连接中…" : "连接 MCP"}
             </span>
           </Button>
         </SetupRow>
 
         {/* Step 2 — Permissions */}
         <SetupRow
-          title="2. Grant macOS permissions"
-          description="Opens the OpenWork Computer Use helper. Grant both permissions there, then click Verify below."
+          title="2. 授予 macOS 系统权限"
+          description="打开 RenWork 电脑控制权限设置助手。完成授权后点击下方的「验证权限」。"
           complete={allGranted}
         >
           <div className="flex w-full min-w-0 flex-col gap-3">
             <div className="grid gap-2">
-              <Pill label="Accessibility" granted={result?.accessibility === true} checked={result !== null} />
-              <Pill label="Screen Recording" granted={result?.screenRecording === true} checked={result !== null} />
+              <Pill label="辅助功能 (Accessibility)" granted={result?.accessibility === true} checked={result !== null} />
+              <Pill label="屏幕录制 (Screen Recording)" granted={result?.screenRecording === true} checked={result !== null} />
             </div>
 
             <Button
@@ -205,7 +205,7 @@ export function ComputerUseConfig({
                 <Settings2 className="size-4 shrink-0" />
               )}
               <span className="min-w-0 wrap-break-word">
-                {isBusy ? "Opening…" : allGranted ? "Reopen helper" : "Grant permissions"}
+                {isBusy ? "打开中…" : allGranted ? "重新打开权限设置助手" : "前往授权权限"}
               </span>
             </Button>
           </div>
@@ -216,8 +216,8 @@ export function ComputerUseConfig({
         <div className="flex w-full flex-col gap-3">
           <p className="text-xs text-muted-foreground">
             {allGranted
-              ? "Permissions verified. Try a Composer prompt that uses Computer Use."
-              : "After granting permissions in the helper, click Verify."}
+              ? "权限已全部验证通过，您可以向智能体下达电脑操作指令了。"
+              : "在权限助手中授予权限后，请点击下方「验证权限」。"}
           </p>
           <div className="flex w-full justify-end gap-2">
             {onRefresh ? (
@@ -225,7 +225,7 @@ export function ComputerUseConfig({
                 variant="outline"
                 onClick={() => void onRefresh?.()}
               >
-                Refresh
+                刷新
               </Button>
             ) : null}
             <Button
@@ -233,7 +233,7 @@ export function ComputerUseConfig({
               disabled={isBusy}
             >
               {isBusy ? <Loader2 className="size-4 shrink-0 animate-spin" /> : null}
-              Verify permissions
+              验证权限
             </Button>
           </div>
         </div>
@@ -291,7 +291,7 @@ function Pill({ label, granted, checked }: PillProps) {
           checked && !granted && "text-amber-11",
         )}
       >
-        {!checked ? "…" : granted ? "Granted" : "Needed"}
+        {!checked ? "…" : granted ? "已授权" : "未授权"}
       </span>
     </div>
   );

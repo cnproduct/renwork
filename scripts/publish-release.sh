@@ -31,11 +31,15 @@ echo "🔨 [3/5] 打包 macOS DMG 与 ZIP 自动更新增量包..."
 pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml --mac dmg zip --publish never
 
 echo "🌐 [4/5] 发布到 GitHub Releases (cnproduct/renwork) ..."
+cp apps/desktop/dist-electron/latest-mac.yml apps/desktop/dist-electron/standalone-mac.yml
+cp apps/desktop/dist-electron/latest-mac.yml apps/desktop/dist-electron/alpha-mac.yml
 gh release delete "v$VERSION" --repo cnproduct/renwork --yes 2>/dev/null || true
 gh release create "v$VERSION" \
   "apps/desktop/dist-electron/renwork-mac-arm64-$VERSION.dmg" \
   "apps/desktop/dist-electron/renwork-mac-arm64-$VERSION.zip" \
   "apps/desktop/dist-electron/latest-mac.yml" \
+  "apps/desktop/dist-electron/standalone-mac.yml" \
+  "apps/desktop/dist-electron/alpha-mac.yml" \
   --repo cnproduct/renwork \
   --title "RenWork v$VERSION" \
   --notes "RenWork 人人易 AI 官方升级版本 v$VERSION"
