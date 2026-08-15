@@ -37,12 +37,12 @@ export type ShellConfig = {
 /* ------------------------------------------------------------------ */
 
 export const DEFAULT_SHELL_CONFIG: ShellConfig = {
-  appName: "OpenWork",
+  appName: "RenWork · 人人易AI",
   statusBar: true,
   sidebar: true,
   docsButton: true,
   feedbackButton: true,
-  cloudSignin: true,
+  cloudSignin: false,
   welcomePage: true,
   starterCards: true,
   modelPicker: true,
@@ -55,15 +55,16 @@ export const DEFAULT_SHELL_CONFIG: ShellConfig = {
 /*  Persistence                                                        */
 /* ------------------------------------------------------------------ */
 
-const STORAGE_KEY = "openwork.shell-config";
+const STORAGE_KEY = "renwork.shell-config";
 
 function readShellConfig(): ShellConfig {
   if (typeof window === "undefined") return DEFAULT_SHELL_CONFIG;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("openwork.shell-config");
     if (!raw) return DEFAULT_SHELL_CONFIG;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_SHELL_CONFIG, ...parsed };
+    const resolvedAppName = (!parsed.appName || parsed.appName === "OpenWork") ? "RenWork · 人人易AI" : parsed.appName;
+    return { ...DEFAULT_SHELL_CONFIG, ...parsed, appName: resolvedAppName, cloudSignin: false };
   } catch {
     return DEFAULT_SHELL_CONFIG;
   }
