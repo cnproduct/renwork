@@ -31,6 +31,7 @@ echo "🔨 [3/5] 打包 macOS DMG 与 ZIP 自动更新增量包..."
 pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml --mac dmg zip --publish never
 
 echo "🌐 [4/5] 发布到 GitHub Releases (cnproduct/renwork) ..."
+gh release delete "v$VERSION" --repo cnproduct/renwork --yes 2>/dev/null || true
 gh release create "v$VERSION" \
   "apps/desktop/dist-electron/renwork-mac-arm64-$VERSION.dmg" \
   "apps/desktop/dist-electron/renwork-mac-arm64-$VERSION.zip" \
