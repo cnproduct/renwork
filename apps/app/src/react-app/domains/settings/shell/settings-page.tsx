@@ -104,11 +104,11 @@ export function getSettingsTabIcon(tab: SettingsTab) {
 export function getSettingsTabLabel(tab: SettingsTab) {
   switch (tab) {
     case "ai":
-      return "AI Providers";
+      return t("settings.tab_ai") || "AI 模型提供商";
     case "preferences":
-      return "Preferences";
+      return t("settings.tab_preferences") || "偏好设置";
     case "permissions":
-      return "Permissions";
+      return t("settings.tab_permissions") || "权限管理";
     case "cloud-account":
       return t("settings.tab_cloud_account");
     case "connect":
@@ -136,7 +136,7 @@ export function getSettingsTabLabel(tab: SettingsTab) {
     case "debug":
       return t("settings.tab_debug");
     case "general":
-      return "Settings";
+      return t("settings.tab_general") || "设置";
     default:
       return t("settings.tab_general");
   }
