@@ -11,7 +11,7 @@ import { app, shell } from "electron";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const COMPUTER_USE_HELPER_APP_NAME = "OpenWork Computer Use.app";
+const COMPUTER_USE_HELPER_APP_NAME = "RenWork Computer Use.app";
 const COMPUTER_USE_HELPER_EXECUTABLE = "ComputerUse";
 
 function computerUseHelperExecutablePath() {

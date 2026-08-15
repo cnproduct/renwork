@@ -60,7 +60,6 @@ mac:
       to: helpers
       filter:
         - "RenWork Computer Use.app/**"
-        - "OpenWork Computer Use.app/**"
   target:
     - dmg
     - zip
