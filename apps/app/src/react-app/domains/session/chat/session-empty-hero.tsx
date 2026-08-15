@@ -25,24 +25,24 @@ type HeroSuggestion = {
 
 const DEFAULT_SUGGESTIONS: HeroSuggestion[] = [
   {
-    title: "Summarize my week",
-    description: "Pull highlights from email and calendar.",
-    prompt: "Summarize my week: pull the highlights from my connected email and calendar and give me a short digest of what happened and what needs my attention.",
+    title: "OKKI & 海关买家穿透",
+    description: "提取公海与海关提单，穿透采购负责人联系方式",
+    prompt: "请帮我启动 OKKI / 海关提单真实买家穿透流程，分析目标海外采购商的真实采购数据与决策人联系方式。",
   },
   {
-    title: "Clean up a spreadsheet",
-    description: "Drop in a CSV and describe the result you want.",
-    prompt: "Create a sample CSV file with 20 rows of fake customer data (name, email, company, revenue). Then show me a summary of the data.",
+    title: "6 语种社媒矩阵营销",
+    description: "一键生成并发布多语言专业图文至 LinkedIn 与 Facebook",
+    prompt: "请为我们的外贸产品生成 6 语种（英语、德语、日语、西语、阿语、中文）的社媒矩阵营销推文与配图建议。",
   },
   {
-    title: "Draft a document",
-    description: "Reports, emails, or briefs from a few bullet points.",
-    prompt: "Draft a one-page project brief. Ask me for the bullet points you need, then turn them into a clear, well-structured document.",
+    title: "Zoho 自动化外贸开发信",
+    description: "批量生成个性化高转化开发信，自动通过 Zoho 发送与跟进",
+    prompt: "请帮我根据目标海外买家画像，撰写并规划一套针对性极强的 Zoho 自动化外贸开发信与跟进序列。",
   },
   {
-    title: "Automate a web task",
-    description: "Use the built-in browser for repetitive steps.",
-    prompt: "Open craigslist.org in the browser and search for couches for sale. Show me the top 5 results with prices.",
+    title: "外贸海关数据智能清洗",
+    description: "上传海关提单或客户表格，自动清洗去重与补齐字段",
+    prompt: "请帮我清洗这份海关/外贸客户数据表格，剔除无效数据并按采购体量与国家维度进行结构化分类。",
   },
 ];
 
@@ -83,11 +83,7 @@ export function SessionEmptyHero(props: SessionEmptyHeroProps) {
   // interrupt. Shown only while the session runs on the free starter model
   // (the built-in `opencode` provider) and the hosted offering applies.
   const onFreeStarterModel = props.composer?.selectedModel.providerID === DEFAULT_MODEL.providerID;
-  const showModelsHint =
-    openWorkModelsPromoEligible &&
-    !modelsPromoHidden &&
-    !props.composer?.openWorkModelsEntitled &&
-    onFreeStarterModel;
+  const showModelsHint = false;
 
   const organizationPrompts = orgRestrictions.onboardingPrompts;
   const suggestions: HeroSuggestion[] = organizationPrompts !== undefined
@@ -116,9 +112,9 @@ export function SessionEmptyHero(props: SessionEmptyHeroProps) {
     <div className="mx-auto w-full max-w-[640px] space-y-6 px-4 max-lg:px-4 sm:px-6">
       <div className="space-y-1.5 text-center">
         <h2 className="text-[24px] font-semibold leading-[30px] tracking-[-0.02em] text-foreground">
-          What do you need done?
+          今天需要为您完成什么外贸任务？
         </h2>
-        <p className="text-[13px] text-muted-foreground">Describe it in plain language</p>
+        <p className="text-[13px] text-muted-foreground">在下方输入您的需求，或点击下方内置的人人易 AI 数字员工工具开始</p>
       </div>
 
       <NewTaskComposer

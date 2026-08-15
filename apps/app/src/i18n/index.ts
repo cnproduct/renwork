@@ -8,7 +8,7 @@ import fr from "./locales/fr";
 import ca from "./locales/ca";
 import es from "./locales/es";
 import ru from "./locales/ru";
-export const LANGUAGE_PREF_KEY = "openwork.language";
+export const LANGUAGE_PREF_KEY = "renwork.language";
 
 /**
  * Supported languages
@@ -217,6 +217,9 @@ export const initLocale = (): Language => {
   if (typeof document !== "undefined") {
     document.documentElement.setAttribute("lang", "zh");
   }
+  try {
+    window.localStorage.setItem(LANGUAGE_PREF_KEY, "zh");
+  } catch {}
 
   return "zh";
 };

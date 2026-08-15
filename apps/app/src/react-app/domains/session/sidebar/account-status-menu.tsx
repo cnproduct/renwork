@@ -274,10 +274,10 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
   });
   const accountLabel = signedIn
     ? user.name?.trim() || user.email
-    : restoringSession ? "OpenWork Cloud" : "Sign in";
+    : "人人易 AI";
   const accountDetail = signedIn
-    ? (user.name ? user.email : "OpenWork Cloud")
-    : restoringSession ? "Restoring your session" : "Sync with OpenWork Cloud";
+    ? (user.name ? user.email : "人人易 AI")
+    : "本地独立运行 · Standalone";
 
   const runtimeStatus = props.showConnectionStatus
     ? resolveRuntimeStatus({
@@ -414,7 +414,7 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
                     </span>
                     <div className="min-w-0">
                       <div className="text-[11.5px] font-medium text-foreground">
-                        {`OpenWork Connect: ${connectStatus.label}`}
+                        {`RenWork Connect: ${connectStatus.label}`}
                       </div>
                       <div className="text-[10.5px] leading-tight text-muted-foreground">
                         {connectStatus.description}
@@ -468,8 +468,8 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
           >
             <Sparkles className="size-3.5 text-blue-11" />
             <span className="flex min-w-0 flex-col">
-              <span>OpenWork Models</span>
-              <span className="text-[10.5px] text-muted-foreground">hosted frontier models</span>
+              <span>RenWork Models</span>
+              <span className="text-[10.5px] text-muted-foreground">人人易 AI 大模型服务</span>
             </span>
           </DropdownMenuItem>
         ) : null}
@@ -496,9 +496,9 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
         {signedIn ? (
           <DropdownMenuItem onClick={logOut}>
             <LogOut className="size-3.5" />
-            Log out
+            退出登录
           </DropdownMenuItem>
-        ) : restoringSession ? null : (
+        ) : !shellConfig.cloudSignin ? null : restoringSession ? null : (
           <>
             <DropdownMenuItem onClick={openSignIn}>
               <UserRound className="size-3.5" />
