@@ -1,11 +1,11 @@
 {
-  "name": "OpenWork",
-  "short_name": "OpenWork",
-  "description": "Local-first agent workspace",
+  "name": "RenWork · 人人易AI 数字员工工作台",
+  "short_name": "RenWork",
+  "description": "人人易AI 跨境外贸数字员工自动化工作台 (RenWork AI Agent Workspace)",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#f8fafc",
+  "background_color": "#0b0f19",
+  "theme_color": "#ea580c",
   "icons": [
     {
       "src": "/apple-touch-icon.png",

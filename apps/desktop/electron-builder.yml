@@ -1,10 +1,10 @@
 extends: ./electron-builder.base.yml
-appId: com.differentai.openwork
-productName: OpenWork
+appId: com.renrenyi.renwork
+productName: RenWork
 protocols:
-  - name: OpenWork
+  - name: RenWork
     schemes:
-      - openwork
+      - renwork
 linux:
-  executableName: openwork
-artifactName: openwork-${os}-${arch}-${version}.${ext}
+  executableName: renwork
+artifactName: renwork-${os}-${arch}-${version}.${ext}

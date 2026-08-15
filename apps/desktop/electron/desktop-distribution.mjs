@@ -1,33 +1,45 @@
+export const STANDALONE_DESKTOP_DISTRIBUTION = Object.freeze({
+  flavor: "standalone",
+  appName: "RenWork",
+  appIdentifier: "com.renrenyi.renwork",
+  protocolScheme: "renwork",
+  requireSignin: false,
+  requireActivation: false,
+});
+
 export const PUBLIC_DESKTOP_DISTRIBUTION = Object.freeze({
   flavor: "public",
-  appName: "OpenWork",
-  appIdentifier: "com.differentai.openwork",
-  protocolScheme: "openwork",
+  appName: "RenWork",
+  appIdentifier: "com.renrenyi.renwork",
+  protocolScheme: "renwork",
   requireSignin: false,
   requireActivation: false,
 });
 
 export const CLOUD_DESKTOP_DISTRIBUTION = Object.freeze({
   flavor: "cloud",
-  appName: "OpenWork Cloud",
-  appIdentifier: "com.differentai.openwork",
-  protocolScheme: "openwork",
-  requireSignin: true,
+  appName: "RenWork Cloud",
+  appIdentifier: "com.renrenyi.renwork",
+  protocolScheme: "renwork",
+  requireSignin: false,
   requireActivation: false,
 });
 
 export const ENTERPRISE_DESKTOP_DISTRIBUTION = Object.freeze({
   flavor: "enterprise",
-  appName: "OpenWork Enterprise",
-  appIdentifier: "com.differentai.openwork",
-  protocolScheme: "openwork",
-  requireSignin: true,
-  requireActivation: true,
+  appName: "RenWork Enterprise",
+  appIdentifier: "com.renrenyi.renwork",
+  protocolScheme: "renwork",
+  requireSignin: false,
+  requireActivation: false,
 });
 
 function normalizeFlavor(value) {
   const flavor = value?.trim().toLowerCase();
-  return flavor === "cloud" || flavor === "enterprise" ? flavor : "public";
+  if (flavor === "standalone") return "standalone";
+  if (flavor === "cloud") return "cloud";
+  if (flavor === "enterprise") return "enterprise";
+  return "standalone";
 }
 
 /**
@@ -45,7 +57,8 @@ export function resolveDesktopDistribution({
   );
   if (flavor === "cloud") return CLOUD_DESKTOP_DISTRIBUTION;
   if (flavor === "enterprise") return ENTERPRISE_DESKTOP_DISTRIBUTION;
-  return PUBLIC_DESKTOP_DISTRIBUTION;
+  if (flavor === "public") return PUBLIC_DESKTOP_DISTRIBUTION;
+  return STANDALONE_DESKTOP_DISTRIBUTION;
 }
 
 export function enterpriseActivationComplete(config) {

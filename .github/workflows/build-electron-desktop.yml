@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - dev
+      - main
       - electron-notary-test
     paths:
       - apps/app/**
@@ -68,7 +70,7 @@ jobs:
       - name: Upload Electron artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: openwork-electron-${{ matrix.artifact }}
+          name: renwork-electron-${{ matrix.artifact }}
           path: apps/desktop/dist-electron/**
 
   electron-macos-notarization-smoke:

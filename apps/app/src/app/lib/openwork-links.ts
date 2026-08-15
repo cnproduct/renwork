@@ -22,7 +22,9 @@ export type ConnectDeepLink = {
 
 function isSupportedDeepLinkProtocol(protocol: string): boolean {
   const normalized = protocol.toLowerCase();
-  return normalized === "openwork:"
+  return normalized === "renwork:"
+    || normalized === "renwork-dev:"
+    || normalized === "openwork:"
     || normalized === "openwork-dev:"
     || normalized === "https:"
     || normalized === "http:";
