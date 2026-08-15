@@ -136,11 +136,11 @@ export function getArtifactTypeLabel(type: ArtifactType) {
 }
 
 export function canPreviewArtifact(artifact: ArtifactItem) {
-  return isCollectibleArtifactTarget(artifact.legacy_target);
+  return isCollectibleArtifactTarget(artifact.legacy_target) || isPreviewSupported(getFileExtension(artifact.path));
 }
 
 export function canOpenArtifact(artifact: ArtifactItem) {
-  return canPreviewArtifact(artifact) || isOpenableFileTarget(artifact.legacy_target);
+  return true;
 }
 
 function getArtifactName(path: string) {

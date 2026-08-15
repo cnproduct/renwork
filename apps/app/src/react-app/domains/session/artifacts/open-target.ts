@@ -170,11 +170,11 @@ function isArtifactTarget(target: OpenTarget) {
 }
 
 export function isCollectibleArtifactTarget(target: OpenTarget) {
-  return target.kind === "file" && target.exists === true && SIDEBAR_ARTIFACT_FILE_PREVIEWS.has(target.preview);
+  return target.kind === "file" && target.exists !== false && SIDEBAR_ARTIFACT_FILE_PREVIEWS.has(target.preview);
 }
 
 export function isOpenableFileTarget(target: OpenTarget) {
-  return target.kind === "file" && target.exists === true;
+  return target.kind === "file" && target.exists !== false;
 }
 
 export function isLocalhostBrowserTarget(target: OpenTarget) {

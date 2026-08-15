@@ -72,9 +72,38 @@ function isTextContent(target: OpenTarget): boolean {
 export function ArtifactPanel({ sessionId, tab, client, workspaceId, workspaceRoot, isRemoteWorkspace = false, onClose }: ArtifactPanelProps) {
   const transcriptTargets = usePanelTabStore((state) => state.transcriptArtifactTargets[sessionId] ?? EMPTY_TRANSCRIPT_TARGETS);
   const artifactTargets = useMemo(() => transcriptTargets.filter(isCollectibleArtifactTarget), [transcriptTargets]);
-  const target = artifactTargets.find((item) => item.id === tab.id) ?? null;
+  const foundTarget = artifactTargets.find((item) => (
+    item.id === tab.id ||
+    item.value === tab.id ||
+    `file:${item.value}` === tab.id ||
+    item.id === `file:${tab.id}` ||
+    (item.value && tab.id.endsWith(item.value))
+  )) ?? null;
 
-  if (!target || !client || !workspaceId) {
+  const rawPath = tab.id.startsWith("file:") ? tab.id.slice(5) : tab.id;
+  const fileName = tab.label || rawPath.split("/").pop() || rawPath;
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
+  let preview = tab.preview as OpenTargetPreview;
+  if (!preview || preview === "external") {
+    if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)) preview = "image";
+    else if (["md", "markdown"].includes(ext)) preview = "markdown";
+    else if (["csv", "tsv", "xlsx", "xls", "ods"].includes(ext)) preview = "sheet";
+    else if (["html", "htm"].includes(ext)) preview = "html";
+    else if (["pdf"].includes(ext)) preview = "pdf";
+    else preview = "text";
+  }
+
+  const target = foundTarget ?? {
+    id: tab.id,
+    kind: "file" as const,
+    value: rawPath,
+    name: fileName,
+    preview,
+    confidence: 100,
+    reason: "tab",
+  };
+
+  if (!client || !workspaceId) {
     return null;
   }
 

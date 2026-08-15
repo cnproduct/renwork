@@ -511,13 +511,11 @@ export function SessionPage(props: SessionPageProps) {
       return;
     }
 
-    if (!isCollectibleArtifactTarget(target)) {
-      if (isOpenableFileTarget(target)) {
-        if (props.selectedWorkspaceDisplay.workspaceType === "remote") {
-          void downloadOpenTarget(target).catch(() => undefined);
-        } else if (isElectronRuntime()) {
-          void openDesktopPath(absoluteWorkspacePath(props.selectedWorkspaceRoot, target.value)).catch(() => undefined);
-        }
+    if (!isCollectibleArtifactTarget(target) && !isOpenableFileTarget(target)) {
+      if (props.selectedWorkspaceDisplay.workspaceType === "remote") {
+        void downloadOpenTarget(target).catch(() => undefined);
+      } else if (isElectronRuntime()) {
+        void openDesktopPath(absoluteWorkspacePath(props.selectedWorkspaceRoot, target.value)).catch(() => undefined);
       }
       return;
     }
