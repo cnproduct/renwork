@@ -8,3 +8,8 @@ protocols:
 linux:
   executableName: renwork
 artifactName: renwork-${os}-${arch}-${version}.${ext}
+publish:
+  provider: github
+  owner: cnproduct
+  repo: renwork
+  releaseType: release

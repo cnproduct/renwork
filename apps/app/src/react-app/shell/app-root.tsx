@@ -46,6 +46,7 @@ import { SettingsRoute } from "./settings-route";
 import { ShellConfigProvider } from "./shell-config";
 import { WelcomeRoute } from "./welcome-route";
 import { readOrgSelectionPending } from "../../app/lib/den-sign-in-intent";
+import { UpdateNotifier } from "./update-notifier";
 import { signedInRoute } from "./den-signin-routing";
 
 
@@ -501,6 +502,7 @@ export function AppRoot() {
         true app-level signal.
       */}
       <NewProvidersListener />
+      <UpdateNotifier />
       <DevProfilerOverlay />
       <ReactRenderWatchdogOverlay />
     </>
