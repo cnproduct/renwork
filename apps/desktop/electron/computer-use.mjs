@@ -41,7 +41,7 @@ function getComputerUseMcpCommand() {
   if (helperExecutable) return [helperExecutable, "mcp"];
 
   if (app.isPackaged) {
-    throw new Error("OpenWork Computer Use is missing from this OpenWork build.");
+    throw new Error("RenWork Computer Use 辅助组件缺失。");
   }
 
   if (process.env.OPENWORK_DEV_MODE === "1") {
