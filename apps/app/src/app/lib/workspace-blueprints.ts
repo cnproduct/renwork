@@ -152,28 +152,27 @@ export function defaultBlueprintStartersForPreset(preset: string): WorkspaceBlue
           prompt: t("blueprint.starter_explore_prompt"),
         },
       ];
-    default:
       return [
         {
-          id: "csv-help",
+          id: "renwork-okki-leads",
           kind: "prompt",
-          title: t("blueprint.starter_csv_title"),
-          description: t("blueprint.starter_csv_desc"),
-          prompt: t("blueprint.starter_csv_prompt"),
+          title: "🔍 OKKI 海关买家穿透",
+          description: "自动挖掘指定产品或类目的真实海外采购商与负责人联系方式",
+          prompt: "请使用 renwork-leads-contacts-extractor 技能，帮我挖掘石材与建材类的海外真实采购商及关键人联系邮箱与电话。",
         },
         {
-          id: "starter-connect-openai",
-          kind: "action",
-          title: t("blueprint.starter_connect_openai_title"),
-          description: t("blueprint.starter_connect_openai_desc"),
-          action: "connect-openai",
+          id: "renwork-social-growth",
+          kind: "prompt",
+          title: "🌐 6语种社媒矩阵营销",
+          description: "自动生成中英日德越泰多语种图文海报并排期发布至 LinkedIn / Facebook",
+          prompt: "请使用 b2b-social-media-growth-matrix 技能，为我们的人人易 AI 外贸产品生成一组多语种社交媒体营销图文与文案。",
         },
         {
-          id: "browser-automation",
-          kind: "session",
-          title: t("blueprint.starter_chrome_title"),
-          description: t("blueprint.starter_chrome_desc"),
-          prompt: t("blueprint.starter_chrome_prompt"),
+          id: "renwork-zoho-outreach",
+          kind: "prompt",
+          title: "✉️ Zoho 自动化邮件外联",
+          description: "批量生成个性化高转化外贸开发信并执行安全轮询发信",
+          prompt: "请使用 zoho-outreach-manager 技能，帮我根据客户列表起草高转化率的个性化英文开发信草稿并准备外联发信。",
         },
       ];
   }

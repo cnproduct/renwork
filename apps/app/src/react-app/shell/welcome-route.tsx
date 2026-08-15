@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 
 import { t } from "../../i18n";
 import {
+  getDefaultWorkspacePath,
   pickDirectory,
   resolveWorkspaceListSelectedId,
   workspaceCreateRemote,
@@ -341,6 +342,21 @@ export function WelcomeRoute() {
       dispatch({ type: "open" });
       return;
     }
+    let folder: string | null = null;
+    try {
+      folder = await getDefaultWorkspacePath();
+    } catch {
+      folder = null;
+    }
+    if (!folder) {
+      const picked = await pickDirectory({ title: t("onboarding.authorize_folder") });
+      folder = typeof picked === "string" ? picked : null;
+    }
+    if (!folder) return;
+    await handleCreateWorkspace("starter", folder);
+  }, [handleCreateWorkspace]);
+
+  const handleSelectFolder = useCallback(async () => {
     const picked = await pickDirectory({ title: t("onboarding.authorize_folder") });
     const folder = typeof picked === "string" ? picked : null;
     if (!folder) return;
@@ -393,14 +409,15 @@ export function WelcomeRoute() {
     <>
       <WelcomePage
         onGetStarted={handleGetStarted}
+        onSelectFolder={handleSelectFolder}
         busy={state.createBusy}
         error={state.createError}
         manualFolder={manualFolder}
         onManualFolderChange={setManualFolder}
         onUseManualFolder={handleUseManualFolder}
         showManualFolder={import.meta.env.DEV && isDesktopRuntime()}
-        onTeamSignIn={handleTeamSignIn}
-        onJoinOrganization={() => setJoinOrganizationOpen(true)}
+        onTeamSignIn={undefined}
+        onJoinOrganization={undefined}
       />
       <JoinOrganizationDialog
         open={joinOrganizationOpen}

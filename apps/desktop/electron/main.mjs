@@ -1940,6 +1940,13 @@ const desktopCommandHandlers = {
   "openworkServerRestart": async (event, ...args) => {
       return runtimeManager.openworkServerRestart(args[0] ?? {});
   },
+  "getDefaultWorkspacePath": async (event, ...args) => {
+      const defaultDir = path.join(app.getPath("documents"), "RenWork Workspace");
+      if (!existsSync(defaultDir)) {
+        await mkdir(defaultDir, { recursive: true });
+      }
+      return defaultDir;
+  },
   "pickDirectory": async (event, ...args) => {
       const options = args[0] ?? {};
       /** @type {import("electron").OpenDialogOptions["properties"]} */
