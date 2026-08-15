@@ -2602,9 +2602,7 @@ const { ensureAutoUpdater } = registerUpdaterIpc({
   // All distributions intentionally share one application identifier, so they also
   // share Squirrel's ShipIt domain. Keep the shared default rather than
   // implying an isolation the bundle identifier cannot provide.
-  manifestChannel: DESKTOP_DISTRIBUTION.flavor === "public"
-    ? "latest"
-    : DESKTOP_DISTRIBUTION.flavor,
+  manifestChannel: "latest",
   electronNet,
   shell,
   distribution: DESKTOP_DISTRIBUTION.flavor,

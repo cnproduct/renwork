@@ -176,7 +176,7 @@ export function targetedStableUpdaterFeed(currentVersion, targetVersion, allowOl
       ? "Recovery target version must differ from the installed version."
       : "Target update version must be newer than the installed version.");
   }
-  return `https://github.com/different-ai/openwork/releases/download/v${normalizedTarget}`;
+  return `https://github.com/cnproduct/renwork/releases/download/v${normalizedTarget}`;
 }
 
 function updaterChannelState(app, channel, targetVersion = null, manifestChannel = "latest") {
