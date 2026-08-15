@@ -700,7 +700,16 @@ export function registerUpdaterIpc({
       // Re-assert the in-place-write default right before the swap; the ShipIt
       // defaults domain may have been wiped when stale state was cleaned.
       await enableSquirrelDirectContentsWrite();
-      updater.quitAndInstall(false, true);
+      app.removeAllListeners("before-quit");
+      app.removeAllListeners("window-all-closed");
+      setImmediate(() => {
+        try {
+          updater.quitAndInstall(false, true);
+        } catch (err) {
+          console.error("[updater] quitAndInstall threw:", err);
+          app.quit();
+        }
+      });
       return { ok: true };
     } catch (error) {
       return { ok: false, reason: String(error?.message ?? error) };
