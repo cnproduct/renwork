@@ -134,10 +134,9 @@ export function ClaudePluginImportModal(props: ClaudePluginImportModalProps) {
     >
       <DialogContent className="flex max-h-[90vh] min-h-0 w-full max-w-lg flex-col overflow-hidden sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Install a plugin from GitHub</DialogTitle>
+          <DialogTitle>从 GitHub 安装插件包</DialogTitle>
           <DialogDescription>
-            Works with Claude Code plugins: a repo with .claude-plugin/plugin.json bundling an MCP
-            server, skills, and commands.
+            支持标准 Claude Code / OpenCode 插件仓库（根目录需包含 .claude-plugin/plugin.json 描述文件，打包了 MCP 服务、技能或命令）。
           </DialogDescription>
         </DialogHeader>
 
@@ -145,8 +144,8 @@ export function ClaudePluginImportModal(props: ClaudePluginImportModalProps) {
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <TextInput
-                label="GitHub repository"
-                placeholder="https://github.com/slackapi/slack-mcp-plugin"
+                label="GitHub 仓库地址"
+                placeholder="https://github.com/owner/plugin-repo"
                 value={state.url}
                 onChange={(event) =>
                   dispatch({ url: event.currentTarget.value, preview: null, previewedUrl: null })
@@ -163,7 +162,7 @@ export function ClaudePluginImportModal(props: ClaudePluginImportModalProps) {
               ) : (
                 <Search data-icon="inline-start" />
               )}
-              Preview
+              预览
             </Button>
           </div>
 
@@ -186,14 +185,14 @@ export function ClaudePluginImportModal(props: ClaudePluginImportModalProps) {
               </div>
 
               <div>
-                <div className="mb-1.5 text-xs font-medium text-dls-text">Will install</div>
+                <div className="mb-1.5 text-xs font-medium text-dls-text">包含以下组件</div>
                 <div className="space-y-2">
                   {groups.map((group) => (
                     <div key={group.type}>
                       <div className="text-[11px] font-medium uppercase tracking-wide text-dls-secondary">
                         {group.items.length === 1
-                          ? `1 ${COMPONENT_LABELS[group.type]?.singular}`
-                          : `${group.items.length} ${COMPONENT_LABELS[group.type]?.plural}`}
+                          ? `1 个 ${group.type === "mcp" ? "MCP 服务" : group.type === "skill" ? "技能" : group.type === "agent" ? "智能体" : "命令"}`
+                          : `${group.items.length} 个 ${group.type === "mcp" ? "MCP 服务" : group.type === "skill" ? "技能" : group.type === "agent" ? "智能体" : "命令"}`}
                       </div>
                       <ul className="mt-0.5 space-y-0.5">
                         {group.items.map((item) => (
@@ -221,8 +220,13 @@ export function ClaudePluginImportModal(props: ClaudePluginImportModalProps) {
           ) : null}
 
           {state.error ? (
-            <div className="rounded-lg border border-red-6 bg-red-2 px-3 py-2 text-xs text-red-11">
-              {state.error}
+            <div className="rounded-lg border border-red-6 bg-red-2 px-3 py-2 text-xs text-red-11 space-y-1">
+              <div>{state.error}</div>
+              {state.error.includes("plugin.json") ? (
+                <div className="text-[11px] opacity-80">
+                  提示：该仓库非打包插件仓库。若需添加 MCP 工具，请点击「+ 添加自定义应用」；若需添加技能，请将包含 SKILL.md 的目录放入工作区。
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -232,7 +236,7 @@ export function ClaudePluginImportModal(props: ClaudePluginImportModalProps) {
             render={<Button variant="outline" disabled={state.previewing || state.installing} />}
             disabled={state.previewing || state.installing}
           >
-            Cancel
+            取消
           </DialogClose>
           <Button
             onClick={() => void handleInstall()}
@@ -243,7 +247,7 @@ export function ClaudePluginImportModal(props: ClaudePluginImportModalProps) {
             ) : (
               <Download data-icon="inline-start" />
             )}
-            Install
+            安装
           </Button>
         </DialogFooter>
       </DialogContent>
