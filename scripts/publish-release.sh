@@ -27,12 +27,18 @@ echo "📦 [2/5] 编译前端与 Electron 核心..."
 pnpm --filter @openwork/app run build
 pnpm --filter @openwork/desktop run build:electron
 
-echo "🔨 [3/5] 打包 macOS DMG 与 ZIP 自动更新增量包..."
+echo "🔨 [3/5] 打包 macOS 与 Windows 安装包及增量更新包..."
+TARGET=x86_64-pc-windows-msvc node apps/desktop/scripts/prepare-sidecar.mjs
 pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml --mac dmg zip --publish never
+pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml --win nsis zip --x64 --publish never
+pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml --win nsis zip --arm64 --publish never
 
 echo "🌐 [4/5] 发布到 GitHub Releases (cnproduct/renwork) ..."
-cp apps/desktop/dist-electron/latest-mac.yml apps/desktop/dist-electron/standalone-mac.yml
-cp apps/desktop/dist-electron/latest-mac.yml apps/desktop/dist-electron/alpha-mac.yml
+cp apps/desktop/dist-electron/latest-mac.yml apps/desktop/dist-electron/standalone-mac.yml || true
+cp apps/desktop/dist-electron/latest-mac.yml apps/desktop/dist-electron/alpha-mac.yml || true
+cp apps/desktop/dist-electron/latest.yml apps/desktop/dist-electron/standalone-win.yml || true
+cp apps/desktop/dist-electron/latest.yml apps/desktop/dist-electron/latest-win.yml || true
+
 gh release delete "v$VERSION" --repo cnproduct/renwork --yes 2>/dev/null || true
 gh release create "v$VERSION" \
   "apps/desktop/dist-electron/renwork-mac-arm64-$VERSION.dmg" \
@@ -40,9 +46,16 @@ gh release create "v$VERSION" \
   "apps/desktop/dist-electron/latest-mac.yml" \
   "apps/desktop/dist-electron/standalone-mac.yml" \
   "apps/desktop/dist-electron/alpha-mac.yml" \
+  "apps/desktop/dist-electron/renwork-win-x64-$VERSION.exe" \
+  "apps/desktop/dist-electron/renwork-win-x64-$VERSION.zip" \
+  "apps/desktop/dist-electron/renwork-win-arm64-$VERSION.exe" \
+  "apps/desktop/dist-electron/renwork-win-arm64-$VERSION.zip" \
+  "apps/desktop/dist-electron/latest.yml" \
+  "apps/desktop/dist-electron/standalone-win.yml" \
+  "apps/desktop/dist-electron/latest-win.yml" \
   --repo cnproduct/renwork \
   --title "RenWork v$VERSION" \
-  --notes "RenWork 人人易 AI 官方升级版本 v$VERSION"
+  --notes "RenWork 人人易 AI 官方跨平台升级版本 v$VERSION (支持 macOS 及 Windows x64 / ARM64)"
 
 echo "💾 [5/5] 提交版本变更并推送到 GitHub 仓库..."
 git add .
