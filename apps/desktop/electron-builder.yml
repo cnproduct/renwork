@@ -5,6 +5,8 @@ protocols:
   - name: RenWork
     schemes:
       - renwork
+win:
+  executableName: RenWork
 linux:
   executableName: renwork
 artifactName: renwork-${os}-${arch}-${version}.${ext}
