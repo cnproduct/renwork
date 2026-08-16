@@ -81,7 +81,14 @@ export function windowsInstalledShortcutFileName(appName) {
 }
 
 export function windowsInstalledExecutablePath({ packaged, execPath, resourcesPath, shortcutPath }) {
-  if (!packaged) return execPath;
+  if (!packaged || !execPath) return execPath;
+  if (
+    typeof execPath === "string" &&
+    !execPath.toLowerCase().includes("systemprofile") &&
+    !execPath.toLowerCase().includes("system32\\config")
+  ) {
+    return execPath;
+  }
   return [
     shortcutPath.split(/[\\/]AppData[\\/]/i)[0],
     "AppData",

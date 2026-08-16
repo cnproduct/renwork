@@ -101,3 +101,10 @@ win:
     - nsis
 nsis:
   include: build/installer.nsh
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: RenWork
+  runAfterFinish: true
