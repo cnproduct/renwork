@@ -1,7 +1,7 @@
 {
   "name": "@openwork/desktop",
   "private": true,
-  "version": "0.18.33",
+  "version": "0.18.34",
   "desktopName": "com.renrenyi.renwork",
   "description": "RenWork (人人易AI 数字员工工作台) desktop shell",
   "author": {
@@ -40,6 +40,12 @@
     "jsonc-parser": "^3.2.1",
     "minimatch": "^10.2.5",
     "node-pty": "npm:@lydell/node-pty@1.2.0-beta.12",
+    "@lydell/node-pty-win32-x64": "1.2.0-beta.12",
+    "@lydell/node-pty-win32-arm64": "1.2.0-beta.12",
+    "@lydell/node-pty-darwin-arm64": "1.2.0-beta.12",
+    "@lydell/node-pty-darwin-x64": "1.2.0-beta.12",
+    "@lydell/node-pty-linux-x64": "1.2.0-beta.12",
+    "@lydell/node-pty-linux-arm64": "1.2.0-beta.12",
     "undici": "6.28.0",
     "yaml": "^2.9.0",
     "zod": "^4.3.6"
