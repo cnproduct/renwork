@@ -342,8 +342,12 @@ async function draftToParts(
       }
     }
     const fileParts = uploaded.filter((part): part is FilePartInput => part.type === "file");
-    for (const [index, attachment] of draft.attachments.entries()) {
-      const filePart = fileParts[index];
+    const filePartByFilename = new Map<string, FilePartInput>();
+    for (const filePart of fileParts) {
+      if (filePart.filename) filePartByFilename.set(filePart.filename, filePart);
+    }
+    for (const attachment of draft.attachments) {
+      const filePart = filePartByFilename.get(attachment.name) ?? filePartByFilename.get(attachment.file.name);
       if (filePart) attachmentFileById.set(attachment.id, filePart);
     }
   }

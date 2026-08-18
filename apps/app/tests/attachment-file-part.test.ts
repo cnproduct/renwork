@@ -375,7 +375,7 @@ describe("composer attachment file parts", () => {
     });
   });
 
-  test("workspace binary attachments upload for tool access and emit a Read-mediated text/plain file part", async () => {
+  test("workspace binary attachments upload for tool access and emit synthetic path note without failing text/plain file parts", async () => {
     const { endpoint, calls } = uploadRecorder("server-workspace-42");
     const file = new File([PPTX_BYTES], "recording.zip", { type: "application/zip" });
 
@@ -396,14 +396,8 @@ describe("composer attachment file parts", () => {
     expect(textPart(parts)).toMatchObject({ type: "text", synthetic: true });
     expect(textPartText(parts)).toContain(".opencode/openwork/inbox/chat-attachments/ses_bin/nonce-bin-recording.zip");
     expect(textPartText(parts)).toContain("Read/Bash/MCP/Docling");
-    // text/plain file parts never reach the provider (opencode expands them
-    // through the Read tool), so binaries keep a transcript badge safely.
-    expect(filePartUrl(parts, 1)).toBe("file:///workspaces/Worker%20Root/.opencode/openwork/inbox/chat-attachments/ses_bin/nonce-bin-recording.zip");
-    expect(parts[1]).toMatchObject({
-      type: "file",
-      filename: "recording.zip",
-      mime: "text/plain",
-    });
+    // Binary attachments do not emit a fake text/plain file part, avoiding Cannot read binary file errors.
+    expect(parts.filter((p) => p.type === "file")).toHaveLength(0);
   });
 
   test("uploads duplicate filenames to distinct non-overwriting paths", async () => {
