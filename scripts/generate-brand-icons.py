@@ -1,8 +1,9 @@
 import os
 import subprocess
+import base64
 from PIL import Image, ImageDraw, ImageFilter
 
-SOURCE_IMG = "/Users/happy/.gemini/antigravity/brain/14113911-18cc-484e-bccf-707435a548e5/.user_uploaded/media_1787050589043.png"
+SOURCE_IMG = "/Users/happy/.gemini/antigravity/brain/14113911-18cc-484e-bccf-707435a548e5/.user_uploaded/media_1787062976469.png"
 REPO_ROOT = "/Users/happy/Library/CloudStorage/GoogleDrive-cnproduct@gmail.com/我的云端硬盘/WPS同步盘/人人易 AI/renwork"
 DESKTOP_ICONS_DIR = os.path.join(REPO_ROOT, "apps/desktop/resources/icons")
 APP_PUBLIC_DIR = os.path.join(REPO_ROOT, "apps/app/public")
@@ -10,63 +11,55 @@ APP_PUBLIC_DIR = os.path.join(REPO_ROOT, "apps/app/public")
 img = Image.open(SOURCE_IMG).convert("RGBA")
 bbox = img.getbbox()
 cropped_glyph = img.crop(bbox)
-print(f"Original size: {img.size}, bbox: {bbox}, cropped_glyph: {cropped_glyph.size}")
+print(f"Loaded source image: {img.size}, bbox: {bbox}, cropped_glyph: {cropped_glyph.size}")
 
-# Master 1024x1024 transparent icon with 94% coverage for favicons & raw icon usages
-master_logo_transparent = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
-glyph_w, glyph_h = cropped_glyph.size
-aspect = glyph_w / glyph_h
-
-target_h = 960
-target_w = int(target_h * aspect)
-resized_for_master = cropped_glyph.resize((target_w, target_h), Image.Resampling.LANCZOS)
-off_x = (1024 - target_w) // 2
-off_y = (1024 - target_h) // 2
-master_logo_transparent.paste(resized_for_master, (off_x, off_y), resized_for_master)
-
-def create_app_icon_1024():
+# Create macOS / Windows Pure-Shaped Standalone App Icon (1024x1024)
+# Apple HIG for Custom-Shaped / Silhouette Icons:
+# The glyph itself is the icon, filling the canvas with optimal optical balance (~940px height)
+# plus a subtle soft ambient depth shadow so it floats cleanly over any background.
+def create_pure_shaped_app_icon():
     size = 1024
     icon = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     
-    # Official Apple macOS Icon Grid standard:
-    # 824x824 squircle centered in 1024x1024 canvas (margin = 100 on all 4 sides)
-    margin = 100
-    rect_box = [margin, margin, size - margin, size - margin]
-    radius = 185
+    glyph_w, glyph_h = cropped_glyph.size
+    aspect = glyph_w / glyph_h
     
-    # Background: Premium deep dark space slate (#0B0F19 -> #151C28)
-    bg = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    bg_draw = ImageDraw.Draw(bg)
-    bg_draw.rounded_rectangle(rect_box, radius=radius, fill=(15, 20, 28, 255))
+    # Scale glyph to 930px height (leaving 47px padding top/bottom for shadow & breathing room)
+    target_h = 930
+    target_w = int(target_h * aspect)
+    scaled_glyph = cropped_glyph.resize((target_w, target_h), Image.Resampling.LANCZOS)
     
-    # Subtle inner border / rim light
-    bg_draw.rounded_rectangle(rect_box, radius=radius, outline=(255, 255, 255, 25), width=3)
+    # Position: centered horizontally and vertically
+    gx = (size - target_w) // 2
+    gy = (size - target_h) // 2
     
-    # Soft drop shadow under the squircle
-    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    shadow_draw = ImageDraw.Draw(shadow)
-    shadow_box = [margin + 2, margin + 14, size - margin - 2, size - margin + 14]
-    shadow_draw.rounded_rectangle(shadow_box, radius=radius, fill=(0, 0, 0, 110))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(26))
+    # Generate Apple-style soft drop shadow from the alpha mask
+    alpha_mask = scaled_glyph.split()[3]
     
-    # Composite background
-    icon = Image.alpha_composite(icon, shadow)
-    icon = Image.alpha_composite(icon, bg)
+    # Shadow layer 1: Soft broad ambient shadow
+    shadow1 = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    shadow1_mask = Image.new("L", (size, size), 0)
+    shadow1_mask.paste(alpha_mask, (gx, gy + 14))
+    shadow1_color = Image.new("RGBA", (size, size), (0, 0, 0, 95))
+    shadow1 = Image.composite(shadow1_color, shadow1, shadow1_mask)
+    shadow1 = shadow1.filter(ImageFilter.GaussianBlur(22))
     
-    # Scale glyph to match Apple App Store / system standard optical weight
-    # Squircle is 824x824. We scale glyph height to 720px (~87.4% of squircle height).
-    target_glyph_h = 720
-    target_glyph_w = int(target_glyph_h * aspect)
-    logo_resized = cropped_glyph.resize((target_glyph_w, target_glyph_h), Image.Resampling.LANCZOS)
+    # Shadow layer 2: Crisper contact shadow
+    shadow2 = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    shadow2_mask = Image.new("L", (size, size), 0)
+    shadow2_mask.paste(alpha_mask, (gx, gy + 6))
+    shadow2_color = Image.new("RGBA", (size, size), (0, 0, 0, 60))
+    shadow2 = Image.composite(shadow2_color, shadow2, shadow2_mask)
+    shadow2 = shadow2.filter(ImageFilter.GaussianBlur(8))
     
-    lx = (size - target_glyph_w) // 2
-    # Vertically center with optical correction (-2px)
-    ly = (size - target_glyph_h) // 2 - 2
+    # Composite: background transparent -> shadow1 -> shadow2 -> scaled_glyph
+    icon = Image.alpha_composite(icon, shadow1)
+    icon = Image.alpha_composite(icon, shadow2)
+    icon.paste(scaled_glyph, (gx, gy), scaled_glyph)
     
-    icon.paste(logo_resized, (lx, ly), logo_resized)
     return icon
 
-app_icon_1024 = create_app_icon_1024()
+app_icon_1024 = create_pure_shaped_app_icon()
 
 # 1. Save Desktop icon.png
 app_icon_1024.save(os.path.join(DESKTOP_ICONS_DIR, "icon.png"), "PNG")
@@ -86,7 +79,7 @@ for s in sizes:
 # 3. Generate Windows icon.ico
 ico_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
 app_icon_1024.save(os.path.join(DESKTOP_ICONS_DIR, "icon.ico"), format="ICO", sizes=ico_sizes)
-print("Saved Windows icon.ico")
+print("Saved Windows icon.ico with maximum glyph scale")
 
 # 4. Generate macOS icon.icns using iconutil
 iconset_dir = "/tmp/RenWork.iconset"
@@ -117,10 +110,25 @@ if os.path.exists(helper_icns):
 print("Generated macOS icon.icns successfully")
 
 # 5. Generate Web App Public Assets
-master_logo_transparent.resize((16, 16), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "favicon-16x16.png"), "PNG")
-master_logo_transparent.resize((32, 32), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "favicon-32x32.png"), "PNG")
+app_icon_1024.resize((16, 16), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "favicon-16x16.png"), "PNG")
+app_icon_1024.resize((32, 32), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "favicon-32x32.png"), "PNG")
 app_icon_1024.resize((180, 180), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "apple-touch-icon.png"), "PNG")
-master_logo_transparent.resize((512, 512), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "renwork-mark.png"), "PNG")
-master_logo_transparent.resize((512, 512), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "openwork-mark.png"), "PNG")
+app_icon_1024.resize((512, 512), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "renwork-mark.png"), "PNG")
+app_icon_1024.resize((512, 512), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "openwork-mark.png"), "PNG")
 
-print("Generated all app & public images successfully with optimized optical scaling!")
+# 6. Generate crisp standalone SVGs
+with open(SOURCE_IMG, "rb") as f:
+    b64_data = base64.b64encode(f.read()).decode("utf-8")
+
+svg_square = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <image width="1024" height="1024" href="data:image/png;base64,{b64_data}"/>
+</svg>'''
+
+with open(os.path.join(APP_PUBLIC_DIR, "renwork-mark.svg"), "w") as f:
+    f.write(svg_square)
+with open(os.path.join(APP_PUBLIC_DIR, "openwork-mark.svg"), "w") as f:
+    f.write(svg_square)
+with open(os.path.join(APP_PUBLIC_DIR, "openwork-logo-square.svg"), "w") as f:
+    f.write(svg_square)
+
+print("Generated all app & public images successfully with pure-shaped logo format!")
