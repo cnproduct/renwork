@@ -362,8 +362,8 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
                   {accountInitials(user.name, user.email)}
                 </span>
               ) : (
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
-                  <UserRound size={13} />
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full overflow-hidden bg-primary/10 border border-primary/20 p-0.5">
+                  <img src="/renwork-mark.svg" alt="RenWork" className="size-4 object-contain" />
                 </span>
               )}
               <span className="min-w-0 flex-1">
