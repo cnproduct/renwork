@@ -39,6 +39,18 @@ export const automationScheduleSchema = z.discriminatedUnion("kind", [
     hour: z.number().int().min(0).max(23),
     minute: z.number().int().min(0).max(59),
   }),
+  z.object({
+    kind: z.literal("monthly"),
+    timezone: timezoneSchema,
+    dayOfMonth: z.number().int().min(-1).max(31),
+    hour: z.number().int().min(0).max(23),
+    minute: z.number().int().min(0).max(59),
+  }),
+  z.object({
+    kind: z.literal("interval"),
+    timezone: timezoneSchema.optional(),
+    intervalMinutes: z.number().int().min(1).max(43200),
+  }),
 ])
 export type AutomationSchedule = z.infer<typeof automationScheduleSchema>
 
@@ -125,6 +137,11 @@ export const automationRevisionSchema = z.object({
   schedule: automationScheduleSchema,
   model: automationModelSchema,
   action: automationActionSchema.optional(),
+  workspaceId: idSchema.nullable().optional(),
+  connectors: z.array(z.string().trim()).optional().default([]),
+  effectiveStartAt: nullableTimestampSchema.optional(),
+  effectiveEndAt: nullableTimestampSchema.optional(),
+  notifyMiniProgram: z.boolean().optional().default(false),
   executionTarget: z.enum(["desktop", "cloud"]).optional(),
   maximumRuntimeMs: z.number().int().min(10_000).max(60 * 60 * 1_000),
   digest: z.string().trim().min(16).max(128),
@@ -310,12 +327,22 @@ const legacyCreateAutomationSchema = z.object({
   instructions: z.string().trim().min(1).max(100_000),
   schedule: automationScheduleSchema,
   model: automationModelSchema,
+  workspaceId: idSchema.nullable().optional(),
+  connectors: z.array(z.string().trim()).optional().default([]),
+  effectiveStartAt: nullableTimestampSchema.optional(),
+  effectiveEndAt: nullableTimestampSchema.optional(),
+  notifyMiniProgram: z.boolean().optional().default(false),
 })
 
 const actionCreateAutomationSchema = z.object({
   name: z.string().trim().min(1).max(120),
   schedule: automationScheduleSchema,
   action: automationActionSchema,
+  workspaceId: idSchema.nullable().optional(),
+  connectors: z.array(z.string().trim()).optional().default([]),
+  effectiveStartAt: nullableTimestampSchema.optional(),
+  effectiveEndAt: nullableTimestampSchema.optional(),
+  notifyMiniProgram: z.boolean().optional().default(false),
   executionTarget: automationExecutionTargetSchema,
 }).superRefine((value, context) => {
   const validPair = value.executionTarget === "cloud"
@@ -333,6 +360,11 @@ export const createCloudAutomationSchema = z.object({
   name: z.string().trim().min(1).max(120),
   schedule: automationScheduleSchema,
   action: automationActionSchema,
+  workspaceId: idSchema.nullable().optional(),
+  connectors: z.array(z.string().trim()).optional().default([]),
+  effectiveStartAt: nullableTimestampSchema.optional(),
+  effectiveEndAt: nullableTimestampSchema.optional(),
+  notifyMiniProgram: z.boolean().optional().default(false),
 }).strict().transform((value) => ({ ...value, executionTarget: "cloud" as const }))
 export type CreateCloudAutomation = z.input<typeof createCloudAutomationSchema>
 
@@ -358,6 +390,11 @@ export const automationProposalSchema = z.object({
   instructions: z.string().trim().min(1).max(100_000),
   schedule: automationScheduleSchema,
   model: automationModelSchema.optional(),
+  workspaceId: idSchema.nullable().optional(),
+  connectors: z.array(z.string().trim()).optional(),
+  effectiveStartAt: nullableTimestampSchema.optional(),
+  effectiveEndAt: nullableTimestampSchema.optional(),
+  notifyMiniProgram: z.boolean().optional(),
 })
 export type AutomationProposal = z.infer<typeof automationProposalSchema>
 
@@ -367,6 +404,11 @@ export const updateAutomationSchema = z.object({
   schedule: automationScheduleSchema.optional(),
   model: automationModelSchema.optional(),
   action: automationActionSchema.optional(),
+  workspaceId: idSchema.nullable().optional(),
+  connectors: z.array(z.string().trim()).optional(),
+  effectiveStartAt: nullableTimestampSchema.optional(),
+  effectiveEndAt: nullableTimestampSchema.optional(),
+  notifyMiniProgram: z.boolean().optional(),
   /** Accepted for round-tripping; execution placement itself is immutable. */
   executionTarget: automationExecutionTargetSchema.optional(),
 }).strict().refine(

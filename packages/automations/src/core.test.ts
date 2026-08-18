@@ -6,13 +6,16 @@ import { assertAutomationTransition, canTransitionAutomation, isTerminalAutomati
 import { selectDueAutomations } from "./tick.js"
 
 describe("portable Automations core", () => {
-  test("calculates once, daily, and weekly occurrences", () => {
+  test("calculates once, daily, weekly, monthly, and interval occurrences", () => {
     expect(nextAutomationOccurrence({ kind: "once", timezone: "UTC", at: 10 }, 9)).toBe(10)
     expect(nextAutomationOccurrence({ kind: "once", timezone: "UTC", at: 10 }, 10)).toBeNull()
     expect(new Date(nextAutomationOccurrence({ kind: "daily", timezone: "UTC", hour: 9, minute: 30 }, Date.UTC(2026, 0, 1)) ?? 0).toISOString())
       .toBe("2026-01-01T09:30:00.000Z")
     expect(new Date(nextAutomationOccurrence({ kind: "weekly", timezone: "UTC", daysOfWeek: [1], hour: 9, minute: 30 }, Date.UTC(2026, 0, 1)) ?? 0).toISOString())
       .toBe("2026-01-05T09:30:00.000Z")
+    expect(new Date(nextAutomationOccurrence({ kind: "monthly", timezone: "UTC", dayOfMonth: 15, hour: 10, minute: 0 }, Date.UTC(2026, 0, 1)) ?? 0).toISOString())
+      .toBe("2026-01-15T10:00:00.000Z")
+    expect(nextAutomationOccurrence({ kind: "interval", intervalMinutes: 120 }, 1000)).toBe(1000 + 120 * 60_000)
   })
 
   test("keeps deterministic DST behavior without process timezone state", () => {

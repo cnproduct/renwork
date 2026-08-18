@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { AlertTriangle, CalendarClock, Check } from "lucide-react"
+import { AlertTriangle, CalendarClock, Check, ExternalLink, Sparkles } from "lucide-react"
 import type { DynamicToolUIPart } from "ai"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
@@ -77,11 +77,11 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
     : null
 
   if (!proposal) {
-    return <Tool toolPart={part} title="Proposed an Automation" />
+    return <Tool toolPart={part} title="提出了定时任务建议" />
   }
 
   const blocker = !signedIn
-    ? "Sign in to OpenWork Cloud to create this Automation."
+    ? "请先登录以创建并激活该自动化任务。"
     : null
 
   const create = async () => {
@@ -96,11 +96,16 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
           providerId: AUTOMATION_FREE_MODEL.providerId,
           modelId: AUTOMATION_FREE_MODEL.modelId,
         },
+        workspaceId: proposal.workspaceId ?? null,
+        connectors: proposal.connectors ?? [],
+        effectiveStartAt: proposal.effectiveStartAt ?? null,
+        effectiveEndAt: proposal.effectiveEndAt ?? null,
+        notifyMiniProgram: proposal.notifyMiniProgram ?? true,
       })
       setCreated(detail.automation.id)
-      toast.success("Automation created and active")
+      toast.success("自动化任务已成功创建并在定时任务列表中就绪！")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create the Automation")
+      toast.error(error instanceof Error ? error.message : "无法创建自动化任务")
     } finally {
       setBusy(false)
     }
@@ -108,80 +113,96 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
 
   return (
     <div
-      className="not-prose w-full max-w-2xl overflow-hidden rounded-2xl border border-dls-border bg-dls-surface/95 shadow-sm"
+      className="not-prose my-3 w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
       data-openwork-automation-proposal
       data-automation-created={created ?? undefined}
       data-automation-model-resolution={resolved?.resolution}
     >
-      <div className="flex items-start gap-3 border-b border-dls-border px-4 py-3">
+      {/* Header */}
+      <div className="flex items-start gap-3 border-b border-border bg-muted/20 px-4 py-3">
         <div className={created
-          ? "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-green-6/35 bg-green-3/30 text-green-11"
-          : "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-dls-border bg-dls-hover text-dls-secondary"
+          ? "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+          : "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
         }>
-          {created ? <Check className="size-4" /> : <CalendarClock className="size-4" />}
+          {created ? <Check className="size-4" /> : <Sparkles className="size-4" />}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-dls-primary">
-            {created ? "Automation created and active" : "Suggested Automation"}
+          <h3 className="text-sm font-semibold text-foreground">
+            {created ? "定时任务已创建并激活" : "💡 AI 识别到定时事项建议"}
           </h3>
-          <p className="mt-0.5 text-xs text-dls-secondary">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {created
-              ? "It runs on the schedule below while this desktop is connected."
-              : "Nothing was created yet. Review it, then create it if it looks right."}
+              ? "已自动登记至「自动化 / 定时任务」列表，客户端将按计划周期自动执行。"
+              : "您在对话中描述了周期性任务，确认后可直接同步至自动化管理面板。"}
           </p>
         </div>
       </div>
 
+      {/* Body / Info */}
       <div className="space-y-3 px-4 py-3">
-        <div>
-          <p className="truncate text-sm font-medium text-dls-primary" title={proposal.name}>{proposal.name}</p>
-          <p className="text-xs text-dls-secondary">{formatAutomationSchedule(proposal.schedule)}</p>
-          {modelLabel ? <p className="text-xs text-dls-secondary">Runs with {modelLabel}</p> : null}
+        <div className="rounded-xl border border-border/80 bg-background p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-sm font-semibold text-foreground" title={proposal.name}>{proposal.name}</p>
+            <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              {formatAutomationSchedule(proposal.schedule)}
+            </span>
+          </div>
+          {modelLabel && (
+            <p className="mt-1 text-xs text-muted-foreground">执行模型：{modelLabel}</p>
+          )}
         </div>
-        <p className="whitespace-pre-wrap text-sm text-dls-secondary">{proposal.instructions}</p>
+        <div>
+          <span className="text-xs font-medium text-muted-foreground">执行指令与提示词：</span>
+          <p className="mt-1 whitespace-pre-wrap rounded-lg bg-muted/30 p-2.5 text-xs leading-relaxed text-foreground">{proposal.instructions}</p>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-dls-border px-4 py-3">
-        <p className="min-w-0 flex-1 text-xs text-dls-secondary">
-          {blocker ?? "Automations run on this desktop while it is connected."}
+      {/* Footer / Actions */}
+      <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/10 px-4 py-3">
+        <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+          {blocker ?? "任务将在客户端运行期间按计划执行"}
         </p>
         {created ? (
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="shrink-0"
+            className="shrink-0 gap-1 rounded-xl text-xs"
             data-open-automation={created}
             onClick={() => navigate(automationsRoute())}
           >
-            Open Automation
+            <span>前往定时任务列表</span>
+            <ExternalLink className="size-3" />
           </Button>
         ) : (
-          <Button
-            type="button"
-            size="sm"
-            className="shrink-0"
-            disabled={busy || blocker !== null || (signedIn && providersQuery.isLoading)}
-            data-create-automation
-            onClick={() => void create()}
-          >
-            {busy ? "Creating…" : "Create Automation"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-xl text-xs"
+              onClick={() => navigate(automationsRoute())}
+            >
+              在自动化中配置
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="shrink-0 rounded-xl bg-primary text-xs font-medium text-primary-foreground hover:bg-primary/90"
+              disabled={busy || blocker !== null || (signedIn && providersQuery.isLoading)}
+              data-create-automation
+              onClick={() => void create()}
+            >
+              {busy ? "创建中…" : "一键创建并启用"}
+            </Button>
+          </div>
         )}
       </div>
 
       {blocker && !created ? (
-        <div className="flex items-center gap-2 border-t border-dls-border px-4 py-2 text-xs text-amber-11">
+        <div className="flex items-center gap-2 border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
           <AlertTriangle className="size-3.5 shrink-0" />
           <span className="min-w-0 flex-1">{blocker}</span>
-        </div>
-      ) : null}
-      {resolved?.resolution === "fallback" && !created ? (
-        <div className="flex items-center gap-2 border-t border-dls-border px-4 py-2 text-xs text-amber-11">
-          <AlertTriangle className="size-3.5 shrink-0" />
-          <span className="min-w-0 flex-1">
-            The proposed model isn't available for Automations, so runs use the free starter model. You can change the model after creating.
-          </span>
         </div>
       ) : null}
     </div>

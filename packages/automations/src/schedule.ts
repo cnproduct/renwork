@@ -101,15 +101,23 @@ function resolveLocalOccurrence(
 
 function isScheduledDay(
   schedule: AutomationSchedule,
+  date: LocalDate,
   weekday: number,
 ): boolean {
-  return (
-    schedule.kind === "daily" ||
-    (schedule.kind === "weekly" && schedule.daysOfWeek.includes(weekday))
-  )
+  if (schedule.kind === "daily") return true
+  if (schedule.kind === "weekly") return schedule.daysOfWeek.includes(weekday)
+  if (schedule.kind === "monthly") {
+    if (schedule.dayOfMonth === -1) {
+      const nextDay = addLocalDays(date, 1)
+      return nextDay.month !== date.month
+    }
+    return date.day === schedule.dayOfMonth
+  }
+  return false
 }
 
-export function assertAutomationTimezone(timezone: string): void {
+export function assertAutomationTimezone(timezone?: string): void {
+  if (!timezone) return
   try {
     formatter(timezone).format(new Date(0))
   } catch {
@@ -127,7 +135,9 @@ export function automationOccurrences(
   options: AutomationOccurrenceSearchOptions,
 ): { occurrences: number[]; warnings: string[] } {
   const schedule = automationScheduleSchema.parse(input)
-  assertAutomationTimezone(schedule.timezone)
+  if ("timezone" in schedule && schedule.timezone) {
+    assertAutomationTimezone(schedule.timezone)
+  }
   const count = Math.max(0, Math.min(options.count ?? 5, 5))
   if (count === 0) {
     return { occurrences: [], warnings: [] }
@@ -137,8 +147,19 @@ export function automationOccurrences(
     return { occurrences: schedule.at > options.after ? [schedule.at] : [], warnings: [] }
   }
 
+  if (schedule.kind === "interval") {
+    const after = Math.floor(options.after)
+    const intervalMs = schedule.intervalMinutes * 60_000
+    const occurrences: number[] = []
+    for (let i = 1; i <= count; i++) {
+      occurrences.push(after + i * intervalMs)
+    }
+    return { occurrences, warnings: [] }
+  }
+
   const after = Math.floor(options.after)
-  const start = localDateTime(after, schedule.timezone)
+  const timezone = schedule.timezone
+  const start = localDateTime(after, timezone)
   const occurrences: number[] = []
   const warnings = new Set<string>()
 
@@ -147,17 +168,17 @@ export function automationOccurrences(
     const weekday = new Date(
       Date.UTC(date.year, date.month - 1, date.day),
     ).getUTCDay()
-    if (!isScheduledDay(schedule, weekday)) continue
+    if (!isScheduledDay(schedule, date, weekday)) continue
     const resolved = resolveLocalOccurrence(
       date,
       schedule.hour,
       schedule.minute,
-      schedule.timezone,
+      timezone,
     )
     if (!resolved || resolved.timestamp <= after) continue
     if (resolved.shifted) {
       warnings.add(
-        `A wall-clock occurrence falls inside a daylight-saving transition and was shifted to the next valid minute in ${schedule.timezone}.`,
+        `A wall-clock occurrence falls inside a daylight-saving transition and was shifted to the next valid minute in ${timezone}.`,
       )
     }
     occurrences.push(resolved.timestamp)
