@@ -1,7 +1,7 @@
 {
   "name": "@openwork/desktop",
   "private": true,
-  "version": "0.18.38",
+  "version": "0.18.39",
   "desktopName": "com.renrenyi.renwork",
   "description": "RenWork (人人易AI 数字员工工作台) desktop shell",
   "author": {

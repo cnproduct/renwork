@@ -8,57 +8,62 @@ DESKTOP_ICONS_DIR = os.path.join(REPO_ROOT, "apps/desktop/resources/icons")
 APP_PUBLIC_DIR = os.path.join(REPO_ROOT, "apps/app/public")
 
 img = Image.open(SOURCE_IMG).convert("RGBA")
-
-# Ensure transparent or trim bounding box if needed
 bbox = img.getbbox()
-print(f"Original size: {img.size}, bbox: {bbox}")
+cropped_glyph = img.crop(bbox)
+print(f"Original size: {img.size}, bbox: {bbox}, cropped_glyph: {cropped_glyph.size}")
 
-# Create a master 1024x1024 transparent logo
+# Master 1024x1024 transparent icon with 94% coverage for favicons & raw icon usages
 master_logo_transparent = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
-# Center and pad slightly for perfect balance
-pad_size = 920
-resized_raw = img.resize((pad_size, pad_size), Image.Resampling.LANCZOS)
-offset_x = (1024 - pad_size) // 2
-offset_y = (1024 - pad_size) // 2
-master_logo_transparent.paste(resized_raw, (offset_x, offset_y), resized_raw)
+glyph_w, glyph_h = cropped_glyph.size
+aspect = glyph_w / glyph_h
 
-# Create macOS Squircle App Icon (1024x1024) with sleek modern dark theme background
+target_h = 960
+target_w = int(target_h * aspect)
+resized_for_master = cropped_glyph.resize((target_w, target_h), Image.Resampling.LANCZOS)
+off_x = (1024 - target_w) // 2
+off_y = (1024 - target_h) // 2
+master_logo_transparent.paste(resized_for_master, (off_x, off_y), resized_for_master)
+
 def create_app_icon_1024():
     size = 1024
     icon = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     
-    # macOS squircle rounded rect bounds (approx 824x824 inside 1024 canvas for shadow room)
-    margin = 80
+    # Official Apple macOS Icon Grid standard:
+    # 824x824 squircle centered in 1024x1024 canvas (margin = 100 on all 4 sides)
+    margin = 100
     rect_box = [margin, margin, size - margin, size - margin]
     radius = 185
     
-    # Background gradient: Deep space dark blue/slate (#0B0F19 -> #161F30)
+    # Background: Premium deep dark space slate (#0B0F19 -> #151C28)
     bg = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     bg_draw = ImageDraw.Draw(bg)
-    # Draw rounded rect mask
-    bg_draw.rounded_rectangle(rect_box, radius=radius, fill=(15, 20, 30, 255))
+    bg_draw.rounded_rectangle(rect_box, radius=radius, fill=(15, 20, 28, 255))
     
     # Subtle inner border / rim light
-    bg_draw.rounded_rectangle(rect_box, radius=radius, outline=(255, 255, 255, 30), width=3)
+    bg_draw.rounded_rectangle(rect_box, radius=radius, outline=(255, 255, 255, 25), width=3)
     
-    # Add subtle soft shadow behind container
+    # Soft drop shadow under the squircle
     shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     shadow_draw = ImageDraw.Draw(shadow)
-    shadow_box = [margin + 4, margin + 12, size - margin - 4, size - margin + 12]
-    shadow_draw.rounded_rectangle(shadow_box, radius=radius, fill=(0, 0, 0, 100))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(24))
+    shadow_box = [margin + 2, margin + 14, size - margin - 2, size - margin + 14]
+    shadow_draw.rounded_rectangle(shadow_box, radius=radius, fill=(0, 0, 0, 110))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(26))
     
-    # Composite
+    # Composite background
     icon = Image.alpha_composite(icon, shadow)
     icon = Image.alpha_composite(icon, bg)
     
-    # Place logo inside
-    logo_inner_size = 640
-    logo_resized = img.resize((logo_inner_size, logo_inner_size), Image.Resampling.LANCZOS)
-    lx = (size - logo_inner_size) // 2
-    ly = (size - logo_inner_size) // 2 - 4
-    icon.paste(logo_resized, (lx, ly), logo_resized)
+    # Scale glyph to match Apple App Store / system standard optical weight
+    # Squircle is 824x824. We scale glyph height to 720px (~87.4% of squircle height).
+    target_glyph_h = 720
+    target_glyph_w = int(target_glyph_h * aspect)
+    logo_resized = cropped_glyph.resize((target_glyph_w, target_glyph_h), Image.Resampling.LANCZOS)
     
+    lx = (size - target_glyph_w) // 2
+    # Vertically center with optical correction (-2px)
+    ly = (size - target_glyph_h) // 2 - 2
+    
+    icon.paste(logo_resized, (lx, ly), logo_resized)
     return icon
 
 app_icon_1024 = create_app_icon_1024()
@@ -72,10 +77,8 @@ linux_dir = os.path.join(DESKTOP_ICONS_DIR, "linux")
 sizes = [16, 24, 32, 48, 64, 96, 128, 256, 512, 1024]
 for s in sizes:
     resized = app_icon_1024.resize((s, s), Image.Resampling.LANCZOS)
-    # Direct size file if exists
     target_png = os.path.join(linux_dir, f"{s}x{s}.png")
     resized.save(target_png, "PNG")
-    # Also subfolder
     sub_dir = os.path.join(linux_dir, f"{s}x{s}")
     if os.path.exists(sub_dir):
         resized.save(os.path.join(sub_dir, "icon.png"), "PNG")
@@ -114,12 +117,10 @@ if os.path.exists(helper_icns):
 print("Generated macOS icon.icns successfully")
 
 # 5. Generate Web App Public Assets
-# Favicons (transparent master logo looks stunning in tabs)
 master_logo_transparent.resize((16, 16), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "favicon-16x16.png"), "PNG")
 master_logo_transparent.resize((32, 32), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "favicon-32x32.png"), "PNG")
-# Apple touch icon (180x180)
 app_icon_1024.resize((180, 180), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "apple-touch-icon.png"), "PNG")
 master_logo_transparent.resize((512, 512), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "renwork-mark.png"), "PNG")
 master_logo_transparent.resize((512, 512), Image.Resampling.LANCZOS).save(os.path.join(APP_PUBLIC_DIR, "openwork-mark.png"), "PNG")
 
-print("Generated all app & public images successfully!")
+print("Generated all app & public images successfully with optimized optical scaling!")
