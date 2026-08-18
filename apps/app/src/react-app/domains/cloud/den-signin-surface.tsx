@@ -1,9 +1,11 @@
 /** @jsxImportSource react */
 import {
+  ArrowRight,
   ArrowUpRight,
   Cloud,
   ChevronDown,
   ChevronUp,
+  Laptop,
 } from "lucide-react";
 import { Dithering } from "@paper-design/shaders-react";
 
@@ -36,6 +38,7 @@ export type DenSignInSurfaceProps = {
   organizationServerBusy?: boolean;
   organizationServerError?: string | null;
   organizationServerUrl?: string;
+  onUseLocalMode?: () => void;
   onBaseUrlDraftInput: (value: string) => void;
   onOrganizationServerSave?: (url: string) => Promise<boolean>;
   onResetBaseUrl: () => void;
@@ -238,43 +241,88 @@ export function DenSignInSurface(props: DenSignInSurfaceProps) {
         <div className="absolute inset-x-0 top-0 z-20 h-10 mac:titlebar-drag" />
 
         <div className="relative z-10 flex min-h-dvh items-center justify-center px-6 py-16">
-          <div className="w-full max-w-[720px] rounded-3xl border border-border bg-background px-8 pb-12 pt-10 sm:px-16 sm:pb-16 sm:pt-14">
-            <div className="flex items-center gap-2.5">
-              <img
-                src={props.logoUrl ?? resolveExtensionIconSrc("/openwork-mark.svg")}
-                alt=""
-                width={26}
-                height={26}
-                className={`max-h-[26px] shrink-0 object-contain object-left ${props.logoUrl ? "" : "dark:invert"}`}
-                aria-hidden="true"
-              />
-              <span className="text-[15px] font-semibold tracking-tight text-foreground">
-                {appName}
+          <div className="w-full max-w-[760px] rounded-3xl border border-border bg-background/95 backdrop-blur-md px-8 pb-12 pt-10 sm:px-14 sm:pb-14 sm:pt-12 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img
+                  src={props.logoUrl ?? resolveExtensionIconSrc("/openwork-mark.svg")}
+                  alt="RenWork"
+                  width={32}
+                  height={32}
+                  className="max-h-8 shrink-0 object-contain object-left"
+                  aria-hidden="true"
+                />
+                <div className="flex flex-col">
+                  <span className="text-[16px] font-bold tracking-tight text-foreground">
+                    {appName}
+                  </span>
+                  <span className="text-[12px] text-muted-foreground">
+                    人人易AI 数字员工工作台
+                  </span>
+                </div>
+              </div>
+              <span className="inline-flex items-center rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-400 border border-orange-500/20">
+                ✨ Standalone 独立版
               </span>
             </div>
 
-            <div className="mt-10 flex flex-col gap-2.5 sm:mt-14">
-              <h1 className="text-[30px] font-semibold leading-[38px] tracking-[-0.03em] text-foreground sm:text-[38px] sm:leading-[46px]">
-                Welcome to {appName}
+            <div className="mt-8 flex flex-col gap-2 sm:mt-10">
+              <h1 className="text-[28px] font-bold leading-[36px] tracking-[-0.03em] text-foreground sm:text-[34px] sm:leading-[42px]">
+                欢迎使用 {appName}
               </h1>
               <p className="text-[15px] leading-[23px] text-muted-foreground">
-                {t("welcome.subtitle")}
+                人人易AI 智能外贸数字员工工作台 · 让AI真正替你干活
               </p>
             </div>
 
-            <div className="mt-11 flex flex-col gap-3">
+            {/* Mode 1: Primary Local Standalone Option (Recommended) */}
+            <div className="mt-7 rounded-2xl border-2 border-orange-500/30 bg-orange-500/5 p-5 sm:p-6 flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">💻</span>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">本地独立运行模式 (推荐)</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                      无需注册云端账号，本地直连 DeepSeek / OpenAI / Claude 等模型，海关买家穿透、社媒矩阵与外联邮件全流程在本地私密高效运行。
+                    </p>
+                  </div>
+                </div>
+                <span className="shrink-0 rounded-full bg-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] font-bold px-2.5 py-0.5 border border-orange-500/30">
+                  免登录 · 隐私安全
+                </span>
+              </div>
               <Button
                 type="button"
                 size="lg"
-                className="h-12 w-full text-[15px] font-semibold"
-                // Opens on the sign-up tab (label stays "Sign in"): most
-                // people hitting this are new, and the web page's tabs let
-                // returning users switch to sign-in in one tap.
+                className="h-12 w-full text-[15px] font-bold bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-md shadow-orange-500/20 cursor-pointer flex items-center justify-center gap-2"
+                onClick={props.onUseLocalMode}
+              >
+                🚀 直接进入本地数字员工工作台
+                <ArrowRight size={16} />
+              </Button>
+            </div>
+
+            {/* Divider: Or connect to cloud */}
+            <div className="mt-8 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs font-medium text-muted-foreground">
+                或连接云端企业协同中心 (可选)
+              </span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            {/* Mode 2: Cloud Sign-In & Settings */}
+            <div className="mt-4 flex flex-col gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="h-11 w-full text-[14px] font-medium border-border hover:bg-accent cursor-pointer flex items-center justify-center gap-2"
                 onClick={() => props.onOpenBrowserAuth("sign-up")}
                 disabled={props.authBusy || props.sessionBusy}
               >
-                Sign in to {appName}
-                <ArrowUpRight size={15} />
+                <Cloud size={15} className="text-muted-foreground" />
+                登录 RenWork Cloud 云端同步 ↗
               </Button>
 
               {props.signinFallbackUrl ? (

@@ -53,6 +53,17 @@ export function OrganizationServerAffordance(props: OrganizationServerAffordance
           >
             {t("welcome.organization_server_change")}
           </Button>
+          <span className="text-muted-foreground/40">·</span>
+          <Button
+            type="button"
+            variant="link"
+            className="h-auto p-0 text-sm text-muted-foreground hover:text-destructive"
+            onClick={() => {
+              void props.onSave("");
+            }}
+          >
+            重置为默认
+          </Button>
         </div>
       ) : (
         <Button
