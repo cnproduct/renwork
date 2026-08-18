@@ -152,7 +152,7 @@ function extensionContribution(): OpenworkFeatureContribution {
         id: "extension.actions",
         kind: "query",
         title: "List extension actions",
-        description: "List actions exposed by enabled local OpenWork extensions.",
+        description: "List actions exposed by enabled local RenWork extensions.",
         provider,
         arguments: [argument("extensionId", "string", false, "Optional extension id.")],
         effects: readEffects,
@@ -161,7 +161,7 @@ function extensionContribution(): OpenworkFeatureContribution {
         id: "extension.call",
         kind: "command",
         title: "Call an extension action",
-        description: "Execute one action exposed by a local OpenWork extension.",
+        description: "Execute one action exposed by a local RenWork extension.",
         provider,
         arguments: [
           argument("extensionId", "string", true, "Extension id."),

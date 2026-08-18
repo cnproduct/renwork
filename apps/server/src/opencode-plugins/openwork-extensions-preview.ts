@@ -59,25 +59,25 @@ const connectSkillsEnvelopeSchema = z.object({
 }).passthrough();
 
 const sessionSearchArgsSchema = z.object({
-  query: z.string().trim().min(1).describe("Text to search for across OpenWork session titles and message transcripts."),
-  workspaceId: z.string().trim().optional().describe("Optional OpenWork workspace id/name to limit the search."),
+  query: z.string().trim().min(1).describe("Text to search for across RenWork session titles and message transcripts."),
+  workspaceId: z.string().trim().optional().describe("Optional RenWork workspace id/name to limit the search."),
   limit: z.number().int().positive().max(20).optional().describe("Maximum matching sessions to return. Defaults to 10, max 20."),
   scanLimit: z.number().int().positive().max(500).optional().describe("Maximum newest sessions to scan across matching workspaces. Defaults to 100, max 500."),
   messageLimit: z.number().int().positive().max(1000).optional().describe("Maximum recent messages to load per scanned session. Defaults to 400, max 1000."),
 });
 
 const sessionReadArgsSchema = z.object({
-  sessionId: z.string().trim().min(1).describe("OpenWork/OpenCode session ID returned by session.search."),
-  workspaceId: z.string().trim().optional().describe("Optional OpenWork workspace id/name. Omit to resolve the session across all workspaces."),
+  sessionId: z.string().trim().min(1).describe("RenWork/OpenCode session ID returned by session.search."),
+  workspaceId: z.string().trim().optional().describe("Optional RenWork workspace id/name. Omit to resolve the session across all workspaces."),
   count: z.number().int().positive().max(100).optional().describe("Number of recent transcript messages to return. Defaults to 30, max 100."),
 });
 
 const sessionCreateArgsSchema = z.object({
   sessions: z.array(z.object({
-    title: z.string().trim().min(1).max(120).describe("Short title shown in the OpenWork session list."),
+    title: z.string().trim().min(1).max(120).describe("Short title shown in the RenWork session list."),
     prompt: z.string().trim().min(1).max(100_000).describe("Self-contained task to start in the new session."),
   })).min(1).describe("One entry per new session to create and start."),
-  workspaceId: z.string().trim().optional().describe("Optional OpenWork workspace id/name. Defaults to the workspace containing the current session."),
+  workspaceId: z.string().trim().optional().describe("Optional RenWork workspace id/name. Defaults to the workspace containing the current session."),
 });
 
 const workspaceSchema = z.object({
@@ -136,18 +136,18 @@ const sessionMessagesEnvelopeSchema = z.object({
 }).passthrough();
 
 const OPENWORK_AGENT_SURFACE_INSTRUCTION =
-  `## OpenWork app context
-Use openwork_context when the request depends on the current OpenWork screen, open tabs, split view, focused pane, sidebar, side panel, settings panel, or available app actions.
-Each affordance declares its effects and executor. Use openwork_query only for side-effect-free affordances whose executor is OpenWork. Use openwork_execute for OpenWork commands without activating the desktop window. If executor names another tool, call that exact tool instead.
+  `## RenWork app context
+Use openwork_context when the request depends on the current RenWork screen, open tabs, split view, focused pane, sidebar, side panel, settings panel, or available app actions.
+Each affordance declares its effects and executor. Use openwork_query only for side-effect-free affordances whose executor is RenWork. Use openwork_execute for RenWork commands without activating the desktop window. If executor names another tool, call that exact tool instead.
 Reading another session does not require opening it. Prefer session.search then session.read for transcript questions; use session.create for new chats and a UI command only when the user asks to navigate.
-To open settings or navigate the app, use openwork_execute with ids from openwork_context such as settings.panel.open — never browser_* tools for the OpenWork app itself.`;
+To open settings or navigate the app, use openwork_execute with ids from openwork_context such as settings.panel.open — never browser_* tools for the RenWork app itself.`;
 
 const OPENWORK_BROWSER_INSTRUCTION =
-  `Do NOT use browser_navigate, browser_click, or browser_snapshot to interact with the OpenWork app itself. Those are for browsing external websites.
+  `Do NOT use browser_navigate, browser_click, or browser_snapshot to interact with the RenWork app itself. Those are for browsing external websites.
 
 ## Built-in Browser (external websites)
-For web browsing tasks, ALWAYS start with openwork_execute id browser.open_url. It creates/selects a built-in OpenWork browser tab and returns browser_url plus target_id. Use that exact browser_url and target_id for every later browser_snapshot, browser_click, browser_fill, browser_eval, and browser_screenshot call.
-Do not call browser_navigate without a target_id returned by browser.open_url. Do not use browser_* tools on the OpenWork app target (avoid targets with title "OpenWork" or URLs containing ":5173/#/").`;
+For web browsing tasks, ALWAYS start with openwork_execute id browser.open_url. It creates/selects a built-in RenWork browser tab and returns browser_url plus target_id. Use that exact browser_url and target_id for every later browser_snapshot, browser_click, browser_fill, browser_eval, and browser_screenshot call.
+Do not call browser_navigate without a target_id returned by browser.open_url. Do not use browser_* tools on the RenWork app target (avoid targets with title "RenWork" or URLs containing ":5173/#/").`;
 
 // ── UI control bridge discovery ──
 
@@ -958,7 +958,7 @@ export const OpenWorkExtensionsPreview = async (factoryInput?: unknown) => {
   },
   tool: {
     openwork_context: {
-      description: "Read one semantic snapshot of OpenWork: current screen, retained conversation tabs, split view and focused pane, sidebar and side panel state, settings panel, provider contributions, remote skill guidance, and available affordances with explicit effects and executors.",
+      description: "Read one semantic snapshot of RenWork: current screen, retained conversation tabs, split view and focused pane, sidebar and side panel state, settings panel, provider contributions, remote skill guidance, and available affordances with explicit effects and executors.",
       args: {},
       async execute() {
         return JSON.stringify(
