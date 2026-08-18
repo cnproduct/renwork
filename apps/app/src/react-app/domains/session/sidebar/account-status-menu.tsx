@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
+import { RenWorkBrandMark } from "@/react-app/design-system/renwork-brand-mark";
 import { usePlatform } from "../../../kernel/platform";
 import { isDenSessionRestoring, useDenAuth } from "../../cloud/den-auth-provider";
 import { useControlAction, type OpenworkControlAction } from "../../../shell/control/control-provider";
@@ -362,8 +363,8 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
                   {accountInitials(user.name, user.email)}
                 </span>
               ) : (
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full overflow-hidden bg-primary/10 border border-primary/20 p-0.5">
-                  <img src="/renwork-mark.svg" alt="RenWork" className="size-4 object-contain" />
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full overflow-hidden bg-orange-500/10 border border-orange-500/20 p-0.5">
+                  <RenWorkBrandMark size={16} />
                 </span>
               )}
               <span className="min-w-0 flex-1">

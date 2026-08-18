@@ -4,7 +4,7 @@ import { Dithering } from "@paper-design/shaders-react";
 
 import { t } from "../../../i18n";
 import { useBootState } from "../../shell/boot-state";
-import { resolveExtensionIconSrc } from "@/react-app/design-system/extension-icon-src";
+import { RenWorkBrandMark } from "@/react-app/design-system/renwork-brand-mark";
 import {
   Page,
   PageTitlebarRegion,
@@ -72,14 +72,7 @@ export function WelcomePage({
             <div className="relative z-10 w-full max-w-[760px] rounded-3xl border border-border bg-background/95 backdrop-blur-md px-8 pb-12 pt-10 shadow-2xl sm:px-14 sm:pb-14 sm:pt-12">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={resolveExtensionIconSrc("/openwork-mark.svg")}
-                    alt="RenWork"
-                    width={32}
-                    height={32}
-                    className="shrink-0"
-                    aria-hidden="true"
-                  />
+                  <RenWorkBrandMark size={32} className="shrink-0" />
                   <div className="flex flex-col">
                     <span className="text-[16px] font-bold tracking-tight text-foreground">
                       {appName}

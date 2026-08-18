@@ -6,7 +6,7 @@ import { readDenBootstrapConfig } from "@/app/lib/den";
 import { denSettingsChangedEvent } from "@/app/lib/den-session-events";
 import { enterpriseActivationRequired } from "@/app/lib/enterprise-activation";
 import { readDesktopDistributionInfo } from "@/app/lib/desktop";
-import { resolveExtensionIconSrc } from "@/react-app/design-system/extension-icon-src";
+import { RenWorkBrandMark } from "@/react-app/design-system/renwork-brand-mark";
 
 function subscribeToBootstrap(onStoreChange: () => void) {
   if (typeof window === "undefined") return () => {};
@@ -58,16 +58,9 @@ function EnterpriseActivationPage() {
           data-testid="enterprise-activation-card"
         >
           <div className="flex items-center gap-2.5">
-            <img
-              src={resolveExtensionIconSrc("/openwork-mark.svg")}
-              alt=""
-              width={26}
-              height={26}
-              className="max-h-[26px] shrink-0 object-contain object-left dark:invert"
-              aria-hidden="true"
-            />
+            <RenWorkBrandMark size={26} className="max-h-[26px] shrink-0 object-contain object-left" />
             <span className="text-[15px] font-semibold tracking-tight text-foreground">
-              OpenWork Enterprise
+              RenWork Enterprise
             </span>
           </div>
 

@@ -11,6 +11,7 @@ import { Dithering } from "@paper-design/shaders-react";
 
 import { t } from "../../../i18n";
 import { resolveExtensionIconSrc } from "../../design-system/extension-icon-src";
+import { RenWorkBrandMark } from "../../design-system/renwork-brand-mark";
 import { DEFAULT_DEN_BASE_URL } from "../../../app/lib/den";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "../../design-system/text-input";
@@ -244,14 +245,18 @@ export function DenSignInSurface(props: DenSignInSurfaceProps) {
           <div className="w-full max-w-[760px] rounded-3xl border border-border bg-background/95 backdrop-blur-md px-8 pb-12 pt-10 sm:px-14 sm:pb-14 sm:pt-12 shadow-2xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img
-                  src={props.logoUrl ?? resolveExtensionIconSrc("/openwork-mark.svg")}
-                  alt="RenWork"
-                  width={32}
-                  height={32}
-                  className="max-h-8 shrink-0 object-contain object-left"
-                  aria-hidden="true"
-                />
+                {props.logoUrl ? (
+                  <img
+                    src={props.logoUrl}
+                    alt="RenWork"
+                    width={32}
+                    height={32}
+                    className="max-h-8 shrink-0 object-contain object-left"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <RenWorkBrandMark size={32} className="shrink-0" />
+                )}
                 <div className="flex flex-col">
                   <span className="text-[16px] font-bold tracking-tight text-foreground">
                     {appName}
