@@ -184,17 +184,6 @@ export function NewTaskComposer(props: NewTaskComposerProps) {
 
   const handleDraftChange = (value: string) => {
     props.onDraftChange(value);
-    const idsInDraft = new Set(
-      [...value.matchAll(/\[attachment ([^\]]+)\]/g)].map((match) => match[1]).filter((id): id is string => Boolean(id)),
-    );
-    setAttachments((current) => {
-      const retained = current.filter((attachment) => idsInDraft.has(attachment.id));
-      if (retained.length === current.length) return current;
-      for (const attachment of current) {
-        if (!idsInDraft.has(attachment.id)) revokeAttachmentPreview(attachment);
-      }
-      return retained;
-    });
   };
 
   const handleAttachFiles = (files: File[]) => {
@@ -212,7 +201,6 @@ export function NewTaskComposer(props: NewTaskComposerProps) {
       };
     });
     setAttachments((current) => [...current, ...next]);
-    props.onDraftChange(`${props.draft}${next.map((attachment) => `[attachment ${attachment.id}]`).join("")}`);
   };
 
   const handleRemoveAttachment = (id: string) => {
@@ -221,7 +209,6 @@ export function NewTaskComposer(props: NewTaskComposerProps) {
       if (target) revokeAttachmentPreview(target);
       return current.filter((item) => item.id !== id);
     });
-    props.onDraftChange(props.draft.replaceAll(`[attachment ${id}]`, ""));
   };
 
   const handleRunTask = () => {

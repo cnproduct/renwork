@@ -21,7 +21,8 @@ import { usePlatform } from "@/react-app/kernel/platform";
 import { resolveExtensionIconUrl } from "@/react-app/design-system/extension-icon-src";
 import { ModelBehaviorSelect } from "@/components/model-behavior-select";
 import { ModelSelect } from "@/components/model-select";
-import { LexicalPromptEditor, syncAttachmentChipStatus, type LexicalPromptEditorHandle } from "./editor";
+import { LexicalPromptEditor, type LexicalPromptEditorHandle } from "./editor";
+import { ComposerAttachmentBar } from "./composer-attachment-bar";
 import { listRunningAppsForMention } from "./app-mentions";
 import type { ComposerMentionKind } from "./mention-encoding";
 import {
@@ -1039,14 +1040,6 @@ export function ReactSessionComposer(props: ComposerProps) {
     }
   };
 
-  // Attachment chips are raw Lexical token DOM, so their uploading overlay is
-  // synced by attribute whenever the uploading flag or the chip set changes.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    syncAttachmentChipStatus(root, props.attachmentsUploading ? "uploading" : "ready");
-  }, [props.attachmentsUploading, props.attachments]);
-
   const addAttachments = async (inputFiles: File[]) => {
     if (!inputFiles.length) return;
     if (!props.attachmentsEnabled) {
@@ -1218,6 +1211,13 @@ export function ReactSessionComposer(props: ComposerProps) {
             </div>
           ) : null}
 
+          {/* Dedicated Upper Row: Attachment chips / thumbnails */}
+          <ComposerAttachmentBar
+            attachments={props.attachments}
+            uploading={props.attachmentsUploading}
+            onRemove={props.onRemoveAttachment}
+          />
+
           <div className="px-4 pt-3 pb-2">
             {/* Editor */}
             <LexicalPromptEditor
@@ -1225,12 +1225,6 @@ export function ReactSessionComposer(props: ComposerProps) {
               value={props.draft}
               mentions={props.mentions}
               pastedText={pastedTextTokens}
-              attachments={props.attachments.map((attachment) => ({
-                id: attachment.id,
-                name: attachment.name,
-                kind: isImageAttachment(attachment) ? "image" : "file",
-                previewUrl: attachment.previewUrl,
-              }))}
               disabled={props.disabled}
               placeholder={t("composer.placeholder")}
               onChange={props.onDraftChange}
