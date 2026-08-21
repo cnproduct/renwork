@@ -266,3 +266,57 @@ export function seedOpencodeSessionMessages(input: {
     db.close();
   }
 }
+
+export function moveOpencodeSession(input: {
+  sessionId: string;
+  targetDirectory: string;
+  dbPath?: string;
+}): { moved: boolean; sessionId: string; targetDirectory: string } {
+  const sessionId = input.sessionId.trim();
+  const targetDirectory = input.targetDirectory.trim();
+  if (!sessionId) {
+    throw new Error("sessionId is required");
+  }
+  if (!targetDirectory) {
+    throw new Error("targetDirectory is required");
+  }
+
+  const explicitDbPath = input.dbPath?.trim() || undefined;
+  const dbPath = findOpencodeSessionDbPath(sessionId, explicitDbPath) || explicitDbPath || resolveOpencodeDbPath();
+  if (!existsSync(dbPath)) {
+    throw new Error(`OpenCode database not found at ${dbPath}`);
+  }
+
+  const db = openDatabase(dbPath);
+  try {
+    const run = db.transaction(() => {
+      const session = db.prepare("select id, project_id, directory from session where id = ?").get(sessionId) as {
+        id: string;
+        project_id: string;
+        directory: string;
+      } | undefined;
+      if (!session) {
+        throw new Error(`OpenCode session not found: ${sessionId}`);
+      }
+
+      // Check if target project exists in project table for targetDirectory
+      const targetProject = db.prepare("select id from project where worktree = ?").get(targetDirectory) as { id: string } | undefined;
+      const targetProjectId = targetProject?.id ?? session.project_id ?? "global";
+
+      // Update session and its children/subagent sessions
+      db.prepare("update session set directory = ?, project_id = ? where id = ? or parent_id = ?").run(
+        targetDirectory,
+        targetProjectId,
+        sessionId,
+        sessionId,
+      );
+
+      return { moved: true, sessionId, targetDirectory };
+    });
+
+    return run();
+  } finally {
+    db.close();
+  }
+}
+

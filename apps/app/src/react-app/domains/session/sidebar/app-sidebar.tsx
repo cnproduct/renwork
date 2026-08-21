@@ -7,6 +7,7 @@ import {
   ArchiveRestore,
   ArrowLeft,
   ArrowRight,
+  ArrowRightLeft,
   Clock3,
   ChevronRight,
   Columns2,
@@ -245,6 +246,8 @@ function SessionMenuContent({ variant, sessionId, workspaceId, isPinned, isArchi
   const { groups, assignments } = useWorkspaceGroups(workspaceId);
   const store = useSessionManagementStore;
   const assignedGroupId = assignments[sessionId] ?? null;
+  const allWorkspaces = ctx.workspaces ?? [];
+  const otherWorkspaces = allWorkspaces.filter((w) => w.id !== workspaceId);
 
   // Sidebar rows are the vertical tabs: any non-active session in the current
   // workspace can be opened side-by-side with the active one.
@@ -329,6 +332,26 @@ function SessionMenuContent({ variant, sessionId, workspaceId, isPinned, isArchi
             )}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        {otherWorkspaces.length > 0 && ctx.onMoveSession ? (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <ArrowRightLeft className="size-4" />
+              {t("session_management.move_to_workspace")}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              {otherWorkspaces.map((targetWs) => (
+                <DropdownMenuItem
+                  key={targetWs.id}
+                  onClick={() => ctx.onMoveSession?.(sessionId, workspaceId, targetWs.id, null)}
+                >
+                  <span className="min-w-0 flex-1 ow-fade-truncate">
+                    {workspaceLabel(targetWs)}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        ) : null}
         {ctx.onArchiveSession ? (
           <DropdownMenuItem onClick={() => ctx.onArchiveSession?.(sessionId, !isArchived)}>
             {isArchived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
@@ -414,6 +437,26 @@ function SessionMenuContent({ variant, sessionId, workspaceId, isPinned, isArchi
           )}
         </ContextMenuSubContent>
       </ContextMenuSub>
+      {otherWorkspaces.length > 0 && ctx.onMoveSession ? (
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <ArrowRightLeft className="mr-2 size-4" />
+            {t("session_management.move_to_workspace")}
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-56">
+            {otherWorkspaces.map((targetWs) => (
+              <ContextMenuItem
+                key={targetWs.id}
+                onClick={() => ctx.onMoveSession?.(sessionId, workspaceId, targetWs.id, null)}
+              >
+                <span className="min-w-0 flex-1 ow-fade-truncate">
+                  {workspaceLabel(targetWs)}
+                </span>
+              </ContextMenuItem>
+            ))}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+      ) : null}
       {ctx.onArchiveSession ? (
         <ContextMenuItem onClick={() => ctx.onArchiveSession?.(sessionId, !isArchived)}>
           {isArchived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
@@ -835,6 +878,7 @@ export type AppSidebarProps = {
   onOpenSession: (workspaceId: string, sessionId: string) => void;
   onPrefetchSession?: (workspaceId: string, sessionId: string) => void;
   onCreateTaskInWorkspace: (workspaceId: string, groupId?: string) => void;
+  onMoveSession?: (sessionId: string, sourceWorkspaceId: string, targetWorkspaceId: string, targetGroupId?: string | null) => Promise<void> | void;
   onOpenRenameSession?: (sessionId: string) => void;
   onOpenDeleteSession?: (sessionId: string) => void;
   onArchiveSession?: (sessionId: string, archived: boolean) => void;
@@ -1007,6 +1051,7 @@ export function AppSidebar(props: AppSidebarProps) {
   const contextValue: SidebarContextValue = {
     selectedWorkspaceId: props.selectedWorkspaceId,
     selectedSessionId: props.selectedSessionId,
+    workspaces: props.workspaceSessionGroups.map((group) => group.workspace),
     developerMode: props.developerMode,
     showSessionActions: props.showSessionActions,
     sessionStatusById: props.sessionStatusById,
@@ -1017,6 +1062,7 @@ export function AppSidebar(props: AppSidebarProps) {
     onOpenSession: props.onOpenSession,
     onPrefetchSession: props.onPrefetchSession,
     onCreateTaskInWorkspace: props.onCreateTaskInWorkspace,
+    onMoveSession: props.onMoveSession,
     onOpenRenameSession: props.onOpenRenameSession,
     onOpenDeleteSession: props.onOpenDeleteSession,
     onArchiveSession: props.onArchiveSession,
@@ -1581,6 +1627,7 @@ function WorkspaceSidebarGroup({
     [activeSessions, pinnedIds],
   );
   const remainingRootSessions = Math.max(0, activeRootCount - previewCount);
+  const [dragOverWorkspace, setDragOverWorkspace] = React.useState(false);
   const showMoreLabel = remainingRootSessions > 0
     ? t("workspace_list.show_more", {
       count: Math.min(MAX_SESSIONS_PREVIEW, remainingRootSessions),
@@ -1597,7 +1644,31 @@ function WorkspaceSidebarGroup({
             onOpenChange={() => ctx.toggleWorkspaceExpanded(workspace.id)}
             className="group/collapsible"
           >
-            <div className="group/workspace-header relative max-md:hidden">
+            <div
+              className={cn(
+                "group/workspace-header relative max-md:hidden rounded-md transition-colors",
+                dragOverWorkspace && "bg-accent/40 ring-1 ring-accent/60",
+              )}
+              onDragOver={(e) => {
+                if (e.dataTransfer.types.includes(SESSION_DRAG_TYPE)) {
+                  e.preventDefault();
+                  setDragOverWorkspace(true);
+                }
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                  setDragOverWorkspace(false);
+                }
+              }}
+              onDrop={(e) => {
+                setDragOverWorkspace(false);
+                const sessionId = e.dataTransfer.getData(SESSION_DRAG_TYPE);
+                const sourceWorkspaceId = e.dataTransfer.getData(SESSION_DRAG_WORKSPACE_TYPE) || workspace.id;
+                if (sessionId && sourceWorkspaceId !== workspace.id) {
+                  ctx.onMoveSession?.(sessionId, sourceWorkspaceId, workspace.id, null);
+                }
+              }}
+            >
               <WorkspaceHeader
                 workspace={workspace}
                 statusLabel={statusLabel}
@@ -1748,6 +1819,7 @@ function WorkspaceSidebarGroup({
 }
 
 const SESSION_DRAG_TYPE = "application/x-openwork-session-id";
+const SESSION_DRAG_WORKSPACE_TYPE = "application/x-openwork-session-workspace-id";
 const EMPTY_PINNED_IDS = new Set<string>();
 const UNGROUPED_GROUP_ID = "__openwork_ungrouped";
 
@@ -1968,6 +2040,7 @@ function GroupDropZone({ groupId, workspaceId, children }: {
 }) {
   const [dragOver, setDragOver] = React.useState(false);
   const store = useSessionManagementStore;
+  const ctx = useSidebarContext();
 
   return (
     <div
@@ -1990,8 +2063,13 @@ function GroupDropZone({ groupId, workspaceId, children }: {
       onDrop={(e) => {
         setDragOver(false);
         const sessionId = e.dataTransfer.getData(SESSION_DRAG_TYPE);
+        const sourceWorkspaceId = e.dataTransfer.getData(SESSION_DRAG_WORKSPACE_TYPE) || workspaceId;
         if (sessionId) {
-          store.getState().assignGroup(workspaceId, sessionId, groupId);
+          if (sourceWorkspaceId && sourceWorkspaceId !== workspaceId) {
+            ctx.onMoveSession?.(sessionId, sourceWorkspaceId, workspaceId, groupId);
+          } else {
+            store.getState().assignGroup(workspaceId, sessionId, groupId);
+          }
         }
       }}
     >
@@ -2337,6 +2415,7 @@ function SessionMenuItem({
     draggable: true,
     onDragStart: (e: React.DragEvent) => {
       e.dataTransfer.setData(SESSION_DRAG_TYPE, session.id);
+      e.dataTransfer.setData(SESSION_DRAG_WORKSPACE_TYPE, workspaceId);
       e.dataTransfer.effectAllowed = "move";
     },
   } : {};

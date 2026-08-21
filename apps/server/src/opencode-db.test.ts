@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { Database } from "bun:sqlite";
 
-import { resolveOpencodeDbPath, seedOpencodeSessionMessages } from "./opencode-db.js";
+import { moveOpencodeSession, resolveOpencodeDbPath, seedOpencodeSessionMessages } from "./opencode-db.js";
 
 async function createDb(): Promise<{ path: string; dispose: () => void }> {
   const dir = await mkdtemp(join(tmpdir(), "openwork-opencode-db-"));
@@ -13,8 +13,16 @@ async function createDb(): Promise<{ path: string; dispose: () => void }> {
   const dbPath = join(dir, "opencode-test.db");
   const db = new Database(dbPath);
   db.exec(`
+    create table project (
+      id text primary key,
+      worktree text not null,
+      name text
+    );
     create table session (
       id text primary key,
+      project_id text,
+      parent_id text,
+      directory text,
       time_updated integer
     );
     create table message (
@@ -32,7 +40,9 @@ async function createDb(): Promise<{ path: string; dispose: () => void }> {
       time_updated integer,
       data text not null
     );
-    insert into session (id, time_updated) values ('ses_test123', 1);
+    insert into project (id, worktree, name) values ('proj_target', '/target/workspace', 'Target');
+    insert into session (id, project_id, directory, time_updated) values ('ses_test123', 'proj_source', '/source/workspace', 1);
+    insert into session (id, project_id, parent_id, directory, time_updated) values ('ses_child123', 'proj_source', 'ses_test123', '/source/workspace', 1);
   `);
   db.close();
   return {
@@ -106,6 +116,52 @@ describe("seedOpencodeSessionMessages", () => {
 
     expect(first.skipped).toBe(false);
     expect(second).toEqual({ inserted: 0, skipped: true });
+  });
+});
+
+describe("moveOpencodeSession", () => {
+  test("updates session directory and project_id for parent and child sessions", async () => {
+    const fixture = await createDb();
+    const result = moveOpencodeSession({
+      dbPath: fixture.path,
+      sessionId: "ses_test123",
+      targetDirectory: "/target/workspace",
+    });
+
+    expect(result).toEqual({
+      moved: true,
+      sessionId: "ses_test123",
+      targetDirectory: "/target/workspace",
+    });
+
+    const db = new Database(fixture.path, { readonly: true });
+    const parent = db.query("select id, project_id, directory from session where id = 'ses_test123'").get() as {
+      id: string;
+      project_id: string;
+      directory: string;
+    };
+    const child = db.query("select id, project_id, directory from session where id = 'ses_child123'").get() as {
+      id: string;
+      project_id: string;
+      directory: string;
+    };
+    db.close();
+
+    expect(parent.directory).toBe("/target/workspace");
+    expect(parent.project_id).toBe("proj_target");
+    expect(child.directory).toBe("/target/workspace");
+    expect(child.project_id).toBe("proj_target");
+  });
+
+  test("throws error when session does not exist", async () => {
+    const fixture = await createDb();
+    expect(() => {
+      moveOpencodeSession({
+        dbPath: fixture.path,
+        sessionId: "ses_nonexistent",
+        targetDirectory: "/target/workspace",
+      });
+    }).toThrow("OpenCode session not found: ses_nonexistent");
   });
 });
 

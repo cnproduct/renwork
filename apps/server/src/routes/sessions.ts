@@ -10,6 +10,7 @@ import {
   type SessionGroupDefinition,
   type SessionGroupState,
 } from "../session-groups.js";
+import { moveOpencodeSession } from "../opencode-db.js";
 import type { ServerConfig, TokenScope, WorkspaceInfo } from "../types.js";
 import { addRoute, type RequestContext, type Route } from "./registry.js";
 
@@ -435,6 +436,74 @@ export function registerSessionRoutes(options: RegisterSessionRoutesOptions): vo
       limit: parseOptionalPositiveInteger(ctx.url.searchParams.get("limit"), "limit"),
     });
     return jsonResponse({ item });
+  });
+
+  addRoute(routes, "POST", "/workspace/:id/sessions/:sessionId/move", "client", async (ctx) => {
+    ensureWritable(config);
+    requireClientScope(ctx, "collaborator");
+
+    const targetWorkspace = await resolveWorkspace(config, ctx.params.id);
+    const sessionId = (ctx.params.sessionId ?? "").trim();
+    if (!sessionId) {
+      throw new ApiError(400, "invalid_payload", "sessionId is required");
+    }
+
+    const body = (await readJsonBody(ctx.request).catch(() => ({}))) as Record<string, unknown>;
+    const sourceWorkspaceId = typeof body.sourceWorkspaceId === "string" ? body.sourceWorkspaceId.trim() : undefined;
+    const targetGroupId = typeof body.targetGroupId === "string" && body.targetGroupId.trim() ? body.targetGroupId.trim() : null;
+
+    // 1. Move session in OpenCode SQLite database
+    const targetDirectory = targetWorkspace.path;
+    try {
+      moveOpencodeSession({
+        sessionId,
+        targetDirectory,
+      });
+    } catch (error) {
+      throw new ApiError(500, "session_move_failed", error instanceof Error ? error.message : "Failed to move session in database");
+    }
+
+    // 2. Remove from source workspace group assignment
+    if (sourceWorkspaceId && sourceWorkspaceId !== targetWorkspace.id) {
+      try {
+        await updateWorkspaceSessionGroups(sourceWorkspaceId, (current) => {
+          const assignments = { ...current.assignments };
+          delete assignments[sessionId];
+          return { ...current, assignments };
+        });
+        sessionGroupEvents.record(sourceWorkspaceId, "assigned", { sessionId });
+      } catch {
+        // non-fatal
+      }
+    }
+
+    // 3. Assign to target workspace group if specified
+    if (targetGroupId) {
+      try {
+        await updateWorkspaceSessionGroups(targetWorkspace.id, (current) => {
+          const assignments = { ...current.assignments };
+          if (current.groups.some((group) => group.id === targetGroupId)) {
+            assignments[sessionId] = targetGroupId;
+          }
+          return { ...current, assignments };
+        });
+        sessionGroupEvents.record(targetWorkspace.id, "assigned", { sessionId, groupId: targetGroupId });
+      } catch {
+        // non-fatal
+      }
+    }
+
+    // 4. Read updated session info from target workspace
+    let session = undefined;
+    try {
+      session = await readWorkspaceSession(targetWorkspace, sessionId);
+    } catch {
+      // ignore
+    }
+
+    sessionGroupEvents.record(targetWorkspace.id, "assigned", { sessionId });
+
+    return jsonResponse({ ok: true, session });
   });
 
   addRoute(routes, "DELETE", "/workspace/:id/sessions/:sessionId", "client", async (ctx) => {

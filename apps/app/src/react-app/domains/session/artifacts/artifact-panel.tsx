@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, ExternalLink, FolderOpen, X } from "lucide-react";
+import { Copy, Download, ExternalLink, FolderOpen, X } from "lucide-react";
 
 import type { OpenworkServerClient } from "@/app/lib/openwork-server";
 import { getDesktopFileIcon, openDesktopPath, revealDesktopItemInDir } from "@/app/lib/desktop";
@@ -245,6 +245,15 @@ function ArtifactPanelView({ client, workspaceId, workspaceRoot, isRemoteWorkspa
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  const copyPath = async () => {
+    try {
+      await navigator.clipboard.writeText(externalPath);
+      toast.success("Path copied");
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Could not copy this path.");
+    }
+  };
+
   const openExternal = async () => {
     if (target.kind === "url") {
       window.open(target.value, "_blank", "noopener,noreferrer");
@@ -309,17 +318,24 @@ function ArtifactPanelView({ client, workspaceId, workspaceRoot, isRemoteWorkspa
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <div className="shrink-0 border-b border-border bg-background mac:bg-background/80 mac:backdrop-blur-2xl mac:backdrop-saturate-150">
-        <div className="flex h-10 items-center gap-2 pe-2 ps-4">
-          <div className="min-w-0 flex-1 flex items-center gap-1.5">
-            {fileIcon ? (
-              <img src={fileIcon} alt="" className="h-4 w-4 shrink-0 object-contain" />
+        <div className="flex min-h-10 items-center gap-2 py-1 pe-2 ps-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-1.5">
+              {fileIcon ? (
+                <img src={fileIcon} alt="" className="h-4 w-4 shrink-0 object-contain" />
+              ) : null}
+              <h3 className="min-w-0 truncate text-sm font-medium text-foreground">
+                {target.name}
+              </h3>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {target.exists === false ? "missing" : isTextEditing ? (isSaving || isDirty ? "Saving\u2026" : "Saved") : ""}
+              </span>
+            </div>
+            {target.kind === "file" ? (
+              <div className="truncate text-[10px] leading-3 text-muted-foreground" title={externalPath}>
+                {externalPath}
+              </div>
             ) : null}
-            <h3 className="min-w-0 truncate text-sm font-medium text-foreground">
-              {target.name}
-            </h3>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {target.exists === false ? "missing" : isTextEditing ? (isSaving || isDirty ? "Saving\u2026" : "Saved") : ""}
-            </span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
           {isTextContent(target) && data?.kind === "text" && !isDirectTextEdit ? (
@@ -330,6 +346,18 @@ function ArtifactPanelView({ client, workspaceId, workspaceRoot, isRemoteWorkspa
                 )}
               />
               <TooltipContent>{editing ? "Stop editing" : "Edit artifact"}</TooltipContent>
+            </Tooltip>
+          ) : null}
+          {target.kind === "file" ? (
+            <Tooltip>
+              <TooltipTrigger
+                render={(
+                  <Button variant="ghost" size="icon-sm" onClick={() => void copyPath()} aria-label="Copy path">
+                    <Copy />
+                  </Button>
+                )}
+              />
+              <TooltipContent>Copy path</TooltipContent>
             </Tooltip>
           ) : null}
           {target.kind === "file" ? (
@@ -348,12 +376,12 @@ function ArtifactPanelView({ client, workspaceId, workspaceRoot, isRemoteWorkspa
             <Tooltip>
               <TooltipTrigger
                 render={(
-                  <Button variant="ghost" size="icon-sm" onClick={() => void revealExternal()} aria-label="Show in folder">
+                  <Button variant="ghost" size="icon-sm" onClick={() => void revealExternal()} aria-label="Reveal in Finder">
                     <FolderOpen />
                   </Button>
                 )}
               />
-              <TooltipContent>Show in folder</TooltipContent>
+              <TooltipContent>Reveal in Finder</TooltipContent>
             </Tooltip>
           ) : null}
           {target.kind === "url" || isRemoteWorkspace || canUseDesktopFileActions ? (

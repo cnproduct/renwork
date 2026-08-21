@@ -1,11 +1,12 @@
 /** @jsxImportSource react */
 import * as React from "react";
-import type { WorkspaceConnectionState } from "../../../../app/types";
+import type { WorkspaceConnectionState, WorkspaceInfo } from "../../../../app/types";
 import type { SessionNumberShortcutOs } from "../../../shell/session-number-shortcuts";
 
 export type SidebarContextValue = {
   selectedWorkspaceId: string;
   selectedSessionId: string | null;
+  workspaces?: WorkspaceInfo[];
   developerMode: boolean;
   showSessionActions?: boolean;
   sessionStatusById?: Record<string, string>;
@@ -16,6 +17,7 @@ export type SidebarContextValue = {
   onOpenSession: (workspaceId: string, sessionId: string) => void;
   onPrefetchSession?: (workspaceId: string, sessionId: string) => void;
   onCreateTaskInWorkspace: (workspaceId: string, groupId?: string) => void;
+  onMoveSession?: (sessionId: string, sourceWorkspaceId: string, targetWorkspaceId: string, targetGroupId?: string | null) => Promise<void> | void;
   onOpenRenameSession?: (sessionId: string) => void;
   onOpenDeleteSession?: (sessionId: string) => void;
   onArchiveSession?: (sessionId: string, archived: boolean) => void;

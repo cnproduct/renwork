@@ -1579,6 +1579,23 @@ export function createOpenworkServerClient(options: { baseUrl: string; token?: s
         `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`,
         { token, hostToken, method: "DELETE", timeoutMs: timeouts.deleteSession },
       ),
+    moveSession: (
+      sourceWorkspaceId: string,
+      sessionId: string,
+      targetWorkspaceId: string,
+      targetGroupId?: string | null,
+    ) =>
+      requestJson<{ ok: boolean; session?: Session }>(
+        baseUrl,
+        `/workspace/${encodeURIComponent(targetWorkspaceId)}/sessions/${encodeURIComponent(sessionId)}/move`,
+        {
+          token,
+          hostToken,
+          method: "POST",
+          body: { sourceWorkspaceId, targetGroupId },
+          timeoutMs: timeouts.sessionRead,
+        },
+      ),
     listSessions: (
       workspaceId: string,
       options?: { roots?: boolean; start?: number; search?: string; limit?: number },

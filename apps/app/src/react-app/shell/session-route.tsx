@@ -2859,6 +2859,33 @@ export function SessionRoute() {
             }
           : undefined
       }
+      onMoveSession={
+        client
+          ? async (sessionId, sourceWorkspaceId, targetWorkspaceId, targetGroupId) => {
+              const endpoint = endpointForWorkspace(workspaces.find((w) => w.id === sourceWorkspaceId) ?? selectedWorkspace);
+              if (!endpoint) return;
+              try {
+                const targetWorkspace = workspaces.find((w) => w.id === targetWorkspaceId);
+                const res = await endpoint.client.moveSession(sourceWorkspaceId, sessionId, targetWorkspaceId, targetGroupId);
+                if (res.ok) {
+                  toast.success(
+                    targetWorkspace
+                      ? t("session_management.session_moved_to", { workspace: targetWorkspace.name || targetWorkspace.id })
+                      : t("session_management.session_moved"),
+                  );
+                  if (selectedSessionId === sessionId) {
+                    navigateToWorkspaceSession(targetWorkspaceId, sessionId);
+                  }
+                  await refreshRouteState();
+                }
+              } catch (error) {
+                toast.error(t("session_management.session_move_failed"), {
+                  description: error instanceof Error ? error.message : String(error),
+                });
+              }
+            }
+          : undefined
+      }
       onArchiveSession={opencodeClient ? handleArchiveSession : undefined}
       statusBar={{
         loading: showPreparingStatus,
