@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>人人易 AI 官网 · 中国—东盟 AI 外贸增长服务平台 (rrenn.com)</title>
+  <meta name="description" content="人人易 AI (rrenn.com) 官方网站。人人易智能科技有限公司为您提供从 1.98 万低成本单国验证到 5.98 万全国销冠主推爆款套餐，部署 5 大语种独立站矩阵与 5 人 AI 数字员工。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #1f2937;
+      --brand-primary: #ea580c;
+      --brand-primary-hover: #f97316;
+      --brand-cyan: #38bdf8;
+      --brand-teal: #0d9488;
+      --brand-gold: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-default: rgba(148, 163, 184, 0.15);
+      --border-orange: rgba(234, 88, 12, 0.4);
+      --border-cyan: rgba(56, 189, 248, 0.4);
+      --border-gold: rgba(245, 158, 11, 0.5);
+      --font-heading: 'Plus Jakarta Sans', -apple-system, 'PingFang SC', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-dark); color: var(--text-main);
+      font-family: var(--font-heading); line-height: 1.6;
+      -webkit-font-smoothing: antialiased; overflow-x: hidden;
+    }
+
+    /* Ambient Glow Effects */
+    .glow-1 {
+      position: absolute; top: -100px; left: 15%; width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(234, 88, 12, 0.15) 0%, rgba(9, 13, 22, 0) 70%);
+      pointer-events: none; z-index: 0;
+    }
+    .glow-2 {
+      position: absolute; top: 700px; right: -100px; width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, rgba(9, 13, 22, 0) 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .container { max-width: 1360px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* Header Nav */
+    header.site-header {
+      position: sticky; top: 16px; z-index: 100;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 28px; background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(20px); border: 1px solid var(--border-default);
+      border-radius: 999px; margin-top: 16px; margin-bottom: 40px;
+      box-shadow: 0 16px 32px -10px rgba(0, 0, 0, 0.6);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 12px; }
+    .nav-logo img { height: 42px; object-fit: contain; }
+    .nav-menu { display: flex; gap: 24px; list-style: none; }
+    .nav-menu a {
+      color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 600;
+      transition: color 0.2s;
+    }
+    .nav-menu a:hover, .nav-menu a.active { color: var(--text-main); }
+    .nav-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px; background: linear-gradient(135deg, var(--brand-primary) 0%, #c2410c 100%);
+      color: #fff; text-decoration: none; font-size: 14px; font-weight: 700;
+      border-radius: 999px; box-shadow: 0 4px 20px rgba(234, 88, 12, 0.35);
+      transition: all 0.3s ease; border: none; cursor: pointer;
+    }
+    .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(234, 88, 12, 0.5); }
+
+    /* Hero Section */
+    .hero { text-align: center; padding: 60px 0 80px; }
+    .domain-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 18px; background: rgba(56, 189, 248, 0.1);
+      border: 1px solid var(--border-cyan); border-radius: 999px;
+      color: var(--brand-cyan); font-size: 13px; font-weight: 700; margin-bottom: 24px;
+    }
+    .hero-h1 {
+      font-size: 54px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em;
+      margin-bottom: 20px; background: linear-gradient(180deg, #FFFFFF 0%, #94A3B8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero-p { font-size: 20px; color: var(--text-muted); max-width: 860px; margin: 0 auto 36px; }
+    .hero-btn-group { display: flex; justify-content: center; gap: 16px; margin-bottom: 60px; }
+    .btn-lg { padding: 14px 32px; font-size: 16px; font-weight: 700; border-radius: 999px; text-decoration: none; }
+    .btn-primary { background: linear-gradient(135deg, var(--brand-primary) 0%, #c2410c 100%); color: #fff; box-shadow: 0 6px 25px rgba(234, 88, 12, 0.4); }
+    .btn-outline { background: var(--bg-surface-elevated); color: var(--text-main); border: 1px solid var(--border-default); }
+    .btn-outline:hover { border-color: var(--brand-cyan); }
+
+    /* Live Inquiry Pulse Card */
+    .pulse-card {
+      background: var(--bg-surface); border: 1px solid var(--border-cyan);
+      border-radius: var(--radius-lg); padding: 24px; max-width: 960px; margin: 0 auto 80px;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    }
+    .pulse-dot { width: 12px; height: 12px; background: var(--brand-teal); border-radius: 50%; box-shadow: 0 0 12px var(--brand-teal); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+    .pulse-text { text-align: left; flex-grow: 1; }
+    .pulse-title { font-size: 14px; font-weight: 700; color: var(--brand-cyan); }
+    .pulse-detail { font-size: 13px; color: var(--text-muted); }
+
+    /* Pain Points Section */
+    .section-title { text-align: center; margin-bottom: 48px; }
+    .section-title h2 { font-size: 34px; font-weight: 800; margin-bottom: 10px; }
+    .section-title p { font-size: 15px; color: var(--text-muted); }
+
+    .pain-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 80px; }
+    .pain-card {
+      background: var(--bg-surface); border: 1px solid var(--border-default);
+      border-radius: var(--radius-md); padding: 28px; transition: transform 0.3s;
+    }
+    .pain-card:hover { transform: translateY(-4px); border-color: var(--border-orange); }
+    .pain-icon { font-size: 32px; margin-bottom: 12px; }
+    .pain-card h4 { font-size: 18px; font-weight: 800; color: var(--brand-primary-hover); margin-bottom: 8px; }
+    .pain-card p { font-size: 14px; color: var(--text-muted); }
+
+    /* Pricing Section */
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 80px; }
+    .pricing-card {
+      background: var(--bg-surface); border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg); padding: 32px 24px; position: relative;
+      display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s;
+    }
+    .pricing-card:hover { transform: translateY(-6px); border-color: var(--border-cyan); }
+    
+    /* ⭐ 销冠主推爆款卡片 */
+    .pricing-card.featured {
+      background: linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, rgba(17, 24, 39, 0.95) 100%);
+      border: 2px solid var(--brand-gold); box-shadow: 0 0 40px rgba(245, 158, 11, 0.25);
+      transform: scale(1.04); z-index: 2;
+    }
+    .pricing-card.featured:hover { transform: scale(1.06) translateY(-4px); }
+
+    .badge-featured {
+      position: absolute; top: -14px; right: 20px;
+      padding: 4px 14px; background: var(--brand-gold); color: #000;
+      font-size: 12px; font-weight: 800; border-radius: 999px;
+    }
+    .tier-name { font-size: 13px; color: var(--brand-cyan); font-weight: 700; margin-bottom: 6px; }
+    .plan-title { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+    .plan-price { font-size: 36px; font-weight: 800; color: var(--text-main); margin-bottom: 14px; }
+    .plan-price span { font-size: 14px; font-weight: 400; color: var(--text-muted); }
+    .plan-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; min-height: 40px; }
+    .plan-features { list-style: none; margin-bottom: 28px; flex-grow: 1; }
+    .plan-features li { font-size: 13px; color: var(--text-main); margin-bottom: 8px; display: flex; gap: 8px; }
+    .plan-features li::before { content: "✓"; color: var(--brand-teal); font-weight: 800; }
+
+    /* Digital Team Section */
+    .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; margin-bottom: 80px; }
+    .team-card {
+      background: var(--bg-surface); border: 1px solid var(--border-default);
+      border-radius: var(--radius-md); padding: 24px; text-align: center;
+    }
+    .team-avatar {
+      width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 14px;
+      background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-cyan) 100%);
+      display: flex; align-items: center; justify-content: center; font-size: 26px;
+    }
+    .team-role { font-size: 17px; font-weight: 800; margin-bottom: 4px; }
+    .team-desc { font-size: 13px; color: var(--text-muted); }
+
+    /* Footer */
+    footer.site-footer {
+      text-align: center; padding: 60px 0; border-top: 1px solid var(--border-default);
+      color: var(--text-muted); font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+
+  <div class="container">
+    <!-- Navigation Bar -->
+    <header class="site-header">
+      <div class="nav-logo">
+        <img src="rrenn logo.png" alt="人人易 AI rrenn.com">
+      </div>
+      <ul class="nav-menu">
+        <li><a href="#hero" class="active">首页</a></li>
+        <li><a href="#pain">痛点对比</a></li>
+        <li><a href="#pricing">套餐方案</a></li>
+        <li><a href="#team">5人AI数字员工</a></li>
+        <li><a href="#guarantee">交付标准</a></li>
+      </ul>
+      <button class="nav-cta" onclick="alert('欢迎访问 rrenn.com！客服热线为您预约专属 AI 增长顾问')">
+        ⚡ 预约外贸 AI 诊断
+      </button>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+      <div class="domain-badge">🌐 官方网站：rrenn.com | 中国—东盟 AI 外贸增长基础设施</div>
+      <h1 class="hero-h1">别再砸钱跑展会投广告！<br>用 AI 打造 365 天自动抓买家的订单收割机</h1>
+      <p class="hero-p">
+        人人易 AI (rrenn.com) —— 融合全球海关交易证据链 + 5 大语种独立站矩阵 + 5 人 AI 数字员工自动追单。低至 1.98 万单国验证，到 5.98 万全国销冠主推爆款！
+      </p>
+
+      <div class="hero-btn-group">
+        <a href="#pricing" class="btn-lg btn-primary">🚀 抢订 5.98 万销冠爆款</a>
+        <a href="rrenn_ai_web_design_system.html" class="btn-lg btn-outline" target="_blank">📐 查看网页 VI 设计规范</a>
+      </div>
+
+      <!-- Live Pulse Widget -->
+      <div class="pulse-card">
+        <div class="pulse-dot"></div>
+        <div class="pulse-text">
+          <div class="pulse-title">⚡ 实时海关数据证据链抓取中 (Live Intelligence Stream)</div>
+          <div class="pulse-detail">最近 10 分钟：成功匹配 42 家中东&东南亚真实机械进口买家，AI 自动发送多轮个性化开发信</div>
+        </div>
+        <span style="font-family:var(--font-mono); font-size:12px; color:var(--brand-teal);">STATUS: ONLINE</span>
+      </div>
+    </section>
+
+    <!-- Pain Points Section -->
+    <section id="pain">
+      <div class="section-title">
+        <h2>外贸企业四大获客阵痛与人人易 AI 解决方案</h2>
+        <p>告别传统低效老路，用科技实现商业降维打击</p>
+      </div>
+
+      <div class="pain-grid">
+        <div class="pain-card">
+          <div class="pain-icon">💔</div>
+          <h4>痛点一：展会与广告费高昂</h4>
+          <p>砸十几万跑线下展会或搜索竞价，来的大多是凑热闹询问，单客获取成本高得吓人。</p>
+        </div>
+
+        <div class="pain-card">
+          <div class="pain-icon">💀</div>
+          <h4>痛点二：展示型官网如同死站</h4>
+          <p>做了一个老古董企业展示站，几年没一个询盘。因为买家现在都在用 ChatGPT 和 Google AI 找供应商！</p>
+        </div>
+
+        <div class="pain-card">
+          <div class="pain-icon">🌐</div>
+          <h4>痛点三：小语种市场吃不到</h4>
+          <p>只有单一英文站，惨烈内卷。面对中东、南美、欧洲等小语种买家，沟通吃力、转化低下。</p>
+        </div>
+
+        <div class="pain-card">
+          <div class="pain-icon">👥</div>
+          <h4>痛点四：外贸业务难招难留</h4>
+          <p>一个外贸经理一年 15 万，离职还带走客户资源，招聘培训成本极其高昂。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Tier Matrix -->
+    <section id="pricing">
+      <div class="section-title">
+        <h2>人人易 AI 外贸增长服务套餐矩阵</h2>
+        <p>基于《详细交付说明书（VI版）》标准，透明阶梯式配置</p>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- 01 验证版 -->
+        <div class="pricing-card">
+          <div>
+            <div class="tier-name">初创试水首选</div>
+            <div class="plan-title">AI 获客验证版</div>
+            <div class="plan-price">¥19,800 <span>/ 年</span></div>
+            <div class="plan-desc">2 周低成本完成单国市场闭环验证。</div>
+            <ul class="plan-features">
+              <li>1 个英文标准营销独立站</li>
+              <li>🎁 活动赠：免费加赠 1 个站</li>
+              <li>1 个目标国市场分析报告</li>
+              <li>100 家带海关证据精准买家</li>
+              <li>3 套 AI 个性化开发信</li>
+            </ul>
+          </div>
+          <button class="btn-outline" style="width:100%; border-radius:999px; padding:10px; cursor:pointer;" onclick="alert('人人易 AI 验证版：联系 rrenn.com 官方顾问开启验证！')">低成本开启验证</button>
+        </div>
+
+        <!-- 02 启动版 -->
+        <div class="pricing-card">
+          <div>
+            <div class="tier-name">常态化获客阵地</div>
+            <div class="plan-title">AI 外贸启动版</div>
+            <div class="plan-price">¥29,800 <span>/ 年</span></div>
+            <div class="plan-desc">建立能被 AI 搜索引擎优先采信的 GEO 营销站。</div>
+            <ul class="plan-features">
+              <li>1 个 AI GEO 营销独立站 (20产品页)</li>
+              <li>🎁 活动赠：免费加赠 2 个站</li>
+              <li>36 篇 SEO/GEO 深度内容矩阵</li>
+              <li>300 家海关交易证据买家</li>
+              <li>5 套 AI 多轮开发信</li>
+            </ul>
+          </div>
+          <button class="btn-outline" style="width:100%; border-radius:999px; padding:10px; cursor:pointer;" onclick="alert('人人易 AI 启动版：部署常态化 GEO 获客阵地')">部署 GEO 阵地</button>
+        </div>
+
+        <!-- ⭐ 03 爆款全能版 -->
+        <div class="pricing-card featured">
+          <div class="badge-featured">⭐ 全国销冠主推爆款</div>
+          <div>
+            <div class="tier-name" style="color:var(--brand-gold)">订单收割机</div>
+            <div class="plan-title" style="color:#FFF">AI 增长全能版</div>
+            <div class="plan-price" style="color:var(--brand-gold)">¥59,800 <span>/ 年</span></div>
+            <div class="plan-desc">最受老板欢迎的主推爆款！收割 5 大语种 800 家买家。</div>
+            <ul class="plan-features">
+              <li>1 个定制独立站 + 5 大语种部署</li>
+              <li>🎁 活动赠：免费加赠 3 个营销站</li>
+              <li>120 篇 GEO 高权重内容矩阵</li>
+              <li>800 家海关交易证据真实买家</li>
+              <li>3 国市场深度研判与商机挖掘</li>
+              <li>全流程自动化追单与询盘转化闭环</li>
+            </ul>
+          </div>
+          <button class="nav-cta" style="width:100%; justify-content:center;" onclick="alert('恭喜！已为您锁定【¥59,800 销冠主推爆款】专属优惠名额！公司专家顾问将尽快联系您！')">⚡ 抢订销冠主推爆款</button>
+        </div>
+
+        <!-- 04 旗舰版 -->
+        <div class="pricing-card">
+          <div>
+            <div class="tier-name">替代 5 人外贸团队</div>
+            <div class="plan-title">AI 数字员工旗舰版</div>
+            <div class="plan-price">¥12.8万 <span>/ 年起</span></div>
+            <div class="plan-desc">相当于部署一整支 365 天无休的 5 人 AI 外贸小队。</div>
+            <ul class="plan-features">
+              <li>部署 5 人 AI 数字员工小队</li>
+              <li>2,500 – 5,000 家海关买家</li>
+              <li>🎁 活动赠：免费加赠 5 个营销站</li>
+              <li>全自动社媒运营与客户追单</li>
+              <li>专属外贸专家上门辅导落地</li>
+            </ul>
+          </div>
+          <button class="btn-outline" style="width:100%; border-radius:999px; padding:10px; cursor:pointer;" onclick="alert('人人易 AI 旗舰版：预约上门部署 AI 数字团队')">预约部署 AI 团队</button>
+        </div>
+
+        <!-- 05 KA 集团大脑 -->
+        <div class="pricing-card">
+          <div>
+            <div class="tier-name">集团私有基础设施</div>
+            <div class="plan-title">KA 集团 AI 大脑</div>
+            <div class="plan-price">¥38万 - 80万 <span>/ 年</span></div>
+            <div class="plan-desc">多品牌多工厂私有化部署，建立集团私有全球买家图谱。</div>
+            <ul class="plan-features">
+              <li>私有知识库与模型微调</li>
+              <li>多品牌站群集群 (赠 10 个站)</li>
+              <li>全球买家知识图谱与证据链</li>
+              <li>对接企业 CRM/ERP 系统闭环</li>
+              <li>集团级安全与独立数据隔离</li>
+            </ul>
+          </div>
+          <button class="btn-outline" style="width:100%; border-radius:999px; padding:10px; cursor:pointer;" onclick="alert('人人易 AI KA 集团大脑：预约专家团队定制私有化大模型')">预约专家定制</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 人 AI 数字员工 -->
+    <section id="team">
+      <div class="section-title">
+        <h2>5 人 AI 数字员工小队分工</h2>
+        <p>无人值守，365 天全流程自动执行</p>
+      </div>
+
+      <div class="team-grid">
+        <div class="team-card">
+          <div class="team-avatar">🔍</div>
+          <div class="team-role">AI 市场研究员</div>
+          <div class="team-desc">自动清洗海关数据、实时研判关税与供应链趋势。</div>
+        </div>
+
+        <div class="team-card">
+          <div class="team-avatar">🎯</div>
+          <div class="team-role">AI 获客专员</div>
+          <div class="team-desc">精准挖掘关键决策人邮箱与社交证据链。</div>
+        </div>
+
+        <div class="team-card">
+          <div class="team-avatar">✉️</div>
+          <div class="team-role">AI 销售跟进专员</div>
+          <div class="team-desc">多轮个性化开发信自动发送与拟真追单。</div>
+        </div>
+
+        <div class="team-card">
+          <div class="team-avatar">✍️</div>
+          <div class="team-role">AI GEO 内容运营</div>
+          <div class="team-desc">撰写被 ChatGPT 与 Google AI 采信的高权重文章。</div>
+        </div>
+
+        <div class="team-card">
+          <div class="team-avatar">💬</div>
+          <div class="team-role">AI 24H 客户成功</div>
+          <div class="team-desc">全球多语种实时在线接待与买家询盘引导。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer" id="guarantee">
+      <p>人人易智能科技有限公司 · 中国—东盟 AI 外贸增长服务平台</p>
+      <p style="margin-top:8px;">官方网站：<a href="https://www.rrenn.com" style="color:var(--brand-cyan); text-decoration:none;">www.rrenn.com</a> | 签约即享活动赠站特别福利</p>
+    </footer>
+  </div>
+</body>
+</html>

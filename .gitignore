@@ -75,3 +75,5 @@ evals/results/
 
 # Warden local run logs
 .warden/logs/
+__pycache__/
+*.pyc
