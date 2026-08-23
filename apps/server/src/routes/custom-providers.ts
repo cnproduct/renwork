@@ -2,7 +2,6 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import os from "node:os";
 import { ApiError } from "../errors.js";
-import { detectSystemProxyEnv } from "../system-proxy.js";
 import type { ServerConfig, TokenScope, WorkspaceInfo } from "../types.js";
 import { addRoute, type RequestContext, type Route } from "./registry.js";
 
@@ -129,7 +128,7 @@ export function registerCustomProviderRoutes(options: {
     const rawId = typeof body.id === "string" ? body.id.trim() : "";
     const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : rawId;
     const type = typeof body.type === "string" ? body.type.trim() : "openai-compatible";
-    const baseURL = typeof body.baseURL === "string" ? body.baseURL.trim() : "";
+    let baseURL = typeof body.baseURL === "string" ? body.baseURL.trim() : "";
     const rawApiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
     const rawModels = Array.isArray(body.models) ? body.models : [];
 
@@ -137,11 +136,20 @@ export function registerCustomProviderRoutes(options: {
       throw new ApiError(400, "invalid_payload", "Provider ID is required");
     }
 
-    // Normalise ID to prevent collision with OpenCode's internal OAuth handler (e.g. 'openrouter' -> 'custom_openrouter')
+    // Normalise ID to prevent collision with OpenCode's internal OAuth handler (e.g. 'openrouter' -> 'openrouter_custom')
     let providerKey = rawId;
     if (type === "openrouter" && providerKey === "openrouter") {
       providerKey = "openrouter_custom";
     }
+
+    // Clean baseURL by stripping trailing /chat/completions or /models
+    let cleanBaseURL = baseURL
+      .replace(/\/chat\/completions\/?$/, "")
+      .replace(/\/models\/?$/, "")
+      .replace(/\/+$/, "");
+
+    if (!cleanBaseURL && type === "ollama") cleanBaseURL = "http://127.0.0.1:11434/v1";
+    else if (!cleanBaseURL && type === "openrouter") cleanBaseURL = "https://openrouter.ai/api/v1";
 
     const globalPath = resolveGlobalOpencodeConfigPath();
     const configData = readOpencodeConfig(globalPath);
@@ -186,7 +194,7 @@ export function registerCustomProviderRoutes(options: {
       name,
       npm: "@ai-sdk/openai-compatible",
       options: {
-        baseURL: baseURL || (type === "ollama" ? "http://127.0.0.1:11434/v1" : type === "openrouter" ? "https://openrouter.ai/api/v1" : ""),
+        baseURL: cleanBaseURL,
       },
       models: modelsMap,
     };
@@ -229,20 +237,24 @@ export function registerCustomProviderRoutes(options: {
 
     const body = (await readJsonBody(ctx.request).catch(() => ({}))) as Record<string, unknown>;
     const type = typeof body.type === "string" ? body.type.trim() : "openai-compatible";
-    let baseURL = typeof body.baseURL === "string" ? body.baseURL.trim() : "";
+    let rawBaseURL = typeof body.baseURL === "string" ? body.baseURL.trim() : "";
     const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
+    const testModel = typeof body.modelId === "string" && body.modelId.trim() ? body.modelId.trim() : "";
 
-    if (!baseURL) {
-      if (type === "ollama") baseURL = "http://127.0.0.1:11434/v1";
-      else if (type === "openrouter") baseURL = "https://openrouter.ai/api/v1";
+    if (!rawBaseURL) {
+      if (type === "ollama") rawBaseURL = "http://127.0.0.1:11434/v1";
+      else if (type === "openrouter") rawBaseURL = "https://openrouter.ai/api/v1";
     }
 
-    if (!baseURL) {
+    if (!rawBaseURL) {
       throw new ApiError(400, "invalid_payload", "Base URL is required");
     }
 
-    const normalizedBaseURL = baseURL.replace(/\/+$/, "");
-    const testURL = `${normalizedBaseURL}/models`;
+    const cleanBaseURL = rawBaseURL
+      .replace(/\/chat\/completions\/?$/, "")
+      .replace(/\/models\/?$/, "")
+      .replace(/\/+$/, "");
+
     const headers: Record<string, string> = {
       Accept: "application/json",
     };
@@ -251,40 +263,93 @@ export function registerCustomProviderRoutes(options: {
     }
 
     const start = Date.now();
+
+    // 1. Try GET /models first
+    const modelsURL = `${cleanBaseURL}/models`;
     try {
-      const response = await fetch(testURL, {
+      const response = await fetch(modelsURL, {
         headers,
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (response.ok) {
+        const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+        const rawList = Array.isArray(data.data) ? data.data : Array.isArray(data.models) ? data.models : [];
+        const models = rawList
+          .map((item: unknown) => {
+            if (typeof item === "string") return item;
+            if (item && typeof item === "object") {
+              const m = item as Record<string, unknown>;
+              return String(m.id || m.name || m.model || "");
+            }
+            return "";
+          })
+          .filter(Boolean);
+
+        return jsonResponse({
+          ok: true,
+          latencyMs: Date.now() - start,
+          modelsCount: models.length,
+          sampleModels: models.slice(0, 30),
+          message: `GET /models 响应成功 (${models.length} 个模型可用)`,
+        });
+      }
+    } catch {
+      // fallback
+    }
+
+    // 2. Fallback: Probe POST /chat/completions
+    const chatURL = `${cleanBaseURL}/chat/completions`;
+    const probeModel = testModel || (type === "openrouter" ? "stealth/ox-alpha" : type === "ollama" ? "qwen3.5:27b" : "deepseek-ai/DeepSeek-V3");
+
+    try {
+      const probeResponse = await fetch(chatURL, {
+        method: "POST",
+        headers: {
+          ...headers,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: probeModel,
+          messages: [{ role: "user", content: "ping" }],
+          max_tokens: 1,
+        }),
         signal: AbortSignal.timeout(10000),
       });
 
       const latencyMs = Date.now() - start;
+      const responseText = await probeResponse.text().catch(() => "");
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "");
+      if (probeResponse.ok) {
         return jsonResponse({
-          ok: false,
-          status: response.status,
+          ok: true,
           latencyMs,
-          error: `HTTP ${response.status}: ${errorText.slice(0, 300) || response.statusText}`,
+          message: `POST /chat/completions 连通成功 (测试模型: ${probeModel})`,
         });
       }
 
-      const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-      const rawList = Array.isArray(data.data) ? data.data : Array.isArray(data.models) ? data.models : [];
-      const models = rawList.map((item: unknown) => {
-        if (typeof item === "string") return item;
-        if (item && typeof item === "object") {
-          const m = item as Record<string, unknown>;
-          return String(m.id || m.name || m.model || "");
+      // If status is 400 with model/token message, the gateway is alive and key is accepted!
+      if (probeResponse.status === 400 && (responseText.includes("model") || responseText.includes("tokens") || responseText.includes("messages"))) {
+        return jsonResponse({
+          ok: true,
+          latencyMs,
+          message: `网关连通成功 (服务端响应正常: ${responseText.slice(0, 120)})`,
+        });
+      }
+
+      let parsedError = responseText;
+      try {
+        const jsonErr = JSON.parse(responseText);
+        if (jsonErr?.error?.message) {
+          parsedError = jsonErr.error.message;
         }
-        return "";
-      }).filter(Boolean);
+      } catch {}
 
       return jsonResponse({
-        ok: true,
+        ok: false,
+        status: probeResponse.status,
         latencyMs,
-        modelsCount: models.length,
-        sampleModels: models.slice(0, 20),
+        error: `HTTP ${probeResponse.status}: ${parsedError.slice(0, 300) || probeResponse.statusText}`,
       });
     } catch (cause) {
       const latencyMs = Date.now() - start;
@@ -292,7 +357,7 @@ export function registerCustomProviderRoutes(options: {
       return jsonResponse({
         ok: false,
         latencyMs,
-        error: message.includes("timeout") ? `Connection timed out after 10000ms: ${message}` : message,
+        error: message.includes("timeout") ? `连接超时 (超过 10000ms): 请检查 Base URL 与网络连接` : message,
       });
     }
   });
