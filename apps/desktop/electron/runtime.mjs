@@ -15,6 +15,7 @@ import {
   summarizeSystemCaSources,
   systemPlatformCertificateLoader,
 } from "./system-ca.mjs";
+import { detectSystemProxyEnv } from "./system-proxy.mjs";
 
 const __runtimeDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -1325,10 +1326,15 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       userEnv,
       previouslyInjectedKeys: injectedUserEnvKeys,
     });
+    const systemProxyEnv = detectSystemProxyEnv(process.env);
     const baseEnv = {
+      ...systemProxyEnv,
       ...userEnv,
       ...process.env,
       BUN_CONFIG_DNS_RESULT_ORDER: "verbatim",
+      OPENCODE_HEADER_TIMEOUT: process.env.OPENCODE_HEADER_TIMEOUT || "120000",
+      OPENCODE_CLIENT_TIMEOUT: process.env.OPENCODE_CLIENT_TIMEOUT || "300000",
+      OPENCODE_STREAM_TIMEOUT: process.env.OPENCODE_STREAM_TIMEOUT || "300000",
     };
     const caEnv = Object.prototype.hasOwnProperty.call(baseEnv, "NODE_EXTRA_CA_CERTS") ? {} : await systemCaEnv();
     // Bun honors Node's NODE_EXTRA_CA_CERTS, so bundled Bun sidecars inherit
