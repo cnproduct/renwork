@@ -305,11 +305,12 @@ export function CustomProvidersDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        showCloseButton={false}
         className={cn(
           "flex flex-col p-0 gap-0 overflow-hidden transition-all duration-200 bg-background",
           isFullscreen
-            ? "fixed inset-0 w-screen h-screen max-w-none max-h-none rounded-none z-50 border-0"
-            : "w-[94vw] max-w-5xl h-[88vh] rounded-2xl border border-border shadow-2xl",
+            ? "!fixed !inset-0 !w-screen !h-screen !max-w-none !max-h-none !rounded-none !z-50 !border-0 !translate-x-0 !translate-y-0 !top-0 !left-0 !transform-none"
+            : "!w-[92vw] lg:!w-[90vw] !max-w-6xl lg:!max-w-6xl !h-[88vh] lg:!h-[88vh] rounded-2xl border border-border shadow-2xl",
         )}
       >
         {/* =================== Fixed Header =================== */}

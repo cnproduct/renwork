@@ -45,13 +45,16 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
 }) {
+  const hasCustomMaxWidth = className && (className.includes("max-w-") || className.includes("w-") || className.includes("w-[") || className.includes("max-w-["));
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed z-50 grid gap-6 overflow-hidden bg-popover p-6 text-sm text-popover-foreground shadow-xl ring-1 ring-foreground/5 duration-100 outline-none dark:ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-auto max-lg:max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)))] max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-t-3xl max-lg:rounded-b-none max-lg:pb-[max(1.5rem,env(safe-area-inset-bottom))] max-lg:data-open:slide-in-from-bottom-4 max-lg:data-closed:slide-out-to-bottom-4 lg:top-1/2 lg:inset-s-1/2 lg:w-[calc(100%-2rem)] lg:max-w-md lg:-translate-x-1/2 rtl:lg:translate-x-1/2 lg:-translate-y-1/2 lg:rounded-4xl lg:data-open:zoom-in-95 lg:data-closed:zoom-out-95",
+          "fixed z-50 grid gap-6 overflow-hidden bg-popover p-6 text-sm text-popover-foreground shadow-xl ring-1 ring-foreground/5 duration-100 outline-none dark:ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-auto max-lg:max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)))] max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-t-3xl max-lg:rounded-b-none max-lg:pb-[max(1.5rem,env(safe-area-inset-bottom))] max-lg:data-open:slide-in-from-bottom-4 max-lg:data-closed:slide-out-to-bottom-4 lg:top-1/2 lg:inset-s-1/2 lg:w-[calc(100%-2rem)] lg:-translate-x-1/2 rtl:lg:translate-x-1/2 lg:-translate-y-1/2 lg:rounded-4xl lg:data-open:zoom-in-95 lg:data-closed:zoom-out-95",
+          !hasCustomMaxWidth && "lg:max-w-md",
           className
         )}
         {...props}
