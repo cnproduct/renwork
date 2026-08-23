@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
-import { ArrowRight, CheckCircle2, KeyRound, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, KeyRound, Sparkles, X } from "lucide-react";
 
 import { t } from "@/i18n";
 import { isCloudManagedProviderKey } from "@/react-app/domains/connections/provider-auth/cloud-provider-config";
@@ -38,6 +38,7 @@ export type AiSettingsViewProps = {
   providerDisconnectStatus: string | null;
   providerDisconnectError: string | null;
   onOpenProviderAuth: () => void | Promise<void>;
+  onOpenCustomProviders?: () => void;
   onDisconnectProvider: (providerId: string) => void | Promise<void>;
   canDisconnectProvider: (provider: ConnectedProvider) => boolean;
   canAddProviders: boolean;
@@ -101,6 +102,16 @@ export function AiSettingsView(props: AiSettingsViewProps) {
             </LayoutSectionItemTitle>
             {props.canAddProviders ? (
               <LayoutSectionItemHeaderActions>
+                {props.onOpenCustomProviders ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => void props.onOpenCustomProviders?.()}
+                    className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+                  >
+                    <Sparkles className="size-3.5" />
+                    自定义大模型管理
+                  </Button>
+                ) : null}
                 <Button
                   onClick={() => void props.onOpenProviderAuth()}
                   disabled={props.busy || props.providerAuthBusy}

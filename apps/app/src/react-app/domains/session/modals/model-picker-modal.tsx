@@ -437,8 +437,21 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
         </div>
 
         {/* Footer */}
-        <DialogFooter className="shrink-0">
-          <DialogClose render={<Button variant="outline" />}>
+        <DialogFooter className="flex w-full items-center justify-between sm:justify-between shrink-0">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              props.onClose();
+              props.onOpenSettings();
+            }}
+            className="gap-1.5 text-xs text-primary hover:bg-primary/10"
+          >
+            <Sparkles className="size-3.5" />
+            + 自定义添加模型 (Ollama / OpenRouter)
+          </Button>
+          <DialogClose render={<Button variant="outline" size="sm" />}>
             {t("models.done")}
           </DialogClose>
         </DialogFooter>

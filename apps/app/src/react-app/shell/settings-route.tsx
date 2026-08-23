@@ -64,6 +64,7 @@ import { createProviderAuthStore, useProviderAuthStoreSnapshot } from "@/react-a
 import ProviderAuthModal from "@/react-app/domains/connections/provider-auth/provider-auth-modal";
 import ConnectionsModals from "@/react-app/domains/connections/modals";
 import { AiSettingsView } from "@/react-app/domains/settings/pages/ai-view";
+import { CustomProvidersDialog } from "@/react-app/domains/settings/custom-providers-dialog";
 // Side-effect imports: register extension config components into the registry.
 import "@/react-app/domains/settings/ollama-config";
 import "@/react-app/domains/settings/computer-use-config";
@@ -497,6 +498,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
   );
   const [configActionStatus, setConfigActionStatus] = useState<string | null>(null);
   const [revealConfigBusy, setRevealConfigBusy] = useState(false);
+  const [customProvidersOpen, setCustomProvidersOpen] = useState(false);
   const [resetConfigBusy, setResetConfigBusy] = useState(false);
   const [renameWorkspaceId, setRenameWorkspaceId] = useState<string | null>(null);
   const [renameWorkspaceTitle, setRenameWorkspaceTitle] = useState("");
@@ -2219,6 +2221,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             providerDisconnectStatus={configActionStatus}
             providerDisconnectError={null}
             onOpenProviderAuth={handleOpenProviderAuth}
+            onOpenCustomProviders={() => setCustomProvidersOpen(true)}
             onDisconnectProvider={async (providerId) => {
               const message = await providerAuthStore.disconnectProvider(providerId);
               if (typeof message === "string" && message.trim()) {
@@ -2647,6 +2650,14 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
         showOpenWorkModelsSubscribe={showOpenWorkModelsSubscribe}
         onSubscribeOpenWorkModels={subscribeToOpenWorkModels}
         onClose={() => providerAuthStore.closeProviderAuthModal()}
+      />
+      <CustomProvidersDialog
+        open={customProvidersOpen}
+        onOpenChange={setCustomProvidersOpen}
+        client={openworkClient}
+        onProvidersChanged={() => {
+          void providerAuthStore.refreshProviders();
+        }}
       />
       <RenameWorkspaceModal
         open={renameWorkspaceId !== null}

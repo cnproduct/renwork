@@ -253,6 +253,25 @@ export type OpenworkWorkspaceFileWriteResult = {
   revision?: string;
 };
 
+export type CustomModelDefinition = {
+  id: string;
+  name: string;
+  contextLimit?: number;
+  outputLimit?: number;
+  modalities?: string[];
+  reasoning?: boolean;
+};
+
+export type CustomProviderRecord = {
+  id: string;
+  name: string;
+  type: "ollama" | "openrouter" | "openai-compatible";
+  baseURL: string;
+  apiKey?: string;
+  models: CustomModelDefinition[];
+  enabled: boolean;
+};
+
 export type OpenworkWorkspaceFileDeleteResult = {
   ok: boolean;
   path: string;
@@ -2404,6 +2423,75 @@ export function createOpenworkServerClient(options: { baseUrl: string; token?: s
         method: "POST",
         body: payload ?? {},
         timeoutMs: timeouts.config,
+      }),
+
+    listCustomProviders: () =>
+      requestJson<{ providers: CustomProviderRecord[] }>(baseUrl, "/api/custom-providers", {
+        token,
+        hostToken,
+        timeoutMs: timeouts.config,
+      }),
+
+    saveCustomProvider: (provider: {
+      id: string;
+      name: string;
+      type: "ollama" | "openrouter" | "openai-compatible";
+      baseURL?: string;
+      apiKey?: string;
+      models: CustomModelDefinition[];
+    }) =>
+      requestJson<{ ok: true; providerId: string }>(baseUrl, "/api/custom-providers/save", {
+        token,
+        hostToken,
+        method: "POST",
+        body: provider,
+        timeoutMs: timeouts.config,
+      }),
+
+    deleteCustomProvider: (providerId: string) =>
+      requestJson<{ ok: true; deleted: string }>(baseUrl, "/api/custom-providers/delete", {
+        token,
+        hostToken,
+        method: "POST",
+        body: { providerId },
+        timeoutMs: timeouts.config,
+      }),
+
+    testCustomProvider: (input: {
+      type: string;
+      baseURL?: string;
+      apiKey?: string;
+      modelId?: string;
+    }) =>
+      requestJson<{
+        ok: boolean;
+        latencyMs: number;
+        modelsCount?: number;
+        sampleModels?: string[];
+        error?: string;
+      }>(baseUrl, "/api/custom-providers/test", {
+        token,
+        hostToken,
+        method: "POST",
+        body: input,
+        timeoutMs: 15000,
+      }),
+
+    scanOllamaModels: (baseURL?: string) =>
+      requestJson<{
+        running: boolean;
+        models: Array<{
+          id: string;
+          name: string;
+          sizeBytes: number;
+          contextLimit?: number;
+          outputLimit?: number;
+          modalities?: string[];
+        }>;
+      }>(baseUrl, `/api/custom-providers/scan-ollama${baseURL ? `?baseURL=${encodeURIComponent(baseURL)}` : ""}`, {
+        token,
+        hostToken,
+        timeoutMs: 6000,
       }),
   };
 }
