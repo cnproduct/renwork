@@ -1,0 +1,130 @@
+version: "3.8"
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: renwork-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/certbot:/var/www/certbot:ro
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.25"
+    depends_on:
+      - den-api
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  den-api:
+    image: renwork/den-api:latest
+    container_name: renwork-den-api
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=640
+      - DATABASE_URL=mysql://renwork_user:${DB_PASSWORD}@mysql:3306/renwork_den
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - PORT=3000
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+          cpus: "0.75"
+    depends_on:
+      - mysql
+      - redis
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  async-worker:
+    image: renwork/async-worker:latest
+    container_name: renwork-async-worker
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=320
+      - DATABASE_URL=mysql://renwork_user:${DB_PASSWORD}@mysql:3306/renwork_den
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CONCURRENCY=3
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+          cpus: "0.50"
+    depends_on:
+      - mysql
+      - redis
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  mysql:
+    image: mysql:8.0
+    container_name: renwork-mysql
+    restart: always
+    command: >
+      --performance-schema=OFF
+      --innodb-buffer-pool-size=1073741824
+      --innodb-log-file-size=134217728
+      --max-connections=60
+      --table-open-cache=400
+      --table-definition-cache=400
+      --thread-cache-size=8
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=renwork_den
+      - MYSQL_USER=renwork_user
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    deploy:
+      resources:
+        limits:
+          memory: 1300M
+          cpus: "0.75"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: renwork-redis
+    restart: always
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 268435456
+      --maxmemory-policy volatile-lru
+      --appendonly yes
+      --appendfsync everysec
+    volumes:
+      - ./data/redis:/data
+    deploy:
+      resources:
+        limits:
+          memory: 280M
+          cpus: "0.25"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
