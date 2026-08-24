@@ -2493,7 +2493,123 @@ export function createOpenworkServerClient(options: { baseUrl: string; token?: s
         hostToken,
         timeoutMs: 6000,
       }),
+
+    // Local Automations API
+    listLocalAutomations: () =>
+      requestJson<{ automations: LocalAutomationTask[]; totalRuns: number; schedulerActive: boolean }>(
+        baseUrl,
+        "/api/local-automations",
+        {
+          token,
+          hostToken,
+          timeoutMs: timeouts.config,
+        },
+      ),
+
+    saveLocalAutomation: (task: Partial<LocalAutomationTask> & { instructions: string }) =>
+      requestJson<{ ok: true; automationId: string }>(baseUrl, "/api/local-automations/save", {
+        token,
+        hostToken,
+        method: "POST",
+        body: task,
+        timeoutMs: timeouts.config,
+      }),
+
+    deleteLocalAutomation: (id: string) =>
+      requestJson<{ ok: true; deleted: string }>(baseUrl, "/api/local-automations/delete", {
+        token,
+        hostToken,
+        method: "POST",
+        body: { id },
+        timeoutMs: timeouts.config,
+      }),
+
+    toggleLocalAutomation: (id: string, enabled: boolean) =>
+      requestJson<{ ok: true; enabled: boolean; nextRunAt?: number }>(baseUrl, "/api/local-automations/toggle", {
+        token,
+        hostToken,
+        method: "POST",
+        body: { id, enabled },
+        timeoutMs: timeouts.config,
+      }),
+
+    runLocalAutomationNow: (id: string) =>
+      requestJson<{ ok: boolean; summary?: string; error?: string }>(baseUrl, "/api/local-automations/run-now", {
+        token,
+        hostToken,
+        method: "POST",
+        body: { id },
+        timeoutMs: 180000,
+      }),
+
+    listLocalAutomationRuns: (limit = 50, automationId?: string) =>
+      requestJson<{ runs: LocalAutomationRunLog[] }>(
+        baseUrl,
+        `/api/local-automations/runs?limit=${limit}${automationId ? `&automationId=${encodeURIComponent(automationId)}` : ""}`,
+        {
+          token,
+          hostToken,
+          timeoutMs: timeouts.config,
+        },
+      ),
+
+    importLocalAutomationPresets: () =>
+      requestJson<{ ok: true; imported: number; total: number }>(baseUrl, "/api/local-automations/import-presets", {
+        token,
+        hostToken,
+        method: "POST",
+        body: {},
+        timeoutMs: timeouts.config,
+      }),
   };
+}
+
+export interface LocalAutomationSchedule {
+  kind: "daily" | "weekly" | "interval" | "once";
+  hour?: number;
+  minute?: number;
+  daysOfWeek?: number[];
+  intervalMinutes?: number;
+  at?: number;
+  timezone?: string;
+}
+
+export interface LocalAutomationTask {
+  id: string;
+  name: string;
+  description?: string;
+  category?: "leadgen" | "social" | "customs" | "nurture" | "market" | "custom";
+  instructions: string;
+  schedule: LocalAutomationSchedule;
+  model?: {
+    providerId: string;
+    modelId: string;
+    variant?: string | null;
+  };
+  workspaceId?: string | null;
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+  lastRunAt?: number;
+  lastRunStatus?: "succeeded" | "failed" | "running";
+  lastRunResult?: string;
+  lastRunDurationMs?: number;
+  lastRunError?: string;
+  nextRunAt?: number;
+}
+
+export interface LocalAutomationRunLog {
+  id: string;
+  automationId: string;
+  automationName: string;
+  startedAt: number;
+  finishedAt?: number;
+  durationMs?: number;
+  status: "running" | "succeeded" | "failed";
+  trigger: "scheduled" | "manual";
+  resultSummary?: string;
+  error?: string;
+  sessionId?: string;
 }
 
 export type OpenworkServerClient = ReturnType<typeof createOpenworkServerClient>;

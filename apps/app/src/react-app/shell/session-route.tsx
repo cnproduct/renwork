@@ -479,7 +479,7 @@ export function SessionRoute() {
   const automationsEnabled = isDesktopRuntime();
   const automationsRouteActive = automationsEnabled && automationsRouteRequested;
   const denSettings = readDenSettings();
-  const [automationsSupported, setAutomationsSupported] = useState(false);
+  const [automationsSupported, setAutomationsSupported] = useState(true);
   const [automationsNeedAttention, setAutomationsNeedAttention] = useState(false);
   useEffect(() => {
     if (!automationsRouteRequested || automationsEnabled) return;
@@ -489,7 +489,7 @@ export function SessionRoute() {
     const authToken = denSettings.authToken?.trim();
     const organizationId = denSettings.activeOrgId?.trim();
     if (!automationsEnabled || !denAuth.isSignedIn || !authToken || !organizationId) {
-      setAutomationsSupported(false);
+      setAutomationsSupported(true);
       setAutomationsNeedAttention(false);
       return;
     }
@@ -504,7 +504,7 @@ export function SessionRoute() {
         })
         .catch(() => {
           if (cancelled) return;
-          setAutomationsSupported(false);
+          setAutomationsSupported(true);
           setAutomationsNeedAttention(false);
         });
     };
@@ -524,7 +524,7 @@ export function SessionRoute() {
     denSettings.authToken,
     denSettings.baseUrl,
   ]);
-  const automationsNavigationAvailable = automationsEnabled && automationsSupported;
+  const automationsNavigationAvailable = automationsEnabled;
   const reloadCoordinator = useReloadCoordinator();
   const checkDesktopRestriction = useCheckDesktopRestriction();
   const restrictionNotice = useRestrictionNotice();
@@ -2643,7 +2643,7 @@ export function SessionRoute() {
       }
       primaryTitle={automationsRouteActive ? "Automations" : undefined}
       primarySlot={automationsRouteActive ? (
-        <AutomationsPage providerCatalog={providerCatalog} />
+        <AutomationsPage providerCatalog={providerCatalog} openworkClient={client} />
       ) : undefined}
       terminalOpen={terminalOpen}
       onTerminalOpenChange={setTerminalOpen}

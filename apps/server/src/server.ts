@@ -90,6 +90,8 @@ import { registerSessionRoutes } from "./routes/sessions.js";
 import { registerWorkspaceRoutes } from "./routes/workspaces.js";
 import { registerCloudMcpRoutes } from "./routes/cloud-mcp.js";
 import { registerCustomProviderRoutes } from "./routes/custom-providers.js";
+import { registerLocalAutomationRoutes } from "./routes/local-automations.js";
+import { startLocalAutomationsScheduler } from "./local-automations-scheduler.js";
 import { captureServerException } from "./telemetry.js";
 import {
   completeLocalManagedMcpAuthorization,
@@ -931,6 +933,12 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
     logger,
     cloudProviderSync,
   );
+
+  startLocalAutomationsScheduler({
+    config,
+    resolveWorkspace,
+    log: (m) => logger.log("info", m),
+  });
 
   const serverOptions: {
     hostname: string;
@@ -1963,6 +1971,16 @@ function createRoutes(
   });
 
   registerCustomProviderRoutes({
+    routes,
+    config,
+    jsonResponse,
+    readJsonBody,
+    ensureWritable,
+    requireClientScope,
+    resolveWorkspace,
+  });
+
+  registerLocalAutomationRoutes({
     routes,
     config,
     jsonResponse,
