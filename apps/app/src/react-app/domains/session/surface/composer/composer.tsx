@@ -755,6 +755,26 @@ export function ReactSessionComposer(props: ComposerProps) {
   );
   const canSend = props.draft.trim().length > 0 || props.attachments.length > 0;
 
+  const handleEnhancePrompt = useCallback(() => {
+    const trimmed = props.draft.trim();
+    if (!trimmed) {
+      props.onDraftChange(
+        "请作为专业外贸增长专家与全流程业务中台，帮我深入分析目标市场的采购异动与买家真实痛点，并输出结构化的高转化实操攻坚方案。"
+      );
+      toast.success("已填入专业外贸提示词模版");
+      return;
+    }
+
+    if (trimmed.includes("【核心目标】") && trimmed.includes("【执行要求与上下文】")) {
+      toast.info("当前提示词已是结构化增强格式");
+      return;
+    }
+
+    const enhanced = `【核心目标】\n${trimmed}\n\n【执行要求与上下文】\n1. 结合真实产品事实与目标市场准入标准，严格杜绝虚构与泛泛而谈；\n2. 突出核心竞争优势、合规认证与差异化价值主张；\n3. 输出逻辑清晰、可直接落地执行的步骤、话术或结构化数据。`;
+    props.onDraftChange(enhanced);
+    toast.success("提示词已成功增强！");
+  }, [props.draft, props.onDraftChange]);
+
   useEffect(() => {
     if (!toolMenuSection.startsWith("plugin:")) return;
     if (activePlugin) return;
@@ -1816,6 +1836,24 @@ export function ReactSessionComposer(props: ComposerProps) {
                     <span>{props.submissionPreparing ? "Preparing connected service tools…" : t("composer.run_task")}</span>
                   </button>
                 )}
+
+                {/* 增强 Prompt 按钮 (位于最右侧边缘，带蓝色Logo与悬浮提示) */}
+                <div className="relative inline-flex items-center">
+                  <button
+                    type="button"
+                    onClick={handleEnhancePrompt}
+                    className="group relative inline-flex h-9 w-9 max-h-9 max-w-9 items-center justify-center rounded-full border border-blue-200 bg-blue-50/90 text-blue-600 shadow-sm transition-all hover:scale-105 hover:border-blue-400 hover:bg-blue-100 hover:text-blue-700 active:scale-95 dark:border-blue-800/80 dark:bg-blue-950/60 dark:text-blue-400 dark:hover:border-blue-600 dark:hover:bg-blue-900/80 max-lg:h-11 max-lg:w-11 max-lg:max-h-11 max-lg:max-w-11"
+                    title="增强 prompt"
+                    aria-label="增强 prompt"
+                  >
+                    <EnhancePromptIcon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
+                    {/* 鼠标靠近时显示的浮动提示文字 */}
+                    <div className="pointer-events-none absolute -top-8.5 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-12 px-2.5 py-1 text-[11px] font-medium text-gray-1 opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 dark:bg-gray-2 dark:text-gray-12">
+                      增强 prompt
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-12 dark:border-t-gray-2" />
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1823,5 +1861,30 @@ export function ReactSessionComposer(props: ComposerProps) {
 
       </div>
     </div>
+  );
+}
+
+function EnhancePromptIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {/* 中心四角星光 (带微透明填充) */}
+      <path
+        d="M12 3C12 7.2 14.8 10 19 10C14.8 10 12 12.8 12 17C12 12.8 9.2 10 5 10C9.2 10 12 7.2 12 3Z"
+        fill="currentColor"
+        fillOpacity="0.22"
+      />
+      {/* 右上角加号 + */}
+      <path d="M19 2V6M17 4H21" strokeWidth="2.2" />
+      {/* 左下角小圆点 • */}
+      <circle cx="5.5" cy="18.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
   );
 }
