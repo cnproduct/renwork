@@ -208,6 +208,39 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // 1.5 POST /api/v1/intent/enhance-prompt - 动态大模型意图探索与 Prompt 结构化增强
+  if (req.method === "POST" && (pathname === "/api/v1/intent/enhance-prompt" || pathname === "/v1/intent/enhance-prompt")) {
+    const body = await readBody(req);
+    const raw = String(body.raw_prompt || "").trim();
+    if (!raw) {
+      return sendJson(res, 400, { ok: false, error: "VALIDATION_FAILED", message: "raw_prompt cannot be empty" });
+    }
+
+    let inferredIntent = "通用任务深度结构化解析";
+    let enhanced = "";
+
+    if (/(开发信|email|inmail|触达|破冰|写信|联系客户|outreach|pitch)/i.test(raw)) {
+      inferredIntent = "海外买家定制开发信与破冰触达";
+      enhanced = `【核心任务目标】\n${raw}\n\n【目标买家画像与决策场景】\n1. 目标受众：海外企业采购委员会关键决策人（经济决策人 CEO/采购总监、技术评估人 工程主管）；\n2. 沟通语调：地道商务英文（Native B2B Business Tone），客观专业，杜绝廉价推销感；\n3. 攻坚切入点：基于买家近期海关采购异动或供应链痛点（Why-Now 信号），建立破冰信任。\n\n【开发序列与专业结构要求】\n- 邮件主题（Subject Line）：3~5个极具吸引力、打开率高且低垃圾邮件分的主题备选；\n- 正文三段式递进（3-Touch Sequence）：\n  · 第1轮（Pain-Point Hook）：点明行业痛点与我们经权威认证的核心优势（如材质公差、交期稳定）；\n  · 第2轮（Value & Proof）：提供具体的测试报告、出货实绩与差异化规格对比；\n  · 第3轮（Risk Reversal CTA）：提供零风险试单政策（极速打样/低MOQ门槛/付款信用保障），附带清晰行动指引。\n\n【交付输出标准】\n- 输出中英双语对照版；\n- 标注各轮次推荐发送时间间隔与注意事项。`;
+    } else if (/(报价|价格|让步|moq|fob|cif|付款方式|折扣|谈判|pi|形式发票|quotation)/i.test(raw)) {
+      inferredIntent = "阶梯报价方案与商务谈判策略";
+      enhanced = `【核心任务目标】\n${raw}\n\n【商业边界与测算约束】\n1. 成本与利润底线：守住企业合理毛利空间，严禁无底线降价；\n2. 贸易条款与交期：明确指定 Incoterms（如 FOB 宁波/深圳 或 CIF 目标港）、标准交货周期与加急交付溢价；\n3. 阶梯起订量（MOQ）：设计 Good / Better / Best 三级阶梯起订方案。\n\n【专业结构与博弈策略】\n- 阶梯报价明细表（Quantity vs Unit Price vs Lead Time）；\n- 谈判让步矩阵（Concession Matrix）：若客户要求降价 5%~10%，必须绑定等价交换条件（如扩大订单量、缩短账期、非核心配件改款等）；\n- 风险锁价说明：包含原材料价格波动条款与报价有效期限（Validity Period）。\n\n【交付输出标准】\n- 标准英文形式发票/报价单文本摘要；\n- 业务员在与客户博弈时可直接复制的 3 套应对异议话术。`;
+    } else if (/(海关|提单|准入|认证|ce|fda|rohs|背调|调研|市场分析|关税|hs编码|买家画像)/i.test(raw)) {
+      inferredIntent = "目标国市场准入与海关买家深度背调";
+      enhanced = `【核心任务目标】\n${raw}\n\n【多维度事实穿透要求】\n1. 海关提单数据透视：分析目标市场近 90/180 天的真实采购频次、总柜量 (TEU)、主要供货商出口走势；\n2. 实体消歧与货代清洗：剔除无船承运人 (NVOCC) 与报关行干扰，锁定真实企业买家实体与官方域名；\n3. 市场准入与法规合规：严格对照目标国家强制认证标准（如欧盟 CE/RoHS、美国 FDA/CPSC、中东 SASO）与关税税率 (HS Code)。\n\n【结构化分析框架】\n- 目标市场容量与竞争定价带（Low / Mid / High Tier）；\n- 采购委员会 5 大角色分工（CEO、采购、工程、质检、仓储）；\n- 存量供货商替代时机分析与针对性攻坚切入点。\n\n【交付输出标准】\n- 结构化 Markdown 调研报告与数据可视化清单。`;
+    } else {
+      enhanced = `【核心任务目标】\n${raw}\n\n【执行标准与上下文要求】\n1. 目标明确：深入探索该任务背后的商业意图与最终落地场景；\n2. 事实为基：严格结合真实业务事实、技术规范与行业标准，拒绝泛泛而谈；\n3. 结构完整：输出条理清晰、步骤完整、可直接执行的交付结果（含关键注意点与备选方案）。\n\n【输出格式】\n- 按照优先级清晰排版，使用结构化列表与加粗重点呈现。`;
+    }
+
+    return sendJson(res, 200, {
+      ok: true,
+      raw_prompt: raw,
+      enhanced_prompt: enhanced,
+      inferred_intent: inferredIntent,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   // 2. GET /api/v1/credits/balance or /v1/rencredit/wallet
   if (req.method === "GET" && (pathname === "/api/v1/credits/balance" || pathname === "/v1/rencredit/wallet")) {
     return sendJson(res, 200, {
