@@ -8,6 +8,7 @@
     "name": "人人易AI",
     "email": "support@rrenn.com"
   },
+  "homepage": "https://rrenn.com",
   "main": "electron/main.mjs",
   "type": "module",
   "scripts": {
