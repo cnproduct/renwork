@@ -1,6 +1,6 @@
 {
   "name": "@openwork/automations",
-  "version": "0.0.0",
+  "version": "0.18.49",
   "private": true,
   "type": "module",
   "exports": {
