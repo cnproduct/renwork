@@ -1,7 +1,7 @@
 {
   "name": "@openwork/desktop",
   "private": true,
-  "version": "0.18.49",
+  "version": "0.18.50",
   "desktopName": "com.renrenyi.renwork",
   "description": "RenWork (\u4eba\u4eba\u6613AI \u6570\u5b57\u5458\u5de5\u5de5\u4f5c\u53f0) desktop shell",
   "author": {

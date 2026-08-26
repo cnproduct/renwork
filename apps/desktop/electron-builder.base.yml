@@ -106,7 +106,10 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
+  allowElevation: true
   createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: RenWork
+  differentialPackage: false
+  deleteAppDataOnUninstall: false
   runAfterFinish: true

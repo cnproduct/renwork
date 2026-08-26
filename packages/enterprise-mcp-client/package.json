@@ -1,7 +1,7 @@
 {
   "name": "@openwork/enterprise-mcp-client",
   "private": true,
-  "version": "0.18.49",
+  "version": "0.18.50",
   "description": "Package-first remote MCP client runtime for enterprise Den connections",
   "type": "module",
   "exports": {

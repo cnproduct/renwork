@@ -408,16 +408,19 @@ export function WelcomeRoute() {
   return (
     <>
       <WelcomePage
-        onGetStarted={handleGetStarted}
-        onSelectFolder={handleSelectFolder}
+        onContinue={async (option) => {
+          if (option === "managed") {
+            await handleGetStarted();
+          } else if (option === "local") {
+            await handleGetStarted();
+          } else if (option === "byok") {
+            hideOpenWorkModelsPromo();
+            markOpenWorkModelsStartupPromoShown();
+            await handleGetStarted();
+          }
+        }}
         busy={state.createBusy}
         error={state.createError}
-        manualFolder={manualFolder}
-        onManualFolderChange={setManualFolder}
-        onUseManualFolder={handleUseManualFolder}
-        showManualFolder={import.meta.env.DEV && isDesktopRuntime()}
-        onTeamSignIn={undefined}
-        onJoinOrganization={undefined}
       />
       <JoinOrganizationDialog
         open={joinOrganizationOpen}

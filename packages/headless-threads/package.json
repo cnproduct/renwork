@@ -1,6 +1,6 @@
 {
   "name": "@openwork/headless-threads",
-  "version": "0.18.49",
+  "version": "0.18.50",
   "private": true,
   "type": "module",
   "exports": {

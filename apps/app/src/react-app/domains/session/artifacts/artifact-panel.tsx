@@ -11,7 +11,7 @@ import { toast } from "@/components/ui/sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePlatform } from "@/react-app/kernel/platform";
 import { type ArtifactPanelTab, usePanelTabStore } from "../panel/panel-tab-store";
-import { isCollectibleArtifactTarget, type BinaryData, type Data, type OpenTarget, type TextData } from "./open-target";
+import { isCollectibleArtifactTarget, type BinaryData, type Data, type OpenTarget, type OpenTargetPreview, type TextData } from "./open-target";
 import { HTMLPreview, ImagePreview, MarkdownPreview, PdfPreview, PlainText, PreviewError, PreviewLoading, PreviewUnavailable } from "./preview";
 
 const ArtifactTextEditor = lazy(() =>
