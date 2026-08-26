@@ -340,6 +340,92 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // 7. GET /api/v1/kb/framework
+  if (req.method === "GET" && pathname === "/api/v1/kb/framework") {
+    const modules = [
+      { module_id: "00", name: "企业事实与可信背书", layer: "truth", layer_name: "真相层", description: "公司全称、品牌、工厂、资质、权威认证与可信事实证据", applicable_archetype: "MCP / Skill" },
+      { module_id: "01", name: "产品分类与主推矩阵", layer: "truth", layer_name: "真相层", description: "主推款、利润款、引流款与产品矩阵分层", applicable_archetype: "Skill" },
+      { module_id: "02", name: "核心产品与参数规格", layer: "truth", layer_name: "真相层", description: "SKU规格参数、材质、MOQ、交期与定制深度", applicable_archetype: "MCP / Skill" },
+      { module_id: "03", name: "制造、研发与交付能力", layer: "truth", layer_name: "真相层", description: "工厂产线、设备、研发团队、产能与质检流程", applicable_archetype: "Skill" },
+      { module_id: "04", name: "认证、测试与合规体系", layer: "truth", layer_name: "真相层", description: "CE/FDA/UL/FCC认证合规报告与国际标准", applicable_archetype: "MCP / Skill" },
+      { module_id: "05", name: "目标市场、准入与关税", layer: "decision", layer_name: "决策层", description: "目标国市场准入标准、HS关税税率与本土渠道", applicable_archetype: "Skill" },
+      { module_id: "06", name: "渠道画像与商业形态", layer: "decision", layer_name: "决策层", description: "批发商、进口商、商超零售、电商独立站画像", applicable_archetype: "Skill" },
+      { module_id: "07", name: "买家 ICP 与关键采购人", layer: "decision", layer_name: "决策层", description: "买家商业形态、采购委员会决策角色与准入排查", applicable_archetype: "Skill" },
+      { module_id: "08", name: "价值主张与差异化卖点", layer: "decision", layer_name: "决策层", description: "企业产品核心优势、差异化定位与反向背书", applicable_archetype: "Skill" },
+      { module_id: "09", name: "价格带、MOQ与商业Offer", layer: "decision", layer_name: "决策层", description: "阶梯报价、MOQ门槛、极速打样与商业Offer包装", applicable_archetype: "Skill" },
+      { module_id: "10", name: "客户背调与商机研判", layer: "assets", layer_name: "客户资产层", description: "L1验真、L2价值评估、L3深度10维背调与原子证据", applicable_archetype: "Skill / MCP" },
+      { module_id: "11", name: "存量客户资产与动态优先级", layer: "assets", layer_name: "客户资产层", description: "Account/Contact/Opportunity模型、复购预警与八类名单", applicable_archetype: "MCP / Skill" },
+      { module_id: "12", name: "获客、触达与渠道内容", layer: "execution", layer_name: "销售执行层", description: "6语种社媒矩阵、Zoho开发信多轮触达与SEO发品", applicable_archetype: "Skill / Plugin" },
+      { module_id: "13", name: "询盘响应、选型与下钻", layer: "execution", layer_name: "销售执行层", description: "询盘10步速检、L1/L2/L3提问下钻与快速选型", applicable_archetype: "Skill" },
+      { module_id: "14", name: "报价方案、阶梯与样品跟进", layer: "execution", layer_name: "销售执行层", description: "Good/Better/Best报价方案、PI形式发票与打样协议", applicable_archetype: "Skill" },
+      { module_id: "15", name: "商务谈判、让步与异议应对", layer: "execution", layer_name: "销售执行层", description: "让步矩阵、10类高频异议应对话术与红线升级", applicable_archetype: "Skill" },
+      { module_id: "16", name: "订单流转、交付与履约风控", layer: "execution", layer_name: "销售执行层", description: "形式发票签署、定金到账、排产质检与海运履约", applicable_archetype: "Skill / MCP" },
+      { module_id: "17", name: "客户关系、老客复购与挽回", layer: "execution", layer_name: "销售执行层", description: "老客复购周期预测、动态分层与沉默客户挽回SOP", applicable_archetype: "Skill" },
+      { module_id: "18", name: "售后支持、客诉分级与索赔", layer: "execution", layer_name: "销售执行层", description: "P1/P2/P3客诉响应机制、补货/赔付与质量闭环", applicable_archetype: "Skill" },
+      { module_id: "19", name: "业务复盘、案例库与周报闭环", layer: "execution", layer_name: "销售执行层", description: "赢单输单复盘、标杆案例库萃取与老板增长周报", applicable_archetype: "Skill" },
+      { module_id: "20", name: "知识治理、红线审批与缺口队列", layer: "governance", layer_name: "治理闭环层", description: "六态置信度审计、内外敏感分级与红线审批流", applicable_archetype: "Skill / MCP" }
+    ];
+    return sendJson(res, 200, {
+      title: "外贸出口企业 AI 知识库标准框架 V3.0",
+      total_modules: modules.length,
+      layers: {
+        truth: "真相层 (Truth Layer)",
+        decision: "决策层 (Market & Decision Layer)",
+        assets: "客户资产层 (Client Asset Layer)",
+        execution: "销售执行层 (Sales & Execution Layer)",
+        governance: "治理闭环层 (Closed-Loop Governance Layer)"
+      },
+      modules
+    });
+  }
+
+  // 8. POST /api/v1/archetype/distill
+  if (req.method === "POST" && pathname === "/api/v1/archetype/distill") {
+    const body = await parseBody(req);
+    const title = body.workflow_title || "外贸业务工作流";
+    const desc = body.workflow_description || "";
+    const tools = body.tools_involved || [];
+
+    const text = `${title} ${desc} ${tools.join(" ")}`.toLowerCase();
+    let archetype = "Skill";
+    let reason = "该工作流属于典型的【外贸任务级复用单元】（包含明确的输入、业务判断规则、多步执行步骤与标准化输出交付物）。根据《外贸出口企业AI知识库标准框架_V3.0》，应封装为具备完整 SOP 与防御红线的 Skill 技能包。";
+    let confidence = 0.95;
+
+    if (text.includes("mcp") || text.includes("数据库") || text.includes("api接口") || text.includes("crm连接") || text.includes("erp连接")) {
+      archetype = "MCP";
+      reason = "该工作流核心聚焦于【系统协议与数据连接】（如CRM/ERP/数据库跨系统通信）。根据三层架构规范，MCP 是定义 AI 访问外部环境的标准网络协议，因此最适合封装为独立 MCP Server。";
+      confidence = 0.92;
+    } else if (text.includes("plugin") || text.includes("tts") || text.includes("视频渲染") || text.includes("底层调用")) {
+      archetype = "Plugin";
+      reason = "该工作流聚焦于【代码级原子功能注入】（如特定本地音视频处理、底层运行时接口）。根据三层架构规范，Plugin 提供单点代码执行能力，最适合封装为标准 OpenCode / RenWork 插件。";
+      confidence = 0.88;
+    }
+
+    if (body.force_archetype) {
+      archetype = body.force_archetype;
+      reason = `用户指定采用 ${archetype} 架构进行资产化封装。`;
+    }
+
+    const safeSlug = title.toLowerCase().replace(/[^a-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || "foreign-trade-workflow";
+    const repoName = safeSlug.startsWith("renwork-") ? safeSlug : `renwork-${safeSlug}`;
+
+    return sendJson(res, 200, {
+      workflow_title: title,
+      recommended_archetype: archetype,
+      confidence_score: confidence,
+      recommendation_reason: reason,
+      matched_kb_module: {
+        module_id: "10",
+        name: "客户背调与商机研判",
+        layer: "assets",
+        layer_name: "客户资产层"
+      },
+      credits_deducted: 5,
+      suggested_repo_name: repoName,
+      github_url: `https://github.com/cnproduct/${repoName}`
+    });
+  }
+
   // Fallback
   return sendJson(res, 404, { ok: false, error: "ENDPOINT_NOT_FOUND", path: pathname });
 });
