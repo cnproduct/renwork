@@ -177,6 +177,10 @@ const EnvSchema = z.object({
   STRIPE_SEAT_PRICE_ID: z.string().optional(),
   STRIPE_BILLING_SUCCESS_URL: z.string().optional(),
   STRIPE_BILLING_CANCEL_URL: z.string().optional(),
+  RENWORK_BUYER_PROVIDER_MODE: z.enum(["disabled", "hunter_single_tenant", "hunter_official_pool"]).optional(),
+  RENWORK_HUNTER_API_KEY: z.string().optional(),
+  RENWORK_HUNTER_ALLOWED_ORG_ID: z.string().optional(),
+  RENWORK_HUNTER_OFFICIAL_POOL_LICENSED: z.string().optional(),
 }).superRefine((value, ctx) => {
   const inferredMode = value.DB_MODE ?? (value.DATABASE_URL ? "mysql" : "planetscale")
 
@@ -648,6 +652,12 @@ export const env = {
     seatPriceId: optionalString(parsed.STRIPE_SEAT_PRICE_ID),
     billingSuccessUrl: optionalString(parsed.STRIPE_BILLING_SUCCESS_URL),
     billingCancelUrl: optionalString(parsed.STRIPE_BILLING_CANCEL_URL),
+  },
+  renworkBuyerProvider: {
+    mode: parsed.RENWORK_BUYER_PROVIDER_MODE ?? "disabled",
+    hunterApiKey: optionalString(parsed.RENWORK_HUNTER_API_KEY),
+    hunterAllowedOrganizationId: optionalString(parsed.RENWORK_HUNTER_ALLOWED_ORG_ID),
+    hunterOfficialPoolLicensed: parsed.RENWORK_HUNTER_OFFICIAL_POOL_LICENSED?.trim() === "1",
   },
   render: {
     apiBase: parsed.RENDER_API_BASE ?? "https://api.render.com/v1",
