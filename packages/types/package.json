@@ -29,6 +29,11 @@
       "development": "./src/openwork-provider.ts",
       "default": "./src/openwork-provider.ts"
     },
+    "./renwork-commerce": {
+      "types": "./src/renwork-commerce.ts",
+      "development": "./src/renwork-commerce.ts",
+      "default": "./src/renwork-commerce.ts"
+    },
     "./automations": {
       "types": "./src/automations.ts",
       "development": "./src/automations.ts",
