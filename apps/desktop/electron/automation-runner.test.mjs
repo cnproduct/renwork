@@ -152,7 +152,7 @@ test("a runner credential bound elsewhere reports why this desktop stays disconn
   ])
 })
 
-test("desktop Automation execution creates a normal visible local OpenWork thread", async () => {
+test("desktop Automation execution creates a normal visible local RenWork thread", async () => {
   const requests = []
   let snapshots = 0
   const fetchImpl = async (url, options = {}) => {

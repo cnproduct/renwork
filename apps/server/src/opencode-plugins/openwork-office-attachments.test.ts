@@ -164,7 +164,7 @@ async function transform(root: string, messages: unknown[]) {
   return output.messages;
 }
 
-describe("OpenWorkOfficeAttachments", () => {
+describe("RenWorkOfficeAttachments", () => {
   test("extracts DOCX/PPTX text, materializes exact bytes, strips binary parts, and preserves ids", async () => {
     await withWorkspace(async (root) => {
       const docx = docxFixture();

@@ -112,13 +112,13 @@ function personDefaults(key: string, person: PersonShape | undefined, runId: str
   return {
     email: person?.email?.trim() || `${key}+${runId}@openwork.test`,
     name: person?.name?.trim() || key.replace(/(^|[-_ ])\w/g, (part) => part.toUpperCase()),
-    password: person?.password || "OpenWorkEval123!",
+    password: person?.password || "RenWorkEval123!",
   };
 }
 
 function defaultLocalOrg(runId: string): OrgShape {
   return {
-    name: `OpenWork Eval ${runId}`,
+    name: `RenWork Eval ${runId}`,
     admin: personDefaults("admin", undefined, runId),
     members: { jordan: personDefaults("jordan", { name: "Jordan Eval" }, runId) },
   };
@@ -128,7 +128,7 @@ function defaultReuseAdmin(): Required<PersonShape> {
   return {
     email: process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test",
     name: "Alex Eval",
-    password: process.env.OPENWORK_EVAL_DEMO_PASSWORD || "OpenWorkDemo123!",
+    password: process.env.OPENWORK_EVAL_DEMO_PASSWORD || "RenWorkDemo123!",
   };
 }
 
@@ -313,7 +313,7 @@ async function provisionOrganization(
   const admin = options.fallbackAdmin && !shape.admin
     ? await signIn(ref, { email: adminPerson.email, password: adminPerson.password })
     : await createOrSignInAccount(ref, adminPerson, options.databaseUrl);
-  if (options.createOrg) await createOrganization(admin, shape.name?.trim() || `OpenWork Eval ${runId}`);
+  if (options.createOrg) await createOrganization(admin, shape.name?.trim() || `RenWork Eval ${runId}`);
   const members: Record<string, DenSession> = {};
   for (const [key, memberShape] of Object.entries(shape.members ?? {})) {
     members[key] = await createMember(ref, admin, personDefaults(key, memberShape, runId), options.databaseUrl);

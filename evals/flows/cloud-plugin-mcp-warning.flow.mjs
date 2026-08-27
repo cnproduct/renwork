@@ -333,7 +333,7 @@ async function workspaceServerJson(ctx, path) {
     const baseUrl = String(info?.baseUrl ?? "").replace(/\\/+$/, "");
     const token = String(info?.ownerToken || info?.clientToken || "").trim();
     const workspaceId = (location.hash.match(/\\/workspace\\/([^/]+)/) || [])[1] || localStorage.getItem("openwork.react.activeWorkspace") || "";
-    if (!baseUrl || !token || !workspaceId) throw new Error("Missing OpenWork server connection");
+    if (!baseUrl || !token || !workspaceId) throw new Error("Missing RenWork server connection");
     const response = await fetch(baseUrl + "/workspace/" + encodeURIComponent(workspaceId) + ${JSON.stringify(path)}, {
       headers: { authorization: "Bearer " + token },
     });

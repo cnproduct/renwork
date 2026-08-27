@@ -388,11 +388,11 @@ function pkiPaths(dir: string) {
 export function opensslCertificateCommands(input: OpenSslCommandInput): OpenSslCommand[] {
   const files = pkiPaths(input.dir);
   const rootSubject = input.corporateIssuer
-    ? "/CN=OpenWork Egress Lab Corporate Root CA"
-    : "/CN=OpenWork Egress Lab Root CA";
+    ? "/CN=RenWork Egress Lab Corporate Root CA"
+    : "/CN=RenWork Egress Lab Root CA";
   const intermediateSubject = input.corporateIssuer
-    ? "/CN=OpenWork Egress Lab Corporate Interception CA"
-    : "/CN=OpenWork Egress Lab Intermediate CA";
+    ? "/CN=RenWork Egress Lab Corporate Interception CA"
+    : "/CN=RenWork Egress Lab Intermediate CA";
   return [
     { label: "root-key", args: ["genrsa", "-out", files.rootKey, "2048"] },
     { label: "root-csr", args: ["req", "-new", "-key", files.rootKey, "-out", files.rootCsr, "-subj", rootSubject] },

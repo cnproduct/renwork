@@ -186,14 +186,14 @@ export async function resolveAutomationModelAccessWithStore(
   if (input.providerId === "openwork") {
     const model = enabledOpenWorkModel(input.modelId)
     if (!model) {
-      return { ok: false, code: "model_access_lost", message: "The selected OpenWork-managed model is not available." }
+      return { ok: false, code: "model_access_lost", message: "The selected RenWork-managed model is not available." }
     }
     const provider = await store.findOpenWorkProvider(input)
     if (!provider) {
-      return { ok: false, code: "provider_unavailable", message: "OpenWork Models are not available for the Automation owner." }
+      return { ok: false, code: "provider_unavailable", message: "RenWork Models are not available for the Automation owner." }
     }
     if (!await store.canAccessProvider({ member, providerRecordId: provider.id })) {
-      return { ok: false, code: "model_access_lost", message: "The Automation owner no longer has access to OpenWork Models." }
+      return { ok: false, code: "model_access_lost", message: "The Automation owner no longer has access to RenWork Models." }
     }
     return {
       ok: true,

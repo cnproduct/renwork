@@ -34,14 +34,14 @@ test.skipIf(!appSpecsEnabled || !localPlacement || !mysqlOpen)(title, async ({ e
       admin: {
         email: `first-run-bootstrap-admin-${Date.now()}@openwork.test`,
         name: "First Run Bootstrap Admin",
-        password: "OpenWorkEval123!",
+        password: "RenWorkEval123!",
       },
     },
   });
   await inviteMember(den, "member", {
     email: `first-run-bootstrap-member-${Date.now()}@openwork.test`,
     name: "First Run Bootstrap Member",
-    password: "OpenWorkEval123!",
+    password: "RenWorkEval123!",
   });
   await using proxy = await faultProxy(den.ref);
   proxy.faults.status(desktopConfigPath, 429, { times: 5 });

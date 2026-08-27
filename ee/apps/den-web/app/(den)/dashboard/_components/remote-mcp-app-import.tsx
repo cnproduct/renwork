@@ -51,7 +51,7 @@ export function RemoteMcpAppImport({
               {preview.data ? "Review the cached resource" : "Add an app from a URL"}
             </h2>
             <p className="mt-1.5 max-w-[560px] text-[13px] leading-5 text-gray-500">
-              OpenWork downloads one immutable copy. The source URL is never needed when the installed app runs.
+              RenWork downloads one immutable copy. The source URL is never needed when the installed app runs.
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700" aria-label="Close">
@@ -74,7 +74,7 @@ export function RemoteMcpAppImport({
                   data-testid="remote-app-source-url"
                 />
                 <p className="mt-2 text-[12px] leading-5 text-gray-400">
-                  Vite and other web apps work when exported as one self-contained HTML file with inline JavaScript and CSS. No OpenWork-specific runtime manifest is required. Maximum 768 KiB.
+                  Vite and other web apps work when exported as one self-contained HTML file with inline JavaScript and CSS. No RenWork-specific runtime manifest is required. Maximum 768 KiB.
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
@@ -127,7 +127,7 @@ export function RemoteMcpAppImport({
                 </dl>
               </div>
 
-              <DenNotice tone="info" message="OpenWork will expose this cached HTML through an ordinary MCP tool and immutable ui:// resource. The app can use app-visible capability search on that same OpenWork MCP server to call authorized Connect tools and Code Mode Programs. Apps with their own MCP server keep that server's native tools and same-server calls through Connect." />
+              <DenNotice tone="info" message="RenWork will expose this cached HTML through an ordinary MCP tool and immutable ui:// resource. The app can use app-visible capability search on that same RenWork MCP server to call authorized Connect tools and Code Mode Programs. Apps with their own MCP server keep that server's native tools and same-server calls through Connect." />
               {importApp.error ? <DenNotice tone="error" message={importApp.error.message} /> : null}
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-5">
                 <DenButton variant="ghost" icon={ArrowLeft} onClick={() => preview.reset()}>Use another URL</DenButton>

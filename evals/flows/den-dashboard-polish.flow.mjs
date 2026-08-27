@@ -7,7 +7,7 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace(/\/+$/, "");
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? "").trim().replace(/\/+$/, "");
 const OWNER_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const ADMIN_EMAIL = "riley.dashboard-polish@acme.test";
 const EXPECTED_VERSION = process.env.OPENWORK_EVAL_DEN_EXPECTED_VERSION?.trim() || "commit 8c412db";
 

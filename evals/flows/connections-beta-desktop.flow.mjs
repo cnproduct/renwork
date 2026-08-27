@@ -5,7 +5,7 @@ const vo = await loadVoiceoverParagraphs("connections-beta-desktop");
 const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace(/\/+$/, "");
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? DEN_API_URL).trim().replace(/\/+$/, "");
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const RUN_TAG = Date.now();
 const CONNECTION_NAME = `beta-proof-desktop-${RUN_TAG}`;
 const CONNECTION_URL = "https://beta-proof.example.com/mcp";
@@ -162,7 +162,7 @@ async function ensureWorkspace(ctx) {
   }
   // Dismiss the OpenWork Models upsell if it appears.
   await ctx.eval(`(() => {
-    const btn = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continue without OpenWork Models');
+    const btn = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continue without RenWork Models');
     btn?.click();
     return true;
   })()`);
@@ -309,7 +309,7 @@ export default {
           },
           screenshot: {
             name: "connections-beta-desktop-connect-row",
-            claim: "OpenWork Connect shows the org MCP connection under Needs your sign-in with Connect your account.",
+            claim: "RenWork Connect shows the org MCP connection under Needs your sign-in with Connect your account.",
             requireText: ["From your organization", "NEEDS YOUR SIGN-IN", CONNECTION_NAME, "Connect your account"],
             rejectText: ["Something went wrong"],
           },

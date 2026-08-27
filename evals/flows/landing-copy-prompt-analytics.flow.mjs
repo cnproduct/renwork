@@ -145,7 +145,7 @@ export default {
             await fetch(routeUrl(ctx, "/")).catch(() => {});
             await ctx.eval(`location.href = ${JSON.stringify(routeUrl(ctx, "/"))}; true`);
             await ctx.waitFor(
-              `Boolean(document.querySelector(${JSON.stringify(COPY_BUTTON_SELECTOR)})) && document.body.innerText.includes("Install OpenWork on my computer")`,
+              `Boolean(document.querySelector(${JSON.stringify(COPY_BUTTON_SELECTOR)})) && document.body.innerText.includes("Install RenWork on my computer")`,
               { timeoutMs: 30_000, label: "hero prompt copy button" },
             );
             // Let any post-compile dev-client refresh settle before arming.
@@ -238,9 +238,9 @@ export default {
               const headerButtons = Array.from(header ? header.querySelectorAll("button") : []);
               const headerLinks = Array.from(header ? header.querySelectorAll("a") : []);
               return {
-                heroPromptVisible: bodyText.includes("Install OpenWork on my computer") && bodyText.includes("start.md?v=hero"),
-                headerVisible: bodyText.includes("Paste this prompt — it installs OpenWork for you"),
-                executionPreviewVisible: bodyText.includes("now paste it into Claude Code") && bodyText.includes("Installs OpenWork") && bodyText.includes("Opens ready to run"),
+                heroPromptVisible: bodyText.includes("Install RenWork on my computer") && bodyText.includes("start.md?v=hero"),
+                headerVisible: bodyText.includes("Paste this prompt — it installs RenWork for you"),
+                executionPreviewVisible: bodyText.includes("now paste it into Claude Code") && bodyText.includes("Installs RenWork") && bodyText.includes("Opens ready to run"),
                 copyPromptNavButtons: headerButtons.filter((button) => button.innerText.includes("Copy Prompt")).length,
                 downloadLinkVisible: headerLinks.some((link) => link.textContent.includes("Download") && link.href.endsWith("/download")),
               };
@@ -289,8 +289,8 @@ export default {
             guideFetch = {
               status: response.status,
               firstLines: body.split("\n").slice(0, 3).join("\n"),
-              startsWithGuide: body.startsWith("# OpenWork Start"),
-              offersMcpConnection: body.includes("Want me to connect the OpenWork MCP to this agent"),
+              startsWithGuide: body.startsWith("# RenWork Start"),
+              offersMcpConnection: body.includes("Want me to connect the RenWork MCP to this agent"),
               includesCodexMcpSetup: body.includes("codex mcp add openwork --url https://api.openworklabs.com/mcp/agent")
                 && body.includes("codex mcp login openwork"),
             };
@@ -299,7 +299,7 @@ export default {
 
             await ctx.eval(`location.href = ${JSON.stringify(routeUrl(ctx, `/start.md?v=${PROMPT_VARIANT}`))}; true`);
             await ctx.waitFor(
-              `document.body.innerText.includes(${JSON.stringify("OpenWork Start")})`,
+              `document.body.innerText.includes(${JSON.stringify("RenWork Start")})`,
               { timeoutMs: 30_000, label: "start.md guide in browser" },
             );
             browserEvents = await waitForMockEvents(ctx, POSTHOG_SERVER_EVENT, 2);
@@ -312,13 +312,13 @@ export default {
             });
             recordAssertion(
               ctx,
-              "Agent fetch returns HTTP 200 and the OpenWork start guide markdown",
+              "Agent fetch returns HTTP 200 and the RenWork start guide markdown",
               guideFetch?.status === 200 && guideFetch.startsWithGuide === true,
               guideFetch,
             );
             recordAssertion(
               ctx,
-              "The start guide offers to connect the OpenWork MCP and includes the Codex setup path",
+              "The start guide offers to connect the RenWork MCP and includes the Codex setup path",
               guideFetch?.offersMcpConnection === true && guideFetch.includesCodexMcpSetup === true,
               guideFetch,
             );
@@ -349,7 +349,7 @@ export default {
           },
           screenshot: {
             name: "start-md-guide",
-            requireText: ["OpenWork Start", "Want me to connect the OpenWork MCP to this agent"],
+            requireText: ["RenWork Start", "Want me to connect the RenWork MCP to this agent"],
           },
         });
       },

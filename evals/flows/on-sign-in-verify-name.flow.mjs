@@ -7,7 +7,7 @@ const vo = await loadVoiceoverParagraphs("on-sign-in-verify-name");
 const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace(/\/+$/, "");
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? "").trim().replace(/\/+$/, "");
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -175,7 +175,7 @@ export default {
           voiceover: vo[0],
           action: async () => {
             await uiSignIn(ctx);
-            await updateProfileName(ctx, "OpenWork", "User");
+            await updateProfileName(ctx, "RenWork", "User");
             await goTo(ctx, "/dashboard");
           },
           assert: async () => {
@@ -184,7 +184,7 @@ export default {
           },
           screenshot: {
             name: "default-name-dashboard-dialog",
-            claim: "The dashboard opens a User Profile dialog for the default OpenWork User name.",
+            claim: "The dashboard opens a User Profile dialog for the default RenWork User name.",
             requireText: ["User Profile", "Change how your name appears in the organization"],
             rejectText: ["Something went wrong"],
           },
@@ -207,7 +207,7 @@ export default {
               const save = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Save');
               return { first: first?.value ?? null, last: last?.value ?? null, saveDisabled: save?.disabled === true };
             })()`);
-            ctx.assert(state.first === "OpenWork", "First name is prefilled from the default name.");
+            ctx.assert(state.first === "RenWork", "First name is prefilled from the default name.");
             ctx.assert(state.last === "User", "Last name is prefilled from the default name.");
             ctx.assert(state.saveDisabled, "Save is disabled before the user changes a field.");
           },
@@ -271,7 +271,7 @@ export default {
         await ctx.prove("Cancel closes the dialog without changing the default name during that dashboard visit", {
           voiceover: vo[4],
           action: async () => {
-            await updateProfileName(ctx, "OpenWork", "User");
+            await updateProfileName(ctx, "RenWork", "User");
             await goTo(ctx, "/dashboard");
             await waitForProfileDialog(ctx);
             await clickDialogButton(ctx, "Cancel");
@@ -280,7 +280,7 @@ export default {
           assert: async () => {
             await ctx.waitFor("!document.body.innerText.includes('User Profile')", { timeoutMs: 10_000, label: "profile dialog remains dismissed" });
             const name = await readProfileName(ctx);
-            ctx.assert(name === "OpenWork User", "Cancel leaves the stored default name unchanged.");
+            ctx.assert(name === "RenWork User", "Cancel leaves the stored default name unchanged.");
           },
           screenshot: {
             name: "dashboard-after-profile-cancel",

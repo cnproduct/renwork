@@ -152,7 +152,7 @@ test(title, async ({ evidence, place }) => {
 
   const shot = await screenshot(desktopApp);
   const seen = await validate(shot, [
-    "An OpenWork session shows a submitted task that used a connected organization tool",
+    "A RenWork session shows a submitted task that used a connected organization tool",
     "No connected service preparation failure or crash message is visible",
   ]);
   expect(seen.ok, seen.why).toBe(true);

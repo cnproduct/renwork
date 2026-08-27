@@ -34,7 +34,7 @@ const appSpecsEnabled = process.env.OPENWORK_EVAL_APP_SPECS === "1";
 const denApiUrl = process.env.OPENWORK_EVAL_DEN_API_URL?.trim().replace(/\/+$/, "") ?? "";
 const denWebUrl = (process.env.OPENWORK_EVAL_DEN_WEB_URL?.trim() || denApiUrl.replace("127.0.0.1", "localhost")).replace(/\/+$/, "");
 const email = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const password = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const password = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 
 const title = !appSpecsEnabled
   ? "marketplace catalogue legibility skipped: set OPENWORK_EVAL_APP_SPECS=1 to opt in"

@@ -15,7 +15,7 @@ const LEGACY_BOOTSTRAP = "C:\\Users\\Administrator\\.config\\openwork\\desktop-b
 const DOWNLOAD_BUNDLE = "C:\\Users\\Administrator\\Downloads\\Example Manufacturing Upgrade";
 const INSTALLED_DESKTOP_DIR = "C:\\Users\\Administrator\\AppData\\Local\\Programs\\@openworkdesktop";
 const BRANCH_LAUNCHER = "C:\\ow\\desktop-upgrade-url\\launch-openwork.cmd";
-const FIREWALL_RULE = "OpenWork Upgrade URL Airgap Eval";
+const FIREWALL_RULE = "RenWork Upgrade URL Airgap Eval";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -115,10 +115,10 @@ async function assertOrganizationBootstrap(ctx, label) {
 }
 
 async function stopOpenWork(ctx) {
-  await windowsExec(ctx, "stop OpenWork", `
-Get-Process -Name OpenWork -ErrorAction SilentlyContinue | Stop-Process -Force
+  await windowsExec(ctx, "stop RenWork", `
+Get-Process -Name RenWork -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 800
-Write-Output 'OpenWork stopped'
+Write-Output 'RenWork stopped'
 `);
 }
 
@@ -193,7 +193,7 @@ $canonical = '${CANONICAL_BOOTSTRAP}'
 $legacy = '${LEGACY_BOOTSTRAP}'
 $bundle = '${DOWNLOAD_BUNDLE}'
 Get-Process -Name msedge -ErrorAction SilentlyContinue | Stop-Process -Force
-Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -match '^OpenWork Setup' } | Stop-Process -Force
+Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -match '^RenWork Setup' } | Stop-Process -Force
 Remove-Item -LiteralPath 'C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Sessions' -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Force | Out-Null
 New-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name HideFirstRunExperience -PropertyType DWord -Value 1 -Force | Out-Null
@@ -212,7 +212,7 @@ $hosted = [ordered]@{
   baseUrl = '${HOSTED_URL}'
   apiBaseUrl = 'https://api.openworklabs.com'
   requireSignin = $true
-  brandAppName = 'OpenWork'
+  brandAppName = 'RenWork'
   writtenAt = '2026-07-10T12:00:00.000Z'
 }
 $utf8NoBom = New-Object Text.UTF8Encoding($false)
@@ -326,7 +326,7 @@ if ($LASTEXITCODE -ne 0) { throw "Organization installer dry run failed with exi
             let installedReady = false;
             while (Date.now() - startedAt < 180_000) {
               const installed = await windowsExec(ctx, "check installed desktop", `
-if (Test-Path -LiteralPath '${INSTALLED_DESKTOP_DIR}\\OpenWork.exe') { Write-Output 'installed' } else { Write-Output 'missing' }
+if (Test-Path -LiteralPath '${INSTALLED_DESKTOP_DIR}\\RenWork.exe') { Write-Output 'installed' } else { Write-Output 'missing' }
 `);
               if (installed.includes("installed")) {
                 installedReady = true;
@@ -427,7 +427,7 @@ Write-Output $rule.Enabled
 Write-Output $rule.Action
 `);
             ctx.assert(firewall.includes("True") && firewall.includes("Block"), `Expected active outbound block rule, got ${firewall}`);
-            ctx.recordEvidence({ type: "assertion", status: "passed", assertion: "Windows Firewall blocks outbound traffic for the tested OpenWork executable", actual: firewall.trim() });
+            ctx.recordEvidence({ type: "assertion", status: "passed", assertion: "Windows Firewall blocks outbound traffic for the tested RenWork executable", actual: firewall.trim() });
             await ctx.expectText("Bootstrap config");
             await ctx.expectText(ORG_URL);
             await assertOrganizationBootstrap(ctx, "during air-gapped restart");

@@ -180,8 +180,8 @@ async function readWorkspace(access: TelegramWorkerAccess, signal: AbortSignal) 
 
 async function readyWorker(scope: OwnerScope, signal: AbortSignal) {
   const worker = await ownerCloudWorker(scope)
-  if (!worker) return { ok: false as const, message: "Set up OpenWork Cloud before creating a Cloud Automation." }
-  if (worker.status === "failed") return { ok: false as const, message: "The OpenWork Cloud runtime needs repair before this Automation can run." }
+  if (!worker) return { ok: false as const, message: "Set up RenWork Cloud before creating a Cloud Automation." }
+  if (worker.status === "failed") return { ok: false as const, message: "The RenWork Cloud runtime needs repair before this Automation can run." }
   if (worker.status === "stopped") await abortable(wakeCloudWorker(worker.id), signal)
   const deadline = Date.now() + WORKER_READY_TIMEOUT_MS
   while (!signal.aborted && Date.now() < deadline) {
@@ -198,7 +198,7 @@ async function readyWorker(scope: OwnerScope, signal: AbortSignal) {
     if (current.status === "stopped") await abortable(wakeCloudWorker(current.id), signal)
     await abortableSleep(WORKER_READY_POLL_MS, signal)
   }
-  return { ok: false as const, message: "OpenWork Cloud could not be started for this Automation run." }
+  return { ok: false as const, message: "RenWork Cloud could not be started for this Automation run." }
 }
 
 async function connectHealth(input: {
@@ -240,7 +240,7 @@ async function connectHealth(input: {
   }
   if (health?.usable === true && health.usableByCurrentModel === true) return { ok: true }
   if (health?.usable === true && health.usableByCurrentModel !== true) {
-    return { ok: false, code: "model_access_lost", message: "The selected model cannot use the current OpenWork Connect capabilities." }
+    return { ok: false, code: "model_access_lost", message: "The selected model cannot use the current RenWork Connect capabilities." }
   }
   const failure = isRecord(health?.firstFailure) ? health.firstFailure : null
   return {
@@ -248,7 +248,7 @@ async function connectHealth(input: {
     code: "connect_access_unavailable",
     message: typeof failure?.message === "string"
       ? failure.message
-      : "OpenWork Connect is not ready in the Cloud runtime. Reconnect it before retrying this Automation.",
+      : "RenWork Connect is not ready in the Cloud runtime. Reconnect it before retrying this Automation.",
   }
 }
 
@@ -358,7 +358,7 @@ export async function executeCloudAgent(input: CloudAgentExecutorInput): Promise
         status: cancelled ? "cancelled" : "failed",
         code: cancelled ? "cancelled" : deadlineController.signal.aborted ? "execution_timed_out" : "execution_runtime_unavailable",
         message: cancelled ? "The Automation run was cancelled."
-          : deadlineController.signal.aborted ? "The Automation run exceeded its maximum runtime while starting OpenWork Cloud." : runtime.message,
+          : deadlineController.signal.aborted ? "The Automation run exceeded its maximum runtime while starting RenWork Cloud." : runtime.message,
         retryable: false,
         needsAttention: !cancelled && !deadlineController.signal.aborted,
       }
@@ -419,7 +419,7 @@ export async function executeCloudAgent(input: CloudAgentExecutorInput): Promise
           ok: false,
           status: "failed",
           code: "execution_failed",
-          message: "Model authority was revoked, but OpenWork Cloud could not confirm that the native thread stopped. Inspect the native run before retrying.",
+          message: "Model authority was revoked, but RenWork Cloud could not confirm that the native thread stopped. Inspect the native run before retrying.",
           retryable: false,
           needsAttention: true,
           events: [{ type: "warning", payload: { code: "authority_revoked_abort_not_observed", nativeThreadId } }],
@@ -450,7 +450,7 @@ export async function executeCloudAgent(input: CloudAgentExecutorInput): Promise
           ok: false,
           status: "failed",
           code: "execution_failed",
-          message: "OpenWork Cloud could not confirm that the cancelled agent thread stopped. Inspect the native run before retrying.",
+          message: "RenWork Cloud could not confirm that the cancelled agent thread stopped. Inspect the native run before retrying.",
           retryable: false,
           needsAttention: true,
           events: [{ type: "warning", payload: { code: "abort_not_observed", nativeThreadId } }],
@@ -469,7 +469,7 @@ export async function executeCloudAgent(input: CloudAgentExecutorInput): Promise
     const transcript = await client.exportTranscript(nativeThreadId, { signal })
     const usage = usageFromTranscript(transcript.usage)
     if (transcript.terminalError) return terminalFailure({ error: transcript.terminalError, transcript, usage })
-    const resultSummary = transcript.finalAssistantText.trim() || "OpenWork Cloud completed the Automation run."
+    const resultSummary = transcript.finalAssistantText.trim() || "RenWork Cloud completed the Automation run."
     return {
       ok: true,
       threadId: nativeThreadId,
@@ -494,7 +494,7 @@ export async function executeCloudAgent(input: CloudAgentExecutorInput): Promise
           ok: false,
           status: "failed",
           code: "execution_failed",
-          message: "OpenWork Cloud could not confirm that the interrupted agent thread stopped. Inspect the native run before retrying.",
+          message: "RenWork Cloud could not confirm that the interrupted agent thread stopped. Inspect the native run before retrying.",
           retryable: false,
           needsAttention: true,
           events: [{ type: "warning", payload: { code: "abort_not_observed", nativeThreadId } }],

@@ -300,7 +300,7 @@ export async function isPasswordCompromised(password: string, fetchPasswordRange
   const response = await fetchPasswordRange(`https://api.pwnedpasswords.com/range/${prefix}`, {
     headers: {
       "add-padding": "true",
-      "user-agent": "OpenWork den-api password screening",
+      "user-agent": "RenWork den-api password screening",
     },
   })
 

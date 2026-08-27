@@ -26,7 +26,7 @@ const appSpecsEnabled = process.env.OPENWORK_EVAL_APP_SPECS === "1";
 const title = appSpecsEnabled
   ? "first use without an invite or cloud reaches local task UI with honest model setup"
   : "first-run local skipped: set OPENWORK_EVAL_APP_SPECS=1 to opt in";
-const prompt = "Create a short welcome checklist for this OpenWork workspace. Use exactly three bullets and mention one thing I can do next.";
+const prompt = "Create a short welcome checklist for this RenWork workspace. Use exactly three bullets and mention one thing I can do next.";
 
 interface TaskAvailability {
   createTaskEnabled: boolean;
@@ -86,11 +86,11 @@ test.skipIf(!appSpecsEnabled)(title, async () => {
 
   expect(app.readiness.route).toContain("/welcome");
   expect(app.readiness.state).toBe("welcome");
-  await waitForText(app, "Welcome to OpenWork");
+  await waitForText(app, "Welcome to RenWork");
   {
     const shot = await screenshot(app);
     const seen = await validate(shot, [
-      "The Welcome to OpenWork heading and Use Without Cloud option are visible",
+      "The Welcome to RenWork heading and Use Without Cloud option are visible",
       "No generic error or 'Something went wrong' crash message is visible",
     ]);
     expect(seen.ok, seen.why).toBe(true);
@@ -115,7 +115,7 @@ test.skipIf(!appSpecsEnabled)(title, async () => {
   }
 
   await clickButton(app, "Skip and use the free model", { timeoutMs: 90_000 });
-  await waitForText(app, "How did you hear about OpenWork?", { timeoutMs: 90_000 });
+  await waitForText(app, "How did you hear about RenWork?", { timeoutMs: 90_000 });
   await clickButton(app, "Skip", { timeoutMs: 15_000 });
   await waitFor(app, `Boolean(localStorage.getItem("openwork.react.activeWorkspace"))
     || /\\/workspace\\/[^/?#]+/.test(window.location.hash)`, {

@@ -82,7 +82,7 @@ export function createExternalConnectionProxyServer(input: {
       ...(downstreamUi ? { extensions: { [EXTENSION_ID]: downstreamUi } } : {}),
     },
     instructions: input.descriptor.instructions
-      ?? `This is the member-authorized OpenWork Connect proxy for ${connection.name}. Tool names and resources are provided by that MCP server.`,
+      ?? `This is the member-authorized RenWork Connect proxy for ${connection.name}. Tool names and resources are provided by that MCP server.`,
   })
 
   if (input.descriptor.capabilities.tools) {
@@ -96,7 +96,7 @@ export function createExternalConnectionProxyServer(input: {
     }))
     server.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const policy = evaluateToolPolicy(connection.toolPolicy, request.params.name)
-      if (policy.blocked) throw new McpError(ErrorCode.InvalidRequest, `Tool ${request.params.name} is disabled by OpenWork Connect policy.`)
+      if (policy.blocked) throw new McpError(ErrorCode.InvalidRequest, `Tool ${request.params.name} is disabled by RenWork Connect policy.`)
       return runtime.callTool({
         ...input.operation,
         toolName: request.params.name,

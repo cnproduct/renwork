@@ -23,7 +23,7 @@ type FeedbackPayload = {
   context?: FeedbackContext;
 };
 
-const DEFAULT_INTERNAL_FEEDBACK_EMAIL = "team@openworklabs.com";
+const DEFAULT_INTERNAL_FEEDBACK_EMAIL = "support@rrenn.com";
 
 function sanitizeValue(value: unknown, maxLength = 240) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -50,7 +50,7 @@ function formatDiagnosticsSummary(context: ReturnType<typeof sanitizeContext>) {
     ["Entrypoint", context.entrypoint],
     ["Deployment", context.deployment],
     ["App version", context.appVersion],
-    ["OpenWork server", context.openworkServerVersion],
+    ["RenWork server", context.openworkServerVersion],
     ["OpenCode", context.opencodeVersion],
     ["OS", osLabel],
     ["Platform", context.platform],

@@ -5,7 +5,7 @@ import { denApiFetch, openAdminConnections, signInApi, signInViaBrowser } from "
 const FLOW_ID = "mcp-connection-editing";
 const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const MOCK_PORT = Number(process.env.OPENWORK_EVAL_MCP_EDIT_MOCK_PORT ?? 4541);
 const MOCK_ORIGIN = `http://127.0.0.1:${MOCK_PORT}`;
 const RUN_TAG = Date.now().toString(36);
@@ -354,7 +354,7 @@ export default {
             await clickDialogButton(ctx, "Review identity change");
             await ctx.waitForText("Confirm that you want to invalidate the old identity.", { timeoutMs: 10_000 });
             await ctx.screenshot("frame-3-identity-change-warning", {
-              claim: "OpenWork names every credential class that the identity change will invalidate before confirmation.",
+              claim: "RenWork names every credential class that the identity change will invalidate before confirmation.",
               voiceover: vo[2],
               requireText: ["This changes the connection identity", "shared and individual sessions", "pending OAuth state", "Confirm and save"],
               rejectText: [REGULAR_API_KEY, "access_token", "refresh_token"],

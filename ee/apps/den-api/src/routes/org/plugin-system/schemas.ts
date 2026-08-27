@@ -650,7 +650,7 @@ export const extensionManifestSchema = z.object({
   contributions: z.array(jsonObjectSchema).optional(),
   setup: jsonObjectSchema.optional(),
   lifecycle: jsonObjectSchema.optional(),
-}).passthrough().meta({ ref: "OpenWorkExtensionManifest" })
+}).passthrough().meta({ ref: "RenWorkExtensionManifest" })
 
 export const pluginExtensionSchema = z.object({
   id: pluginIdSchema,

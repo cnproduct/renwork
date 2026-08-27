@@ -10,7 +10,7 @@ export type ActorSpec = Actor | "owner" | "fresh" | {
   prefix?: string;
 };
 
-const FRESH_PASSWORD = "OpenWorkEval123!";
+const FRESH_PASSWORD = "RenWorkEval123!";
 const PROCESS_RUNSTAMP = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -45,7 +45,7 @@ export const persona = {
     return {
       name: "owner",
       email: env.DEN_DEMO_OWNER_EMAIL ?? "alex@acme.test",
-      password: env.DEN_DEMO_OWNER_PASSWORD ?? "OpenWorkDemo123!",
+      password: env.DEN_DEMO_OWNER_PASSWORD ?? "RenWorkDemo123!",
       role: "owner",
     };
   },

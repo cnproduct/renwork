@@ -13,18 +13,18 @@ const INVITEE_CDP_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_WEB_CDP_INVITEE);
 const MOBILE_CDP_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_WEB_CDP_MOBILE);
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
-const MEMBER_PASSWORD = "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const MEMBER_PASSWORD = "RenWorkDemo123!";
 const DOWNLOAD_URL = "https://openworklabs.com/download";
 const REMOVED_INVITE_EMAIL_TEXT = [
   "Download the desktop app",
-  "Download OpenWork",
+  "Download RenWork",
   "Edit spreadsheets",
   "Control your browser",
   "Organize files",
   "Automate tasks",
   "desktop app",
-  "Open OpenWork",
+  "Open RenWork",
 ];
 const RUN_TAG = Date.now().toString(36);
 const MAYA_EMAIL = `maya+${RUN_TAG}@acme.test`;
@@ -181,7 +181,7 @@ export default {
             await withClient(ctx, INVITEE_CDP_URL, async () => {
               await ctx.waitFor("Boolean(document.querySelector('[data-testid=\"join-org-success\"]'))", { timeoutMs: 45_000, label: "join-org success" });
               await ctx.expectText("You're in");
-              await ctx.expectText("Open OpenWork");
+              await ctx.expectText("Open RenWork");
               await ctx.expectText("Download the desktop app");
               const pathname = await ctx.eval("location.pathname");
               ctx.assert(typeof pathname === "string" && !pathname.startsWith("/dashboard"), `Join success redirected unexpectedly to ${pathname}.`);
@@ -189,7 +189,7 @@ export default {
           },
           screenshot: {
             name: "maya-success-desktop-cta",
-            requireText: ["Open OpenWork", "Download the desktop app", "Edit spreadsheets"],
+            requireText: ["Open RenWork", "Download the desktop app", "Edit spreadsheets"],
             rejectText: ["Something went wrong"],
           },
         });
@@ -229,7 +229,7 @@ export default {
     {
       name: "Frame 6",
       run: async (ctx) => {
-        await ctx.prove("Maya clicks Open OpenWork and the Electron app signs into Acme", {
+        await ctx.prove("Maya clicks Open RenWork and the Electron app signs into Acme", {
           voiceover: vo[5],
           action: async () => {
             await withClient(ctx, INVITEE_CDP_URL, async () => {
@@ -237,7 +237,7 @@ export default {
               await ctx.clickText("Copy sign-in link", { selector: "button", timeoutMs: 20_000 });
               state.copiedDesktopUrl = await ctx.waitFor(
                 "typeof window.__capturedSignin === 'string' && window.__capturedSignin.startsWith('openwork://den-auth') && window.__capturedSignin",
-                { timeoutMs: 30_000, label: "captured OpenWork sign-in link" },
+                { timeoutMs: 30_000, label: "captured RenWork sign-in link" },
               );
               const clicked = await ctx.eval(`(() => {
                 const button = document.querySelector('[data-testid="join-org-open-openwork"]');
@@ -245,7 +245,7 @@ export default {
                 button?.click();
                 return Boolean(button);
               })()`);
-              ctx.assert(clicked, "Open OpenWork button was not available on Maya's success page.");
+              ctx.assert(clicked, "Open RenWork button was not available on Maya's success page.");
             });
 
             useDesktopClient(ctx);
@@ -347,9 +347,9 @@ export default {
           assert: async () => {
             await withClient(ctx, MOBILE_CDP_URL, async () => {
               await applyMobileEmulation(ctx);
-              await ctx.expectText("OpenWork runs on your computer.");
+              await ctx.expectText("RenWork runs on your computer.");
               await ctx.expectText("Email me the download link");
-              await ctx.expectNoText("Open OpenWork");
+              await ctx.expectNoText("Open RenWork");
               const hiddenDesktopButtons = await ctx.eval(`(() => {
                 return document.querySelector('[data-testid="join-org-open-openwork"]') === null
                   && document.querySelector('[data-testid="join-org-download"]') === null;
@@ -359,8 +359,8 @@ export default {
           },
           screenshot: {
             name: "riley-mobile-honest-next-step",
-            requireText: ["OpenWork runs on your computer", "Email me the download link"],
-            rejectText: ["Open OpenWork", "Download the desktop app", "Something went wrong"],
+            requireText: ["RenWork runs on your computer", "Email me the download link"],
+            rejectText: ["Open RenWork", "Download the desktop app", "Something went wrong"],
           },
         });
         });
@@ -382,18 +382,18 @@ export default {
           assert: async () => {
             const { entry, html } = await getLatestDevEmail(ctx, "downloadLink", RILEY_EMAIL);
             ctx.assert(html.includes(DOWNLOAD_URL), `Download email is missing ${DOWNLOAD_URL}.`);
-            ctx.assert(html.includes("Download OpenWork"), "Download email is missing its primary heading/CTA.");
+            ctx.assert(html.includes("Download RenWork"), "Download email is missing its primary heading/CTA.");
             ctx.output("riley-download-email", JSON.stringify({ to: entry.to, subject: entry.subject }, null, 2));
             await withClient(ctx, MOBILE_CDP_URL, async () => {
               await applyMobileEmulation(ctx);
               await navigateToAbsolute(ctx, `${DEN_API_URL}/v1/dev/emails/last?template=downloadLink`);
-              await ctx.waitForText("Download OpenWork", { timeoutMs: 20_000 });
+              await ctx.waitForText("Download RenWork", { timeoutMs: 20_000 });
               await ctx.expectText("Edit spreadsheets");
             });
           },
           screenshot: {
             name: "riley-download-email",
-            requireText: ["Download OpenWork", "Edit spreadsheets"],
+            requireText: ["Download RenWork", "Edit spreadsheets"],
             rejectText: ["Something went wrong"],
           },
         });

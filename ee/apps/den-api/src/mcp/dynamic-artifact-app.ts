@@ -83,7 +83,7 @@ export const DYNAMIC_ARTIFACT_APP_HTML = String.raw`<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>OpenWork Dynamic Artifact</title>
+  <title>RenWork Dynamic Artifact</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -421,7 +421,7 @@ export const DYNAMIC_ARTIFACT_APP_HTML = String.raw`<!doctype html>
         id: INIT_ID,
         method: 'ui/initialize',
         params: {
-          appInfo: { name: 'OpenWork Dynamic Artifact', version: '1.0.0' },
+          appInfo: { name: 'RenWork Dynamic Artifact', version: '1.0.0' },
           appCapabilities: {},
           protocolVersion: '2026-01-26'
         }
@@ -478,7 +478,7 @@ export function registerAgentDynamicArtifactApp(input: {
 export function registerAgentDynamicArtifactResource(server: McpServer) {
   registerAppResource(
     server,
-    "OpenWork Dynamic Artifact",
+    "RenWork Dynamic Artifact",
     DYNAMIC_ARTIFACT_APP_RESOURCE_URI,
     {
       description: "A data-first Preview, Data, and Lineage view for an immutable saved Script result.",

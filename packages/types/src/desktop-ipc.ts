@@ -476,6 +476,7 @@ export type DesktopCommandMap = {
   };
 
   // Dialogs
+  getDefaultWorkspacePath: { args: []; result: string };
   pickDirectory: {
     args: [options?: { title?: string; defaultPath?: string; multiple?: boolean }];
     result: string | string[] | null;

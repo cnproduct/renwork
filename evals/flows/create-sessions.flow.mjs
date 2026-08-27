@@ -68,7 +68,7 @@ async function createWorkspace(ctx) {
       },
     );
     const serverInfo = await window.__OPENWORK_ELECTRON__.invokeDesktop("openworkServerInfo");
-    if (!serverInfo?.baseUrl) throw new Error("OpenWork server did not restart for the eval workspace");
+    if (!serverInfo?.baseUrl) throw new Error("RenWork server did not restart for the eval workspace");
     localStorage.setItem("openwork.server.urlOverride", serverInfo.baseUrl);
     if (serverInfo.port) localStorage.setItem("openwork.server.port", String(serverInfo.port));
     const nextToken = String(serverInfo.ownerToken || serverInfo.clientToken || "").trim();
@@ -119,7 +119,7 @@ async function readCreatedSessions(ctx) {
   return ctx.eval(`(async () => {
     const port = localStorage.getItem("openwork.server.port");
     const token = localStorage.getItem("openwork.server.token");
-    if (!port || !token) throw new Error("OpenWork server connection is unavailable");
+    if (!port || !token) throw new Error("RenWork server connection is unavailable");
     const baseUrl = "http://127.0.0.1:" + port;
     const headers = { Authorization: "Bearer " + token };
     const listResponse = await fetch(
@@ -194,7 +194,7 @@ export default {
       run: async (ctx) => {
         await ctx.waitFor("Boolean(window.__openworkControl && window.__OPENWORK_ELECTRON__)", {
           timeoutMs: 60_000,
-          label: "OpenWork desktop control surfaces",
+          label: "RenWork desktop control surfaces",
         });
         await createWorkspace(ctx);
         await ctx.waitFor(
@@ -214,13 +214,13 @@ export default {
         await ctx.prove("CREATE-SESSIONS creates and starts every requested chat without navigating the origin", {
           action: async () => {
             const promoOpen = await ctx.eval(
-              `document.body.innerText.includes("Continue without OpenWork Models")`,
+              `document.body.innerText.includes("Continue without RenWork Models")`,
             );
             if (promoOpen) {
-              await ctx.clickText("Continue without OpenWork Models");
+              await ctx.clickText("Continue without RenWork Models");
               await ctx.waitFor(
-                `!document.body.innerText.includes("Continue without OpenWork Models")`,
-                { timeoutMs: 10_000, label: "OpenWork Models promo dismissed" },
+                `!document.body.innerText.includes("Continue without RenWork Models")`,
+                { timeoutMs: 10_000, label: "RenWork Models promo dismissed" },
               );
             }
             await ctx.waitFor(

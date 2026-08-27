@@ -67,7 +67,7 @@ export function registerAgentAutomationResources(input: {
 }) {
   input.server.registerResource("agent-automations-index", AGENT_AUTOMATION_INDEX_URI, {
     title: "Your Automations",
-    description: "Discovery index of the Automations this OpenWork member owns, with live schedule and run state.",
+    description: "Discovery index of the Automations this RenWork member owns, with live schedule and run state.",
     mimeType: "application/json",
   }, async () => ({
     contents: [{

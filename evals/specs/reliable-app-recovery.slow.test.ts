@@ -19,7 +19,7 @@ const title = appSpecsEnabled
   : "reliable app recovery skipped — needs: set OPENWORK_EVAL_APP_SPECS=1";
 const profileMarker = "reliable-recovery-profile-marker";
 const fatalFailure = "EVAL_FATAL_DESKTOP_BOOTSTRAP_FAILURE: dlopen(/private/tmp/runtime.node): invalid code signature";
-const verifiedArtifact = "https://releases.openwork.test/v1.8.2/OpenWork-darwin-arm64.dmg";
+const verifiedArtifact = "https://releases.openwork.test/v1.8.2/RenWork-darwin-arm64.dmg";
 
 test.skipIf(!appSpecsEnabled)(title, async ({ evidence }) => {
   needs({ optIn: ["OPENWORK_EVAL_APP_SPECS"] });
@@ -57,7 +57,7 @@ test.skipIf(!appSpecsEnabled)(title, async ({ evidence }) => {
         OPENWORK_EVAL_FATAL_DESKTOP_BOOTSTRAP_FAILURE: fatalFailure,
         OPENWORK_EVAL_RECOVERY_CANDIDATES: JSON.stringify([
           { version: "1.8.2", verified: true, artifactUrl: verifiedArtifact },
-          { version: "1.8.1", verified: false, artifactUrl: "https://tampered.invalid/OpenWork.dmg" },
+          { version: "1.8.1", verified: false, artifactUrl: "https://tampered.invalid/RenWork.dmg" },
         ]),
       },
     });

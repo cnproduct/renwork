@@ -40,7 +40,7 @@ export default {
       name: "Signed-out state explains how to load the Marketplace",
       run: async (ctx) => {
         const signedOutNotice = await ctx.hasText(
-          "Sign in to OpenWork Cloud to load the Marketplace",
+          "Sign in to RenWork Cloud to load the Marketplace",
         );
         const hasRows = await ctx.eval(
           "document.querySelectorAll('[data-slot=card], article, li').length > 0",

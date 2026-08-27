@@ -1,6 +1,6 @@
 export const baseOpenGraph = {
   type: "website" as const,
-  siteName: "OpenWork",
+  siteName: "RenWork",
   locale: "en_US",
   images: ["/og-image-clean.png"]
 };

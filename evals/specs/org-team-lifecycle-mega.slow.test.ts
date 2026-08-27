@@ -358,7 +358,7 @@ test.skipIf(missingRequirements.length > 0)(title, { timeout: 45 * 60_000 }, asy
   const providerName = `Mega OpenAI Models ${stamp}`;
   const teammateEmail = `taylor.mega.${stamp}@acme.test`;
   const outsiderEmail = `riley.mega.${stamp}@acme.test`;
-  const password = "OpenWorkEval123!";
+  const password = "RenWorkEval123!";
   const skillNonce = `mega-${stamp}`;
   const skillName = `mega-echo-${stamp}`;
   const pluginName = `Mega Echo Plugin ${stamp}`;
@@ -456,7 +456,7 @@ test.skipIf(missingRequirements.length > 0)(title, { timeout: 45 * 60_000 }, asy
     );
 
     await sendComposerMessage(appAdmin, [
-      "Create exactly one OpenWork Cloud skill, not a local skill.",
+      "Create exactly one RenWork Cloud skill, not a local skill.",
       "Load and follow the remote create-skill capability `skill:create-skill`, then verify the created plugin.",
       `Use skill name ${skillName} and plugin title ${pluginName}.`,
       `The complete SKILL.md must contain nonce ${skillNonce}.`,
@@ -569,7 +569,7 @@ test.skipIf(missingRequirements.length > 0)(title, { timeout: 45 * 60_000 }, asy
     await waitForButtonGone(appAdmin, "Stop", { timeoutMs: 240_000 });
     const shot = await screenshot(appAdmin);
     const seen = await validate(shot, [
-      "An OpenWork chat surface shows the admin's completed Cloud skill creation task",
+      "A RenWork chat surface shows the admin's completed Cloud skill creation task",
       "No 'Something went wrong', blank screen, or crash message is visible",
     ]);
     expect(seen.ok, seen.why).toBe(true);

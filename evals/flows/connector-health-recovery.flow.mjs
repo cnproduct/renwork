@@ -51,7 +51,7 @@ function reportValue(output, prefix) {
 
 export default {
   id: FLOW_ID,
-  title: "OpenWork Cloud identifies and recovers any unhealthy downstream connector",
+  title: "RenWork Cloud identifies and recovers any unhealthy downstream connector",
   kind: "internal",
   requiresApp: false,
   steps: [
@@ -78,7 +78,7 @@ export default {
     {
       name: "Invalid refresh tokens name the downstream connector and recovery owner",
       run: async (ctx) => {
-        await ctx.prove("A JSON-RPC refresh failure becomes a connector-specific reauthorization action, not an OpenWork Cloud failure", {
+        await ctx.prove("A JSON-RPC refresh failure becomes a connector-specific reauthorization action, not a RenWork Cloud failure", {
           voiceover: vo[1],
           assert: async () => {
             const output = combinedOutput(runEndToEndSuite());
@@ -96,7 +96,7 @@ export default {
     {
       name: "The same discovery path recovers after the connector is fixed",
       run: async (ctx) => {
-        await ctx.prove("Updating the connector credential makes live tools discoverable on the next search without reconnecting OpenWork Cloud", {
+        await ctx.prove("Updating the connector credential makes live tools discoverable on the next search without reconnecting RenWork Cloud", {
           voiceover: vo[2],
           assert: async () => {
             const output = combinedOutput(runEndToEndSuite());

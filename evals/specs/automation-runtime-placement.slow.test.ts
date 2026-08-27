@@ -34,13 +34,13 @@ test("Web creates Cloud-owned Automations while Desktop creation remains local",
   await waitForText(browser, "New Automation", { timeoutMs: 60_000 });
 
   const surfaceCopy = await evalIn(browser, "document.body.innerText");
-  expect(surfaceCopy).toContain("Automations created here run headlessly in OpenWork Cloud");
+  expect(surfaceCopy).toContain("Automations created here run headlessly in RenWork Cloud");
   expect(surfaceCopy).toContain("Desktop-created Automations stay on Desktop");
   await evalIn(browser, `([...document.querySelectorAll("button")].find((button) => button.textContent?.includes("New Automation")))?.click()`);
   await waitForText(browser, "A stopped Cloud container wakes automatically", { timeoutMs: 10_000 });
   evidence.fact(
     "Creation surface explains immutable runtime placement",
-    "Web identifies new Automations as OpenWork Cloud-owned and preserves Desktop-created Automations as Desktop-owned.",
+    "Web identifies new Automations as RenWork Cloud-owned and preserves Desktop-created Automations as Desktop-owned.",
     true,
   );
 

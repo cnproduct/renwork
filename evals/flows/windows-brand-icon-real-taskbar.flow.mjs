@@ -78,7 +78,7 @@ async function windowsExec(ctx, label, command) {
 
 async function assertWindowsBrandShortcut(ctx, expected) {
   const result = await windowsExec(ctx, "check organization shortcut", `
-$path = 'C:\\Users\\Administrator\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\OpenWork.lnk'
+$path = 'C:\\Users\\Administrator\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\RenWork.lnk'
 if (Test-Path -LiteralPath $path) { Write-Output 'present' } else { Write-Output 'absent' }
 `);
   const actual = result.stdout.match(/(?:^|\r?\n)(present|absent)(?:\r?\n|$)/)?.[1] ?? result.stdout.trim();
@@ -122,11 +122,11 @@ async function assertOpenWorkWindow(ctx) {
   const result = await daytonaComputerUseWindows(sandboxId(ctx));
   const windows = Array.isArray(result?.windows) ? result.windows : [];
   const openwork = windows.find((entry) => /openwork/i.test(entry?.title ?? ""));
-  ctx.assert(Boolean(openwork), `Daytona Computer Use did not find an OpenWork window: ${JSON.stringify(windows)}`);
+  ctx.assert(Boolean(openwork), `Daytona Computer Use did not find a RenWork window: ${JSON.stringify(windows)}`);
   ctx.recordEvidence({
     type: "assertion",
     status: "passed",
-    assertion: "Daytona Computer Use sees the real OpenWork window in the interactive Windows session",
+    assertion: "Daytona Computer Use sees the real RenWork window in the interactive Windows session",
     actual: openwork?.title,
   });
 }
@@ -197,7 +197,7 @@ export default {
     {
       name: "Frame 1",
       run: async (ctx) => {
-        await ctx.prove("The stock OpenWork icon is visible in the real Windows taskbar", {
+        await ctx.prove("The stock RenWork icon is visible in the real Windows taskbar", {
           voiceover: vo[0],
           action: async () => {
             await assertOpenWorkWindow(ctx);

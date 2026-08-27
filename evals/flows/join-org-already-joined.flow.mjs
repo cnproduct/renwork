@@ -20,7 +20,7 @@ const ADMIN_TOKEN = (process.env.OPENWORK_EVAL_DEN_TOKEN ?? "").trim();
 const MEMBER_CDP_URL = (process.env.OPENWORK_EVAL_WEB_CDP_MEMBER ?? "").trim().replace(/\/+$/, "");
 const RUN_TAG = `${Date.now().toString(36)}-${randomBytes(2).toString("hex")}`;
 const TEAMMATE_EMAIL = `teammate+${RUN_TAG}@acme.test`;
-const PASSWORD = "OpenWorkDemo123!";
+const PASSWORD = "RenWorkDemo123!";
 
 const state = {
   invitationId: null,
@@ -269,7 +269,7 @@ export default {
         // demo ("Join OpenWork.", "welcome to OpenWork's OpenWork"). Rename
         // it to a real company so the frames read like the customer story;
         // keep the resolved name on any failure — the flow is name-agnostic.
-        if (orgName === "OpenWork") {
+        if (orgName === "RenWork") {
           const renamed = await authed("/v1/org", { method: "PATCH", body: JSON.stringify({ name: "Acme Robotics" }) });
           if (renamed.response.ok) {
             orgName = "Acme Robotics";

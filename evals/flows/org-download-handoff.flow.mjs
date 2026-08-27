@@ -15,7 +15,7 @@ const DEN_TOKEN = process.env.OPENWORK_EVAL_DEN_TOKEN?.trim() || "";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const RUN_TAG = Date.now().toString(36);
 const MEMBER_EMAIL = `maya-download-${RUN_TAG}@acme.test`;
-const MEMBER_PASSWORD = "OpenWorkDemo123!";
+const MEMBER_PASSWORD = "RenWorkDemo123!";
 const ORG_NAME = "Acme Robotics";
 
 const state = {
@@ -75,10 +75,10 @@ export default {
             const oldOpenButtonVisible = await ctx.eval(`(() => {
               const oldTestId = document.querySelector('[data-testid=join-org-open-openwork]');
               const exactButton = [...document.querySelectorAll('button')]
-                .find((button) => (button.textContent ?? '').replace(/\\s+/g, ' ').trim() === 'Open OpenWork');
+                .find((button) => (button.textContent ?? '').replace(/\\s+/g, ' ').trim() === 'Open RenWork');
               return Boolean(oldTestId || exactButton);
             })()`);
-            witness(ctx, !oldOpenButtonVisible, "The old Open OpenWork button is gone from the join success layout", oldOpenButtonVisible);
+            witness(ctx, !oldOpenButtonVisible, "The old Open RenWork button is gone from the join success layout", oldOpenButtonVisible);
           },
           screenshot: {
             name: "join-success-one-clear-next-step",
@@ -107,7 +107,7 @@ export default {
           },
           assert: async () => {
             await ctx.expectText("Download and install");
-            await ctx.expectText("Open OpenWork");
+            await ctx.expectText("Open RenWork");
             await ctx.expectText("Sign in");
 
             const href = await ctx.eval("document.querySelector('[data-testid=install-download-primary]')?.href ?? ''");
@@ -130,7 +130,7 @@ export default {
           },
           screenshot: {
             name: "guided-setup-org-served-download",
-            requireText: ["Download and install", "Open OpenWork", "Sign in"],
+            requireText: ["Download and install", "Open RenWork", "Sign in"],
           },
         }));
       },
@@ -145,18 +145,18 @@ export default {
             await ctx.waitFor("Boolean(document.querySelector('[data-testid=install-guide]'))", { timeoutMs: 30_000, label: "guided installer" });
             // Both narrated beats: the wait-gate copy, then the one-click
             // "I already have it" affirmation that advances the guide.
-            await ctx.expectText("Only continue once OpenWork is installed and running on this computer.");
-            await ctx.expectText("I already have OpenWork");
+            await ctx.expectText("Only continue once RenWork is installed and running on this computer.");
+            await ctx.expectText("I already have RenWork");
             await clickSelector(ctx, "[data-testid=install-skip-download]", "already have app button");
           },
           assert: async () => {
             await ctx.waitFor("document.querySelector('[data-testid=install-guide-step-open]')?.dataset.state === 'active'", { timeoutMs: 20_000, label: "open step active" });
             await ctx.expectText("Open the app and confirm that you want to connect it to Acme Robotics.");
-            witness(ctx, await ctx.eval("Boolean(document.querySelector('[data-testid=install-connect-open]'))"), "The guide exposes the Open OpenWork action after the affirmation", "install-connect-open");
+            witness(ctx, await ctx.eval("Boolean(document.querySelector('[data-testid=install-connect-open]'))"), "The guide exposes the Open RenWork action after the affirmation", "install-connect-open");
           },
           screenshot: {
             name: "install-wait-gate-copy",
-            requireText: ["Open OpenWork", "Open the app and confirm that you want to connect it to Acme Robotics."],
+            requireText: ["Open RenWork", "Open the app and confirm that you want to connect it to Acme Robotics."],
           },
         }));
       },
@@ -164,7 +164,7 @@ export default {
     {
       name: "Frame 4",
       run: async (ctx) => {
-        await ctx.prove("Open OpenWork shows Acme and its server before anything changes", {
+        await ctx.prove("Open RenWork shows Acme and its server before anything changes", {
           voiceover: vo[3],
           action: async () => {
             await withWeb(ctx, async () => {
@@ -217,15 +217,15 @@ export default {
             await clickSelector(ctx, "[data-testid=connect-confirm-accept]", "connect confirmation button");
           },
           assert: async () => {
-            await ctx.waitForText("Welcome to OpenWork", { timeoutMs: 45_000 });
-            await ctx.expectText("Sign in to OpenWork");
+            await ctx.waitForText("Welcome to RenWork", { timeoutMs: 45_000 });
+            await ctx.expectText("Sign in to RenWork");
             const persisted = await invokeDesktop(ctx, "getDesktopBootstrapConfig");
             witness(ctx, persisted?.requireSignin === true, "The accepted connect link persisted a required sign-in gate", persisted);
             witness(ctx, cleanBaseUrl(persisted?.baseUrl) === DEN_WEB_URL, "The desktop bootstrap baseUrl points at the Den deployment", persisted?.baseUrl);
           },
           screenshot: {
             name: "desktop-forced-signin-after-connect",
-            requireText: ["Welcome to OpenWork", "Sign in to OpenWork"],
+            requireText: ["Welcome to RenWork", "Sign in to RenWork"],
           },
         });
       },
@@ -645,7 +645,7 @@ async function completeDesktopSignedInJourney(ctx) {
       || document.body.innerText.includes("No resources have been configured for this organization yet.")
       || location.hash.includes('/session')
       || location.hash.includes('/workspace/')
-      || document.body.innerText.includes("OpenWork Cloud")`,
+      || document.body.innerText.includes("RenWork Cloud")`,
     { timeoutMs: 60_000, label: "post-sign-in desktop surface" },
   );
 
@@ -668,7 +668,7 @@ async function completeDesktopSignedInJourney(ctx) {
   }
 
   await ctx.navigateHash("/settings/cloud-account");
-  await ctx.waitForText("OpenWork Cloud", { timeoutMs: 45_000 });
+  await ctx.waitForText("RenWork Cloud", { timeoutMs: 45_000 });
   await ctx.waitForText("Sign out", { timeoutMs: 45_000 });
 }
 

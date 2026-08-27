@@ -138,7 +138,7 @@ function startMockOpencode(options: MockOpencodeOptions = {}) {
         return Response.json({
           all: [
             { id: "anthropic", name: "Anthropic", source: "config", env: [], options: {}, models },
-            { id: "openwork", name: "OpenWork", source: "config", env: [], options: {}, models },
+            { id: "openwork", name: "RenWork", source: "config", env: [], options: {}, models },
           ],
           default: {},
           connected: ["anthropic", "openwork"],
@@ -564,7 +564,7 @@ describe("openwork-cloud MCP strict reconcile", () => {
 
     const body = await responseRecord(await reconcile(openwork.base, "ws_1", { provider: "anthropic", model: "claude" }));
     expect(firstFailure(body).code).toBe("provider_tool_projection_missing");
-    expect(firstFailure(body).recommendedAction).toBe("Choose a model that can use OpenWork Cloud tools");
+    expect(firstFailure(body).recommendedAction).toBe("Choose a model that can use RenWork Cloud tools");
     expect(requireRecord(requireRecord(body.tools, "tools").providerProjection, "projection")).toMatchObject({
       source: "provider_capability",
       modelExists: true,
@@ -609,14 +609,14 @@ describe("openwork-cloud MCP strict reconcile", () => {
     expect(requireArray(requireRecord(body.pluginCanaries, "pluginCanaries").missing, "missing")).toContain("openwork_query");
   });
 
-  test("old engines without tool.ids return Update OpenWork guidance", async () => {
+  test("old engines without tool.ids return Update RenWork guidance", async () => {
     const root = await createRoot();
     const mock = startMockOpencode({ unsupportedToolIds: true });
     const openwork = await startOpenwork([workspace("ws_1", root, `http://127.0.0.1:${mock.server.port}`)]);
 
     const body = await responseRecord(await reconcile(openwork.base));
     expect(firstFailure(body).code).toBe("opencode_tool_ids_unsupported");
-    expect(firstFailure(body).recommendedAction).toBe("Update OpenWork");
+    expect(firstFailure(body).recommendedAction).toBe("Update RenWork");
   });
 
   test("health detects project tool denies while generic MCP add remains best-effort", async () => {
@@ -726,7 +726,7 @@ describe("openwork-cloud MCP engine refresh", () => {
     // A transport/cert failure must never be classified as an expired token:
     // "Reconnect OpenWork Cloud" cannot repair a broken TLS path.
     expect(failure.code).toBe("opencode_mcp_sync_failed");
-    expect(failure.recommendedAction).toBe("Retry reconcile or reconnect OpenWork Cloud");
+    expect(failure.recommendedAction).toBe("Retry reconcile or reconnect RenWork Cloud");
   });
 
   test("token-expired engine errors keep their token classification", async () => {

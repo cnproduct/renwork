@@ -7,7 +7,7 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const execFileAsync = promisify(execFile);
 
 const DEMO_EMAIL = "alex@acme.test";
-const DEMO_PASSWORD = "OpenWorkDemo123!";
+const DEMO_PASSWORD = "RenWorkDemo123!";
 const SIGN_IN_ROUTE = "/";
 const MEMBERS_ROUTE = "/dashboard/members";
 const COPY_INSTALL_LINK_SELECTOR = '[data-testid="copy-install-link"]';

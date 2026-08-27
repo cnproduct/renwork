@@ -327,7 +327,7 @@ export function productDiagnosticsPrecondition(env: NodeJS.ProcessEnv = process.
   const bun = spawnSync("bun", ["--version"], { env, encoding: "utf8", timeout: 5_000 });
   if (bun.status !== 0) {
     const reason = bun.error?.message ?? bun.stderr?.trim() ?? "bun --version failed";
-    return `Bun is required to import OpenWork's shipped TypeScript diagnostics modules for product-verdict egress proofs (${reason}).`;
+    return `Bun is required to import RenWork's shipped TypeScript diagnostics modules for product-verdict egress proofs (${reason}).`;
   }
   const openssl = spawnSync("openssl", ["version"], { env, encoding: "utf8", timeout: 5_000 });
   if (openssl.status !== 0) {
@@ -749,7 +749,7 @@ async function diagnoseTlsLab(lab: EgressLabHandle): Promise<DiagnosticVerdict> 
   if (lab.profile === "intercept" && /corporate|interception|proxy|mitm/u.test(issuerLower)) {
     return {
       profile: lab.profile,
-      text: `LIKELY TLS INTERCEPTION: endpoint leaf is re-signed by ${servedIssuer}, not the expected public issuer. Install or pass the corporate root, or bypass TLS inspection for OpenWork hosts.`,
+      text: `LIKELY TLS INTERCEPTION: endpoint leaf is re-signed by ${servedIssuer}, not the expected public issuer. Install or pass the corporate root, or bypass TLS inspection for RenWork hosts.`,
       evidence: lines.join("\n"),
       source: "lab-corroboration",
       available: true,
@@ -905,7 +905,7 @@ const { X509Certificate } = require("node:crypto");
 const fs = require("node:fs");
 let tls;
 try { tls = require("node:tls"); } catch { tls = {}; }
-const needle = (process.env.OPENWORK_TLS_REPRO_CA_MATCH || "OpenWork Egress Lab").toLowerCase();
+const needle = (process.env.OPENWORK_TLS_REPRO_CA_MATCH || "RenWork Egress Lab").toLowerCase();
 function countMatching(certs) {
   let count = 0;
   for (const pem of certs || []) {

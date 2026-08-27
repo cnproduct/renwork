@@ -1,4 +1,4 @@
-export const DEFAULT_OPENWORK_DOWNLOAD_URL = "https://openworklabs.com/download"
+export const DEFAULT_OPENWORK_DOWNLOAD_URL = "https://rrenn.com"
 
 export type DesktopCapability = {
   title: string

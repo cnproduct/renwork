@@ -77,7 +77,7 @@ export function SiteNav(props: Props) {
           >
             <OpenWorkMark className="h-[30px] w-[38px] transition-opacity group-hover:opacity-80" />
             <span className="text-[1.2rem] font-semibold tracking-tight text-[#011627] md:text-[1.3rem]">
-              OpenWork
+              RenWork
             </span>
           </Link>
 
@@ -100,7 +100,7 @@ export function SiteNav(props: Props) {
               className="hidden h-9 items-center gap-2 rounded-full border border-[var(--lp-border)] bg-white px-3.5 text-sm font-normal text-[var(--lp-muted)] transition-colors hover:text-[var(--lp-ink)] sm:flex"
               rel="noreferrer"
               target="_blank"
-              aria-label="OpenWork GitHub stars"
+              aria-label="RenWork GitHub stars"
             >
               <svg
                 className="h-4 w-4"

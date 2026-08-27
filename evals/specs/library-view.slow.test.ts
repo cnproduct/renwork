@@ -97,7 +97,7 @@ async function useMobileViewport(browser: Surface): Promise<void> {
 
 test.skipIf(!apiUrl || !webUrl)(title, async () => {
   const den = { apiUrl, webUrl };
-  const password = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+  const password = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
   const admin = await signIn(den, {
     email: process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test",
     password,

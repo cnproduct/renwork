@@ -232,24 +232,24 @@ async function assertOfficeMockSelected(ctx) {
 async function dismissOpenWorkModelsModal(ctx) {
   const result = await ctx.eval(`(() => {
     const roots = Array.from(document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"], [data-radix-dialog-content]'));
-    const dialog = roots.find((item) => (item.textContent || "").includes("OpenWork Models"));
+    const dialog = roots.find((item) => (item.textContent || "").includes("RenWork Models"));
     if (!dialog) return { dismissed: false };
     const buttons = Array.from(dialog.querySelectorAll("button"));
-    const continueButton = buttons.find((button) => (button.textContent || "").trim().includes("Continue without OpenWork Models"));
+    const continueButton = buttons.find((button) => (button.textContent || "").trim().includes("Continue without RenWork Models"));
     const closeButton = buttons.find((button) => {
       const label = button.getAttribute("aria-label") || "";
       return label === "Close" || (button.textContent || "").trim() === "Close";
     });
     const button = continueButton || closeButton;
-    if (!button) return { dismissed: false, reason: "OpenWork Models modal had no dismiss button" };
+    if (!button) return { dismissed: false, reason: "RenWork Models modal had no dismiss button" };
     button.click();
     return { dismissed: true };
   })()`);
   if (!result || !result.dismissed) return;
   await ctx.waitFor(`(() => {
     const roots = Array.from(document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"], [data-radix-dialog-content]'));
-    return !roots.some((item) => (item.textContent || "").includes("OpenWork Models"));
-  })()`, { timeoutMs: 10_000, label: "OpenWork Models modal dismissed" });
+    return !roots.some((item) => (item.textContent || "").includes("RenWork Models"));
+  })()`, { timeoutMs: 10_000, label: "RenWork Models modal dismissed" });
 }
 
 async function createFreshSession(ctx) {
@@ -806,7 +806,7 @@ export default {
     {
       name: "Send normalizes Office files for provider text, tool loop writes artifacts, and sent cards are actionable",
       run: async (ctx) => {
-        await ctx.prove("Sending crosses Electron, OpenWork, OpenCode, and the provider; the mock receives normalized Office text, then writes exact materialized bytes via bash", {
+        await ctx.prove("Sending crosses Electron, RenWork, OpenCode, and the provider; the mock receives normalized Office text, then writes exact materialized bytes via bash", {
           voiceover: vo[2],
           action: async () => {
             const beforeHashes = resetWorkspaceOfficeArtifacts(ctx);

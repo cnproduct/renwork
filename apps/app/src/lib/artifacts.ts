@@ -113,7 +113,7 @@ export function getArtifactType(filename: string): ArtifactType {
 }
 
 function getFileExtension(filename: string) {
-  return filename.split(".").pop()?.toLowerCase();
+  return filename.split(".").pop()?.toLowerCase() ?? "";
 }
 
 const ARTIFACT_TYPE_LABELS: Record<ArtifactType, string> = {

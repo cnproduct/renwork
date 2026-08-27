@@ -587,7 +587,7 @@ export const env = {
   },
   orgMode,
   singleOrg: {
-    name: optionalString(parsed.DEN_SINGLE_ORG_NAME) ?? "OpenWork",
+    name: optionalString(parsed.DEN_SINGLE_ORG_NAME) ?? "RenWork",
     slug: normalizeSingleOrgSlug(parsed.DEN_SINGLE_ORG_SLUG),
     allowPublicSignup: parseSingleOrgAllowPublicSignup(parsed.DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP, orgMode),
     ownerEmails: splitCsv(parsed.DEN_SINGLE_ORG_OWNER_EMAILS)

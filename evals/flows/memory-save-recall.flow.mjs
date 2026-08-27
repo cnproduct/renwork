@@ -241,7 +241,7 @@ export default {
           screenshot: {
             name: "memory-panel-shows-saved-memory",
             requireText: ["Acme account renews"],
-            rejectText: ["Something went wrong", "Sign in to your OpenWork account"],
+            rejectText: ["Something went wrong", "Sign in to your RenWork account"],
             hashIncludes: "/settings/memory",
           },
         });

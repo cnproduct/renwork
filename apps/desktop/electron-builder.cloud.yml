@@ -1,10 +1,10 @@
 extends: ./electron-builder.base.yml
 appId: com.differentai.openwork
-productName: OpenWork Cloud
+productName: RenWork Cloud
 extraMetadata:
   openworkDistribution: cloud
 protocols:
-  - name: OpenWork Cloud
+  - name: RenWork Cloud
     schemes:
       - openwork
 publish:

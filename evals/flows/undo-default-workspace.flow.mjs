@@ -48,7 +48,7 @@ async function resetToFreshWelcome(ctx) {
     const invoke = window.__OPENWORK_ELECTRON__.invokeDesktop;
     const info = await invoke("openworkServerInfo");
     const baseUrl = info?.baseUrl || info?.connectUrl;
-    if (!baseUrl) throw new Error("OpenWork server URL is unavailable");
+    if (!baseUrl) throw new Error("RenWork server URL is unavailable");
     const headers = {};
     const token = info?.ownerToken || info?.clientToken || "";
     if (token) headers.authorization = "Bearer " + token;
@@ -101,7 +101,7 @@ async function resetToFreshWelcome(ctx) {
     timeoutMs: 60_000,
     label: "welcome route",
   });
-  await ctx.waitForText("Welcome to OpenWork", { timeoutMs: 30_000 });
+  await ctx.waitForText("Welcome to RenWork", { timeoutMs: 30_000 });
 }
 
 export default {
@@ -123,7 +123,7 @@ export default {
           },
           screenshot: {
             name: "welcome-with-no-workspaces",
-            requireText: ["Welcome to OpenWork", "Pick a folder to get started"],
+            requireText: ["Welcome to RenWork", "Pick a folder to get started"],
             hashIncludes: ["/welcome"],
           },
         });
@@ -134,7 +134,7 @@ export default {
       run: async (ctx) => {
         const workspaceDir = await mkdtemp(join(homedir(), ".openwork-eval-user-workspace-"));
         ctx.workspaceDir = workspaceDir;
-        await ctx.prove("OpenWork creates a workspace only in the chosen folder", {
+        await ctx.prove("RenWork creates a workspace only in the chosen folder", {
           voiceover: vo[1],
           action: async () => {
             await ctx.waitFor(`Boolean(document.querySelector(${JSON.stringify(WELCOME_FOLDER_INPUT)}))`, {
@@ -186,16 +186,16 @@ export default {
               selector: "button",
               timeoutMs: 30_000,
             });
-            await ctx.waitForText("How did you hear about OpenWork?", { timeoutMs: 30_000 });
+            await ctx.waitForText("How did you hear about RenWork?", { timeoutMs: 30_000 });
           },
           assert: async () => {
-            await ctx.expectText("How did you hear about OpenWork?");
+            await ctx.expectText("How did you hear about RenWork?");
             const onWelcome = await ctx.eval("location.hash.includes('/welcome')");
             ctx.assert(onWelcome, "Onboarding left welcome before completion.");
           },
           screenshot: {
             name: "attribution-before-workspace",
-            requireText: ["How did you hear about OpenWork?", "Skip"],
+            requireText: ["How did you hear about RenWork?", "Skip"],
             hashIncludes: ["/welcome"],
           },
         });
@@ -250,7 +250,7 @@ export default {
             const created = await ctx.eval(`(async () => {
               const info = await window.__OPENWORK_ELECTRON__.invokeDesktop("openworkServerInfo");
               const baseUrl = info?.baseUrl || info?.connectUrl || localStorage.getItem("openwork.server.active");
-              if (!baseUrl) throw new Error("OpenWork server URL is unavailable");
+              if (!baseUrl) throw new Error("RenWork server URL is unavailable");
               const token = info?.ownerToken || info?.clientToken || localStorage.getItem("openwork.server.token") || "";
               const hostToken = info?.hostToken || localStorage.getItem("openwork.server.hostToken") || "";
               const headers = { "content-type": "application/json" };

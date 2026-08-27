@@ -59,7 +59,7 @@ const scriptSchema = z.object({
 })
 const listSchema = z.object({ items: z.array(scriptSchema) })
 const saveSchema = z.object({
-  pluginId: z.string().trim().min(1).max(160).optional().describe("Existing OpenWork Connect Plugin that will contain and share this Program. Omit to use the member's private My Programs Plugin."),
+  pluginId: z.string().trim().min(1).max(160).optional().describe("Existing RenWork Connect Plugin that will contain and share this Program. Omit to use the member's private My Programs Plugin."),
   name: z.string().trim().min(1).max(255),
   description: z.string().trim().max(4_000).optional(),
   code: z.string().min(1).max(200_000),
@@ -215,7 +215,7 @@ export function registerOrgCodemodeScriptRoutes<T extends { Variables: OrgRouteV
     "/v1/codemode-scripts",
     describeRoute({
       operationId: saveProgramOperationId,
-      tags: ["Codemode Runs"], summary: "Save a successful Code Mode run as a Program inside an OpenWork Connect Plugin",
+      tags: ["Codemode Runs"], summary: "Save a successful Code Mode run as a Program inside a RenWork Connect Plugin",
       responses: {
         201: jsonResponse("Program saved.", savedSchema),
         400: jsonResponse("Invalid request.", invalidRequestSchema),

@@ -1,10 +1,10 @@
 const ROUTES_WITHOUT_SHADER = [
-  { path: "/pricing", text: "OpenWork pricing" },
+  { path: "/pricing", text: "RenWork pricing" },
   { path: "/enterprise", text: "A privacy-first" },
   { path: "/trust", text: "Security & Data Privacy" },
   { path: "/privacy", text: "Privacy Policy" },
   { path: "/terms", text: "Terms of Service" },
-  { path: "/og", text: "OpenWork" },
+  { path: "/og", text: "RenWork" },
 ];
 
 function routeUrl(ctx, path) {

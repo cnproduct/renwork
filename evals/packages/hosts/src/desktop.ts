@@ -87,7 +87,7 @@ async function waitForReadiness(app: Surface, timeoutMs: number): Promise<AppRea
     await sleep(Math.min(POLL_INTERVAL_MS, Math.max(0, deadline - Date.now())));
   }
   throw new Error(
-    `OpenWork desktop did not become ready after ${timeoutMs}ms: ${describeAppState(last)} On screen: ${await dumpScreenState(app)}.`,
+    `RenWork desktop did not become ready after ${timeoutMs}ms: ${describeAppState(last)} On screen: ${await dumpScreenState(app)}.`,
   );
 }
 

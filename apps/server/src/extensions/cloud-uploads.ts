@@ -25,7 +25,7 @@ export const OPENWORK_CLOUD_UPLOAD_ACTIONS = [
     extensionId: OPENWORK_CLOUD_UPLOADS_EXTENSION_ID,
     action: "drive_upload_file",
     title: "Upload a workspace file to Google Drive",
-    description: "Uploads a workspace file up to 4 MiB directly to Google Drive outside model context. OpenWork preserves the file bytes, basename, and source MIME type; it does not convert Office files.",
+    description: "Uploads a workspace file up to 4 MiB directly to Google Drive outside model context. RenWork preserves the file bytes, basename, and source MIME type; it does not convert Office files.",
     inputSchema: {
       type: "object",
       properties: {
@@ -169,17 +169,17 @@ async function cloudUploadEndpoint(config: ServerConfig, suffix: string, depende
       ? headers.authorization
       : "";
   if (!endpoint || !authorization) {
-    throw new ApiError(409, "cloud_not_connected", "OpenWork Cloud must be connected before uploading files.");
+    throw new ApiError(409, "cloud_not_connected", "RenWork Cloud must be connected before uploading files.");
   }
   let url: URL;
   try {
     url = new URL(endpoint);
   } catch {
-    throw new ApiError(409, "cloud_endpoint_invalid", "The configured OpenWork Cloud endpoint is invalid.");
+    throw new ApiError(409, "cloud_endpoint_invalid", "The configured RenWork Cloud endpoint is invalid.");
   }
   const mcpSuffix = "/mcp/agent";
   if (!url.pathname.replace(/\/+$/, "").endsWith(mcpSuffix)) {
-    throw new ApiError(409, "cloud_endpoint_invalid", "The configured OpenWork Cloud endpoint must end in /mcp/agent.");
+    throw new ApiError(409, "cloud_endpoint_invalid", "The configured RenWork Cloud endpoint must end in /mcp/agent.");
   }
   url.pathname = `${url.pathname.replace(/\/+$/, "").slice(0, -mcpSuffix.length)}${suffix}`;
   url.search = "";
@@ -222,7 +222,7 @@ async function postDirectUpload(
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const message = isRecord(payload) && typeof payload.message === "string" ? payload.message : `HTTP ${response.status}`;
-    throw new ApiError(response.status || 502, "cloud_upload_failed", `OpenWork Cloud could not upload the file: ${message}`);
+    throw new ApiError(response.status || 502, "cloud_upload_failed", `RenWork Cloud could not upload the file: ${message}`);
   }
   return payload;
 }

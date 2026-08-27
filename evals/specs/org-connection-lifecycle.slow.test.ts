@@ -105,11 +105,11 @@ test.skipIf(!apiUrl || !appSpecsEnabled)(title, async () => {
   };
   const admin = await signIn(den, {
     email: process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test",
-    password: process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!",
+    password: process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!",
   });
   const member = await ensureMemberSession(den, admin, {
     email: process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test",
-    password: process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!",
+    password: process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!",
     name: "Jordan Demo",
     markVerifiedCmd: process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim(),
   });

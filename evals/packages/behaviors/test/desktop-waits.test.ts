@@ -46,7 +46,7 @@ test("waitFor appends a bounded on-screen dump to timeout failures", async () =>
     ? {
       hash: "#/workspace/demo/extensions",
       route: "/workspace/demo/extensions",
-      title: "OpenWork",
+      title: "RenWork",
       buttons: ["Back", "Add extension"],
       body: "Extensions Add an extension to this workspace",
     }

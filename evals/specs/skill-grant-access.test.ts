@@ -135,13 +135,13 @@ test.skipIf(!apiUrl)(title, async () => {
   };
   const admin = await signIn(den, {
     email: process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test",
-    password: process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!",
+    password: process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!",
   });
   const orgId = await organizationId(admin);
   await selectOrganization(admin, orgId);
   const creator = await ensureMemberSession(den, admin, {
     email: process.env.OPENWORK_EVAL_CREATOR_EMAIL?.trim() || "casey.spec@acme.test",
-    password: process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!",
+    password: process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!",
     name: "Casey Spec",
     markVerifiedCmd: process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim(),
   });
@@ -149,7 +149,7 @@ test.skipIf(!apiUrl)(title, async () => {
   const deniedEmail = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "nova.spec@acme.test";
   const denied = await ensureMemberSession(den, admin, {
     email: deniedEmail,
-    password: process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!",
+    password: process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!",
     name: "Nova Spec",
     markVerifiedCmd: process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim(),
   });
@@ -157,7 +157,7 @@ test.skipIf(!apiUrl)(title, async () => {
   const thirdEmail = process.env.OPENWORK_EVAL_THIRD_MEMBER_EMAIL?.trim() || "riley.spec@acme.test";
   const third = await ensureMemberSession(den, admin, {
     email: thirdEmail,
-    password: process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!",
+    password: process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!",
     name: "Riley Spec",
     markVerifiedCmd: process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim(),
   });

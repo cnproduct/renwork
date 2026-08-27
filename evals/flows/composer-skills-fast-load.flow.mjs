@@ -151,24 +151,24 @@ export default {
         await ctx.prove("Extensions settle immediately instead of hanging on a loader", {
           claim: "Selecting Extensions shows the built-in extension catalog right away.",
           voiceover:
-            "Extensions behave the same way: the catalog is on screen immediately — here the built-in OpenWork Browser, already enabled.",
+            "Extensions behave the same way: the catalog is on screen immediately — here the built-in RenWork Browser, already enabled.",
           action: async () => {
             await ctx.eval(`(() => {
               const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Extensions");
               btn.click();
               return true;
             })()`);
-            await ctx.waitFor(`document.body.innerText.includes("OpenWork Browser")`, {
+            await ctx.waitFor(`document.body.innerText.includes("RenWork Browser")`, {
               timeoutMs: 10_000,
               label: "extensions catalog entry",
             });
           },
           assert: async () => {
-            await ctx.expectText("OpenWork Browser");
+            await ctx.expectText("RenWork Browser");
           },
           screenshot: {
             name: "extensions-section",
-            requireText: ["OpenWork Browser"],
+            requireText: ["RenWork Browser"],
             rejectText: ["Loading commands"],
           },
         });

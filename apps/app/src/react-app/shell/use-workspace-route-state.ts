@@ -433,7 +433,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
 
       const { normalizedBaseUrl, resolvedToken, resolvedHostToken, hostInfo } = await withRouteRefreshTimeout(
         resolveOpenworkConnection(),
-        "OpenWork server connection",
+        "RenWork server connection",
       );
       if (!attempt.isCurrent()) return;
       if (!normalizedBaseUrl || !resolvedToken) {

@@ -28,7 +28,7 @@ export default {
       run: async (ctx) => {
         await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000 });
         const signedIn = await ctx.eval("Boolean((localStorage.getItem('openwork.den.authToken') ?? '').trim())");
-        ctx.assert(signedIn, "Desktop app must be signed in to OpenWork Cloud (run mcp-connections-desktop-e2e first).");
+        ctx.assert(signedIn, "Desktop app must be signed in to RenWork Cloud (run mcp-connections-desktop-e2e first).");
         const marker = await ctx.eval("localStorage.getItem('openwork.den.mcp.sync')");
         ctx.assert(Boolean(marker), "No sync marker present — cloud MCP was never configured.");
         ctx.log(`marker before: ${marker}`);
@@ -61,13 +61,13 @@ export default {
               { timeoutMs: 30_000, label: "sync marker rewritten by Refresh" },
             );
             ctx.log(`marker after: ${await ctx.eval("localStorage.getItem('openwork.den.mcp.sync')")}`);
-            await ctx.expectText("OpenWork Cloud Control");
+            await ctx.expectText("RenWork Cloud Control");
             await ctx.expectNoText("Something went wrong");
           },
           screenshot: {
             name: "force-sync-refreshed",
             claim: "After one Refresh click, the cloud MCP sync marker was rewritten — token re-minted and config re-synced on demand.",
-            requireText: ["OpenWork Cloud Control"],
+            requireText: ["RenWork Cloud Control"],
             rejectText: ["Something went wrong"],
           },
         });

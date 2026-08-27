@@ -141,16 +141,16 @@ async function getPerformanceMetrics(ctx, label) {
 }
 
 async function waitForControl(ctx, timeoutMs = 90_000) {
-  await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs, label: "OpenWork control API" });
+  await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs, label: "RenWork control API" });
 }
 
 async function dismissOpenWorkModelsPromo(ctx) {
-  const promoText = "Use OpenWork Models without API keys";
+  const promoText = "Use RenWork Models without API keys";
   if (!(await ctx.hasText(promoText))) return;
-  await ctx.clickText("Continue without OpenWork Models");
+  await ctx.clickText("Continue without RenWork Models");
   await ctx.waitFor(`!document.body.innerText.includes(${quoted(promoText)})`, {
     timeoutMs: 20_000,
-    label: "OpenWork Models promo dismissed",
+    label: "RenWork Models promo dismissed",
   });
 }
 
@@ -476,16 +476,16 @@ function setupWorker(params, emit) {
       if (Date.now() > deadlineAt) throw new Error(`Benchmark setup exceeded ${params.timeoutMs}ms.`);
     };
     const bridge = window.__OPENWORK_ELECTRON__?.invokeDesktop;
-    if (!bridge) throw new Error("OpenWork Electron desktop bridge is missing.");
+    if (!bridge) throw new Error("RenWork Electron desktop bridge is missing.");
     let connection = null;
     const refreshConnection = async (reason) => {
       const info = await bridge("openworkServerInfo");
-      if (!info?.running || !info.port) throw new Error(`Embedded OpenWork server is not running after ${reason}.`);
+      if (!info?.running || !info.port) throw new Error(`Embedded RenWork server is not running after ${reason}.`);
       const clientToken = typeof info.clientToken === "string" && info.clientToken ? info.clientToken : "";
       const ownerToken = typeof info.ownerToken === "string" && info.ownerToken ? info.ownerToken : "";
       const hostToken = typeof info.hostToken === "string" && info.hostToken ? info.hostToken : "";
-      if (!clientToken && !ownerToken) throw new Error(`OpenWork client token is unavailable after ${reason}.`);
-      if (!hostToken && !ownerToken) throw new Error(`OpenWork host authentication is unavailable after ${reason}.`);
+      if (!clientToken && !ownerToken) throw new Error(`RenWork client token is unavailable after ${reason}.`);
+      if (!hostToken && !ownerToken) throw new Error(`RenWork host authentication is unavailable after ${reason}.`);
       connection = {
         baseUrl: `http://127.0.0.1:${info.port}`,
         port: info.port,
@@ -499,7 +499,7 @@ function setupWorker(params, emit) {
     const initialServer = await refreshConnection("initial setup");
     const perRequestTimeoutMs = Math.min(params.timeoutMs, 120_000);
     const headersFor = (auth) => {
-      if (!connection) throw new Error("OpenWork server connection is not initialized.");
+      if (!connection) throw new Error("RenWork server connection is not initialized.");
       const headers = { "content-type": "application/json" };
       if (auth === "host") {
         if (connection.hostToken) headers["x-openwork-host-token"] = connection.hostToken;
@@ -516,7 +516,7 @@ function setupWorker(params, emit) {
       let status = null;
       let recorded = false;
       try {
-        if (!connection) throw new Error("OpenWork server connection is not initialized.");
+        if (!connection) throw new Error("RenWork server connection is not initialized.");
         const response = await fetch(`${connection.baseUrl}${path}`, {
           method,
           headers: headersFor(auth),
@@ -761,12 +761,12 @@ function conversationWorker(params, emit) {
       if (Date.now() > deadlineAt) throw new Error(`Conversation benchmark exceeded ${params.timeoutMs}ms.`);
     };
     const bridge = window.__OPENWORK_ELECTRON__?.invokeDesktop;
-    if (!bridge) throw new Error("OpenWork Electron desktop bridge is missing.");
+    if (!bridge) throw new Error("RenWork Electron desktop bridge is missing.");
     const info = await bridge("openworkServerInfo");
-    if (!info?.running || !info.port) throw new Error("Embedded OpenWork server is not running.");
+    if (!info?.running || !info.port) throw new Error("Embedded RenWork server is not running.");
     const clientToken = typeof info.clientToken === "string" && info.clientToken ? info.clientToken : "";
     const ownerToken = typeof info.ownerToken === "string" && info.ownerToken ? info.ownerToken : "";
-    if (!clientToken && !ownerToken) throw new Error("OpenWork client token is unavailable inside the renderer.");
+    if (!clientToken && !ownerToken) throw new Error("RenWork client token is unavailable inside the renderer.");
     const baseUrl = `http://127.0.0.1:${info.port}`;
     const perRequestTimeoutMs = Math.min(params.timeoutMs, 120_000);
     const headers = { "content-type": "application/json", authorization: `Bearer ${ownerToken || clientToken}` };
@@ -870,7 +870,7 @@ function conversationWorker(params, emit) {
         index,
         marker,
         title: `${conversationTitlePrefix}${pad(index)}`,
-        prompt: `Reply with exactly ${marker} and no other text. Do not call tools. This is a Windows OpenWork performance isolation check.`,
+        prompt: `Reply with exactly ${marker} and no other text. Do not call tools. This is a Windows RenWork performance isolation check.`,
         sessionId: null,
         created: false,
         accepted: false,
@@ -1022,7 +1022,7 @@ export default {
   preserveTheme: true,
   precondition: async (ctx) => {
     readParams(ctx);
-    await ctx.waitFor("Boolean(window.__OPENWORK_ELECTRON__)", { timeoutMs: 60_000, label: "OpenWork Electron bridge" });
+    await ctx.waitFor("Boolean(window.__OPENWORK_ELECTRON__)", { timeoutMs: 60_000, label: "RenWork Electron bridge" });
   },
   steps: [
     {
@@ -1030,7 +1030,7 @@ export default {
       run: async (ctx) => {
         const params = readParams(ctx);
         state.perfBefore = await getPerformanceMetrics(ctx, "before");
-        await ctx.prove("The eval is attached to a real packaged Windows Electron OpenWork app", {
+        await ctx.prove("The eval is attached to a real packaged Windows Electron RenWork app", {
           voiceover: vo[0],
           action: async () => {
             await waitForControl(ctx);
@@ -1072,7 +1072,7 @@ export default {
           screenshot: {
             name: "packaged-windows-baseline",
             requireText: ["Overview of all settings"],
-            rejectText: ["Something went wrong", "Use OpenWork Models without API keys"],
+            rejectText: ["Something went wrong", "Use RenWork Models without API keys"],
             hashIncludes: "/settings/general",
           },
         });
@@ -1087,7 +1087,7 @@ export default {
         recordAssertion(ctx, state.setup.workspaceCount === params.workspaces, "The renderer created or reused the requested benchmark workspaces through /workspaces/local.", { expected: params.workspaces, actual: state.setup.workspaceCount });
         recordAssertion(ctx, Number.isInteger(state.setup.registeredWorkspaceTotal) && state.setup.registeredWorkspaceTotal >= state.setup.workspaceCount, "The server reported total registered workspaces separately from this run's benchmark workspaces.", { registeredWorkspaceTotal: state.setup.registeredWorkspaceTotal, benchmarkWorkspaceCount: state.setup.workspaceCount });
         recordAssertion(ctx, state.setup.benchmarkSessionTotal >= state.setup.targetSessionTotal, "The renderer created or reused enough real benchmark sessions through OpenCode.", { expected: state.setup.targetSessionTotal, actual: state.setup.benchmarkSessionTotal });
-        recordAssertion(ctx, state.setup.requestSummary.errors === 0, "Dataset setup completed with zero OpenWork/OpenCode API failures.", state.setup.requestSummary);
+        recordAssertion(ctx, state.setup.requestSummary.errors === 0, "Dataset setup completed with zero RenWork/OpenCode API failures.", state.setup.requestSummary);
         ctx.output("windows setup metrics", JSON.stringify(state.setup, null, 2));
         state.activationRouteReadyMs = await activateVisibleWorkspace(ctx, state.setup);
       },
@@ -1199,7 +1199,7 @@ export default {
           screenshot: {
             name: "benchmark-sessions-navigable",
             requireText: ["Search sessions", finalSwitchTitle],
-            rejectText: ["Something went wrong", "Use OpenWork Models without API keys"],
+            rejectText: ["Something went wrong", "Use RenWork Models without API keys"],
           },
         });
       },
@@ -1245,7 +1245,7 @@ export default {
           screenshot: {
             name: "completed-assistant-marker",
             requireText: [state.conversations.representative.marker],
-            rejectText: ["Something went wrong", "Use OpenWork Models without API keys"],
+            rejectText: ["Something went wrong", "Use RenWork Models without API keys"],
           },
         });
       },

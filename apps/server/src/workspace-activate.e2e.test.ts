@@ -532,7 +532,7 @@ describe("workspace lifecycle registry", () => {
     expect(workspace?.opencodePassword).toBeUndefined();
   });
 
-  test("creates and persists remote OpenWork workspace records", async () => {
+  test("creates and persists remote RenWork workspace records", async () => {
     const workspaceRoot = await createWorkspaceRoot();
     const configPath = join(workspaceRoot, "server.json");
     await writeFile(configPath, `${JSON.stringify({ workspaces: [], authorizedRoots: [] }, null, 2)}\n`, "utf8");

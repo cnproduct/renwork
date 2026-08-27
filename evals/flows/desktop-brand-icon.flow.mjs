@@ -9,7 +9,7 @@ const vo = await loadVoiceoverParagraphs("desktop-brand-icon");
 
 const execFileAsync = promisify(execFile);
 const ADMIN_EMAIL = "alex@acme.test";
-const ADMIN_PASSWORD = "OpenWorkDemo123!";
+const ADMIN_PASSWORD = "RenWorkDemo123!";
 const GENPACT_LOGO = "https://upload.wikimedia.org/wikipedia/commons/5/50/Genpact_Logo_Black_%283%29.png";
 const TEST_ICON_URL = "https://upload.wikimedia.org/wikipedia/commons/6/6a/JavaScript-logo.png";
 const ORG_SETTINGS_PATH = "/dashboard/brand-appearance";
@@ -287,7 +287,7 @@ async function daytonaExec(ctx, label, script) {
 async function assertDaytonaCacheExists(ctx) {
   const result = await daytonaExec(ctx, "brand-icon cache exists", `
 set -euo pipefail
-for candidate in "$HOME/.config"/com.differentai.openwork* "$HOME/.config"/*OpenWork* "$HOME/.config"/*openwork*; do
+for candidate in "$HOME/.config"/com.differentai.openwork* "$HOME/.config"/*RenWork* "$HOME/.config"/*openwork*; do
   if [ -d "$candidate" ] && [ -f "$candidate/brand-icon.png" ]; then
     printf '%s\n' "$candidate/brand-icon.png"
     exit 0
@@ -304,7 +304,7 @@ exit 1
 async function assertDaytonaCacheGone(ctx) {
   const result = await daytonaExec(ctx, "brand-icon cache removed", `
 set -euo pipefail
-for candidate in "$HOME/.config"/com.differentai.openwork* "$HOME/.config"/*OpenWork* "$HOME/.config"/*openwork*; do
+for candidate in "$HOME/.config"/com.differentai.openwork* "$HOME/.config"/*RenWork* "$HOME/.config"/*openwork*; do
   if [ -d "$candidate" ] && [ -f "$candidate/brand-icon.png" ]; then
     printf 'unexpected cache file: %s\n' "$candidate/brand-icon.png" >&2
     exit 1

@@ -44,7 +44,7 @@ export default defineScenario({
               assert: async () => {
                 await ctx.expectRoute("/dashboard", { timeoutMs: 60_000 });
               },
-              screenshot: { name: "sso-user-dashboard", requireText: ["OpenWork"] },
+              screenshot: { name: "sso-user-dashboard", requireText: ["RenWork"] },
             });
           });
 

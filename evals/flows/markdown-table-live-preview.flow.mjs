@@ -9,7 +9,7 @@ const DOC = `# Recovery objectives
 | Service or obligation | Proposed RTO | Proposed RPO | Approval |
 |---|---:|---:|---|
 | Critical support intake | 4 hours | Not applicable | Joint |
-| OpenWork server | 8 hours | 24 hours | Genpact |
+| RenWork server | 8 hours | 24 hours | Genpact |
 
 Some prose between the two tables that should still wrap to the width of the panel.
 

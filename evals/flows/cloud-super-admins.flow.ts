@@ -100,7 +100,7 @@ type FlowState = {
 
 const DEN_API_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_DEN_API_URL);
 const DEN_WEB_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_DEN_WEB_URL);
-const DEFAULT_PASSWORD = process.env.OPENWORK_EVAL_SUPER_ADMINS_PASSWORD?.trim() || "OpenWorkDemo123!";
+const DEFAULT_PASSWORD = process.env.OPENWORK_EVAL_SUPER_ADMINS_PASSWORD?.trim() || "RenWorkDemo123!";
 const FIXTURE_ORG_NAME = process.env.OPENWORK_EVAL_SUPER_ADMINS_ORG_NAME?.trim() || "Cloud Super Admins Eval";
 
 const OWNER: FixtureActor = {
@@ -146,7 +146,7 @@ const state: FlowState = {
 
 const SIDEBAR_TOP_LEVEL = ["Dashboard", "Extensions", "Models", "Members", "Analytics", "Settings"];
 const EXTENSIONS_CHILDREN = ["Marketplace", "Sources", "Plugins", "Connectors"];
-const MODELS_CHILDREN = ["OpenWork Models", "LLM Providers"];
+const MODELS_CHILDREN = ["RenWork Models", "LLM Providers"];
 const SETTINGS_CHILDREN = ["General", "Diagnostics", "Brand appearance", "Desktop Policies", "Stripe", "API Keys", "SSO", "SCIM"];
 
 export default defineFlow({

@@ -330,6 +330,9 @@ importers:
       '@openwork/enterprise-mcp-client':
         specifier: workspace:*
         version: link:../../packages/enterprise-mcp-client
+      '@openwork/export-growth-domain':
+        specifier: workspace:*
+        version: link:../../packages/export-growth-domain
       '@openwork/paths':
         specifier: workspace:*
         version: link:../../packages/paths

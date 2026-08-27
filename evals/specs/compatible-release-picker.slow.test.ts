@@ -7,8 +7,8 @@ const appSpecsEnabled = process.env.OPENWORK_EVAL_APP_SPECS === "1";
 const title = appSpecsEnabled
   ? "recovery offers only recent stable releases with exact compatible artifacts"
   : "compatible release picker skipped — needs: set OPENWORK_EVAL_APP_SPECS=1";
-const currentArtifact = "https://releases.openwork.test/v2.4.0/OpenWork-darwin-arm64.dmg";
-const previousArtifact = "https://releases.openwork.test/v2.3.1/OpenWork-darwin-arm64.dmg";
+const currentArtifact = "https://releases.openwork.test/v2.4.0/RenWork-darwin-arm64.dmg";
+const previousArtifact = "https://releases.openwork.test/v2.3.1/RenWork-darwin-arm64.dmg";
 
 test.skipIf(!appSpecsEnabled)(title, async ({ evidence, place }) => {
   needs({ optIn: ["OPENWORK_EVAL_APP_SPECS"] });
@@ -22,9 +22,9 @@ test.skipIf(!appSpecsEnabled)(title, async ({ evidence, place }) => {
       OPENWORK_EVAL_RECOVERY_RELEASES: JSON.stringify([
         { version: "2.4.0", channel: "stable", artifact: { platform: "darwin", arch: "arm64", distribution: "public", url: currentArtifact } },
         { version: "2.3.1", channel: "stable", artifact: { platform: "darwin", arch: "arm64", distribution: "public", url: previousArtifact } },
-        { version: "2.3.0", channel: "stable", artifact: { platform: "linux", arch: "x64", distribution: "public", url: "https://incompatible.invalid/OpenWork.AppImage" } },
-        { version: "2.2.9", channel: "stable", artifact: { platform: "darwin", arch: "arm64", distribution: "enterprise", url: "https://wrong-flavor.invalid/OpenWork.dmg" } },
-        { version: "2.2.8-beta.1", channel: "prerelease", artifact: { platform: "darwin", arch: "arm64", distribution: "public", url: "https://prerelease.invalid/OpenWork.dmg" } },
+        { version: "2.3.0", channel: "stable", artifact: { platform: "linux", arch: "x64", distribution: "public", url: "https://incompatible.invalid/RenWork.AppImage" } },
+        { version: "2.2.9", channel: "stable", artifact: { platform: "darwin", arch: "arm64", distribution: "enterprise", url: "https://wrong-flavor.invalid/RenWork.dmg" } },
+        { version: "2.2.8-beta.1", channel: "prerelease", artifact: { platform: "darwin", arch: "arm64", distribution: "public", url: "https://prerelease.invalid/RenWork.dmg" } },
       ]),
     },
   });
@@ -85,9 +85,9 @@ test.skipIf(!appSpecsEnabled)(title, async ({ evidence, place }) => {
   );
   expect(openedArtifactUrls).toEqual([previousArtifact]);
   expect(openedArtifactUrls).not.toContain(currentArtifact);
-  expect(openedArtifactUrls).not.toContain("https://incompatible.invalid/OpenWork.AppImage");
-  expect(openedArtifactUrls).not.toContain("https://wrong-flavor.invalid/OpenWork.dmg");
-  expect(openedArtifactUrls).not.toContain("https://prerelease.invalid/OpenWork.dmg");
+  expect(openedArtifactUrls).not.toContain("https://incompatible.invalid/RenWork.AppImage");
+  expect(openedArtifactUrls).not.toContain("https://wrong-flavor.invalid/RenWork.dmg");
+  expect(openedArtifactUrls).not.toContain("https://prerelease.invalid/RenWork.dmg");
   evidence.fact(
     "The picker opened only the exact compatible previous stable artifact",
     "Current and previous were marked, incompatible and prerelease targets were absent, and arbitrary selection opened nothing.",

@@ -25,6 +25,7 @@ import {
 } from "./recovery.mjs";
 
 const fakeApp = { getPath: (key) => (key === "home" ? "/Users/test" : `/Users/test/${key}`) };
+const RENWORK_RELEASES = "https://github.com/cnproduct/renwork/releases";
 
 // Unpackaged builds resolve their version from package.json, so release bumps
 // must not require touching this test.
@@ -73,6 +74,8 @@ async function registerFakeUpdaterIpc({ version }) {
       isPackaged: true,
       getVersion: () => "0.17.0",
       getPath: (key) => path.join(tempDir, key),
+      removeAllListeners: () => {},
+      quit: () => {},
     },
     ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
     getMainWindow: () => null,
@@ -84,7 +87,7 @@ async function registerFakeUpdaterIpc({ version }) {
 describe("staleUpdaterStatePaths", () => {
   it("targets the ShipIt cache on macOS", { skip: process.platform !== "darwin" }, () => {
     assert.deepEqual(staleUpdaterStatePaths(fakeApp), [
-      "/Users/test/Library/Caches/com.differentai.openwork.ShipIt",
+      "/Users/test/Library/Caches/com.renrenyi.renwork.ShipIt",
     ]);
   });
 
@@ -97,7 +100,7 @@ describe("targetedStableUpdaterFeed", () => {
   it("builds a fixed GitHub release feed from a strict stable version", () => {
     assert.equal(
       targetedStableUpdaterFeed("0.17.22", "0.17.23"),
-      "https://github.com/different-ai/openwork/releases/download/v0.17.23",
+      `${RENWORK_RELEASES}/download/v0.17.23`,
     );
   });
 
@@ -126,7 +129,7 @@ describe("targetedStableUpdaterFeed", () => {
   it("allows only an explicit exact recovery downgrade", () => {
     assert.equal(
       targetedStableUpdaterFeed("0.17.23", "0.17.22", true),
-      "https://github.com/different-ai/openwork/releases/download/v0.17.22",
+      `${RENWORK_RELEASES}/download/v0.17.22`,
     );
     assert.throws(
       () => targetedStableUpdaterFeed("0.17.23", "0.17.23", true),
@@ -201,9 +204,9 @@ describe("recovery metadata and candidates", () => {
 
   it("accepts only the exact platform, architecture, distribution release artifact", () => {
     const files = [
-      { url: "openwork-mac-x64-1.2.3.dmg", sha512: "wrong-arch" },
-      { url: "https://tampered.invalid/openwork-mac-arm64-1.2.3.dmg", sha512: "tampered" },
-      { url: "openwork-mac-arm64-1.2.3.dmg", sha512: "verified" },
+      { url: "renwork-mac-x64-1.2.3.dmg", sha512: "wrong-arch" },
+      { url: "https://tampered.invalid/renwork-mac-arm64-1.2.3.dmg", sha512: "tampered" },
+      { url: "renwork-mac-arm64-1.2.3.dmg", sha512: "verified" },
     ];
     assert.deepEqual(selectRecoveryArtifact(files, {
       version: "1.2.3",
@@ -215,7 +218,7 @@ describe("recovery metadata and candidates", () => {
       platform: "darwin",
       arch: "arm64",
       distribution: "public",
-      url: "https://github.com/different-ai/openwork/releases/download/v1.2.3/openwork-mac-arm64-1.2.3.dmg",
+      url: `${RENWORK_RELEASES}/download/v1.2.3/renwork-mac-arm64-1.2.3.dmg`,
       sha512: "verified",
     });
     assert.equal(selectRecoveryArtifact(files, {
@@ -228,7 +231,7 @@ describe("recovery metadata and candidates", () => {
 
   it("accepts each artifact flavor only for its matching distribution", () => {
     const artifacts = {
-      public: "openwork-mac-arm64-1.2.3.dmg",
+      public: "renwork-mac-arm64-1.2.3.dmg",
       cloud: "openwork-cloud-mac-arm64-1.2.3.dmg",
       enterprise: "openwork-enterprise-mac-arm64-1.2.3.dmg",
     };
@@ -236,7 +239,7 @@ describe("recovery metadata and candidates", () => {
       const files = [{ url: fileName, sha512: `${distribution}-checksum` }];
       assert.equal(selectRecoveryArtifact(files, {
         version: "1.2.3", platform: "darwin", arch: "arm64", distribution,
-      })?.url, `https://github.com/different-ai/openwork/releases/download/v1.2.3/${fileName}`);
+      })?.url, `${RENWORK_RELEASES}/download/v1.2.3/${fileName}`);
       for (const otherDistribution of Object.keys(artifacts).filter((flavor) => flavor !== distribution)) {
         assert.equal(selectRecoveryArtifact(files, {
           version: "1.2.3", platform: "darwin", arch: "arm64", distribution: otherDistribution,
@@ -248,14 +251,14 @@ describe("recovery metadata and candidates", () => {
   it("parses representative builder manifests and selects published installer extensions", () => {
     const files = parseRecoveryManifest(`version: 1.2.3
 files:
-  - url: openwork-mac-arm64-1.2.3.dmg
+  - url: renwork-mac-arm64-1.2.3.dmg
     sha512: mac-checksum
     size: 100
   - url: openwork-cloud-win-x64-1.2.3.exe
     sha512: win-checksum
   - url: openwork-enterprise-linux-x86_64-1.2.3.AppImage
     sha512: linux-checksum
-path: openwork-mac-arm64-1.2.3.zip
+path: renwork-mac-arm64-1.2.3.zip
 sha512: updater-zip-checksum
 releaseDate: '2026-08-11T00:00:00.000Z'
 `);
@@ -279,7 +282,7 @@ releaseDate: '2026-08-11T00:00:00.000Z'
       await assert.rejects(
         cacheVerifiedRecoveryArtifact({
           app: { getPath: () => userData },
-          artifact: { url: "https://github.com/different-ai/openwork/releases/download/v1.2.3/openwork.dmg", sha512: "invalid" },
+          artifact: { url: `${RENWORK_RELEASES}/download/v1.2.3/renwork-mac-arm64-1.2.3.dmg`, sha512: "invalid" },
           fetchArtifact: async () => new Response("tampered"),
         }),
         /checksum did not match/,
@@ -298,7 +301,7 @@ releaseDate: '2026-08-11T00:00:00.000Z'
       platform: "darwin",
       arch: "arm64",
       distribution: "public",
-      url: "https://github.com/different-ai/openwork/releases/download/v1.2.3/openwork-mac-arm64-1.2.3.dmg",
+      url: `${RENWORK_RELEASES}/download/v1.2.3/renwork-mac-arm64-1.2.3.dmg`,
       sha512: createHash("sha512").update(bytes).digest("base64"),
     };
     try {
@@ -334,7 +337,7 @@ releaseDate: '2026-08-11T00:00:00.000Z'
       platform: "darwin",
       arch: "arm64",
       distribution: "public",
-      url: "https://github.com/different-ai/openwork/releases/download/v0.18.18/openwork-mac-arm64-0.18.18.dmg",
+      url: `${RENWORK_RELEASES}/download/v0.18.18/renwork-mac-arm64-0.18.18.dmg`,
       sha512: createHash("sha512").update(bytes).digest("base64"),
     };
     const expected = { platform: "darwin", arch: "arm64", distribution: "public" };
@@ -342,9 +345,9 @@ releaseDate: '2026-08-11T00:00:00.000Z'
       await cacheVerifiedRecoveryArtifact({ app, artifact, fetchArtifact: async () => new Response(bytes) });
       const metadataPath = path.join(userData, "app-recovery-cache", "metadata.json");
       const metadata = JSON.parse(await readFile(metadataPath, "utf8"));
-      await writeFile(metadataPath, JSON.stringify({ ...metadata, url: "https://tampered.invalid/OpenWork.dmg" }), "utf8");
+      await writeFile(metadataPath, JSON.stringify({ ...metadata, url: "https://tampered.invalid/RenWork.dmg" }), "utf8");
       assert.equal(await readCachedRecoveryArtifact(app, expected), null);
-      await writeFile(metadataPath, JSON.stringify({ ...metadata, fileName: "OpenWork.dmg" }), "utf8");
+      await writeFile(metadataPath, JSON.stringify({ ...metadata, fileName: "RenWork.dmg" }), "utf8");
       assert.equal(await readCachedRecoveryArtifact(app, expected), null);
     } finally {
       await rm(userData, { recursive: true, force: true });
@@ -366,7 +369,7 @@ releaseDate: '2026-08-11T00:00:00.000Z'
       platform: "darwin",
       arch: "arm64",
       distribution: "public",
-      url: "https://github.com/different-ai/openwork/releases/download/v1.9.0/openwork-mac-arm64-1.9.0.dmg",
+      url: `${RENWORK_RELEASES}/download/v1.9.0/renwork-mac-arm64-1.9.0.dmg`,
       sha512: createHash("sha512").update(bytes).digest("base64"),
     };
     const handlers = new Map();
@@ -415,7 +418,7 @@ releaseDate: '2026-08-11T00:00:00.000Z'
     const handlers = new Map();
     const destructiveCalls = [];
     let candidateFetches = 0;
-    const manifest = (checksum) => `version: 1.9.0\nfiles:\n  - url: openwork-mac-arm64-1.9.0.dmg\n    sha512: ${checksum}\n`;
+    const manifest = (checksum) => `version: 1.9.0\nfiles:\n  - url: renwork-mac-arm64-1.9.0.dmg\n    sha512: ${checksum}\n`;
     try {
       isolatedUpdaterImportId += 1;
       const isolated = await import(`./updater.mjs?fresh-mismatch=${isolatedUpdaterImportId}`);
@@ -523,6 +526,7 @@ describe("downloaded update lifecycle", () => {
       assert.equal(failedCheck.available, false);
       assert.match(failedCheck.reason, /network flake/);
       assert.deepEqual(await install(), { ok: true });
+      await new Promise((resolve) => setImmediate(resolve));
       assert.deepEqual(calls, ["download", "quitAndInstall"]);
     } finally {
       await rm(tempDir, { recursive: true, force: true });
@@ -547,6 +551,7 @@ describe("downloaded update lifecycle", () => {
       assert.equal(typeof onError, "function");
       onError(new Error("network flake"));
       assert.deepEqual(await install(), { ok: true });
+      await new Promise((resolve) => setImmediate(resolve));
       assert.deepEqual(calls, ["download", "quitAndInstall"]);
     } finally {
       await rm(tempDir, { recursive: true, force: true });
@@ -609,7 +614,7 @@ describe("release channel changes", () => {
       assert.equal(typeof setChannel, "function");
       assert.deepEqual(await setChannel(null, "alpha"), {
         channel: "stable",
-        feedUrl: "https://github.com/different-ai/openwork/releases/latest/download",
+        feedUrl: `${RENWORK_RELEASES}/latest/download`,
         currentVersion: desktopVersion,
       });
     } finally {

@@ -12,7 +12,7 @@ import { denApiFetch, openAdminConnections as openConnections, openYourConnectio
 const vo = await loadVoiceoverParagraphs("slack-org-connection");
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const MOCK_SERVER_URL = (process.env.MOCK_DCRLESS_MCP_URL ?? "http://127.0.0.1:3979").trim().replace(/\/+$/, "");
 const MOCK_CLIENT_ID = process.env.MOCK_CLIENT_ID || "mock-preregistered-client";
 const MOCK_CLIENT_SECRET = process.env.MOCK_CLIENT_SECRET || "mock-preregistered-secret";
@@ -199,7 +199,7 @@ export default {
           },
           screenshot: {
             name: "slack-style-redirect-url-handoff",
-            claim: "After create, OpenWork shows the exact redirect URL the admin must whitelist in the app.",
+            claim: "After create, RenWork shows the exact redirect URL the admin must whitelist in the app.",
             requireText: ["redirect URL", "/connect/callback"],
             rejectText: ["Something went wrong"],
           },

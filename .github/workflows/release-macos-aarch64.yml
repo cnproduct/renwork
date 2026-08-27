@@ -11,7 +11,7 @@ on:
         required: false
         type: string
       release_name:
-        description: "Release title (defaults to OpenWork <tag>)"
+        description: "Release title (defaults to RenWork <tag>)"
         required: false
         type: string
       release_body:
@@ -121,19 +121,19 @@ jobs:
           if [ -n "$RELEASE_NAME_INPUT" ]; then
             RELEASE_NAME="$RELEASE_NAME_INPUT"
           else
-            RELEASE_NAME="OpenWork $TAG"
+            RELEASE_NAME="RenWork $TAG"
           fi
 
           RELEASE_BODY_INPUT="${INPUT_RELEASE_BODY:-}"
           if [ -n "$RELEASE_BODY_INPUT" ]; then
             RELEASE_BODY="$RELEASE_BODY_INPUT"
           else
-            printf -v RELEASE_BODY '%s\n\nOpenWork %s desktop release.\n\n%s\n%s\n%s\n%s' \
+            printf -v RELEASE_BODY '%s\n\nRenWork %s desktop release.\n\n%s\n%s\n%s\n%s' \
               "## What's new" \
               "$TAG" \
-              "- Public artifacts use the openwork-* naming convention." \
+              "- Public RenWork artifacts use the renwork-* naming convention." \
               "- Cloud artifacts use openwork-cloud-* and require sign-in without enterprise activation." \
-              "- Enterprise artifacts use openwork-enterprise-* while retaining the standard OpenWork app identity." \
+              "- Enterprise artifacts use openwork-enterprise-* while retaining the RenWork app identity." \
               "- Public, Cloud, and enterprise Electron builds use separate updater manifests on this release."
           fi
 
@@ -274,7 +274,7 @@ jobs:
             os_type: macos
             artifact: electron-macos-arm64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--mac --arm64"
             target_triple: aarch64-apple-darwin
@@ -282,7 +282,7 @@ jobs:
             os_type: macos
             artifact: electron-macos-x64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--mac --x64"
             target_triple: x86_64-apple-darwin
@@ -290,7 +290,7 @@ jobs:
             os_type: linux
             artifact: electron-linux-x64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--linux --x64"
             target_triple: x86_64-unknown-linux-gnu
@@ -298,7 +298,7 @@ jobs:
             os_type: linux
             artifact: electron-linux-arm64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--linux --arm64"
             target_triple: aarch64-unknown-linux-gnu
@@ -306,7 +306,7 @@ jobs:
             os_type: windows
             artifact: electron-windows-x64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--win --x64"
             target_triple: x86_64-pc-windows-msvc
@@ -314,7 +314,7 @@ jobs:
             os_type: windows
             artifact: electron-windows-arm64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--win --arm64"
             target_triple: aarch64-pc-windows-msvc
@@ -462,6 +462,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify public RenWork branding
+        run: pnpm run check:brand
+
       - name: Write Electron notary API key (macOS)
         if: matrix.os_type == 'macos' && env.MACOS_NOTARIZE == 'true'
         env:
@@ -510,6 +513,10 @@ jobs:
           TARGET: ${{ matrix.target_triple }}
         run: pnpm --filter @openwork/desktop build:electron
 
+      - name: Verify packaged renderer resources
+        shell: bash
+        run: node apps/desktop/scripts/verify-renderer-bundle.mjs apps/app/dist
+
       - name: Package Electron (macOS, signed + notarized)
         if: matrix.os_type == 'macos' && env.MACOS_NOTARIZE == 'true'
         env:
@@ -543,6 +550,19 @@ jobs:
             --config ${{ matrix.builder_config }} \
             ${{ matrix.electron_args }} \
             --publish never
+
+      - name: Verify signed and notarized macOS artifact
+        if: matrix.os_type == 'macos'
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          dmgs=(apps/desktop/dist-electron/${{ matrix.asset_prefix }}-mac-*.dmg)
+          if [ ${#dmgs[@]} -ne 1 ]; then
+            echo "Expected exactly one macOS DMG for ${{ matrix.asset_prefix }}, found ${#dmgs[@]}." >&2
+            exit 1
+          fi
+          node apps/desktop/scripts/verify-macos-artifact.mjs "${dmgs[0]}"
 
       - name: Use unsigned Windows installer fallback
         if: matrix.os_type == 'windows' && env.SIGN_WINDOWS != 'true'

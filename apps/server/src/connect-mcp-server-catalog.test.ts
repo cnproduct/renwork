@@ -74,7 +74,7 @@ function indexFetcher(requests: Array<{ url: string; headers: Headers; body: Rec
   };
 }
 
-describe("OpenWork Connect MCP server catalog", () => {
+describe("RenWork Connect MCP server catalog", () => {
   test("reads the member catalog through an authenticated MCP resource", async () => {
     const requests: Array<{ url: string; headers: Headers; body: Record<string, unknown> }> = [];
     const index = await readOpenWorkConnectMcpServerIndex({
@@ -92,7 +92,7 @@ describe("OpenWork Connect MCP server catalog", () => {
     expect(requests.every((request) => request.headers.get("authorization") === "Bearer member-token")).toBe(true);
   });
 
-  test("reconciles only OpenWork-owned proxy entries and preserves user MCPs", async () => {
+  test("reconciles only RenWork-owned proxy entries and preserves user MCPs", async () => {
     const config = await fixtureConfig();
     await writeRuntimeOpencodeConfig(config, "ws_1", () => ({
       mcp: {

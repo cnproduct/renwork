@@ -31,7 +31,7 @@ const MEMBER_CDP = "http://127.0.0.1:9823";
 const DEN_API = "http://localhost:8790";
 const DEN_WEB = "http://localhost:3005";
 const ADMIN_EMAIL = "alex@acme.test";
-const ADMIN_PASSWORD = "OpenWorkDemo123!";
+const ADMIN_PASSWORD = "RenWorkDemo123!";
 const GENPACT_LOGO = "https://upload.wikimedia.org/wikipedia/commons/5/50/Genpact_Logo_Black_%283%29.png";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -53,7 +53,7 @@ async function connectTo(baseUrl) {
 /** Pick the den-web admin page target (title "OpenWork Cloud"). */
 async function connectAdmin() {
   const targets = await listTargets(ADMIN_CDP);
-  const page = targets.find((t) => t.type === "page" && t.title.includes("OpenWork Cloud"))
+  const page = targets.find((t) => t.type === "page" && t.title.includes("RenWork Cloud"))
     ?? targets.find((t) => t.type === "page" && t.url.includes("3005"))
     ?? targets.find((t) => t.type === "page");
   const ws = debuggerUrlFor(ADMIN_CDP, page);

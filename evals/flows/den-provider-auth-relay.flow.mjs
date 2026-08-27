@@ -21,7 +21,7 @@ const REQUIRED_ENV = [
 ];
 const RUN_TAG = `${Date.now().toString(36)}-${randomBytes(3).toString("hex")}`;
 const ADMIN_EMAIL = `den-provider-auth-${RUN_TAG}@acme.test`;
-const ADMIN_PASSWORD = `OpenWork-${RUN_TAG}-Provider-Auth!`;
+const ADMIN_PASSWORD = `RenWork-${RUN_TAG}-Provider-Auth!`;
 const CONNECTION_A_NAME = `Salesforce Gateway Auth Required ${RUN_TAG}`;
 const CONNECTION_B_NAME = `Salesforce Gateway Foreign Link ${RUN_TAG}`;
 const TIMEOUT_WORDING = /latency|timed? ?out/i;

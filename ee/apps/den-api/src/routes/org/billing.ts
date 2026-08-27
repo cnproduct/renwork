@@ -120,7 +120,7 @@ export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariable
     describeRoute({
       tags: ["Organizations"],
       hide: true,
-      summary: "Create Stripe Checkout session for OpenWork Models",
+      summary: "Create Stripe Checkout session for RenWork Models",
       responses: {
         200: jsonResponse("Stripe Checkout session created successfully.", stripeCheckoutResponseSchema),
         401: jsonResponse("The caller must be signed in to start billing.", unauthorizedSchema),
@@ -163,7 +163,7 @@ export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariable
     describeRoute({
       tags: ["Organizations"],
       hide: true,
-      summary: "Create Stripe billing portal session for OpenWork Models",
+      summary: "Create Stripe billing portal session for RenWork Models",
       responses: {
         200: jsonResponse("Stripe billing portal session created successfully.", stripePortalResponseSchema),
         401: jsonResponse("The caller must be signed in to manage billing.", unauthorizedSchema),

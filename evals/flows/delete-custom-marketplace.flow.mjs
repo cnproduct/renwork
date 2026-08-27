@@ -4,7 +4,7 @@ import { denApiFetch, denApiUrl, denWebUrl, signInApi, signInViaBrowser } from "
 const FLOW_ID = "delete-custom-marketplace";
 const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const OWNER_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const OWNER_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const OWNER_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const MARKETPLACE_NAME = `Fraimz Custom Marketplace ${Date.now()}`;
 const UPDATED_MARKETPLACE_NAME = `${MARKETPLACE_NAME} Edited`;
 
@@ -78,8 +78,8 @@ export default {
         });
 
         const marketplaces = await denApiFetch("/v1/marketplaces?status=active&limit=100", { headers: authHeaders() });
-        state.builtInMarketplaceId = marketplaces.body?.items?.find((item) => item?.name === "OpenWork Marketplace")?.id ?? "";
-        witness(ctx, state.builtInMarketplaceId.length > 0, "The built-in OpenWork Marketplace is available for the protection check");
+        state.builtInMarketplaceId = marketplaces.body?.items?.find((item) => item?.name === "RenWork Marketplace")?.id ?? "";
+        witness(ctx, state.builtInMarketplaceId.length > 0, "The built-in RenWork Marketplace is available for the protection check");
 
         await signInViaBrowser(ctx, OWNER_EMAIL, OWNER_PASSWORD);
       },
@@ -186,7 +186,7 @@ export default {
           screenshot: screenshot(
             "custom-marketplace-removed",
             "The deleted custom marketplace is absent from the active marketplace list.",
-            ["Marketplaces", "OpenWork Marketplace"],
+            ["Marketplaces", "RenWork Marketplace"],
             [UPDATED_MARKETPLACE_NAME],
           ),
         });
@@ -199,10 +199,10 @@ export default {
           voiceover: vo[4],
           action: async () => {
             await navigateTo(ctx, `/dashboard/marketplaces/${encodeURIComponent(state.builtInMarketplaceId)}`);
-            await ctx.waitForText("OpenWork Marketplace", { timeoutMs: 30_000 });
+            await ctx.waitForText("RenWork Marketplace", { timeoutMs: 30_000 });
           },
           assert: async () => {
-            await ctx.expectText("OpenWork Marketplace");
+            await ctx.expectText("RenWork Marketplace");
             const actionsTriggerVisible = await ctx.eval(`Boolean(document.querySelector('[data-testid="marketplace-actions-trigger"]'))`);
             witness(ctx, actionsTriggerVisible === false, "The built-in marketplace exposes no edit or delete menu", { actionsTriggerVisible });
             const directDelete = await denApiFetch(`/v1/marketplaces/${encodeURIComponent(state.builtInMarketplaceId)}/delete`, {
@@ -218,7 +218,7 @@ export default {
           screenshot: screenshot(
             "built-in-marketplace-protected",
             "The built-in marketplace remains available without edit or delete controls.",
-            ["OpenWork Marketplace", "Add a plugin"],
+            ["RenWork Marketplace", "Add a plugin"],
             ["Edit", "Delete"],
           ),
         });

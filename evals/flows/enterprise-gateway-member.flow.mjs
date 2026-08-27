@@ -60,7 +60,7 @@ export default {
       },
     },
     {
-      name: "Create member's fresh workspace with OpenWork Connect ready",
+      name: "Create member's fresh workspace with RenWork Connect ready",
       run: async (ctx) => {
         await clickThroughLingeringOnboarding(ctx);
         const folder = workspaceFolder(ctx, WORKSPACE_ENV, DEFAULT_WORKSPACE);

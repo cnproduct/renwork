@@ -41,7 +41,7 @@ export function ProgramDetailScreen({ programId }: { programId: string }) {
           <div>
             <div className="flex flex-wrap items-center gap-2"><h1 className="text-[22px] font-semibold tracking-[-0.02em] text-gray-950">{detail.program.name}</h1><DenChip tone="teal">Program</DenChip><DenChip tone={detail.program.resultState === "fresh" ? "success" : detail.program.resultState === "needs_attention" ? "danger" : "warning"}>{detail.program.resultState.replace("_", " ")}</DenChip></div>
             <p className="mt-1 max-w-3xl text-[13px] text-gray-500">{detail.program.description || "A reusable Code Mode Script with retained artifacts, generated views, runs, Automations, and access."}</p>
-            {detail.program.plugin ? <p className="mt-1 text-[12px] text-gray-400">Inside OpenWork Connect Plugin <strong>{detail.program.plugin.name}</strong>.</p> : null}
+            {detail.program.plugin ? <p className="mt-1 text-[12px] text-gray-400">Inside RenWork Connect Plugin <strong>{detail.program.plugin.name}</strong>.</p> : null}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

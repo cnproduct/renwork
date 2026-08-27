@@ -55,6 +55,7 @@
     "test:fs-engine": "pnpm --filter @openwork/app test:fs-engine",
     "test:eval-runner": "pnpm --dir evals run test",
     "check:outbound-access": "node scripts/check-outbound-access.mjs",
+    "check:brand": "node scripts/release/verify-renwork-public-brand.mjs",
     "test:e2e": "pnpm --filter @openwork/app test:e2e",
     "test:admin-scale": "pnpm --filter @openwork-ee/den-api test:admin-scale",
     "benchmark:admin-scale:mysql": "pnpm --filter @openwork-ee/den-db benchmark:admin-scale:mysql",

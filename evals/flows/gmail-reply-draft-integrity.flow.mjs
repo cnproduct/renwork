@@ -8,15 +8,15 @@ const vo = await loadVoiceoverParagraphs("gmail-reply-draft-integrity");
 const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace(/\/+$/, "");
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? DEN_API_URL.replace("127.0.0.1", "localhost")).trim().replace(/\/+$/, "");
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const MEMBER_EMAIL = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test";
-const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
+const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const MOCK_SERVER_URL = (process.env.MOCK_OAUTH_MCP_URL ?? "http://127.0.0.1:3978").trim().replace(/\/+$/, "");
 const RUN_TAG = Date.now();
 const WORKSPACE_PATH = `/tmp/openwork-gmail-reply-draft-integrity-${RUN_TAG}`;
 const GMAIL_THREAD_ID = "thread-q3-launch";
-const PROMPT = `Use the OpenWork Cloud connection: find the Gmail thread about "Q3 launch" (call search_capabilities, then the Gmail messages capability), then create a reply draft on that thread with subject "Re: Q3 launch" confirming Thursday works, addressed to sarah@acme.test. Do not include quoted history yourself; pass the threadId so OpenWork can append it. When done, reply with the draft link the tool returned.`;
+const PROMPT = `Use the RenWork Cloud connection: find the Gmail thread about "Q3 launch" (call search_capabilities, then the Gmail messages capability), then create a reply draft on that thread with subject "Re: Q3 launch" confirming Thursday works, addressed to sarah@acme.test. Do not include quoted history yourself; pass the threadId so RenWork can append it. When done, reply with the draft link the tool returned.`;
 const PROMPT_FRAGMENT = 'find the Gmail thread about "Q3 launch"';
 const GOOGLE_CARD_EXPR = (needle) =>
   `[...document.querySelectorAll("button")].some((el) => el.textContent.includes("Google Workspace") && el.textContent.includes(${JSON.stringify(needle)}))`;
@@ -144,7 +144,7 @@ async function ensureWorkspace(ctx) {
     await sleep(1_000);
   }
   await ctx.eval(`(() => {
-    const btn = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continue without OpenWork Models');
+    const btn = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continue without RenWork Models');
     btn?.click();
     return true;
   })()`, { awaitPromise: true });
@@ -154,7 +154,7 @@ async function createFreshEvalWorkspace(ctx) {
   await ensureWorkspace(ctx);
   await ctx.waitFor(
     "Boolean(localStorage.getItem('openwork.server.port') && localStorage.getItem('openwork.server.token') && localStorage.getItem('openwork.server.hostToken'))",
-    { timeoutMs: 30_000, label: "OpenWork server auth for workspace setup" },
+    { timeoutMs: 30_000, label: "RenWork server auth for workspace setup" },
   );
   let created = null;
   const deadline = Date.now() + 60_000;
@@ -300,7 +300,7 @@ async function connectGoogleWorkspace(ctx) {
       return Boolean(card);
     })()`);
     ctx.assert(opened, "Could not open the org Google Workspace card.");
-    await ctx.expectText("OpenWork stores this sign-in", { timeoutMs: 15_000 });
+    await ctx.expectText("RenWork stores this sign-in", { timeoutMs: 15_000 });
     state.clickedAt = new Date().toISOString();
     const clicked = await ctx.eval(`(() => {
       const dialog = document.querySelector('[role="dialog"]');
@@ -340,19 +340,19 @@ async function connectGoogleWorkspace(ctx) {
 async function ensureOpenWorkCloudControl(ctx) {
   await openMcpSettings(ctx);
   await revealHidden(ctx);
-  await ctx.expectText("OpenWork Cloud Control", { timeoutMs: 30_000 });
+  await ctx.expectText("RenWork Cloud Control", { timeoutMs: 30_000 });
   const alreadyConnected = await ctx.eval(`(() => {
-    const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('OpenWork Cloud Control'));
+    const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('RenWork Cloud Control'));
     return Boolean(card?.textContent.includes('Connected'));
   })()`);
   if (!alreadyConnected) {
     const openedCard = await ctx.eval(`(() => {
-      const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('OpenWork Cloud Control'));
+      const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('RenWork Cloud Control'));
       card?.scrollIntoView({ block: 'center' });
       card?.click();
       return Boolean(card);
     })()`);
-    ctx.assert(openedCard, "Could not open the OpenWork Cloud Control card.");
+    ctx.assert(openedCard, "Could not open the RenWork Cloud Control card.");
     await ctx.expectText("Manage your org", { timeoutMs: 15_000 });
     const clicked = await ctx.eval(`(() => {
       const dialog = document.querySelector('[role="dialog"]');
@@ -360,14 +360,14 @@ async function ensureOpenWorkCloudControl(ctx) {
       button?.click();
       return Boolean(button);
     })()`);
-    ctx.assert(clicked, "Could not click Connect for OpenWork Cloud Control.");
+    ctx.assert(clicked, "Could not click Connect for RenWork Cloud Control.");
   }
   await ctx.waitFor(
     `(() => {
-      const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('OpenWork Cloud Control'));
+      const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('RenWork Cloud Control'));
       return Boolean(card?.textContent.includes('Connected'));
     })()`,
-    { timeoutMs: 60_000, label: "OpenWork Cloud Control connected card" },
+    { timeoutMs: 60_000, label: "RenWork Cloud Control connected card" },
   );
   await ctx.clickText("Refresh", { timeoutMs: 15_000 }).catch(() => {});
 }
@@ -393,7 +393,7 @@ async function ensureRuntimeCloudMcp(ctx) {
     if (runtime?.ok) break;
     await sleep(1_000);
   }
-  ctx.assert(runtime?.ok, `Runtime OpenWork Cloud Control MCP never became ready: ${JSON.stringify(runtime)}`);
+  ctx.assert(runtime?.ok, `Runtime RenWork Cloud Control MCP never became ready: ${JSON.stringify(runtime)}`);
 }
 
 async function resetChatState(ctx) {
@@ -504,7 +504,7 @@ export default {
     {
       name: "Frame 1",
       run: async (ctx) => {
-        await ctx.prove("The user asks OpenWork to reply to Sarah's Q3 launch thread", {
+        await ctx.prove("The user asks RenWork to reply to Sarah's Q3 launch thread", {
           voiceover: vo[0],
           // "I'm in OpenWork, and Sarah's thread about the Q3 launch has been going back "
           action: async () => {
@@ -531,7 +531,7 @@ export default {
     {
       name: "Frame 2",
       run: async (ctx) => {
-        await ctx.prove("OpenWork reads Gmail before drafting the reply", {
+        await ctx.prove("RenWork reads Gmail before drafting the reply", {
           voiceover: vo[1],
           // "OpenWork reads the thread through my connected Google account first, so the "
           action: async () => {},
@@ -631,7 +631,7 @@ export default {
     {
       name: "Frame 6",
       run: async (ctx) => {
-        await ctx.prove("OpenWork relays the Gmail draft link back to the user", {
+        await ctx.prove("RenWork relays the Gmail draft link back to the user", {
           voiceover: vo[5],
           // "And OpenWork finishes by handing me the link — one click opens the ready-to-"
           action: async () => {},

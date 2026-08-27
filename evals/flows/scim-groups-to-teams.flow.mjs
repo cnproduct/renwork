@@ -10,7 +10,7 @@ const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? "").trim().replace
 const ADMIN_CDP_URL = (process.env.OPENWORK_EVAL_WEB_CDP_ADMIN ?? "").trim().replace(/\/+$/, "");
 const ADMIN_TOKEN = (process.env.OPENWORK_EVAL_DEN_TOKEN ?? "").trim();
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const MYSQL_CONTAINER = process.env.OPENWORK_EVAL_DEN_MYSQL_CONTAINER?.trim() || "openwork-web-local-mysql";
 const RUN_TAG = `${Date.now().toString(36)}-${randomBytes(2).toString("hex")}`;
 const MAYA_EMAIL = `maya.scim+${RUN_TAG}@acme.test`;
@@ -328,7 +328,7 @@ function removedMemberState(memberId) {
 
 export default {
   id: FLOW_ID,
-  title: "SCIM groups create and safely manage OpenWork teams alongside SAML",
+  title: "SCIM groups create and safely manage RenWork teams alongside SAML",
   kind: "user-facing",
   requiresApp: false,
   preserveTheme: true,
@@ -422,7 +422,7 @@ export default {
     {
       name: "Frame 5",
       run: async (ctx) => withAdminBrowser(ctx, async () => {
-        await ctx.prove("A SCIM membership move updates OpenWork teams without another user login", {
+        await ctx.prove("A SCIM membership move updates RenWork teams without another user login", {
           voiceover: vo[4],
           action: async () => {
             await patchGroup(ctx, state.engineering, [{ op: "remove", path: `members[value eq \"${state.maya.userId}\"]` }]);

@@ -95,7 +95,7 @@ function createClient(double: ReturnType<typeof createOpenworkDouble>, clock = c
 }
 
 describe("createThread", () => {
-  test("sends the title, prompt, and model in OpenWork's casing", async () => {
+  test("sends the title, prompt, and model in RenWork's casing", async () => {
     const double = createOpenworkDouble();
     const thread = await createClient(double).createThread({
       title: "Refund policy",

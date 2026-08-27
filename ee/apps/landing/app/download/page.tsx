@@ -8,9 +8,9 @@ import { baseOpenGraph } from "../../lib/seo";
 const downloadSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "OpenWork",
+  name: "RenWork",
   description:
-    "Open source Claude Cowork alternative. Download the OpenWork desktop app for macOS, Windows, or Linux. No account required.",
+    "Open source Claude Cowork alternative. Download the RenWork desktop app for macOS, Windows, or Linux. No account required.",
   url: "https://openworklabs.com/download",
   applicationCategory: "BusinessApplication",
   operatingSystem: "macOS, Windows, Linux",
@@ -21,15 +21,15 @@ const downloadSchema = {
   },
   publisher: {
     "@type": "Organization",
-    name: "OpenWork",
+    name: "RenWork",
     url: "https://openworklabs.com"
   }
 };
 
 export const metadata = {
-  title: "Download OpenWork — macOS, Windows, Linux",
+  title: "Download RenWork — macOS, Windows, Linux",
   description:
-    "Download the OpenWork desktop app for macOS, Windows, or Linux. Free, open source, no account required.",
+    "Download the RenWork desktop app for macOS, Windows, or Linux. Free, open source, no account required.",
   alternates: {
     canonical: "/download"
   },

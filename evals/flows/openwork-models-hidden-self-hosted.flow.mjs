@@ -7,14 +7,14 @@ const FLOW_ID = "openwork-models-hidden-self-hosted";
 const vo = await loadVoiceoverParagraphs(FLOW_ID);
 
 const SELF_HOSTED_BASE_URL = "https://den.internal.acme.test";
-const STARTUP_DIALOG_TITLE = "Use OpenWork Models without API keys";
-const DEFAULT_ORG_SERVER_TEXT = "Using standard OpenWork Cloud.";
+const STARTUP_DIALOG_TITLE = "Use RenWork Models without API keys";
+const DEFAULT_ORG_SERVER_TEXT = "Using standard RenWork Cloud.";
 const EDITOR_SELECTOR = '[contenteditable="true"][data-lexical-editor="true"]';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function waitForControl(ctx) {
-  await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 90_000, label: "OpenWork control API" });
+  await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 90_000, label: "RenWork control API" });
 }
 
 async function reloadApp(ctx) {
@@ -44,7 +44,7 @@ async function clickReact(ctx, text) {
 
 /** Skip through first-run onboarding overlays (provider step + attribution). */
 async function dismissOnboardingOverlays(ctx) {
-  const ATTRIBUTION_TITLE = "How did you hear about OpenWork?";
+  const ATTRIBUTION_TITLE = "How did you hear about RenWork?";
   if (await ctx.hasText("Skip and use the free model")) {
     await clickReact(ctx, "Skip and use the free model");
     // The attribution step follows the provider choice; wait for it (or for
@@ -229,7 +229,7 @@ async function resetPromoLatches(ctx, { startupShown }) {
 
 export default {
   id: FLOW_ID,
-  title: "Self-hosted control planes hide every OpenWork Models upsell surface; hosted keeps them",
+  title: "Self-hosted control planes hide every RenWork Models upsell surface; hosted keeps them",
   kind: "user-facing",
   steps: [
     {
@@ -247,26 +247,26 @@ export default {
         ctx.recordEvidence({
           type: "assertion",
           status: "passed",
-          assertion: "Setup: session is ready on the default hosted OpenWork Cloud control plane with promo latches reset (startup dialog latch pre-marked for the baseline phase).",
+          assertion: "Setup: session is ready on the default hosted RenWork Cloud control plane with promo latches reset (startup dialog latch pre-marked for the baseline phase).",
         });
       },
     },
     {
-      name: "Frame 1 — hosted model picker pitches OpenWork Models",
+      name: "Frame 1 — hosted model picker pitches RenWork Models",
       run: async (ctx) => {
-        await ctx.prove("On the hosted control plane the model picker shows the OpenWork Models promo group", {
+        await ctx.prove("On the hosted control plane the model picker shows the RenWork Models promo group", {
           voiceover: vo[0],
           action: async () => {
             await openModelPicker(ctx);
-            await ctx.waitForText("OpenWork hosted", { timeoutMs: 15_000 });
+            await ctx.waitForText("RenWork hosted", { timeoutMs: 15_000 });
           },
           assert: async () => {
-            await ctx.expectText("OpenWork Models");
-            await ctx.expectText("OpenWork hosted");
+            await ctx.expectText("RenWork Models");
+            await ctx.expectText("RenWork hosted");
           },
           screenshot: {
             name: "hosted-model-picker-promo",
-            requireText: ["OpenWork Models", "OpenWork hosted"],
+            requireText: ["RenWork Models", "RenWork hosted"],
           },
         });
         await closeModelPicker(ctx);
@@ -275,42 +275,42 @@ export default {
     {
       name: "Frame 2 — hosted Settings > AI shows the subscribe banner",
       run: async (ctx) => {
-        await ctx.prove("On the hosted control plane Settings > AI offers the OpenWork Models subscription", {
+        await ctx.prove("On the hosted control plane Settings > AI offers the RenWork Models subscription", {
           voiceover: vo[1],
           action: async () => {
             await ctx.navigateHash("/settings/ai");
-            await ctx.waitForText("OpenWork Models", { timeoutMs: 30_000 });
+            await ctx.waitForText("RenWork Models", { timeoutMs: 30_000 });
           },
           assert: async () => {
-            await ctx.expectText("OpenWork Models");
+            await ctx.expectText("RenWork Models");
             await ctx.expectText("Subscribe");
-            await ctx.expectText("Hosted frontier models for OpenWork tasks without managing provider API keys.");
+            await ctx.expectText("Hosted frontier models for RenWork tasks without managing provider API keys.");
           },
           screenshot: {
             name: "hosted-settings-ai-subscribe",
-            requireText: ["OpenWork Models", "Subscribe"],
+            requireText: ["RenWork Models", "Subscribe"],
             hashIncludes: "/settings/ai",
           },
         });
       },
     },
     {
-      name: "Frame 3 — hosted workspace setup offers Use OpenWork Models",
+      name: "Frame 3 — hosted workspace setup offers Use RenWork Models",
       run: async (ctx) => {
-        await ctx.prove("On the hosted control plane the workspace-setup provider step includes the Use OpenWork Models option", {
+        await ctx.prove("On the hosted control plane the workspace-setup provider step includes the Use RenWork Models option", {
           voiceover: vo[2],
           action: async () => {
             await openProviderStepViaWorkspaceSetup(ctx, "/workspace/hello-hosted");
           },
           assert: async () => {
             await ctx.expectText("Power your first task");
-            await ctx.expectText("Use OpenWork Models");
+            await ctx.expectText("Use RenWork Models");
             await ctx.expectText("Bring your own API key");
             await ctx.expectText("Skip and use the free model");
           },
           screenshot: {
             name: "hosted-provider-step-openwork-models",
-            requireText: ["Power your first task", "Use OpenWork Models", "Skip and use the free model"],
+            requireText: ["Power your first task", "Use RenWork Models", "Skip and use the free model"],
           },
         });
         await dismissOnboardingOverlays(ctx);
@@ -347,9 +347,9 @@ export default {
       },
     },
     {
-      name: "Frame 5 — no startup pitch and no OpenWork Models in Settings > AI",
+      name: "Frame 5 — no startup pitch and no RenWork Models in Settings > AI",
       run: async (ctx) => {
-        await ctx.prove("Self-hosted: the startup dialog never auto-opens and Settings > AI drops every OpenWork Models row", {
+        await ctx.prove("Self-hosted: the startup dialog never auto-opens and Settings > AI drops every RenWork Models row", {
           voiceover: vo[4],
           action: async () => {
             await ensureWorkspaceSession(ctx);
@@ -361,13 +361,13 @@ export default {
             await ctx.waitForText("Connect provider", { timeoutMs: 30_000 });
           },
           assert: async () => {
-            await ctx.expectNoText("OpenWork Models");
+            await ctx.expectNoText("RenWork Models");
             await ctx.expectNoText("Hosted frontier models");
           },
           screenshot: {
             name: "self-hosted-settings-ai-clean",
             requireText: ["Connect provider"],
-            rejectText: ["OpenWork Models", "Subscribe"],
+            rejectText: ["RenWork Models", "Subscribe"],
             hashIncludes: "/settings/ai",
           },
         });
@@ -376,7 +376,7 @@ export default {
     {
       name: "Frame 6 — self-hosted model picker has no promo group",
       run: async (ctx) => {
-        await ctx.prove("Self-hosted: the model picker lists only real providers, no OpenWork Models group", {
+        await ctx.prove("Self-hosted: the model picker lists only real providers, no RenWork Models group", {
           voiceover: vo[5],
           action: async () => {
             await ctx.navigateHash("/");
@@ -384,20 +384,20 @@ export default {
             await openModelPicker(ctx);
           },
           assert: async () => {
-            await ctx.expectNoText("OpenWork hosted");
-            await ctx.expectNoText("OpenWork Models");
+            await ctx.expectNoText("RenWork hosted");
+            await ctx.expectNoText("RenWork Models");
           },
           screenshot: {
             name: "self-hosted-model-picker-clean",
             requireText: ["All models"],
-            rejectText: ["OpenWork Models", "OpenWork hosted"],
+            rejectText: ["RenWork Models", "RenWork hosted"],
           },
         });
         await closeModelPicker(ctx);
       },
     },
     {
-      name: "Frame 7 — self-hosted provider step has no OpenWork Models option",
+      name: "Frame 7 — self-hosted provider step has no RenWork Models option",
       run: async (ctx) => {
         await ctx.prove("Self-hosted: the workspace-setup provider step only offers BYO key and the free model", {
           voiceover: vo[6],
@@ -408,12 +408,12 @@ export default {
             await ctx.expectText("Power your first task");
             await ctx.expectText("Bring your own API key");
             await ctx.expectText("Skip and use the free model");
-            await ctx.expectNoText("Use OpenWork Models");
+            await ctx.expectNoText("Use RenWork Models");
           },
           screenshot: {
             name: "self-hosted-provider-step-clean",
             requireText: ["Power your first task", "Bring your own API key", "Skip and use the free model"],
-            rejectText: ["Use OpenWork Models"],
+            rejectText: ["Use RenWork Models"],
           },
         });
         await dismissOnboardingOverlays(ctx);
@@ -423,7 +423,7 @@ export default {
     {
       name: "Frame 8 — clearing the server restores the hosted offer",
       run: async (ctx) => {
-        await ctx.prove("Clearing the server configuration returns to OpenWork Cloud and the subscribe banner comes back", {
+        await ctx.prove("Clearing the server configuration returns to RenWork Cloud and the subscribe banner comes back", {
           voiceover: vo[7],
           action: async () => {
             await ctx.navigateHash("/settings/advanced");
@@ -434,15 +434,15 @@ export default {
             await ctx.waitForText(DEFAULT_ORG_SERVER_TEXT, { timeoutMs: 15_000 });
             await reloadApp(ctx);
             await ctx.navigateHash("/settings/ai");
-            await ctx.waitForText("OpenWork Models", { timeoutMs: 30_000 });
+            await ctx.waitForText("RenWork Models", { timeoutMs: 30_000 });
           },
           assert: async () => {
-            await ctx.expectText("OpenWork Models");
+            await ctx.expectText("RenWork Models");
             await ctx.expectText("Subscribe");
           },
           screenshot: {
             name: "hosted-restored-settings-ai",
-            requireText: ["OpenWork Models", "Subscribe"],
+            requireText: ["RenWork Models", "Subscribe"],
             hashIncludes: "/settings/ai",
           },
         });

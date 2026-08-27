@@ -37,7 +37,7 @@ function BrandIcon({ iconUrl }: { iconUrl: string | null }) {
 
 function BrandLabel({ organization }: { organization: OnboardingCardOrganization | null }) {
   if (!organization) {
-    return <span>OpenWork Cloud</span>;
+    return <span>RenWork Cloud</span>;
   }
 
   if (organization.brand.logoUrl) {

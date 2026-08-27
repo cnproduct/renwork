@@ -227,7 +227,7 @@ export default {
         await ctx.eval('location.hash = "#/session"; location.reload()');
         await ctx.waitFor("Boolean(window.__openworkControl)", {
           timeoutMs: 60_000,
-          label: "OpenWork control API after clean-state reload",
+          label: "RenWork control API after clean-state reload",
         });
         const desktopContext = await ctx.eval(`({
           signedIn: Boolean((localStorage.getItem("openwork.den.authToken") ?? "").trim()),
@@ -300,7 +300,7 @@ export default {
     {
       name: "Frame 2",
       run: async (ctx) => {
-        await ctx.prove("The newly assigned model appears without restarting OpenWork", {
+        await ctx.prove("The newly assigned model appears without restarting RenWork", {
           voiceover: vo[1],
           action: async () => {
             await clickEmptyStateNotice(ctx);

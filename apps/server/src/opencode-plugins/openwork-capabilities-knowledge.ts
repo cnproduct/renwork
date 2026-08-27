@@ -129,7 +129,7 @@ ${automationRuntimeKnowledge()}
 When users ask "what can I do?" or "what can RenWork do?", summarize these capabilities. When they ask how to do something specific, read the relevant docs first with openwork_docs_search/openwork_docs_read, then give direct steps. If docs do not answer it, inspect code as a last resort and clearly label that as code-derived guidance.`;
 
 const docsSearchArgsSchema = z.object({
-  query: z.string().min(1).describe("OpenWork docs search query, for example 'connect slack mcp'."),
+  query: z.string().min(1).describe("RenWork docs search query, for example 'connect slack mcp'."),
   limit: z.number().int().min(1).max(10).optional().describe("Maximum number of matching docs to return."),
 });
 
@@ -249,7 +249,7 @@ export const OpenWorkCapabilitiesKnowledge = async () => ({
   },
   tool: {
     openwork_docs_search: {
-      description: "Search the bundled OpenWork documentation. Use this first for OpenWork product questions before inspecting implementation code.",
+      description: "Search the bundled RenWork documentation. Use this first for RenWork product questions before inspecting implementation code.",
       args: docsSearchArgsSchema.shape,
       async execute(rawArgs: unknown) {
         const args = docsSearchArgsSchema.parse(rawArgs);
@@ -269,7 +269,7 @@ export const OpenWorkCapabilitiesKnowledge = async () => ({
       },
     },
     openwork_docs_read: {
-      description: "Read a bundled OpenWork documentation page by docs-relative path returned from openwork_docs_search.",
+      description: "Read a bundled RenWork documentation page by docs-relative path returned from openwork_docs_search.",
       args: docsReadArgsSchema.shape,
       async execute(rawArgs: unknown) {
         const args = docsReadArgsSchema.parse(rawArgs);
@@ -277,7 +277,7 @@ export const OpenWorkCapabilitiesKnowledge = async () => ({
         if (normalized.split("/").includes("..")) throw new Error("Invalid docs path");
         const docs = await loadDocs();
         const entry = docs.find((doc) => doc.path === normalized);
-        if (!entry) throw new Error(`OpenWork docs page not found: ${normalized}`);
+        if (!entry) throw new Error(`RenWork docs page not found: ${normalized}`);
         return JSON.stringify(entry, null, 2);
       },
     },

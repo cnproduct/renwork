@@ -75,7 +75,7 @@ function failure(error: unknown): { status: 400 | 403 | 404 | 409; body: { error
   if (!(error instanceof Error)) return null
   if (error.message === "automation_not_found") return { status: 404, body: { error: "automation_not_found" } }
   if (error.message === "automation_action_target_mismatch") {
-    return { status: 400, body: { error: "automation_action_target_mismatch", message: "Desktop creates local Automations; Web creates OpenWork Cloud Automations." } }
+    return { status: 400, body: { error: "automation_action_target_mismatch", message: "Desktop creates local Automations; Web creates RenWork Cloud Automations." } }
   }
   if (error.message === "automation_saved_script_input_invalid") {
     return { status: 400, body: { error: "automation_saved_script_input_invalid", message: "The existing Automation input does not match the selected Script version. Correct the input before creating the revision." } }
@@ -90,7 +90,7 @@ function failure(error: unknown): { status: 400 | 403 | 404 | 409; body: { error
     return { status: 409, body: { error: error.message, message: "The Automation owner is no longer an active organization member." } }
   }
   if (error.message === "automation_cloud_worker_required") {
-    return { status: 409, body: { error: error.message, message: "Set up OpenWork Cloud before creating a Cloud Automation." } }
+    return { status: 409, body: { error: error.message, message: "Set up RenWork Cloud before creating a Cloud Automation." } }
   }
   if (["owner_membership_lost", "model_access_lost", "provider_unavailable"].includes(error.name)) {
     return { status: 409, body: { error: error.name, message: error.message } }
@@ -100,9 +100,9 @@ function failure(error: unknown): { status: 400 | 403 | 404 | 409; body: { error
 
 const routeDescription = [
   "Den schedules Automations and keeps durable run history.",
-  "Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud.",
+  "Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in RenWork Cloud.",
   "If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed.",
-  "Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations.",
+  "Creation makes an Automation active immediately and uses the owner's current RenWork Connect integrations.",
   "Deactivation stops future runs but does not cancel a run already in progress.",
 ].join(" ")
 
@@ -311,8 +311,8 @@ export function registerAutomationRoutes<T extends { Variables: RouteVariables }
     "/v1/cloud-automations",
     describeMcpRoute({
       tags: ["Automations"], operationId: "createCloudAutomation", "x-mcp": true,
-      summary: "Create an active OpenWork Cloud Automation",
-      description: `${routeDescription} This is the Web and Cloud Chat creation surface. Placement is fixed to OpenWork Cloud and the Automation can wake a stopped Cloud container without a desktop. Create only when the person explicitly asks to create or schedule it; there is no draft step.`,
+      summary: "Create an active RenWork Cloud Automation",
+      description: `${routeDescription} This is the Web and Cloud Chat creation surface. Placement is fixed to RenWork Cloud and the Automation can wake a stopped Cloud container without a desktop. Create only when the person explicitly asks to create or schedule it; there is no draft step.`,
       responses: {
         201: jsonResponse("Active Cloud Automation created.", automationDetailSchema),
         400: jsonResponse("Invalid request.", invalidRequestSchema),

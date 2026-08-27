@@ -483,7 +483,7 @@ async function getServerAuth(ctx, requireWorkspace = false) {
       workspaceId: workspaceFromHash || (localStorage.getItem("openwork.react.activeWorkspace") ?? "").trim(),
     };
   })()`);
-  ctx.assert(auth?.port && auth.token, `OpenWork server credentials missing: ${JSON.stringify(auth)}`);
+  ctx.assert(auth?.port && auth.token, `RenWork server credentials missing: ${JSON.stringify(auth)}`);
   if (requireWorkspace) ctx.assert(auth.workspaceId, `Workspace id missing from desktop state: ${JSON.stringify(auth)}`);
   state.serverAuth = auth;
   return auth;
@@ -1543,7 +1543,7 @@ export default {
               direct: health.tools.direct,
             });
             assertExpectedTools(ctx, health.tools.present, "health.tools.present");
-            witness(ctx, health.tools.missing.length === 0, "No expected OpenWork Cloud tools are missing.", { missing: health.tools.missing });
+            witness(ctx, health.tools.missing.length === 0, "No expected RenWork Cloud tools are missing.", { missing: health.tools.missing });
             if (state.model) {
               const projection = health.tools.providerProjection;
               witness(ctx, projection.checked === true && projection.provider === state.model.provider && projection.model === state.model.model, "Provider/model compatibility was checked for the selected provider/model.", projection);
@@ -1676,7 +1676,7 @@ export default {
             const searchIndex = transcriptText.indexOf("[tool:openwork-cloud_search_capabilities]");
             const executeIndex = transcriptText.indexOf("[tool:openwork-cloud_execute_capability]");
             witness(ctx, searchIndex >= 0 && executeIndex > searchIndex, "Transcript tool order is openwork-cloud_search_capabilities before openwork-cloud_execute_capability.", { searchIndex, executeIndex });
-            witness(ctx, !transcriptText.includes(PLUGIN_CANARY), "Transcript did not substitute OpenWork documentation search for the connected-service action.", { containsDocsSearch: transcriptText.includes(PLUGIN_CANARY) });
+            witness(ctx, !transcriptText.includes(PLUGIN_CANARY), "Transcript did not substitute RenWork documentation search for the connected-service action.", { containsDocsSearch: transcriptText.includes(PLUGIN_CANARY) });
             const freshExecutions = state.fixtureExecutions.filter((entry) => !state.chatStartedAt || entry.at >= state.chatStartedAt);
             witness(ctx, freshExecutions.length >= 1, "The external Cloud Reliability Check fixture observed a real tools/call execution from the task.", freshExecutions.map((entry) => ({ at: entry.at, toolName: entry.toolName })));
             const latest = await ctx.control("session.latest_message");

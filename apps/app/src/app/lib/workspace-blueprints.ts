@@ -152,6 +152,7 @@ export function defaultBlueprintStartersForPreset(preset: string): WorkspaceBlue
           prompt: t("blueprint.starter_explore_prompt"),
         },
       ];
+    default:
       return [
         {
           id: "renwork-okki-leads",

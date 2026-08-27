@@ -11,14 +11,14 @@ const INVITEE_EMAIL = `maya.invite+${RUN_TAG}@acme.test`;
 
 const REMOVED_EMAIL_TEXT = [
   "Download the desktop app",
-  "Download OpenWork",
+  "Download RenWork",
   "Edit spreadsheets",
   "Control your browser",
   "Organize files",
   "Automate tasks",
   "desktop app",
-  "Open OpenWork",
-  "Install OpenWork",
+  "Open RenWork",
+  "Install RenWork",
   "Install the desktop app",
 ];
 

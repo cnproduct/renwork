@@ -3,9 +3,9 @@ import { getGithubData } from "../../lib/github";
 import { baseOpenGraph } from "../../lib/seo";
 
 export const metadata = {
-  title: "OpenWork — Security & Data Privacy",
+  title: "RenWork — Security & Data Privacy",
   description:
-    "How OpenWork handles data, subprocessors, incident response, and compliance for self-hosted enterprise deployments.",
+    "How RenWork handles data, subprocessors, incident response, and compliance for self-hosted enterprise deployments.",
   alternates: {
     canonical: "/trust"
   },

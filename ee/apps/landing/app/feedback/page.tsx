@@ -5,8 +5,8 @@ import { SiteFooter } from "../../components/site-footer";
 import { baseOpenGraph } from "../../lib/seo";
 
 export const metadata = {
-  title: "OpenWork — Feedback",
-  description: "Send app feedback to the OpenWork team with prefilled runtime context.",
+  title: "RenWork — Feedback",
+  description: "Send app feedback to the RenWork team with prefilled runtime context.",
   alternates: {
     canonical: "/feedback"
   },
@@ -56,7 +56,7 @@ export default async function FeedbackPage({ searchParams }: PageProps) {
           <Link href="/" className="inline-flex items-center gap-3 text-[#011627]">
             <OpenWorkMark className="h-[30px] w-[38px]" />
             <span className="text-[1.2rem] font-semibold tracking-tight lowercase">
-              OpenWork
+              RenWork
             </span>
           </Link>
           <Link

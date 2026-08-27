@@ -13,7 +13,7 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const execFileAsync = promisify(execFile);
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const ORG_SCOPE_HEADER = "x-openwork-org-id";
 const ORG_SETTINGS_PATH = "/dashboard/org-settings";
 const API_KEYS_PATH = "/dashboard/api-keys";
@@ -175,7 +175,7 @@ async function prepareSeededMultiOrg(ctx) {
   await cleanupApiKeys(ctx);
   let organization = await readOrganization(ctx);
   if (organization.name.startsWith(ORG_NAME_PREFIX)) {
-    const healedName = state.org.slug === "default" ? "OpenWork" : "Acme Robotics";
+    const healedName = state.org.slug === "default" ? "RenWork" : "Acme Robotics";
     await renameOrganization(ctx, healedName);
     organization = await readOrganization(ctx);
   }

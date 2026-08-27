@@ -107,7 +107,7 @@ export async function createDesktopHandoff(ctx, token) {
 }
 
 export async function configureDesktopForDen(ctx) {
-  await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 120_000, label: "OpenWork control API" });
+  await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 120_000, label: "RenWork control API" });
   const apiBase = denApiBase(ctx);
   const webBase = denWebBase(ctx);
   const result = await ctx.eval(`(async () => {
@@ -341,8 +341,8 @@ export async function waitForOpenWorkConnectReady(ctx, timeout = 90_000) {
     if (onboardingClick.clickedContinueOrg || onboardingClick.clickedContinueWorkspace) await sleep(1_000);
     last = await ctx.eval(`(() => {
       const text = document.body.innerText || "";
-      const match = text.match(/OpenWork Connect: (Ready|Checking|Needs attention)/);
-      return { ready: text.includes("OpenWork Connect: Ready"), status: match?.[0] || "", hash: window.location.hash };
+      const match = text.match(/RenWork Connect: (Ready|Checking|Needs attention)/);
+      return { ready: text.includes("RenWork Connect: Ready"), status: match?.[0] || "", hash: window.location.hash };
     })()`);
     if ((last.hash === "#/onboarding" || last.hash === "#/welcome") && !onboardingClick.hasContinueOrg && !onboardingClick.hasContinueWorkspace) {
       await ctx.eval("window.dispatchEvent(new Event('focus'))").catch(() => undefined);
@@ -353,7 +353,7 @@ export async function waitForOpenWorkConnectReady(ctx, timeout = 90_000) {
     await ctx.eval("window.dispatchEvent(new Event('focus'))").catch(() => undefined);
     await sleep(1_000);
   }
-  throw new Error(`OpenWork Connect did not become Ready in the status bar within ${timeout}ms: ${JSON.stringify(last)}`);
+  throw new Error(`RenWork Connect did not become Ready in the status bar within ${timeout}ms: ${JSON.stringify(last)}`);
 }
 
 export async function ensureLocalWorkspaceBeforeConnectPollIfNeeded(ctx, folderPath) {
@@ -369,7 +369,7 @@ export async function ensureLocalWorkspaceBeforeConnectPollIfNeeded(ctx, folderP
 }
 
 export async function ensureLocalWorkspace(ctx, folderPath) {
-  await ctx.waitFor(`(() => { const s = ${localServerExpr()}; return Boolean(s.base && s.token); })()`, { timeoutMs: 60_000, label: "local OpenWork server URL/token" });
+  await ctx.waitFor(`(() => { const s = ${localServerExpr()}; return Boolean(s.base && s.token); })()`, { timeoutMs: 60_000, label: "local RenWork server URL/token" });
   let last = null;
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
@@ -392,7 +392,7 @@ export async function ensureLocalWorkspace(ctx, folderPath) {
 async function clickThroughWorkspaceOnboarding(ctx, folderPath) {
   const onboardingClick = await clickThroughLingeringOnboarding(ctx);
   if (onboardingClick.clickedContinueOrg || onboardingClick.clickedContinueWorkspace) return true;
-  for (const text of ["Skip and use the free model", "Continue without OpenWork Models", "Skip"]) {
+  for (const text of ["Skip and use the free model", "Continue without RenWork Models", "Skip"]) {
     if (await clickExactIfVisible(ctx, text, "button, [role=button]")) return true;
   }
   const state = await workspaceSessionState(ctx);
@@ -421,9 +421,9 @@ async function workspaceSessionState(ctx) {
       hasConcreteSession: Boolean(match),
       hasComposer: Boolean(document.querySelector(${JSON.stringify(EDITOR_SELECTOR)})),
       hasFolderInput: Boolean(input && inputRect && inputRect.width > 0 && inputRect.height > 0),
-      hasWelcome: text.includes("Welcome to OpenWork"),
+      hasWelcome: text.includes("Welcome to RenWork"),
       workspaceCreateBusy: text.includes("Creating workspace"),
-      hasConnectStatus: /OpenWork Connect: (Ready|Checking|Needs attention)/.test(text),
+      hasConnectStatus: /RenWork Connect: (Ready|Checking|Needs attention)/.test(text),
       opencodeUnavailable: text.includes("OpenCode unavailable") || text.includes("opencode_unconfigured") || text.includes("OpenCode base URL is missing"),
       text: text.slice(0, 1_000),
     };
@@ -465,7 +465,7 @@ export async function readTranscriptSnapshot(ctx) {
     const normalize = (value) => String(value ?? "").replace(/\\s+/g, " ").trim();
     const substantive = (value) => {
       const text = normalize(value);
-      return text.length > 0 && text !== "OpenWork";
+      return text.length > 0 && text !== "RenWork";
     };
     const bodyText = document.body.innerText || "";
     let transcript = null;
@@ -498,7 +498,7 @@ function normalizeSnapshotText(value) {
 
 function isSubstantiveAssistantText(value) {
   const text = normalizeSnapshotText(value);
-  return text.length > 0 && text !== "OpenWork";
+  return text.length > 0 && text !== "RenWork";
 }
 
 function hasAssistantAfter(snapshot, initialMessageCount) {

@@ -145,7 +145,7 @@ async function startOpenworkServer(input: { workspaceRoot: string; opencodeBaseU
   return { server, token: config.token };
 }
 
-test("drives two headless turns on a native OpenWork thread", async () => {
+test("drives two headless turns on a native RenWork thread", async () => {
   const workspaceRoot = await createWorkspaceRoot();
   const engine = startMockOpencode();
   const openwork = await startOpenworkServer({

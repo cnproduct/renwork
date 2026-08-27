@@ -19,7 +19,7 @@ import { denApiFetch, denWebUrl, signInApi as signIn } from "./lib/den-web.mjs";
 const vo = await loadVoiceoverParagraphs("org-scope-dashboard-pinning");
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const DRIFT_ORG_NAME = "Drift Probe Org";
 const ORG_SCOPE_HEADER = "x-openwork-org-id";
 const PENDING_ORG_SELECTION_KEY = "openwork:web:pending-org-selection";
@@ -148,7 +148,7 @@ export default {
           // A prior crashed run left our probe rename behind. Slugs survive
           // renames, so restore the stack's canonical name for the slug.
           const healedName = state.orgA.slug === "default"
-            ? "OpenWork"
+            ? "RenWork"
             : state.orgA.slug.startsWith("acme")
               ? "Acme Robotics"
               : `Restored ${state.orgA.slug}`;

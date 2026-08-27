@@ -62,7 +62,7 @@ test("actor validation accepts complete actors and rejects incomplete shapes", (
   const actor = {
     name: "Maya",
     email: "maya@example.test",
-    password: "OpenWorkEval123!",
+    password: "RenWorkEval123!",
     role: "fresh",
   };
 

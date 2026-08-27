@@ -57,7 +57,7 @@ async function send(body: unknown, headers: Record<string, string> = ANTHROPIC_H
   return JSON.parse(sent);
 }
 
-describe("OpenWorkAnthropicToolSchema fetch patch", () => {
+describe("RenWorkAnthropicToolSchema fetch patch", () => {
   test("flattens a top-level anyOf into a plain object schema", async () => {
     const body = await send({
       model: "claude-fable-5",

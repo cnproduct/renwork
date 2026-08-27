@@ -411,10 +411,10 @@ export default defineScenario({
             assert: async () => {
               const route = stateString(ctx, "jamieWorkspaceRoute");
               witness(ctx, route.includes("/workspace/") || route === "/session", "Jamie desktop reached a fresh usable route", ctx.state.jamieWorkspaceRoute);
-              await ctx.expectText("OpenWork", { timeoutMs: 30_000 });
+              await ctx.expectText("RenWork", { timeoutMs: 30_000 });
               await ctx.expectNoText(ctx.actors.alex.email);
             },
-            screenshot: { name: "jamie-fresh-desktop", requireText: ["OpenWork"], rejectText: [ctx.actors.alex.email] },
+            screenshot: { name: "jamie-fresh-desktop", requireText: ["RenWork"], rejectText: [ctx.actors.alex.email] },
           });
         });
       },

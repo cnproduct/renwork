@@ -143,7 +143,7 @@ export async function startEmbeddedServer(options: EmbeddedServerOptions): Promi
 
     if (errors.length === 1) throw errors[0];
     if (errors.length > 1) {
-      throw new AggregateError(errors, "Failed to stop embedded OpenWork server");
+      throw new AggregateError(errors, "Failed to stop embedded RenWork server");
     }
   };
 
@@ -161,7 +161,7 @@ export async function startEmbeddedServer(options: EmbeddedServerOptions): Promi
       } catch (cleanupError) {
         throw new AggregateError(
           [startupError, cleanupError],
-          "Embedded OpenWork server startup failed and cleanup was incomplete",
+          "Embedded RenWork server startup failed and cleanup was incomplete",
         );
       }
       throw startupError;

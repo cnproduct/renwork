@@ -47,7 +47,7 @@ const ADMIN_EXCEPTION_POLICY_NAME = "Admins may add providers";
 const ADMIN_EXCEPTION_ROLES: DenDesktopPolicyRole[] = ["owner", "admin"];
 
 function getProviderSourceLabel(source: DenLlmProviderSource) {
-  if (source === "openwork") return "OpenWork";
+  if (source === "openwork") return "RenWork";
   return source === "custom" ? "Custom" : "Catalog";
 }
 
@@ -411,8 +411,8 @@ export function LlmProvidersScreen() {
           <section className="overflow-hidden rounded-[28px] border border-gray-200 bg-white">
             <DenSectionHeader
               className="border-b border-gray-100 px-6 py-4"
-              title="OpenWork Model Keys"
-              description="Members in this organization with an OpenWork Models key."
+              title="RenWork Model Keys"
+              description="Members in this organization with a RenWork Models key."
             />
             <DenTable columns={openWorkKeyColumns} rows={openWorkKeyRows} getRowKey={(row) => row.id} />
           </section>

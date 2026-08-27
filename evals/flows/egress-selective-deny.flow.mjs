@@ -42,7 +42,7 @@ export default {
         let lab;
         let denied;
         let manifest;
-        await ctx.prove("github.com is blocked by policy, the lab error names the host, and OpenWork product diagnostics classify the HTTP 451 allowlist deny", {
+        await ctx.prove("github.com is blocked by policy, the lab error names the host, and RenWork product diagnostics classify the HTTP 451 allowlist deny", {
           voiceover: vo[0],
           action: async () => {
             lab = await startEgressLab({ profile: "deny", denyHosts: ["github.com", "127.0.0.1"] });

@@ -143,7 +143,7 @@ function demoOwnerEmail(ctx: FlowContext): string {
 }
 
 function demoOwnerPassword(ctx: FlowContext): string {
-  return ctx.env.DEN_DEMO_OWNER_PASSWORD?.trim() || "OpenWorkDemo123!";
+  return ctx.env.DEN_DEMO_OWNER_PASSWORD?.trim() || "RenWorkDemo123!";
 }
 
 function sessionCookieFromHeader(value: string | null): string {

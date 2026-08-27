@@ -511,8 +511,8 @@ export class AutomationService {
         runId,
         leaseOwner,
         status: "failed",
-        resultSummary: "OpenWork Cloud script execution is unavailable.",
-        error: { code: "execution_runtime_unavailable", message: "OpenWork Cloud script execution is unavailable.", retryable: true },
+        resultSummary: "RenWork Cloud script execution is unavailable.",
+        error: { code: "execution_runtime_unavailable", message: "RenWork Cloud script execution is unavailable.", retryable: true },
         now: Date.now(),
       })
       return
@@ -569,9 +569,9 @@ export class AutomationService {
         runId: claimed.run.id,
         leaseOwner,
         status: "failed",
-        resultSummary: "OpenWork Cloud agent execution is unavailable.",
+        resultSummary: "RenWork Cloud agent execution is unavailable.",
         updateArtifactState: false,
-        error: { code: "execution_runtime_unavailable", message: "OpenWork Cloud agent execution is unavailable.", retryable: true },
+        error: { code: "execution_runtime_unavailable", message: "RenWork Cloud agent execution is unavailable.", retryable: true },
         now: Date.now(),
       })
       return

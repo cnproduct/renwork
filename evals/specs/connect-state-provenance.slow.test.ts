@@ -31,14 +31,14 @@ test.skipIf(!appSpecsEnabled || !localPlacement || !mysqlOpen)(title, async ({ e
       admin: {
         email: `connect-state-admin-${Date.now()}@openwork.test`,
         name: "Connect State Admin",
-        password: "OpenWorkEval123!",
+        password: "RenWorkEval123!",
       },
     },
   });
   await inviteMember(den, "fresh", {
     email: `connect-state-member-${Date.now()}@openwork.test`,
     name: "Fresh Profile Member",
-    password: "OpenWorkEval123!",
+    password: "RenWorkEval123!",
   });
   await using freshApp = await app({
     den,

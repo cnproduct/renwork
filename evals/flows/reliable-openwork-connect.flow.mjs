@@ -14,10 +14,10 @@ const MCP_NAME = "openwork";
 const MCP_PATH = "/mcp/agent";
 const PUBLIC_MCP_SERVER_URL = "https://api.openworklabs.com/mcp/agent";
 const CLIENT_SCOPE = "mcp:read mcp:write offline_access";
-const CLIENT_NAME = "OpenWork reliable connect eval client";
+const CLIENT_NAME = "RenWork reliable connect eval client";
 const OPENCODE_BIN = process.env.OPENWORK_EVAL_OPENCODE_BIN?.trim() || "opencode";
 const DEMO_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const DEMO_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const DEMO_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const SECTION_SELECTOR = "#connect-mcp";
 const INSTALL_SELECTOR = "#connect-mcp-install";
 const ACTIVE_PANEL_SELECTOR = `${INSTALL_SELECTOR} [role="tabpanel"]:not([hidden])`;
@@ -352,7 +352,7 @@ async function navigateBrowser(ctx, url, label) {
 async function ensureLandingConnect(ctx) {
   const url = `${baseUrlFromEnv(ctx, "OPENWORK_EVAL_LANDING_URL")}/#connect-mcp`;
   await applyDesktopViewport(ctx);
-  await navigateBrowser(ctx, url, "landing OpenWork Connect section");
+  await navigateBrowser(ctx, url, "landing RenWork Connect section");
   await ctx.waitFor(
     `(() => {
       const section = document.querySelector(${JSON.stringify(SECTION_SELECTOR)});
@@ -563,7 +563,7 @@ function renderLoopbackPage(input) {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>OpenWork MCP client - ${escapeHtml(input.status)}</title>
+    <title>RenWork MCP client - ${escapeHtml(input.status)}</title>
     <style>
       body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f0f9ff; color: #0f172a; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
       main { width: min(760px, calc(100vw - 48px)); border: 1px solid #bae6fd; border-radius: 28px; background: white; box-shadow: 0 24px 80px rgba(15,23,42,.16); padding: 40px; }
@@ -574,7 +574,7 @@ function renderLoopbackPage(input) {
   </head>
   <body>
     <main>
-      <p>OpenWork MCP client</p>
+      <p>RenWork MCP client</p>
       <h1>${escapeHtml(input.status)}</h1>
       <p>Loopback redirect URI: <code>${escapeHtml(input.redirectUri)}</code></p>
       <ul>${details}</ul>
@@ -585,7 +585,7 @@ function renderLoopbackPage(input) {
 
 async function startLoopbackServer() {
   let status = "waiting for authorization";
-  let details = ["The browser is authorizing OpenWork MCP access."];
+  let details = ["The browser is authorizing RenWork MCP access."];
   let resolveCallback;
   const waitForCallback = new Promise((resolve) => {
     resolveCallback = resolve;
@@ -598,7 +598,7 @@ async function startLoopbackServer() {
       const callbackState = requestUrl.searchParams.get("state") ?? "";
       status = requestUrl.searchParams.get("code") ? "authorization code received" : "callback missing authorization code";
       details = [
-        "OpenWork redirected back to the client loopback callback.",
+        "RenWork redirected back to the client loopback callback.",
         "The callback carried an authorization code and state only; no bearer or refresh tokens are present in the URL.",
       ];
       resolveCallback({
@@ -1285,7 +1285,7 @@ async function submitSignIn(ctx) {
     return Boolean(document.querySelector(${JSON.stringify(emailSelector)}))
       || Boolean(document.querySelector('input[name="mcp-organization"], input[type="radio"]'))
       || text.includes('Choose workspace');
-  })()`, { timeoutMs: 60_000, label: "OpenWork OAuth sign-in or consent" });
+  })()`, { timeoutMs: 60_000, label: "RenWork OAuth sign-in or consent" });
 
   const alreadyAtConsent = await ctx.eval(`Boolean(document.querySelector('input[name="mcp-organization"], input[type="radio"]'))`);
   if (alreadyAtConsent) return "already signed in";
@@ -1525,7 +1525,7 @@ function renderProofPage(proof) {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Reliable OpenWork Connect proof</title>
+    <title>Reliable RenWork Connect proof</title>
     <style>
       body { margin: 0; background: #f8fafc; color: #0f172a; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
       main { max-width: 1040px; margin: 0 auto; padding: 36px; }
@@ -1543,7 +1543,7 @@ function renderProofPage(proof) {
   <body>
     <main>
       <p class="badge">Connected</p><p class="badge">No tokens shown</p><p class="badge">Native OpenCode</p>
-      <h1>Reliable OpenWork Connect proof</h1>
+      <h1>Reliable RenWork Connect proof</h1>
       <p>Landing UI contract: <code>${escapeHtml(proof.canonicalServerUrl)}</code></p>
       <p>Runtime under test: <code>${escapeHtml(proof.runtimeServerUrl)}</code>. ${escapeHtml(proof.urlContract)}</p>
       <div class="grid">
@@ -1577,7 +1577,7 @@ function renderErrorMatrixPage(matrix) {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>OpenWork Connect error matrix</title>
+    <title>RenWork Connect error matrix</title>
     <style>
       body { margin: 0; background: #fff7ed; color: #111827; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
       main { max-width: 1120px; margin: 0 auto; padding: 36px; }
@@ -1591,7 +1591,7 @@ function renderErrorMatrixPage(matrix) {
   </head>
   <body>
     <main>
-      <h1>OpenWork Connect error matrix</h1>
+      <h1>RenWork Connect error matrix</h1>
       <p>Every row is from a real HTTP response and includes an <strong>X-Request-Id</strong> plus a body reference. Tokens are redacted.</p>
       <table>
         <thead><tr><th>Scenario</th><th>Status</th><th>X-Request-Id</th><th>Body reference</th><th>Contract</th></tr></thead>
@@ -1844,21 +1844,21 @@ function matrixRow(scenario, response, contract) {
 
 async function navigateDocsPage(ctx) {
   const url = `${baseUrlFromEnv(ctx, "OPENWORK_EVAL_DOCS_URL")}/cloud/run-in-the-cloud/cloud-mcp`;
-  await navigateBrowser(ctx, url, "OpenWork Connect docs page");
+  await navigateBrowser(ctx, url, "RenWork Connect docs page");
   await ctx.waitFor(
     `(() => {
       const root = document.querySelector('article, main') || document.body;
       const text = root.innerText || "";
-      return text.includes(${JSON.stringify(PUBLIC_MCP_SERVER_URL)}) && text.includes('OpenWork Connect MCP');
+      return text.includes(${JSON.stringify(PUBLIC_MCP_SERVER_URL)}) && text.includes('RenWork Connect MCP');
     })()`,
-    { timeoutMs: 30_000, label: "OpenWork Connect docs content" },
+    { timeoutMs: 30_000, label: "RenWork Connect docs content" },
   );
   return url;
 }
 
 export default {
   id: FLOW_ID,
-  title: "Reliable OpenWork Connect is proven from landing page to OAuth, MCP tools, errors, and docs",
+  title: "Reliable RenWork Connect is proven from landing page to OAuth, MCP tools, errors, and docs",
   kind: "user-facing",
   preserveTheme: true,
   requiredEnv: [
@@ -1874,7 +1874,7 @@ export default {
     {
       name: "Frame 1",
       run: async (ctx) => {
-        await ctx.prove("OpenWork Connect publishes the permanent MCP server URL and labels only native-proven clients as verified.", {
+        await ctx.prove("RenWork Connect publishes the permanent MCP server URL and labels only native-proven clients as verified.", {
           voiceover: vo[0],
           action: async () => {
             state.landingUrl = await ensureLandingConnect(ctx);
@@ -2008,7 +2008,7 @@ export default {
               await waitForOrganizationConsent(ctx);
               state.selectedOrganizationLabel = await selectAcmeOrganization(ctx);
               const consentScreenshotUrl = await screenshotWithTemporarilyQuerylessUrl(ctx, "frame-3-consent-before-authorize", {
-                claim: "OpenWork shows the selected organization on the MCP consent screen before authorization.",
+                claim: "RenWork shows the selected organization on the MCP consent screen before authorization.",
                 voiceover: vo[2],
                 requireText: ["CHOOSE WORKSPACE", "Authorize"],
                 rejectText: ["access_token", "refresh_token"],
@@ -2133,7 +2133,7 @@ export default {
       name: "Frame 4",
       run: async (ctx) => {
         try {
-          await ctx.prove("Public OAuth uses JWT access tokens plus rotating opaque refresh tokens while the verified client searches and executes OpenWork capabilities for the selected org.", {
+          await ctx.prove("Public OAuth uses JWT access tokens plus rotating opaque refresh tokens while the verified client searches and executes RenWork capabilities for the selected org.", {
             voiceover: vo[3],
             action: async () => {
               const nativeBefore = await readNativeCredential();
@@ -2257,7 +2257,7 @@ export default {
       name: "Frame 5",
       run: async (ctx) => {
         try {
-          await ctx.prove("OpenWork Connect returns standards-compliant, traceable error responses for the failure modes clients hit.", {
+          await ctx.prove("RenWork Connect returns standards-compliant, traceable error responses for the failure modes clients hit.", {
             voiceover: vo[4],
             action: async () => {
               const rateLimitReset = await cleanupEvalRateLimits(ctx, "frame-5-start");

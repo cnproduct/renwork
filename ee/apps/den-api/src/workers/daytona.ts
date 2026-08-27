@@ -489,7 +489,7 @@ hydrate_checkpoint() {
     return 0
   fi
   if ! state_dirs_pristine; then
-    echo "checkpoint hydrate skipped; local OpenWork state is not pristine or was already restored"
+    echo "checkpoint hydrate skipped; local RenWork state is not pristine or was already restored"
     return 0
   fi
   echo "checkpoint hydrate restoring $latest_checkpoint"
@@ -497,7 +497,7 @@ hydrate_checkpoint() {
     printf '%s\n' "$latest_checkpoint" > "$RESTORE_MARKER"
     return 0
   fi
-  echo "checkpoint hydrate failed for $latest_checkpoint; continuing with fresh OpenWork state" >&2
+  echo "checkpoint hydrate failed for $latest_checkpoint; continuing with fresh RenWork state" >&2
   rm -rf ${shellQuote(env.daytona.runtimeDataPath)} ${shellQuote(env.daytona.runtimeWorkspacePath)}
   mkdir -p ${shellQuote(env.daytona.runtimeDataPath)} ${shellQuote(`${env.daytona.runtimeWorkspacePath}/volumes`)}
   ln -sfn ${shellQuote(env.daytona.workspaceMountPath)} ${shellQuote(`${env.daytona.runtimeWorkspacePath}/volumes/workspace`) }
@@ -516,7 +516,7 @@ checkpoint_loop() {
 server_pid=""
 checkpoint_pid=""
 on_term() {
-  echo "termination requested; flushing OpenWork checkpoint"
+  echo "termination requested; flushing RenWork checkpoint"
   flush_checkpoint
   if [ -n "$server_pid" ]; then
     kill -TERM "$server_pid" 2>/dev/null || true
@@ -1192,7 +1192,7 @@ async function recycleDaytonaSandbox(input: {
     })
     const restored = await input.runtime.verifyRestoreMarker(replacementSandbox)
     if (!restored) {
-      throw new Error("Daytona replacement did not restore an OpenWork checkpoint")
+      throw new Error("Daytona replacement did not restore a RenWork checkpoint")
     }
 
     await persistDaytonaSandbox({

@@ -340,10 +340,10 @@ export default defineScenario({
             },
             assert: async () => {
               await ctx.expectText("This invite can't be opened.", { timeoutMs: 60_000 });
-              await ctx.expectText("Back to OpenWork Cloud", { timeoutMs: 60_000 });
+              await ctx.expectText("Back to RenWork Cloud", { timeoutMs: 60_000 });
               await ctx.expectNoText("Dashboard");
             },
-            screenshot: { name: "invalid-invite-token", requireText: ["This invite can't be opened.", "Back to OpenWork Cloud"], rejectText: ["Dashboard", "Could not join", "Something went wrong"] },
+            screenshot: { name: "invalid-invite-token", requireText: ["This invite can't be opened.", "Back to RenWork Cloud"], rejectText: ["Dashboard", "Could not join", "Something went wrong"] },
           });
         });
       },

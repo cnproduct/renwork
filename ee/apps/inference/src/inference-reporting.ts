@@ -319,7 +319,7 @@ export const sentryInferenceReporter: InferenceReporter = {
       return
     }
 
-    Sentry.logger.info("OpenWork chat completions inference request", {
+    Sentry.logger.info("RenWork chat completions inference request", {
       ...reportAttributes(report),
       payloadMode: report.payloadMode,
       payload: report.payload,
@@ -335,10 +335,10 @@ export const sentryInferenceReporter: InferenceReporter = {
       error: report.error,
     }
     if (shouldEmitSentryLog("error")) {
-      Sentry.logger.error("OpenWork inference handled error", attributes)
+      Sentry.logger.error("RenWork inference handled error", attributes)
     }
     if (report.exception === undefined) {
-      Sentry.captureMessage(`OpenWork inference handled error: ${report.reason}`, {
+      Sentry.captureMessage(`RenWork inference handled error: ${report.reason}`, {
         level: "error",
         tags: reportTags(report),
         contexts: { inference: attributes },

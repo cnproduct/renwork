@@ -32,7 +32,7 @@ function restoreResourcesPath(previous: string | undefined) {
 describe("openworkPluginPath", () => {
   test("prefers OPENWORK_EXTENSIONS_PLUGIN_DIR", () => {
     withPluginDir("/opt/openwork/opencode-plugins", () => {
-      const resourcesPath = join("/Applications", "OpenWork.app", "Contents", "Resources");
+      const resourcesPath = join("/Applications", "RenWork.app", "Contents", "Resources");
       const previousResourcesPath = process.resourcesPath;
       process.resourcesPath = resourcesPath;
       try {
@@ -47,7 +47,7 @@ describe("openworkPluginPath", () => {
   test("uses external resources plugin path in packaged Electron when env is unset", () => {
     withPluginDir(undefined, () => {
       const previousResourcesPath = process.resourcesPath;
-      const resourcesPath = join("/Applications", "OpenWork.app", "Contents", "Resources");
+      const resourcesPath = join("/Applications", "RenWork.app", "Contents", "Resources");
       process.resourcesPath = resourcesPath;
       try {
         const pluginPath = openworkPluginPath(

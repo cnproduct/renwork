@@ -98,7 +98,7 @@ export class DenRequestTimeoutError extends Error {
 
   constructor(timeoutMs: number, cause?: unknown) {
     super(
-      `OpenWork stopped waiting after ${formatDeadlineDuration(timeoutMs)}. The operation’s outcome is unknown.`,
+      `RenWork stopped waiting after ${formatDeadlineDuration(timeoutMs)}. The operation’s outcome is unknown.`,
       cause === undefined ? undefined : { cause },
     );
     this.name = "DenRequestTimeoutError";
@@ -111,7 +111,7 @@ export class DenRequestCanceledError extends Error {
 
   constructor(cause?: unknown) {
     super(
-      "The OpenWork request was canceled before the dashboard received a result. The operation’s outcome is unknown.",
+      "The RenWork request was canceled before the dashboard received a result. The operation’s outcome is unknown.",
       cause === undefined ? undefined : { cause },
     );
     this.name = "DenRequestCanceledError";
@@ -226,7 +226,7 @@ export const AUTH_TOKEN_STORAGE_KEY = "openwork:web:auth-token";
 export const ONBOARDING_INTENT_STORAGE_KEY = "openwork:web:onboarding-intent";
 export const PENDING_AUTH_INTENT_STORAGE_KEY = "openwork:web:pending-auth-intent";
 export const WORKER_STATUS_POLL_MS = DEN_WORKER_POLL_INTERVAL_MS;
-export const DEFAULT_AUTH_NAME = "OpenWork User";
+export const DEFAULT_AUTH_NAME = "RenWork User";
 export const DEFAULT_WORKER_NAME = "My Worker";
 export const WORKSPACE_REAUTH_SECURITY_MESSAGE = "For security, confirm it's you before changing workspace settings.";
 
@@ -668,7 +668,7 @@ export function getWorkerRuntimeSnapshot(payload: unknown): WorkerRuntimeSnapsho
 export function getRuntimeServiceLabel(name: RuntimeServiceName): string {
   switch (name) {
     case "openwork-server":
-      return "OpenWork server";
+      return "RenWork server";
     case "opencode":
       return "OpenCode";
   }

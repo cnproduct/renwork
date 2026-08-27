@@ -28,7 +28,7 @@ const MYSQL_CONTAINER = "openwork-web-local-mysql";
 const MYSQL_ARGS = ["exec", MYSQL_CONTAINER, "mysql", "-uroot", "-ppassword", "openwork_den", "-N", "-e"];
 const ADMIN_TOKEN = (process.env.OPENWORK_EVAL_DEN_TOKEN ?? "").trim();
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const TYPE_ID_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
 const TYPE_ID_PREFIXES = {
   member: "om",
@@ -37,7 +37,7 @@ const TYPE_ID_PREFIXES = {
 const RUN_TAG = `${Date.now().toString(36)}-${randomBytes(2).toString("hex")}`;
 const RILEY_EMAIL = `riley+${RUN_TAG}@acme.test`;
 const RILEY_JIT_EMAIL = `riley+jit-${RUN_TAG}@acme.test`;
-const RILEY_PASSWORD = `OpenWork-${RUN_TAG}!`;
+const RILEY_PASSWORD = `RenWork-${RUN_TAG}!`;
 
 const state = {
   organization: null,

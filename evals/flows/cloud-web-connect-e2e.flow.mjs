@@ -543,7 +543,7 @@ async function executeMockMcpThroughAgent(ctx) {
 
 export default defineFlow({
   id: FLOW_ID,
-  title: "Cloud web sign-in opens a real instance, completes an approved action, and executes a mock MCP through OpenWork Connect",
+  title: "Cloud web sign-in opens a real instance, completes an approved action, and executes a mock MCP through RenWork Connect",
   kind: "user-facing",
   preserveTheme: true,
   requiresApp: true,
@@ -647,7 +647,7 @@ export default defineFlow({
     {
       name: "Frame 4 — Instance is full app",
       run: async (ctx) => {
-        await ctx.prove("The instance is the full OpenWork app.", {
+        await ctx.prove("The instance is the full RenWork app.", {
           action: async () => {
             await navigateAbsolute(ctx, instanceBase());
             await seedDenSession(ctx);
@@ -656,7 +656,7 @@ export default defineFlow({
             await navigateAbsolute(ctx, `${instanceBase()}/session`);
             await ctx.waitFor("document.body.innerText.includes('What do you need done?') || document.body.innerText.includes('New session')", {
               timeoutMs: 90_000,
-              label: "OpenWork app shell in Cloud instance",
+              label: "RenWork app shell in Cloud instance",
             });
           },
           assert: async () => {
@@ -666,11 +666,11 @@ export default defineFlow({
               if (text.includes("New session")) return "New session";
               return "";
             })()`);
-            witness(ctx, marker === "What do you need done?" || marker === "New session", "The Cloud instance renders the OpenWork app shell", marker);
+            witness(ctx, marker === "What do you need done?" || marker === "New session", "The Cloud instance renders the RenWork app shell", marker);
           },
           screenshot: {
             name: "frame-4-instance-app",
-            claim: "The Cloud instance loads the full OpenWork app shell after the same signed-in organization session is restored.",
+            claim: "The Cloud instance loads the full RenWork app shell after the same signed-in organization session is restored.",
             rejectText: ["Something went wrong"],
           },
         });
@@ -738,13 +738,13 @@ export default defineFlow({
     {
       name: "Frame 7 — Mock MCP executes through Connect",
       run: async (ctx) => {
-        await ctx.prove("The mock MCP provably executes through OpenWork Connect.", {
+        await ctx.prove("The mock MCP provably executes through RenWork Connect.", {
           action: async () => {
             await executeMockMcpThroughAgent(ctx);
           },
           assert: async () => {
             witness(ctx, state.mockWitnessEntries.length > 0, "The mock MCP witness log captured the executed tool", state.mockWitnessEntries);
-            witness(ctx, state.executeResultText.includes(LOOKUP_OK_TEXT), "The OpenWork Connect execution returned the Acme lookup proof", state.executeResultText);
+            witness(ctx, state.executeResultText.includes(LOOKUP_OK_TEXT), "The RenWork Connect execution returned the Acme lookup proof", state.executeResultText);
           },
           // No screenshot: the execution is node-side and the Connect view is
           // visually identical to frame 6 (the runner rejects duplicate

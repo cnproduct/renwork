@@ -13,7 +13,7 @@ test("parses namespaced and catalog tool calls from a session transcript", () =>
       index: 0,
       role: "assistant",
       text: [
-        "OpenWork",
+        "RenWork",
         "[tool:mcp:emc_labs:send_email] sent",
         "[tool:native:emc_robotics:postCapabilitiesGoogleWorkspaceGmailDrafts] drafted",
         "[tool:openwork-cloud_execute_capability] searched",

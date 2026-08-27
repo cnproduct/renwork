@@ -56,7 +56,7 @@ async function listAdminCapabilityMatches(query?: string): Promise<CapabilityMat
             ["admin", "platform"],
           )
           : 1,
-        summary: `[OpenWork Admin] ${tool.description ?? tool.name}`,
+        summary: `[RenWork Admin] ${tool.description ?? tool.name}`,
         pathParams: [],
         queryParams: [],
         hasBody,

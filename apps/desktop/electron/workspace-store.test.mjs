@@ -195,14 +195,14 @@ test("does not create a default workspace when desktop state is absent", async (
 
     const state = await store.readWorkspaceState();
     assert.equal(state.workspaces.length, 0);
-    await assert.rejects(readFile(path.join(userData, "openwork-dev-data", "home", "OpenWork", ".opencode", "openwork.json"), "utf8"));
+    await assert.rejects(readFile(path.join(userData, "openwork-dev-data", "home", "RenWork", ".opencode", "openwork.json"), "utf8"));
   } finally {
     restoreEnv("OPENWORK_DEV_MODE", previousDevMode);
     restoreEnv("OPENWORK_SERVER_CONFIG", previousServerConfig);
   }
 });
 
-test("normalizes recovered remote OpenWork entries before persisting", async () => {
+test("normalizes recovered remote RenWork entries before persisting", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "openwork-workspace-store-"));
   const userData = path.join(root, "userData");
   const serverConfig = path.join(root, "server.json");

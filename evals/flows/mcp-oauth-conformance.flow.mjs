@@ -16,7 +16,7 @@ const FLOW_ID = "mcp-oauth-conformance";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const MOCK_PORT = Number(process.env.OPENWORK_EVAL_MCP_OAUTH_PORT ?? 39728);
 const MOCK_ORIGIN = `http://127.0.0.1:${MOCK_PORT}`;
 const RUN_TAG = Date.now().toString(36);
@@ -278,7 +278,7 @@ export default {
     {
       name: "DCR and PKCE return through the shared callback",
       run: async (ctx) => {
-        await ctx.prove("Dynamic registration identifies OpenWork as a web client and completes through one shared callback", {
+        await ctx.prove("Dynamic registration identifies RenWork as a web client and completes through one shared callback", {
           voiceover: vo[1],
           action: async () => {
             const selected = await ctx.eval(`(() => {

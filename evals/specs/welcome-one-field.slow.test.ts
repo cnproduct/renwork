@@ -36,7 +36,7 @@ test(title, async ({ evidence }) => {
     env: { PATH: `${capture.binDir}:${process.env.PATH ?? ""}` },
   });
   expect(app.readiness.route).toContain("/welcome");
-  await waitForText(app, "Welcome to OpenWork");
+  await waitForText(app, "Welcome to RenWork");
 
   const doors = await evalIn(app, `(() => {
     const join = document.querySelector('[data-testid="welcome-join-org"]');
@@ -44,7 +44,7 @@ test(title, async ({ evidence }) => {
       signIn: Boolean(document.querySelector('[data-testid="welcome-team-signin"]')),
       useWithoutCloud: Boolean(document.querySelector('[data-testid="welcome-use-without-cloud"]')),
       join: (join?.textContent ?? "").replace(/\\s+/g, " ").trim(),
-      onPremLink: document.body.innerText.includes("Using OpenWork on-premises?"),
+      onPremLink: document.body.innerText.includes("Using RenWork on-premises?"),
     };
   })()`);
   if (!isRecord(doors) || typeof doors.join !== "string") {
@@ -67,10 +67,10 @@ test(title, async ({ evidence }) => {
   {
     const shot = await screenshot(app);
     const seen = await validate(shot, [
-      "The Welcome to OpenWork heading is visible",
-      "Sign in to OpenWork Cloud and Use Without Cloud are offered",
+      "The Welcome to RenWork heading is visible",
+      "Sign in to RenWork Cloud and Use Without Cloud are offered",
       "Join your organization says to paste an invite link, install link, or server URL",
-      "The page does not say Using OpenWork on-premises",
+      "The page does not say Using RenWork on-premises",
     ]);
     expect(seen.ok, seen.why).toBe(true);
   }

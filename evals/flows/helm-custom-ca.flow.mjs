@@ -163,7 +163,7 @@ export default {
       name: "Frame 4",
       run: async (ctx) => {
         let output = "";
-        await ctx.prove("The actual migration bootstrap and an OpenWork/mysql2 query connect to a strict-TLS MySQL endpoint signed by the private CA", {
+        await ctx.prove("The actual migration bootstrap and a RenWork/mysql2 query connect to a strict-TLS MySQL endpoint signed by the private CA", {
           voiceover: vo[3],
           action: async () => {
             const result = run("node", [MYSQL_TLS_TEST]);
@@ -172,9 +172,9 @@ export default {
           },
           assert: async () => {
             witness(ctx, output.includes("Generated private CA and MySQL server certificate"), "The test generates the private CA and matching MySQL server certificate");
-            witness(ctx, output.includes("Strict OpenWork/mysql2 without custom CA: rejected"), "Strict OpenWork/mysql2 connection fails without the custom CA");
-            witness(ctx, output.includes("OpenWork migration bootstrap completed with NODE_EXTRA_CA_CERTS and strict DATABASE_URL"), "The actual OpenWork migration bootstrap completes with the mounted custom CA");
-            witness(ctx, output.includes("OpenWork/mysql2 strict query succeeded after migration"), "OpenWork/mysql2 connects successfully after migration using strict TLS");
+            witness(ctx, output.includes("Strict RenWork/mysql2 without custom CA: rejected"), "Strict RenWork/mysql2 connection fails without the custom CA");
+            witness(ctx, output.includes("RenWork migration bootstrap completed with NODE_EXTRA_CA_CERTS and strict DATABASE_URL"), "The actual RenWork migration bootstrap completes with the mounted custom CA");
+            witness(ctx, output.includes("RenWork/mysql2 strict query succeeded after migration"), "RenWork/mysql2 connects successfully after migration using strict TLS");
             ctx.output("MySQL TLS integration evidence", output);
           },
         });

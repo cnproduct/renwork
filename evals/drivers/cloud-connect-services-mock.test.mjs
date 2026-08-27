@@ -104,5 +104,5 @@ test("worker mock rejects partial credentials and completes a prompt after a bus
   const idle = await json(await fetch(snapshotUrl, { headers }));
   assert.equal(idle.item.status.type, "idle");
   assert.equal(idle.item.messages.at(-1).info.role, "assistant");
-  assert.equal(idle.item.messages.at(-1).parts[0].text, "OpenWork worker reply: Summarize the launch notes");
+  assert.equal(idle.item.messages.at(-1).parts[0].text, "RenWork worker reply: Summarize the launch notes");
 });

@@ -143,7 +143,7 @@ export function SessionEmptyHero(props: SessionEmptyHeroProps) {
             type="button"
             className="flex size-5 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:text-foreground"
             onClick={hideOpenWorkModelsPromo}
-            aria-label="Hide OpenWork Models hint"
+            aria-label="Hide RenWork Models hint"
           >
             <X className="size-3" />
           </button>

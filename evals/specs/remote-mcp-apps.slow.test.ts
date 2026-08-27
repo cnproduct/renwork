@@ -36,7 +36,7 @@ function requireRecord(value: unknown, label: string): Record<string, unknown> {
 
 async function waitForMountedProjectAtlas(
   app: Awaited<ReturnType<typeof desktop>>,
-  expected: string[] = ["Project Atlas", "Connected through OpenWork Connect"],
+  expected: string[] = ["Project Atlas", "Connected through RenWork Connect"],
   timeoutMs = 60_000,
 ): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
@@ -165,7 +165,7 @@ function programAppHtml(version: string): string {
 <html>
   <head>
     <meta charset="utf-8">
-    <meta name="description" content="Search and execute authorized OpenWork Connect tools and Programs through the standard MCP Apps bridge.">
+    <meta name="description" content="Search and execute authorized RenWork Connect tools and Programs through the standard MCP Apps bridge.">
     <title>Project Atlas</title>
     <style>
       body{margin:0;padding:18px;color:#172033;background:#f5f7fb;font-family:system-ui,sans-serif}
@@ -175,7 +175,7 @@ function programAppHtml(version: string): string {
     </style>
   </head>
   <body>
-    <main><p class="eyebrow">REMOTE MCP APP</p><h1>Project Atlas</h1><p id="status">Waiting for OpenWork…</p><pre id="result"></pre></main>
+    <main><p class="eyebrow">REMOTE MCP APP</p><h1>Project Atlas</h1><p id="status">Waiting for RenWork…</p><pre id="result"></pre></main>
     <script>
       (() => {
         const INIT_ID = "project-atlas-init";
@@ -267,7 +267,7 @@ function programAppHtml(version: string): string {
               return;
             }
             if (kind === "execute-program") {
-              status.textContent = "Connected through OpenWork capability search.";
+              status.textContent = "Connected through RenWork capability search.";
               result.textContent = JSON.stringify({ installer: "blocked", connect: connectResult, program: structured(message) }, null, 2);
             }
           }
@@ -307,7 +307,7 @@ function standardMcpAppRpc(message: Record<string, unknown>): Record<string, unk
           name: "project-atlas-connect-fixture",
           title: "Project Atlas Connect",
           version: "1.0.0",
-          description: "A standard MCP App fixture served through OpenWork Connect.",
+          description: "A standard MCP App fixture served through RenWork Connect.",
           websiteUrl: "https://example.test/project-atlas",
           icons: [{ src: "https://example.test/project-atlas.png", mimeType: "image/png", sizes: ["64x64"] }],
         },
@@ -392,8 +392,8 @@ function standardMcpAppRpc(message: Record<string, unknown>): Record<string, unk
           content: [{ type: "text", text: "Project Atlas opened." }],
           structuredContent: {
             schemaVersion: "1",
-            artifact: { title: "Project Atlas", description: "A standard MCP App served through OpenWork Connect." },
-            data: { name: "Project Atlas", status: "Connected through OpenWork Connect" },
+            artifact: { title: "Project Atlas", description: "A standard MCP App served through RenWork Connect." },
+            data: { name: "Project Atlas", status: "Connected through RenWork Connect" },
           },
           _meta: { source: "project-atlas-standard-mcp" },
         },
@@ -656,7 +656,7 @@ test.skipIf(!appSpecsEnabled || !localPlacement || !mysqlOpen)(title, { timeout:
     clientInfo: { name: "remote-mcp-app-eval", version: "1.0.0" },
   });
   expect(initialized.protocolVersion).toBeTruthy();
-  expect(String(initialized.instructions ?? "")).toContain("authored and bundled outside OpenWork");
+  expect(String(initialized.instructions ?? "")).toContain("authored and bundled outside RenWork");
   const initializedCapabilities = requireRecord(initialized.capabilities, "agent capabilities");
   expect(requireRecord(initializedCapabilities.tools, "agent tool capabilities").listChanged).toBe(true);
   expect(requireRecord(initializedCapabilities.resources, "agent resource capabilities").listChanged).toBe(true);
@@ -843,7 +843,7 @@ test.skipIf(!appSpecsEnabled || !localPlacement || !mysqlOpen)(title, { timeout:
     name: "project-atlas-connect-fixture",
     title: "Project Atlas Connect",
     version: "1.0.0",
-    description: "A standard MCP App fixture served through OpenWork Connect.",
+    description: "A standard MCP App fixture served through RenWork Connect.",
     websiteUrl: "https://example.test/project-atlas",
     icons: [{ src: "https://example.test/project-atlas.png", mimeType: "image/png", sizes: ["64x64"] }],
   });
@@ -1026,8 +1026,8 @@ test.skipIf(!appSpecsEnabled || !localPlacement || !mysqlOpen)(title, { timeout:
   const persistedMcpResult = requireRecord(persistedMetadata.openworkMcpApp, "persisted Project Atlas MCP result");
   expect(persistedMcpResult.structuredContent).toEqual({
     schemaVersion: "1",
-    artifact: { title: "Project Atlas", description: "A standard MCP App served through OpenWork Connect." },
-    data: { name: "Project Atlas", status: "Connected through OpenWork Connect" },
+    artifact: { title: "Project Atlas", description: "A standard MCP App served through RenWork Connect." },
+    data: { name: "Project Atlas", status: "Connected through RenWork Connect" },
   });
   expect(persistedMcpResult._meta).toEqual({ source: "project-atlas-standard-mcp" });
   await waitFor(desktopApp, `Boolean(document.querySelector(${JSON.stringify(`[data-mcp-app-resource="${connectedResourceUri}"] iframe`)}))`, {
@@ -1049,7 +1049,7 @@ test.skipIf(!appSpecsEnabled || !localPlacement || !mysqlOpen)(title, { timeout:
   ];
   const desktopSeen = await validate(desktopShot, desktopExpectations, {
     ask: async (request) => request.prompt.startsWith("Objectively describe")
-      ? JSON.stringify({ description: "An OpenWork Desktop conversation with a visible Project Atlas MCP App delivered through a normal Connect server and a completed assistant reply." })
+      ? JSON.stringify({ description: "A RenWork Desktop conversation with a visible Project Atlas MCP App delivered through a normal Connect server and a completed assistant reply." })
       : JSON.stringify({ results: desktopExpectations.map((expectation) => ({ expectation, passed: true, evidence: "The deterministic desktop DOM and MCP protocol assertions completed before capture." })) }),
   });
   expect(desktopSeen.ok, desktopSeen.why).toBe(true);
@@ -1085,7 +1085,7 @@ test.skipIf(!appSpecsEnabled || !localPlacement || !mysqlOpen)(title, { timeout:
   });
   const mountedProgramApp = await waitForMountedProjectAtlas(
     desktopApp,
-    ["Project Atlas", "Connected through OpenWork capability search", "Atlas migration", "blocked"],
+    ["Project Atlas", "Connected through RenWork capability search", "Atlas migration", "blocked"],
     30_000,
   );
   const approvalCount = await evalIn(desktopApp, "window.__remoteMcpApprovalCount ?? 0");
@@ -1098,7 +1098,7 @@ test.skipIf(!appSpecsEnabled || !localPlacement || !mysqlOpen)(title, { timeout:
   const installedShot = await screenshot(desktopApp);
   const installedExpectations = [
     "The conversation visibly contains the installed Project Atlas MCP App",
-    "The app reports that it connected through OpenWork capability search",
+    "The app reports that it connected through RenWork capability search",
     "The Connect tool and Program results contain Atlas migration",
     "The app-visible attempt to invoke the model-only installer was blocked",
     "No interactive-view-unavailable or crash message is visible",
@@ -1202,7 +1202,7 @@ test.skipIf(!appSpecsEnabled || !localPlacement || !mysqlOpen)(title, { timeout:
   expect(toolsFrom(restoredTools).some((tool) => tool.name === launchToolName)).toBe(true);
 
   evidence.fact(
-    "Externally authored MCP Apps use standard same-server tools while Programs compose OpenWork Connect",
+    "Externally authored MCP Apps use standard same-server tools while Programs compose RenWork Connect",
     `Preserved native Project Atlas server identity, tools, exact UI metadata, resources, structuredContent, and _meta through connection ${connection.id}; completed both MCP Apps handshakes; imported ${appId} through the model-only installer; blocked installer access from the App; searched and executed an authorized Connect tool and durable Program through ordinary same-server tools/call; returned Atlas migration; served two immutable ui:// revisions after the source returned 404; and removed/restored ${launchToolName} through the Library lifecycle.`,
     standardMcpCalls === 7 && mountedProjectAtlas && mountedProgramApp && approvalCount === 2,
   );

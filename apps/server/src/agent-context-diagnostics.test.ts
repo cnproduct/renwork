@@ -913,7 +913,7 @@ describe("agent context diagnostics analyzer", () => {
     });
   });
 
-  test("assigns missing and disabled client runtime cloud entries to the OpenWork client", async () => {
+  test("assigns missing and disabled client runtime cloud entries to the RenWork client", async () => {
     const missing = await createFixture({ runtime: {} });
     const missingReport = await runAgentContextDiagnostics({
       config: missing.config,
@@ -1118,7 +1118,7 @@ describe("agent context diagnostics analyzer", () => {
     expect(fetchCalls).toHaveLength(8);
   });
 
-  test("fails closed when the effective engine does not resolve the OpenWork agent", async () => {
+  test("fails closed when the effective engine does not resolve the RenWork agent", async () => {
     const fixture = await createFixture();
     const fetchCalls: CatalogFetchCall[] = [];
     const report = await runAgentContextDiagnostics({
@@ -1146,7 +1146,7 @@ describe("agent context diagnostics analyzer", () => {
     expect(fetchCalls).toHaveLength(4);
   });
 
-  test("rejects hidden and subagent-only OpenWork defaults before cloud egress", async () => {
+  test("rejects hidden and subagent-only RenWork defaults before cloud egress", async () => {
     const fixture = await createFixture();
     const cases = [
       {
@@ -1653,7 +1653,7 @@ describe("agent context diagnostics analyzer", () => {
     expect(checkById(report, "cloud-tool-catalog")).toMatchObject({
       status: "failed",
       code: "credential_missing",
-      message: "The managed OpenWork Cloud entry does not contain one unambiguous authentication value.",
+      message: "The managed RenWork Cloud entry does not contain one unambiguous authentication value.",
     });
     expect(fetchCalls).toEqual([]);
   });
@@ -2344,7 +2344,7 @@ describe("agent context diagnostics route", () => {
     expect(downstreamFetches).toEqual([]);
   });
 
-  test("rejects remote OpenWork shells so diagnostics run on the owning server", async () => {
+  test("rejects remote RenWork shells so diagnostics run on the owning server", async () => {
     const fixture = await createFixture({
       withRuntime: false,
       workspace: {
@@ -2359,7 +2359,7 @@ describe("agent context diagnostics route", () => {
     const downstreamFetches: string[] = [];
     globalThis.fetch = (async (input: Parameters<typeof fetch>[0]) => {
       downstreamFetches.push(String(input));
-      throw new Error("Remote OpenWork shell unexpectedly performed downstream fetch");
+      throw new Error("Remote RenWork shell unexpectedly performed downstream fetch");
     }) as unknown as typeof fetch;
     const base = await startOpenwork(fixture.config);
 

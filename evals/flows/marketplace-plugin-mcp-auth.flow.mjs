@@ -12,9 +12,9 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const DEN_API_URL = denApiUrl();
 const DEN_WEB_URL = denWebUrl();
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const MAYA_EMAIL = process.env.OPENWORK_EVAL_MAYA_EMAIL?.trim() || process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "maya.support@acme.test";
-const MAYA_PASSWORD = process.env.OPENWORK_EVAL_MAYA_PASSWORD?.trim() || process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
+const MAYA_PASSWORD = process.env.OPENWORK_EVAL_MAYA_PASSWORD?.trim() || process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const PLATFORM_ADMIN_EMAIL = process.env.OPENWORK_EVAL_PLATFORM_ADMIN_EMAIL?.trim() || "";
 const PLATFORM_ADMIN_PASSWORD = process.env.OPENWORK_EVAL_PLATFORM_ADMIN_PASSWORD?.trim() || "";
@@ -194,7 +194,7 @@ export default {
     {
       name: "Frame 4",
       run: async (ctx) => {
-        await ctx.prove("Maya's MCP-compatible harness searches OpenWork and finds Create shift handoff from the assigned marketplace", {
+        await ctx.prove("Maya's MCP-compatible harness searches RenWork and finds Create shift handoff from the assigned marketplace", {
           voiceover: vo[3],
           action: async () => {
             await prepareMayaHarness(ctx);
@@ -202,23 +202,23 @@ export default {
             const searchResult = await browserMcpToolCall(ctx, "search_capabilities", searchArguments());
             state.skillSearchPayload = parseToolJson(searchResult);
             state.shiftHandoffCapabilityName = findCapabilityBySummary(state.skillSearchPayload, "Create shift handoff")?.name ?? null;
-            await renderHarness(ctx, "Search result from OpenWork MCP", [
-              { title: "Connected MCPs", body: { connected: ["OpenWork MCP"], exposedTools: toolNames(state.toolsListPayload) } },
+            await renderHarness(ctx, "Search result from RenWork MCP", [
+              { title: "Connected MCPs", body: { connected: ["RenWork MCP"], exposedTools: toolNames(state.toolsListPayload) } },
               { title: "Search request", body: { tool: "search_capabilities", arguments: searchArguments() } },
               { title: "Structured search response", body: state.skillSearchPayload },
             ]);
           },
           assert: async () => {
             const exposedTools = toolNames(state.toolsListPayload);
-            ctx.assert(JSON.stringify(exposedTools) === JSON.stringify(["execute_capability", "search_capabilities"]), `Harness should expose only OpenWork MCP search/execute tools: ${JSON.stringify(exposedTools)}`);
+            ctx.assert(JSON.stringify(exposedTools) === JSON.stringify(["execute_capability", "search_capabilities"]), `Harness should expose only RenWork MCP search/execute tools: ${JSON.stringify(exposedTools)}`);
             ctx.assert(Boolean(state.shiftHandoffCapabilityName), `Create shift handoff was not found: ${JSON.stringify(state.skillSearchPayload).slice(0, 800)}`);
             ctx.assert(String(state.shiftHandoffCapabilityName).startsWith("plugin:"), `Expected a marketplace plugin capability name, got ${state.shiftHandoffCapabilityName}`);
             await assertNoProviderToolCallBeforeAuth(ctx);
           },
           screenshot: {
             name: "frame-4-harness-search-finds-shift-handoff",
-            claim: "Maya's visible harness finds Create shift handoff through OpenWork MCP only.",
-            requireText: ["MAYA'S MCP-COMPATIBLE HARNESS", "OpenWork MCP", "search_capabilities", "Create shift handoff", PLUGIN_NAME],
+            claim: "Maya's visible harness finds Create shift handoff through RenWork MCP only.",
+            requireText: ["MAYA'S MCP-COMPATIBLE HARNESS", "RenWork MCP", "search_capabilities", "Create shift handoff", PLUGIN_NAME],
             rejectText: ["Something went wrong", "SHIFT_HANDOFF_READY"],
           },
         });
@@ -304,7 +304,7 @@ export default {
           voiceover: vo[6],
           action: async () => {
             await renderHarness(ctx, "Retry after Maya connects Slack", [
-              { title: "Connected MCPs", body: { connected: ["OpenWork MCP"], note: "Maya retries the same search and execute inputs." } },
+              { title: "Connected MCPs", body: { connected: ["RenWork MCP"], note: "Maya retries the same search and execute inputs." } },
             ]);
             const retrySearch = await browserMcpToolCall(ctx, "search_capabilities", searchArguments());
             state.retrySkillSearchPayload = parseToolJson(retrySearch);
@@ -970,7 +970,7 @@ async function assertAllSkillsSearchableForMaya(ctx) {
     const match = findCapabilityBySummary(payload, skillName);
     searchable.push({ skillName, found: Boolean(match), matchName: match?.name ?? null, summary: match?.summary ?? null });
   }
-  recordAssertion(ctx, "All three Support Operations skills remain searchable for Maya through OpenWork MCP", searchable.every((entry) => entry.found), searchable);
+  recordAssertion(ctx, "All three Support Operations skills remain searchable for Maya through RenWork MCP", searchable.every((entry) => entry.found), searchable);
 }
 
 async function prepareMayaHarness(ctx) {
@@ -980,7 +980,7 @@ async function prepareMayaHarness(ctx) {
     state.mcpToken = await mintMcpToken(requireState(state.mayaSession, "Maya session"), ctx);
   }
   await renderHarness(ctx, "Maya's MCP-compatible harness", [
-    { title: "Connection", body: { connected: ["OpenWork MCP"], token: "Maya MCP token minted from /v1/mcp/token (redacted)" } },
+    { title: "Connection", body: { connected: ["RenWork MCP"], token: "Maya MCP token minted from /v1/mcp/token (redacted)" } },
   ]);
 }
 
@@ -1059,7 +1059,7 @@ function findCapabilityByNameFragment(payload, fragment) {
 async function renderHarness(ctx, title, panels) {
   const html = harnessHtml(title, panels);
   await ctx.eval(`(() => {
-    document.title = 'OpenWork MCP harness';
+    document.title = 'RenWork MCP harness';
     document.body.innerHTML = ${JSON.stringify(html)};
     return true;
   })()`);
@@ -1072,7 +1072,7 @@ function harnessHtml(title, panels) {
       <section style="max-width:1040px;margin:0 auto;">
         <p style="text-transform:uppercase;letter-spacing:.16em;font-size:12px;color:#2563eb;font-weight:700;margin:0 0 8px;">Maya's MCP-compatible harness</p>
         <h1 style="font-size:32px;line-height:1.1;margin:0 0 10px;">${escapeHtml(title)}</h1>
-        <p style="font-size:15px;color:#475569;margin:0 0 24px;">Only the OpenWork MCP is connected here. The harness calls <code>/mcp/agent</code> and renders the structured responses it receives.</p>
+        <p style="font-size:15px;color:#475569;margin:0 0 24px;">Only the RenWork MCP is connected here. The harness calls <code>/mcp/agent</code> and renders the structured responses it receives.</p>
         <div style="display:grid;gap:16px;">
           ${panels.map((panel) => `
             <article style="background:#fff;border:1px solid #bfdbfe;border-radius:22px;box-shadow:0 18px 50px rgba(30,64,175,.10);overflow:hidden;">
@@ -1138,7 +1138,7 @@ async function routeLocalSplitOriginCallback(ctx) {
   await ctx.waitFor(`(() => {
     const path = window.location.pathname;
     return path.includes('/connect/callback') || path === '/v1/mcp-connections/oauth/callback';
-  })()`, { timeoutMs: 30_000, label: "provider redirect to OpenWork callback" });
+  })()`, { timeoutMs: 30_000, label: "provider redirect to RenWork callback" });
   const location = await ctx.eval(`({ origin: window.location.origin, pathname: window.location.pathname, search: window.location.search })`);
   if (!String(location.pathname).includes("/connect/callback") || location.origin === new URL(DEN_API_URL).origin) return;
   const callbackUrl = new URL(`${location.pathname}${location.search}`, DEN_API_URL).toString();

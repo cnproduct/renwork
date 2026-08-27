@@ -114,7 +114,7 @@ export async function executeSavedCodemodeScript(input: {
     ? firstUnattendedUnsafeCapability(built, parsed.payload.requiredCapabilities)
     : null
   if (unsafe) {
-    const message = `Required capability ${unsafe.scriptPath} (${unsafe.capabilityName}) must be read-only and explicitly approved by an organization admin before it can run unattended in OpenWork Cloud.`
+    const message = `Required capability ${unsafe.scriptPath} (${unsafe.capabilityName}) must be read-only and explicitly approved by an organization admin before it can run unattended in RenWork Cloud.`
     const receiptId = await recordPreflightFailure("CapabilityUnavailable", message)
     return {
       ok: false,

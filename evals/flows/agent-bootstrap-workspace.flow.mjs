@@ -8,7 +8,7 @@ const BOOTSTRAP = {
     orgName: "Agent Bootstrap Workspace",
     orgSlug: "org_01h2xcejqtf2nbrexx3vqjhp41",
     skillId: "skl_01h2xcejqtf2nbrexx3vqjhp41",
-    skillTitle: "First OpenWork Skill",
+    skillTitle: "First RenWork Skill",
     skillsDir: "/tmp/openwork-agent-bootstrap-skills",
     skillPath: "/tmp/openwork-agent-bootstrap-skills/first-openwork-skill/SKILL.md",
     preparedAt: new Date().toISOString(),

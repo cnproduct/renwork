@@ -106,7 +106,7 @@ function connectionStatusMatch(
     hasBody: false,
     kind: "connection_status",
     status: "needs_connection",
-    hint: `Ask the user to open OpenWork Cloud -> Your Connections and click Connect on "${connection.name}", then search again.`,
+    hint: `Ask the user to open RenWork Cloud -> Your Connections and click Connect on "${connection.name}", then search again.`,
     connectionStatus: buildExternalConnectionStatus({
       connection,
       state: "needs_connection",

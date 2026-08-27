@@ -65,7 +65,7 @@ const title = !appSpecsEnabled || !apiUrl || !optedIn
   ? "google workspace multi-account skipped: set OPENWORK_EVAL_APP_SPECS=1, OPENWORK_EVAL_DEN_API_URL, and OPENWORK_EVAL_GOOGLE_MULTI_ACCOUNT_SPEC=1"
   : "two Google Workspace connectors keep one member's accounts and drafts isolated";
 
-const password = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const password = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const adminEmail = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
 const memberEmail = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan@acme.test";
 const roboticsEmail = "jordan@acme.test";
@@ -240,7 +240,7 @@ test.skipIf(!appSpecsEnabled || !apiUrl || !optedIn)(title, async () => {
   {
     const shot = await screenshot(app);
     const seen = await validate(shot, [
-      "OpenWork visibly shows that Acme Labs browser authorization is in progress",
+      "RenWork visibly shows that Acme Labs browser authorization is in progress",
       "The app has not silently reported success and no OAuth launch error is visible",
     ]);
     expect(seen.ok, seen.why).toBe(true);

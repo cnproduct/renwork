@@ -10,7 +10,7 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const INITIAL_BASE_URL = "https://app.openworklabs.com";
 const SAVED_BASE_URL = "https://bootstrap-debug.example.test";
 const SAVED_ORG_SERVER_TEXT = `Current organization server: ${SAVED_BASE_URL}`;
-const DEFAULT_ORG_SERVER_TEXT = "Using standard OpenWork Cloud.";
+const DEFAULT_ORG_SERVER_TEXT = "Using standard RenWork Cloud.";
 
 function bootstrapPath(ctx) {
   const rawPath = ctx.env.OPENWORK_DESKTOP_BOOTSTRAP_PATH?.trim();

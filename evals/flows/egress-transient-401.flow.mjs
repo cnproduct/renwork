@@ -124,7 +124,7 @@ export default {
         let lab;
         let verdictLab;
         let result;
-        await ctx.prove("A one-off foreign 401 is treated as unavailable, not revoked, and OpenWork product diagnostics report the recovered transient 401", {
+        await ctx.prove("A one-off foreign 401 is treated as unavailable, not revoked, and RenWork product diagnostics report the recovered transient 401", {
           voiceover: vo[0],
           action: async () => {
             lab = await startEgressLab({ profile: "blip", blip: { route: "/api/den/v1/me", count: 1, status: 401, body: "" } });

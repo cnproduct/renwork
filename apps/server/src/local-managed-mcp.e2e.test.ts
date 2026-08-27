@@ -135,7 +135,7 @@ async function connectGateway(runtimeConfig: Record<string, unknown>): Promise<C
   return client;
 }
 
-describe("OpenWork-managed local MCP OAuth gateway", () => {
+describe("RenWork-managed local MCP OAuth gateway", () => {
   test("leaves ordinary MCP fallbacks usable when no managed vault exists", async () => {
     const workspaceRoot = await mkdtemp(join(tmpdir(), "openwork-local-managed-mcp-fallback-"));
     roots.push(workspaceRoot);
@@ -271,8 +271,8 @@ describe("OpenWork-managed local MCP OAuth gateway", () => {
 
       const firstClient = await connectGateway(firstRuntimeConfig!);
       expect((await firstClient.listTools()).tools.map((tool) => tool.name)).toContain("mock_echo");
-      expect(await firstClient.callTool({ name: "mock_echo", arguments: { text: "through OpenWork" } }))
-        .toMatchObject({ content: [{ type: "text", text: "through OpenWork" }] });
+      expect(await firstClient.callTool({ name: "mock_echo", arguments: { text: "through RenWork" } }))
+        .toMatchObject({ content: [{ type: "text", text: "through RenWork" }] });
       await expect(firstClient.callTool({ name: "mock_provider_error", arguments: {} })).rejects.toThrow();
       const providerErrorStatus = await fetch(`${openworkBaseUrl}/workspace/ws_managed/mcp/mock-oauth/managed`, {
         headers: clientHeaders(config.token),

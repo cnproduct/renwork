@@ -224,7 +224,7 @@ const MODEL_COLUMNS: readonly DenTableColumn<LineupModel>[] = [
 const PILLARS = [
   {
     label: "You or your whole team",
-    body: "One subscription activates OpenWork Models across your organization and lets everyone use battle-tested LLMs without setting anything up.",
+    body: "One subscription activates RenWork Models across your organization and lets everyone use battle-tested LLMs without setting anything up.",
   },
   {
     label: "Nothing to set up",
@@ -240,8 +240,8 @@ const STEPS: ReactNode[] = [
   "Subscribe — one plan covers the whole workspace",
   "Every member is provisioned automatically — nothing to send",
   <>
-    Open OpenWork and pick any model from the{" "}
-    <code className="rounded-md bg-gray-100 px-2 py-1 font-mono text-[12px] text-gray-700">OpenWork</code> group
+    Open RenWork and pick any model from the{" "}
+    <code className="rounded-md bg-gray-100 px-2 py-1 font-mono text-[12px] text-gray-700">RenWork</code> group
   </>,
   "Start working — usage limits are shared and scale with active members",
 ];
@@ -342,7 +342,7 @@ export function InferenceScreen() {
   // status/portal view.
   async function startSubscribeCheckout() {
     if (!canManageModels) {
-      setError("Only workspace admins can start OpenWork Models checkout.");
+      setError("Only workspace admins can start RenWork Models checkout.");
       return;
     }
 
@@ -372,7 +372,7 @@ export function InferenceScreen() {
 
   async function toggleEnabled() {
     if (!canManageModels) {
-      setError("Only workspace admins can manage OpenWork Models.");
+      setError("Only workspace admins can manage RenWork Models.");
       return;
     }
     if (!status) return;
@@ -427,7 +427,7 @@ export function InferenceScreen() {
   return (
     <div className="mx-auto grid max-w-[860px] gap-6 px-8 pb-16 pt-8">
       <DenPageHeader
-        title="OpenWork Models"
+        title="RenWork Models"
         description="Reliable, hand-picked models for knowledge work. No API keys to manage."
         action={
           <DenButton
@@ -448,7 +448,7 @@ export function InferenceScreen() {
       {canManageModels ? null : (
         <DenNotice
           tone="info"
-          message="Only workspace admins can subscribe or enable OpenWork Models. Ask an owner, super-admin, or admin for this workspace."
+          message="Only workspace admins can subscribe or enable RenWork Models. Ask an owner, super-admin, or admin for this workspace."
         />
       )}
 

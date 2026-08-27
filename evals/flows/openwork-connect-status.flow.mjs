@@ -3,7 +3,7 @@ import { loadVoiceoverParagraphs } from "../runner/voiceover.mjs";
 const FLOW_ID = "openwork-connect-status";
 const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const DEMO_EMAIL = "alex@acme.test";
-const DEMO_PASSWORD = "OpenWorkDemo123!";
+const DEMO_PASSWORD = "RenWorkDemo123!";
 const PROMPT = "Say hello without using connected services.";
 const SAVED_TOKEN_KEY = "openwork.eval.openworkConnectStatus.sessionToken";
 
@@ -36,8 +36,8 @@ async function authDelay(ctx, action) {
 }
 
 async function dismissModelUpsells(ctx) {
-  if (await ctx.hasText("Use OpenWork Models without API keys")) {
-    await ctx.clickText("Continue without OpenWork Models", { selector: "button", timeoutMs: 15_000 });
+  if (await ctx.hasText("Use RenWork Models without API keys")) {
+    await ctx.clickText("Continue without RenWork Models", { selector: "button", timeoutMs: 15_000 });
   }
   if (await ctx.hasText("Power your first task")) {
     await ctx.clickText("Skip and use the free model", { selector: "button", timeoutMs: 15_000 });
@@ -149,7 +149,7 @@ async function waitForConnectState(ctx, expected, timeoutMs = 90_000) {
     await ctx.eval("window.dispatchEvent(new Event('focus'))");
     await new Promise((resolve) => setTimeout(resolve, 2_000));
   }
-  throw new Error(`OpenWork Connect did not reach "${expected}" after background retries.`);
+  throw new Error(`RenWork Connect did not reach "${expected}" after background retries.`);
 }
 
 async function waitForConnectReady(ctx) {
@@ -189,7 +189,7 @@ async function installHealthFailureProbe(ctx) {
         stage: "engine_delivery",
         retryable: true,
         recommendedAction: "Run diagnostics",
-        message: "OpenWork Connect could not verify connected service tools.",
+        message: "RenWork Connect could not verify connected service tools.",
       },
     });
     window.fetch = async (input, init) => {
@@ -261,7 +261,7 @@ async function setup(ctx) {
 
 export default {
   id: FLOW_ID,
-  title: "Signed-in users see non-blocking OpenWork Connect lifecycle health",
+  title: "Signed-in users see non-blocking RenWork Connect lifecycle health",
   kind: "user-facing",
   requiredEnv: ["OPENWORK_EVAL_DEN_API_URL"],
   steps: [
@@ -269,12 +269,12 @@ export default {
     {
       name: "Frame 1: saved-session restore shows Checking",
       run: async (ctx) => {
-        await ctx.prove("A retained signed-in session shows OpenWork Connect checking while authentication is restored", {
+        await ctx.prove("A retained signed-in session shows RenWork Connect checking while authentication is restored", {
           voiceover: vo[0],
           action: async () => {
             await beginSavedSessionRestore(ctx);
             await openAccountMenu(ctx);
-            await ctx.waitForText("OpenWork Connect: Checking", { timeoutMs: 10_000 });
+            await ctx.waitForText("RenWork Connect: Checking", { timeoutMs: 10_000 });
           },
           assert: async () => {
             const delay = await authDelay(ctx);
@@ -282,8 +282,8 @@ export default {
           },
           screenshot: {
             name: "openwork-connect-checking",
-            claim: "The signed-in status bar shows OpenWork Connect checking during session restoration.",
-            requireText: ["OpenWork Connect: Checking", "Ready for new tasks"],
+            claim: "The signed-in status bar shows RenWork Connect checking during session restoration.",
+            requireText: ["RenWork Connect: Checking", "Ready for new tasks"],
             hashIncludes: `/workspace/${state.workspaceId}/session/`,
           },
         });
@@ -320,12 +320,12 @@ export default {
           },
           assert: async () => {
             witness(ctx, state.transcriptCount > 0, "The message entered the transcript while Connect restoration remained pending.", { transcriptCount: state.transcriptCount });
-            ctx.expectText("OpenWork Connect: Checking");
+            ctx.expectText("RenWork Connect: Checking");
           },
           screenshot: {
             name: "openwork-connect-nonblocking",
-            claim: "A normal task is submitted while OpenWork Connect continues checking in the background.",
-            requireText: ["OpenWork Connect: Checking", PROMPT],
+            claim: "A normal task is submitted while RenWork Connect continues checking in the background.",
+            requireText: ["RenWork Connect: Checking", PROMPT],
             rejectText: ["Preparing connected service tools"],
             hashIncludes: `/workspace/${state.workspaceId}/session/`,
           },
@@ -335,7 +335,7 @@ export default {
     {
       name: "Frame 3: successful restore shows Ready",
       run: async (ctx) => {
-        await ctx.prove("Successful reconciliation changes OpenWork Connect to Ready", {
+        await ctx.prove("Successful reconciliation changes RenWork Connect to Ready", {
           voiceover: vo[2],
           action: async () => {
             await closeAccountMenu(ctx);
@@ -344,12 +344,12 @@ export default {
             await openAccountMenu(ctx);
           },
           assert: async () => {
-            ctx.expectNoText("OpenWork Connect: Needs attention");
+            ctx.expectNoText("RenWork Connect: Needs attention");
           },
           screenshot: {
             name: "openwork-connect-ready",
-            claim: "The status bar reports OpenWork Connect ready after background restoration succeeds.",
-            requireText: ["OpenWork Connect: Ready", "Ready for new tasks"],
+            claim: "The status bar reports RenWork Connect ready after background restoration succeeds.",
+            requireText: ["RenWork Connect: Ready", "Ready for new tasks"],
             hashIncludes: `/workspace/${state.workspaceId}/session/`,
           },
         });
@@ -369,12 +369,12 @@ export default {
           },
           assert: async () => {
             const red = await ctx.eval(`Boolean(document.querySelector('${CONNECT_ROW} .bg-red-9'))`);
-            witness(ctx, red, "The failed OpenWork Connect status uses the red error indicator.", { red });
+            witness(ctx, red, "The failed RenWork Connect status uses the red error indicator.", { red });
           },
           screenshot: {
             name: "openwork-connect-needs-attention",
             claim: "The failed status is red and explains how to run diagnostics.",
-            requireText: ["OpenWork Connect: Needs attention", "Run diagnostics"],
+            requireText: ["RenWork Connect: Needs attention", "Run diagnostics"],
             hashIncludes: `/workspace/${state.workspaceId}/session/`,
           },
         });
@@ -383,7 +383,7 @@ export default {
     {
       name: "Frame 5: signed-out status is hidden",
       run: async (ctx) => {
-        await ctx.prove("The OpenWork Connect status is absent when the user is signed out", {
+        await ctx.prove("The RenWork Connect status is absent when the user is signed out", {
           voiceover: vo[4],
           action: async () => {
             await closeAccountMenu(ctx);
@@ -396,17 +396,17 @@ export default {
               return true;
             })()`);
             await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "control API after sign-out" });
-            await ctx.waitFor("!document.body.innerText.includes('OpenWork Connect:')", { timeoutMs: 15_000, label: "Connect status hidden" });
+            await ctx.waitFor("!document.body.innerText.includes('RenWork Connect:')", { timeoutMs: 15_000, label: "Connect status hidden" });
             await openAccountMenu(ctx);
           },
           assert: async () => {
-            ctx.expectNoText("OpenWork Connect:");
+            ctx.expectNoText("RenWork Connect:");
           },
           screenshot: {
             name: "openwork-connect-signed-out-hidden",
-            claim: "Signed-out users do not see an OpenWork Connect lifecycle status.",
+            claim: "Signed-out users do not see a RenWork Connect lifecycle status.",
             requireText: ["Ready for new tasks"],
-            rejectText: ["OpenWork Connect:"],
+            rejectText: ["RenWork Connect:"],
             hashIncludes: `/workspace/${state.workspaceId}/session/`,
           },
         });

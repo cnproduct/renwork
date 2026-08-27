@@ -8,7 +8,7 @@ async function runHook(apiId: string, options: Record<string, unknown>) {
   return output.options;
 }
 
-describe("OpenWorkAnthropicAdaptiveThinking chat.params", () => {
+describe("RenWorkAnthropicAdaptiveThinking chat.params", () => {
   test("rewrites legacy enabled thinking to adaptive for Claude 5-family ids", async () => {
     expect(await runHook("claude-fable-5", { thinking: { type: "enabled", budgetTokens: 16000 } })).toEqual({
       thinking: { type: "adaptive" },

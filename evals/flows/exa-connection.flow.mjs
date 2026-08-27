@@ -10,7 +10,7 @@ import { denApiFetch, mcpAgentCall, mintMcpToken, openAdminConnections, signInAp
 const vo = await loadVoiceoverParagraphs("exa-connection");
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const EXA_URL = "https://mcp.exa.ai/mcp";
 const EXA_API_KEY = process.env.OPENWORK_EVAL_EXA_API_KEY?.trim() || "exa-eval-placeholder-key";
 const HAS_REAL_EXA_API_KEY = EXA_API_KEY !== "exa-eval-placeholder-key";
@@ -178,7 +178,7 @@ export default {
                 name: "execute_capability",
                 arguments: {
                   name: exaToolName,
-                  body: { query: "OpenWork AI agents", numResults: 1 },
+                  body: { query: "RenWork AI agents", numResults: 1 },
                 },
               }, ctx);
               const executeText = JSON.stringify(execute);

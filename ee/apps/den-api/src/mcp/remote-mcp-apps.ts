@@ -56,8 +56,8 @@ export function registerAgentRemoteMcpApps(input: {
       {
         title: "Import remote MCP App",
         description: [
-          "Install an externally built, self-contained MCP App index.html from an HTTPS URL into an existing OpenWork Connect Plugin.",
-          "OpenWork downloads and validates the document server-side, stores the exact bytes and digest as an immutable revision, and serves only the cached ui:// resource.",
+          "Install an externally built, self-contained MCP App index.html from an HTTPS URL into an existing RenWork Connect Plugin.",
+          "RenWork downloads and validates the document server-side, stores the exact bytes and digest as an immutable revision, and serves only the cached ui:// resource.",
           "This tool accepts no inline HTML, React, JavaScript, source tree, or build project. Installing third-party executable content requires normal user approval.",
         ].join(" "),
         annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
@@ -105,7 +105,7 @@ export function registerAgentRemoteMcpApps(input: {
         revision.resourceUri,
         {
           title: `${revision.payload.metadata.name} ${revision.payload.metadata.version}`,
-          description: "An immutable, self-contained Remote MCP App cached by OpenWork.",
+          description: "An immutable, self-contained Remote MCP App cached by RenWork.",
           _meta: metadata,
         },
         async () => {

@@ -565,24 +565,24 @@ export function cloudCatalogCheck(probe: CloudCatalogProbe): AgentContextDiagnos
         ? "cloud_catalog_recovered_after_transient_401"
         : exact ? "cloud_catalog_exact_match" : "cloud_catalog_mismatch",
       message: transientUnauthorizedRecovered
-        ? "The OpenWork runtime saw a transient HTTP 401 during the independent Cloud MCP initialize request and recovered on retry; this points to a proxy or auth-gateway blip, not a revoked OpenWork Cloud credential."
+        ? "The RenWork runtime saw a transient HTTP 401 during the independent Cloud MCP initialize request and recovered on retry; this points to a proxy or auth-gateway blip, not a revoked RenWork Cloud credential."
         : exact
-        ? "The canonical OpenWork Cloud catalog exposes exactly the two required capability tools."
-        : "The OpenWork Cloud catalog does not match the required two-tool contract.",
+        ? "The canonical RenWork Cloud catalog exposes exactly the two required capability tools."
+        : "The RenWork Cloud catalog does not match the required two-tool contract.",
       owner: transientUnauthorizedRecovered ? "network-admin" : exact ? "openwork-server" : "openwork-support",
       action: transientUnauthorizedRecovered
         ? "Treat the first 401 as transient unless it repeats or carries a Den revoked-session envelope; inspect proxy and auth-gateway logs for one-off challenges."
         : exact
         ? "No action is required."
-        : "Review the OpenWork Cloud deployment and restore the canonical capability catalog.",
+        : "Review the RenWork Cloud deployment and restore the canonical capability catalog.",
     });
   }
 
   let status: AgentContextDiagnosticCheck["status"] = "failed";
   let evidenceKind: AgentContextDiagnosticCheck["evidenceKind"] = probe.performed ? "observed" : "derived";
-  let message = "The selected workspace does not have a usable managed OpenWork Cloud MCP configuration.";
+  let message = "The selected workspace does not have a usable managed RenWork Cloud MCP configuration.";
   let owner: AgentContextDiagnosticCheck["owner"] = "openwork-server";
-  let action = "Reconnect OpenWork Cloud from Settings > Connect and rerun diagnostics.";
+  let action = "Reconnect RenWork Cloud from Settings > Connect and rerun diagnostics.";
 
   switch (probe.code) {
     case "runtime_config_unavailable":
@@ -595,51 +595,51 @@ export function cloudCatalogCheck(probe: CloudCatalogProbe): AgentContextDiagnos
       status = "warning";
       evidenceKind = "unavailable";
       message = "A local runtime credential was not inspected or used for this remote workspace shell.";
-      action = "Run diagnostics on the OpenWork server that owns the workspace.";
+      action = "Run diagnostics on the RenWork server that owns the workspace.";
       break;
     case "cloud_mcp_missing":
       owner = "openwork-client";
-      message = "The selected client workspace has no synced OpenWork Cloud MCP entry.";
+      message = "The selected client workspace has no synced RenWork Cloud MCP entry.";
       break;
     case "cloud_mcp_disabled":
       owner = "openwork-client";
-      message = "The selected workspace OpenWork Cloud MCP entry is disabled.";
-      action = "Enable or reconnect OpenWork Cloud from Settings > Connect, then rerun diagnostics.";
+      message = "The selected workspace RenWork Cloud MCP entry is disabled.";
+      action = "Enable or reconnect RenWork Cloud from Settings > Connect, then rerun diagnostics.";
       break;
     case "cloud_mcp_not_remote":
-      message = "The managed OpenWork Cloud entry is not configured as a remote MCP.";
-      action = "Reconnect OpenWork Cloud to restore its managed remote configuration.";
+      message = "The managed RenWork Cloud entry is not configured as a remote MCP.";
+      action = "Reconnect RenWork Cloud to restore its managed remote configuration.";
       break;
     case "invalid_endpoint":
-      message = "The managed OpenWork Cloud endpoint is not credential-safe or does not end at the required /mcp/agent route.";
-      action = "Reconnect OpenWork Cloud to restore its managed endpoint, then rerun diagnostics.";
+      message = "The managed RenWork Cloud endpoint is not credential-safe or does not end at the required /mcp/agent route.";
+      action = "Reconnect RenWork Cloud to restore its managed endpoint, then rerun diagnostics.";
       break;
     case "untrusted_endpoint":
       status = "warning";
       evidenceKind = "unavailable";
       message = probe.enterpriseActivationPresent
-        ? "The runtime endpoint probe was not performed: this installation is enterprise activated, but against a different control-plane origin than the configured OpenWork Cloud MCP. No request was sent, so this is a configuration mismatch, not a network, TLS, or MCP failure."
+        ? "The runtime endpoint probe was not performed: this installation is enterprise activated, but against a different control-plane origin than the configured RenWork Cloud MCP. No request was sent, so this is a configuration mismatch, not a network, TLS, or MCP failure."
         : "The runtime endpoint probe was not performed because the configured origin is not in the diagnostics trust list; no request was sent, so this is a trust-configuration state, not a network, TLS, or MCP failure.";
       action = probe.enterpriseActivationPresent
-        ? "Reconcile the enterprise activation origin with the configured OpenWork Cloud MCP origin, or have an administrator add the exact endpoint origin to OPENWORK_AGENT_DIAGNOSTICS_TRUSTED_ORIGINS, then rerun diagnostics."
-        : "Activate this installation against your on-prem Den, or have an administrator set OPENWORK_AGENT_DIAGNOSTICS_TRUSTED_ORIGINS on the OpenWork desktop/server process to the exact endpoint origin, then rerun diagnostics.";
+        ? "Reconcile the enterprise activation origin with the configured RenWork Cloud MCP origin, or have an administrator add the exact endpoint origin to OPENWORK_AGENT_DIAGNOSTICS_TRUSTED_ORIGINS, then rerun diagnostics."
+        : "Activate this installation against your on-prem Den, or have an administrator set OPENWORK_AGENT_DIAGNOSTICS_TRUSTED_ORIGINS on the RenWork desktop/server process to the exact endpoint origin, then rerun diagnostics.";
       break;
     case "credential_missing":
     case "duplicate_authorization":
       owner = "openwork-client";
-      message = "The managed OpenWork Cloud entry does not contain one unambiguous authentication value.";
-      action = "Reconnect OpenWork Cloud so the client can replace the managed credential, then rerun diagnostics.";
+      message = "The managed RenWork Cloud entry does not contain one unambiguous authentication value.";
+      action = "Reconnect RenWork Cloud so the client can replace the managed credential, then rerun diagnostics.";
       break;
     case "timeout":
     case "network_error":
     case "http_error":
       owner = "network-admin";
       if (probe.httpStatus === 451) {
-        message = "The independent runtime endpoint probe received HTTP 451, which indicates an egress proxy, firewall, or allowlist deny rather than an OpenWork Cloud catalog shape problem.";
-        action = "Add the configured OpenWork Cloud MCP host and its documented redirect targets to the corporate allowlist, then rerun diagnostics.";
+        message = "The independent runtime endpoint probe received HTTP 451, which indicates an egress proxy, firewall, or allowlist deny rather than a RenWork Cloud catalog shape problem.";
+        action = "Add the configured RenWork Cloud MCP host and its documented redirect targets to the corporate allowlist, then rerun diagnostics.";
       } else {
         message = "The independent runtime endpoint probe could not be completed through the configured network path.";
-        action = "Verify server egress, DNS, TLS, proxy policy, and the configured OpenWork Cloud service, then rerun diagnostics.";
+        action = "Verify server egress, DNS, TLS, proxy policy, and the configured RenWork Cloud service, then rerun diagnostics.";
       }
       break;
     case "redirect_rejected":
@@ -650,11 +650,11 @@ export function cloudCatalogCheck(probe: CloudCatalogProbe): AgentContextDiagnos
     case "dns_error":
       owner = "network-admin";
       message = "The independent runtime endpoint probe could not resolve the configured service hostname.";
-      action = "Verify DNS resolution from the OpenWork server, then rerun diagnostics.";
+      action = "Verify DNS resolution from the RenWork server, then rerun diagnostics.";
       break;
     case "connection_refused":
       owner = "network-admin";
-      message = "The configured OpenWork Cloud service refused the independent runtime probe connection.";
+      message = "The configured RenWork Cloud service refused the independent runtime probe connection.";
       action = "Verify the service listener, firewall, and egress route, then rerun diagnostics.";
       break;
     case "connection_reset":
@@ -664,14 +664,14 @@ export function cloudCatalogCheck(probe: CloudCatalogProbe): AgentContextDiagnos
       break;
     case "tls_error":
       owner = "network-admin";
-      message = "The independent runtime endpoint probe failed TLS certificate validation or negotiation on the OpenWork runtime trust store.";
+      message = "The independent runtime endpoint probe failed TLS certificate validation or negotiation on the RenWork runtime trust store.";
       action = "Verify the server trust store, enterprise certificates, TLS inspection, and service certificate, then rerun diagnostics.";
       break;
     case "proxy_error":
       owner = "network-admin";
       if (probe.httpStatus === 451) {
-        message = "The independent runtime endpoint probe received HTTP 451, which indicates an egress proxy, firewall, or allowlist deny rather than an OpenWork Cloud catalog shape problem.";
-        action = "Add the configured OpenWork Cloud MCP host and its documented redirect targets to the corporate allowlist, then rerun diagnostics.";
+        message = "The independent runtime endpoint probe received HTTP 451, which indicates an egress proxy, firewall, or allowlist deny rather than a RenWork Cloud catalog shape problem.";
+        action = "Add the configured RenWork Cloud MCP host and its documented redirect targets to the corporate allowlist, then rerun diagnostics.";
       } else {
         message = "The configured proxy could not complete the independent runtime endpoint probe.";
         action = "Verify proxy reachability, authentication, and bypass policy, then rerun diagnostics.";
@@ -679,28 +679,28 @@ export function cloudCatalogCheck(probe: CloudCatalogProbe): AgentContextDiagnos
       break;
     case "unauthorized":
       owner = "openwork-client";
-      message = "OpenWork Cloud rejected the configured credential during the independent runtime probe.";
-      action = "Reconnect OpenWork Cloud so the client can replace the managed credential, then rerun diagnostics.";
+      message = "RenWork Cloud rejected the configured credential during the independent runtime probe.";
+      action = "Reconnect RenWork Cloud so the client can replace the managed credential, then rerun diagnostics.";
       break;
     case "forbidden":
       owner = "organization-admin";
-      message = "OpenWork Cloud rejected the probe for membership, scope, or policy reasons rather than credential validity.";
+      message = "RenWork Cloud rejected the probe for membership, scope, or policy reasons rather than credential validity.";
       action = "Verify organization membership, workspace scope, and Cloud policy for this credential, then rerun diagnostics.";
       break;
     case "mcp_route_not_found":
       owner = "openwork-support";
       message = "The configured service answered, but the MCP agent route was not found; the deployment version or route configuration is implicated.";
-      action = "Verify the OpenWork Cloud or on-prem Den deployment version exposes the /mcp/agent route, then rerun diagnostics.";
+      action = "Verify the RenWork Cloud or on-prem Den deployment version exposes the /mcp/agent route, then rerun diagnostics.";
       break;
     case "rate_limited":
       status = "warning";
       owner = "openwork-support";
-      message = "OpenWork Cloud rate-limited the independent runtime probe.";
-      action = "Wait before rerunning diagnostics; contact OpenWork support if rate limiting persists.";
+      message = "RenWork Cloud rate-limited the independent runtime probe.";
+      action = "Wait before rerunning diagnostics; contact RenWork support if rate limiting persists.";
       break;
     case "gateway_unavailable":
       owner = "network-admin";
-      message = "A gateway or upstream in front of the OpenWork Cloud service reported it unavailable during the independent runtime probe.";
+      message = "A gateway or upstream in front of the RenWork Cloud service reported it unavailable during the independent runtime probe.";
       action = "Check service status and gateway health, wait briefly, then rerun diagnostics.";
       break;
     case "probe_busy":
@@ -722,13 +722,13 @@ export function cloudCatalogCheck(probe: CloudCatalogProbe): AgentContextDiagnos
     case "pagination_unsupported":
     case "invalid_catalog":
       owner = "openwork-support";
-      message = "OpenWork Cloud returned a response that does not satisfy the bounded MCP handshake protocol contract.";
-      action = "Review the OpenWork Cloud deployment and restore a conformant MCP handshake response.";
+      message = "RenWork Cloud returned a response that does not satisfy the bounded MCP handshake protocol contract.";
+      action = "Review the RenWork Cloud deployment and restore a conformant MCP handshake response.";
       break;
     case "required_tools_missing":
       owner = "openwork-support";
-      message = "The OpenWork Cloud catalog handshake succeeded, but the catalog does not contain both required capability tools.";
-      action = "Review the OpenWork Cloud deployment and restore the canonical capability catalog.";
+      message = "The RenWork Cloud catalog handshake succeeded, but the catalog does not contain both required capability tools.";
+      action = "Review the RenWork Cloud deployment and restore the canonical capability catalog.";
       break;
   }
   return diagnosticCheck({
@@ -765,7 +765,7 @@ export function cloudDifferentialCheck(probe: CloudCatalogProbe, engineReachable
       ...common,
       status: "passed",
       evidenceKind: "derived",
-      message: "The independent OpenWork runtime probe and the engine registration evidence both report the OpenWork Cloud endpoint as reachable.",
+      message: "The independent RenWork runtime probe and the engine registration evidence both report the RenWork Cloud endpoint as reachable.",
       owner: "openwork-server",
       action: "No action is required.",
     });
@@ -775,9 +775,9 @@ export function cloudDifferentialCheck(probe: CloudCatalogProbe, engineReachable
       ...common,
       status: "failed",
       evidenceKind: "derived",
-      message: "The OpenWork runtime reached the Cloud endpoint directly, but the engine registration evidence reports a failure; the engine-side connection path or registration lifecycle is implicated, not the endpoint.",
+      message: "The RenWork runtime reached the Cloud endpoint directly, but the engine registration evidence reports a failure; the engine-side connection path or registration lifecycle is implicated, not the endpoint.",
       owner: "opencode-engine",
-      action: "Reconnect OpenWork Cloud or restart the selected workspace engine, then rerun diagnostics; the endpoint itself is reachable from this machine.",
+      action: "Reconnect RenWork Cloud or restart the selected workspace engine, then rerun diagnostics; the endpoint itself is reachable from this machine.",
     });
   }
   if (verdict === "runtime_failed_engine_connected") {
@@ -785,9 +785,9 @@ export function cloudDifferentialCheck(probe: CloudCatalogProbe, engineReachable
       ...common,
       status: "warning",
       evidenceKind: "derived",
-      message: "The engine registration evidence reports a live connection, but the independent runtime probe failed; the OpenWork runtime network path is implicated rather than the endpoint or the engine.",
+      message: "The engine registration evidence reports a live connection, but the independent runtime probe failed; the RenWork runtime network path is implicated rather than the endpoint or the engine.",
       owner: "network-admin",
-      action: "Compare proxy, DNS, and trust-store configuration between the OpenWork runtime and the engine process, then rerun diagnostics.",
+      action: "Compare proxy, DNS, and trust-store configuration between the RenWork runtime and the engine process, then rerun diagnostics.",
     });
   }
   if (verdict === "runtime_and_engine_failed") {
@@ -805,7 +805,7 @@ export function cloudDifferentialCheck(probe: CloudCatalogProbe, engineReachable
       ...common,
       status: "warning",
       evidenceKind: "derived",
-      message: "The engine registration evidence for OpenWork Cloud is stale or was never recorded, so only the independent runtime observation is current.",
+      message: "The engine registration evidence for RenWork Cloud is stale or was never recorded, so only the independent runtime observation is current.",
       owner: "opencode-engine",
       action: "Start or reconnect the selected workspace engine to refresh its registration evidence, then rerun diagnostics.",
     });
@@ -852,7 +852,7 @@ export function cloudEndpointTransportCheck(
       status: "skipped",
       evidenceKind: "derived",
       code: "transport_probe_not_required",
-      message: "The managed OpenWork Cloud MCP registration is connected; the differential check compares runtime and engine reachability, so a separate TLS-layer probe was not needed.",
+      message: "The managed RenWork Cloud MCP registration is connected; the differential check compares runtime and engine reachability, so a separate TLS-layer probe was not needed.",
       owner: "openwork-server",
       action: "No action is required.",
       details,
@@ -864,7 +864,7 @@ export function cloudEndpointTransportCheck(
       status: "passed",
       evidenceKind: "observed",
       code: "endpoint_tls_handshake_verified",
-      message: "The OpenWork Cloud endpoint completed a credential-free TLS handshake; use the differential check for authentication, MCP protocol, and engine-registration attribution.",
+      message: "The RenWork Cloud endpoint completed a credential-free TLS handshake; use the differential check for authentication, MCP protocol, and engine-registration attribution.",
       owner: "openwork-server",
       action: "Review the cloud-endpoint-differential verdict and catalog evidence for the next failure layer.",
       details,
@@ -883,7 +883,7 @@ export function cloudEndpointTransportCheck(
       code: "endpoint_tls_version_handshake_fault",
       message: "The credential-free transport probe reproduced a TLS version fault: TLS 1.3 timed out while TLS 1.2 completed, which points to an egress proxy or firewall stalling TLS 1.3 handshakes rather than a ServiceNow, credential, or allowlist issue.",
       owner: "network-admin",
-      action: "Fix or bypass the egress device that stalls TLS 1.3 ClientHello traffic for OpenWork Cloud hosts, or temporarily force TLS 1.2 where your policy permits it, then rerun diagnostics.",
+      action: "Fix or bypass the egress device that stalls TLS 1.3 ClientHello traffic for RenWork Cloud hosts, or temporarily force TLS 1.2 where your policy permits it, then rerun diagnostics.",
       details,
     });
   }
@@ -901,7 +901,7 @@ export function cloudEndpointTransportCheck(
         code: "endpoint_tls_handshake_timeout_tls12_comparison_failed",
         message: "The credential-free TLS handshake timed out before any HTTP response, and the explicit TLS 1.3 probe also timed out; the runtime TLS 1.2 comparison timed out too, so this still points to an egress TLS ClientHello stall but this runtime could not prove the TLS 1.2 workaround.",
         owner: "network-admin",
-        action: "Verify the egress proxy and firewall pass TLS ClientHello traffic to OpenWork Cloud hosts, then compare with a known Node or openssl TLS 1.2-only probe and confirm every OpenWork runtime honors any temporary TLS-version pinning policy.",
+        action: "Verify the egress proxy and firewall pass TLS ClientHello traffic to RenWork Cloud hosts, then compare with a known Node or openssl TLS 1.2-only probe and confirm every RenWork runtime honors any temporary TLS-version pinning policy.",
         details,
       });
     }
@@ -912,7 +912,7 @@ export function cloudEndpointTransportCheck(
       code: "endpoint_tls_handshake_timeout",
       message: "The credential-free TLS handshake timed out before any HTTP response; this points to a TLS handshake or egress proxy fault consistent with a TLS 1.3 ClientHello stall, not an application credential or ServiceNow problem.",
       owner: "network-admin",
-      action: "Verify that the egress proxy and firewall pass TLS 1.3 ClientHello traffic to OpenWork Cloud hosts; compare with a TLS 1.2-only probe or temporarily force TLS 1.2 where policy permits, then rerun diagnostics.",
+      action: "Verify that the egress proxy and firewall pass TLS 1.3 ClientHello traffic to RenWork Cloud hosts; compare with a TLS 1.2-only probe or temporarily force TLS 1.2 where policy permits, then rerun diagnostics.",
       details,
     });
   }
@@ -924,9 +924,9 @@ export function cloudEndpointTransportCheck(
         status: "failed",
         evidenceKind: "observed",
         code: "endpoint_tls_interception_detected",
-        message: "The OpenWork Cloud endpoint appears to be TLS-inspected or re-signed by a corporate proxy; the runtime does not trust that inspecting issuer.",
+        message: "The RenWork Cloud endpoint appears to be TLS-inspected or re-signed by a corporate proxy; the runtime does not trust that inspecting issuer.",
         owner: "network-admin",
-        action: "Install the corporate inspection root for the OpenWork runtime with NODE_EXTRA_CA_CERTS, or bypass TLS inspection for OpenWork Cloud hosts, then rerun diagnostics.",
+        action: "Install the corporate inspection root for the RenWork runtime with NODE_EXTRA_CA_CERTS, or bypass TLS inspection for RenWork Cloud hosts, then rerun diagnostics.",
         details,
       });
     }
@@ -936,9 +936,9 @@ export function cloudEndpointTransportCheck(
         status: "failed",
         evidenceKind: "observed",
         code: "endpoint_tls_incomplete_chain",
-        message: "The OpenWork Cloud endpoint served a leaf-only TLS chain and verification failed with UNABLE_TO_VERIFY_LEAF_SIGNATURE; the missing intermediate/fullchain must be repaired before blaming credentials or application logic.",
+        message: "The RenWork Cloud endpoint served a leaf-only TLS chain and verification failed with UNABLE_TO_VERIFY_LEAF_SIGNATURE; the missing intermediate/fullchain must be repaired before blaming credentials or application logic.",
         owner: "network-admin",
-        action: "Serve the complete certificate chain from the endpoint or let the OpenWork runtime add the AIA intermediate to NODE_EXTRA_CA_CERTS, then rerun diagnostics.",
+        action: "Serve the complete certificate chain from the endpoint or let the RenWork runtime add the AIA intermediate to NODE_EXTRA_CA_CERTS, then rerun diagnostics.",
         details,
       });
     }
@@ -947,9 +947,9 @@ export function cloudEndpointTransportCheck(
       status: "failed",
       evidenceKind: "observed",
       code: "endpoint_tls_untrusted",
-      message: `The OpenWork Cloud endpoint TLS handshake failed with ${probe.verifyErrorCode ?? "a certificate verification error"}; the OS or corporate CA chain is not visible to this runtime.`,
+      message: `The RenWork Cloud endpoint TLS handshake failed with ${probe.verifyErrorCode ?? "a certificate verification error"}; the OS or corporate CA chain is not visible to this runtime.`,
       owner: "network-admin",
-      action: "Provide the corporate CA chain to OpenWork with NODE_EXTRA_CA_CERTS or fix the server to present its full certificate chain; the served-chain evidence below shows what the endpoint sent.",
+      action: "Provide the corporate CA chain to RenWork with NODE_EXTRA_CA_CERTS or fix the server to present its full certificate chain; the served-chain evidence below shows what the endpoint sent.",
       details,
     });
   }
@@ -959,7 +959,7 @@ export function cloudEndpointTransportCheck(
       status: "failed",
       evidenceKind: "observed",
       code: "endpoint_unreachable",
-      message: "The OpenWork Cloud endpoint could not be reached with a credential-free TCP/TLS handshake.",
+      message: "The RenWork Cloud endpoint could not be reached with a credential-free TCP/TLS handshake.",
       owner: "network-admin",
       action: "Verify DNS, firewall, VPN, proxy, and endpoint availability from this machine, then rerun diagnostics.",
       details,
@@ -972,7 +972,7 @@ export function cloudEndpointTransportCheck(
     code: "transport_probe_not_applicable",
     message: "A credential-free TLS-layer probe was not applicable to this workspace or endpoint configuration; the differential check reports runtime probe eligibility.",
     owner: "openwork-server",
-    action: "Review the managed OpenWork Cloud MCP configuration if transport evidence is needed.",
+    action: "Review the managed RenWork Cloud MCP configuration if transport evidence is needed.",
     details,
   });
 }
@@ -998,7 +998,7 @@ function organizationCheck(request: AgentContextDiagnosticsRequest): AgentContex
       evidenceKind: "client-observed",
       code: request.organizationConnectionsProbe.code ?? "organization_connections_skipped",
       message: remotePrivacy
-        ? "Local Den organization topology was intentionally omitted from the remote OpenWork diagnostics request."
+        ? "Local Den organization topology was intentionally omitted from the remote RenWork diagnostics request."
         : "Organization connection readiness was not observed for this run.",
       owner: remotePrivacy ? "openwork-client" : "member",
       action: remotePrivacy
@@ -1155,12 +1155,12 @@ function engineAgentCheck(
     evidenceKind: "observed",
     code: agent ? "effective_openwork_agent_observed" : "effective_openwork_agent_missing",
     message: agent
-      ? "The selected engine resolved the OpenWork agent."
-      : "The selected engine did not resolve an OpenWork agent.",
+      ? "The selected engine resolved the RenWork agent."
+      : "The selected engine did not resolve a RenWork agent.",
     owner: agent ? "opencode-engine" : "openwork-server",
     action: agent
       ? "No action is required."
-      : "Restore the OpenWork runtime agent injection and restart the selected workspace engine.",
+      : "Restore the RenWork runtime agent injection and restart the selected workspace engine.",
     details: {
       engineApiReadPerformed: true,
       effectiveAgentCount: snapshot.agents.length,
@@ -1214,9 +1214,9 @@ function runtimeHealthCheck(
     action: status === "passed"
       ? "No action is required."
       : corrupt
-        ? "Repair the OpenWork runtime state before relying on injected configuration."
+        ? "Repair the RenWork runtime state before relying on injected configuration."
         : remote
-          ? "Run diagnostics on the OpenWork server that owns the workspace."
+          ? "Run diagnostics on the RenWork server that owns the workspace."
           : "Start or configure the selected workspace runtime, then rerun diagnostics.",
     details: {
       workspaceType: workspace.workspaceType,
@@ -1561,13 +1561,13 @@ export async function runAgentContextDiagnostics(input: {
       message: !connectSnapshotAvailable
         ? "The passive Connect steering state could not be inspected."
         : crossWorkspaceSteeringDrift
-          ? "Global Connect steering sees OpenWork Cloud, but the selected workspace does not contain that managed MCP."
+          ? "Global Connect steering sees RenWork Cloud, but the selected workspace does not contain that managed MCP."
           : "The expected Connect steering branch is internally consistent for the selected workspace.",
       owner: !connectSnapshotAvailable || crossWorkspaceSteeringDrift ? "openwork-server" : "openwork-client",
       action: !connectSnapshotAvailable
-        ? "Verify the OpenWork server runtime state and rerun diagnostics."
+        ? "Verify the RenWork server runtime state and rerun diagnostics."
         : crossWorkspaceSteeringDrift
-          ? "Reconnect or sync OpenWork Cloud for the selected workspace."
+          ? "Reconnect or sync RenWork Cloud for the selected workspace."
           : "No action is required.",
       details: {
         expectedBranch: branch,
@@ -1601,22 +1601,22 @@ export async function runAgentContextDiagnostics(input: {
           : "runtime_agent_intent_only",
       message: effectiveEngine
         ? !effectiveOpenworkAgent
-          ? "The effective engine configuration does not contain the OpenWork agent."
+          ? "The effective engine configuration does not contain the RenWork agent."
           : effectiveEngine.defaultAgent !== "openwork"
-            ? "The effective engine default does not select the OpenWork agent."
+            ? "The effective engine default does not select the RenWork agent."
             : effectiveOpenworkAgent.hidden
-              ? "The effective OpenWork agent is hidden and cannot be used as the default agent."
+              ? "The effective RenWork agent is hidden and cannot be used as the default agent."
               : !effectiveAgentModeUsable
-                ? "The effective OpenWork agent is subagent-only and cannot be used as the default agent."
-            : "The effective engine default selects the resolved OpenWork agent."
+                ? "The effective RenWork agent is subagent-only and cannot be used as the default agent."
+            : "The effective engine default selects the resolved RenWork agent."
         : projectOverrideDetected
-          ? "The configured OpenWork agent intent has project override layers and could not be confirmed live."
-          : "Only the configured OpenWork agent intent was available; effective resolution was not observed.",
+          ? "The configured RenWork agent intent has project override layers and could not be confirmed live."
+          : "Only the configured RenWork agent intent was available; effective resolution was not observed.",
       owner: effectiveEngine ? "opencode-engine" : projectOverrideDetected ? "member" : "opencode-engine",
       action: effectiveEngine && effectiveAgentUsable
         ? "No action is required."
         : effectiveEngine
-          ? "Restore the OpenWork agent and default-agent injection, then restart the selected workspace engine."
+          ? "Restore the RenWork agent and default-agent injection, then restart the selected workspace engine."
           : "Check the selected workspace engine health and rerun diagnostics.",
       details: {
         configuredAgentPresent: Boolean(expectedAgent),
@@ -1643,19 +1643,19 @@ export async function runAgentContextDiagnostics(input: {
           : effectiveEngine ? "effective_prompt_digest_mismatch" : "configured_prompt_digest_mismatch",
       message: promptMatchesCanonicalIntent
         ? effectiveEngine
-          ? "The effective OpenWork base prompt exactly matches the canonical configured injection and contains every required marker."
-          : "The configured OpenWork base prompt intent matches its canonical generated injection and contains every required marker."
+          ? "The effective RenWork base prompt exactly matches the canonical configured injection and contains every required marker."
+          : "The configured RenWork base prompt intent matches its canonical generated injection and contains every required marker."
         : !promptMarkersPresent
           ? effectiveEngine
-            ? "The effective OpenWork base prompt is missing one or more required markers."
-            : "The configured OpenWork base prompt intent is missing one or more required markers."
+            ? "The effective RenWork base prompt is missing one or more required markers."
+            : "The configured RenWork base prompt intent is missing one or more required markers."
           : effectiveEngine
-            ? "The effective OpenWork base prompt contains the markers but does not match the canonical configured injection."
-            : "The configured OpenWork base prompt markers are present, but its digest does not match the canonical generated injection.",
+            ? "The effective RenWork base prompt contains the markers but does not match the canonical configured injection."
+            : "The configured RenWork base prompt markers are present, but its digest does not match the canonical generated injection.",
       owner: effectiveEngine ? "opencode-engine" : "openwork-server",
       action: promptMatchesCanonicalIntent
         ? "No action is required."
-        : "Restore the canonical OpenWork runtime agent definition.",
+        : "Restore the canonical RenWork runtime agent definition.",
       details: {
         ...prompt.markers,
         promptLength: prompt.length,
@@ -1682,18 +1682,18 @@ export async function runAgentContextDiagnostics(input: {
           : "required_connect_tool_ids_not_denied_by_effective_policy",
       message: cloudToolPolicyStatus === "denied"
         ? !effectiveEngine && staticallyDeniedCloudAgentToolIds.size > 0
-          ? "A passively inspected static OpenCode policy denies one or more required OpenWork Cloud capability tools."
-          : "The effective OpenCode agent policy hides one or more required OpenWork Cloud capability tools."
+          ? "A passively inspected static OpenCode policy denies one or more required RenWork Cloud capability tools."
+          : "The effective OpenCode agent policy hides one or more required RenWork Cloud capability tools."
         : cloudToolPolicyStatus === "unavailable"
-          ? "Required OpenWork Cloud tool visibility could not be verified from the effective selected-engine agent."
-          : "The effective OpenCode agent policy does not deny either required OpenWork Cloud candidate tool ID; the live engine tool registry was not read.",
+          ? "Required RenWork Cloud tool visibility could not be verified from the effective selected-engine agent."
+          : "The effective OpenCode agent policy does not deny either required RenWork Cloud candidate tool ID; the live engine tool registry was not read.",
       owner: cloudToolPolicyStatus === "available"
         ? "openwork-server"
         : cloudToolPolicyStatus === "unavailable"
           ? "opencode-engine"
           : "member",
       action: cloudToolPolicyStatus === "denied"
-        ? "Allow the denied openwork-cloud capability tool IDs in top-level or OpenWork agent permission policy, then rerun diagnostics."
+        ? "Allow the denied openwork-cloud capability tool IDs in top-level or RenWork agent permission policy, then rerun diagnostics."
         : cloudToolPolicyStatus === "unavailable"
           ? "Check the selected workspace engine health and rerun diagnostics."
           : "No policy change is required; confirm catalog and registration evidence because this policy check alone does not prove live tool presence.",
@@ -1726,7 +1726,7 @@ export async function runAgentContextDiagnostics(input: {
       owner: effectiveEngine ? "opencode-engine" : "openwork-server",
       action: canonicalPluginSpecMatched
         ? "No action is required."
-        : "Restore the canonical OpenWork runtime plugin bundle.",
+        : "Restore the canonical RenWork runtime plugin bundle.",
       details: {
         configuredPluginLabels: pluginLabels,
         canonicalPluginSpecMatched,
@@ -1761,7 +1761,7 @@ export async function runAgentContextDiagnostics(input: {
       message: effectiveEngine
         ? inventoryTotal > 200
           ? "The combined engine-configuration and runtime-managed MCP evidence exceeded the report limit and was truncated."
-          : "The selected engine's merged MCP configuration and OpenWork-managed dynamic injection intent were inventoried as separate evidence sources."
+          : "The selected engine's merged MCP configuration and RenWork-managed dynamic injection intent were inventoried as separate evidence sources."
         : layerHealthProblem
         ? "One or more static MCP configuration layers are invalid or unreadable."
         : inventoryTotal > 200
@@ -1776,7 +1776,7 @@ export async function runAgentContextDiagnostics(input: {
         : layerHealthProblem ? "member" : inventory.collisions.length > 0 ? "member" : "openwork-server",
       action: effectiveEngine
         ? inventoryTotal > 200
-          ? "Reduce the configured MCP count or inspect the engine and OpenWork runtime sources directly."
+          ? "Reduce the configured MCP count or inspect the engine and RenWork runtime sources directly."
           : "No action is required; review registration evidence for runtime-managed dynamic MCP connection state."
         : layerHealthProblem
         ? "Repair the invalid or unreadable OpenCode configuration layer, then rerun diagnostics."
@@ -1842,7 +1842,7 @@ export async function runAgentContextDiagnostics(input: {
         : missingRegistrationCount > 0
           ? "One or more enabled managed MCPs do not have a current engine registration record."
           : remoteMcps.length > 0
-            ? "Every enabled OpenWork-managed MCP has a current connected registration result; configured-disabled entries are not treated as injected tools."
+            ? "Every enabled RenWork-managed MCP has a current connected registration result; configured-disabled entries are not treated as injected tools."
             : "No server-managed MCP registration was available to inspect.",
       owner: failedRegistrationCount > 0 || missingRegistrationCount > 0 ? "opencode-engine" : "openwork-server",
       action: failedRegistrationCount > 0 || missingRegistrationCount > 0
@@ -1875,7 +1875,7 @@ export async function runAgentContextDiagnostics(input: {
       code: "live_mcp_status_intentionally_not_queried",
       message: "Live MCP status was not queried because that endpoint can connect every enabled MCP.",
       owner: "opencode-engine",
-      action: "Review the bounded OpenWork Cloud catalog probe and exact managed registration response evidence instead.",
+      action: "Review the bounded RenWork Cloud catalog probe and exact managed registration response evidence instead.",
       details: {
         effectiveMcpConfigurationObserved: Boolean(effectiveEngine),
         mcpStatusApiReadPerformed: false,

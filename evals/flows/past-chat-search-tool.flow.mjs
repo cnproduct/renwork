@@ -94,7 +94,7 @@ function startMockOpenWorkServer() {
     server.listen(0, "127.0.0.1", () => {
       const address = server.address();
       if (!address || typeof address === "string") {
-        reject(new Error("Mock OpenWork server did not bind a port."));
+        reject(new Error("Mock RenWork server did not bind a port."));
         return;
       }
       resolve({
@@ -108,8 +108,8 @@ function startMockOpenWorkServer() {
 
 async function runInjectedSessionTools(baseUrl) {
   const script = `
-    const { OpenWorkExtensionsPreview } = await import("./apps/server/src/opencode-plugins/openwork-extensions-preview.ts");
-    const plugin = await OpenWorkExtensionsPreview();
+    const { RenWorkExtensionsPreview } = await import("./apps/server/src/opencode-plugins/openwork-extensions-preview.ts");
+    const plugin = await RenWorkExtensionsPreview();
     const search = JSON.parse(await plugin.tool.openwork_query.execute({ id: "session.search", args: { query: "raven launch", limit: 5, scanLimit: 10 } }));
     const read = JSON.parse(await plugin.tool.openwork_query.execute({ id: "session.read", args: { sessionId: "ses_archive", count: 2 } }));
     console.log(JSON.stringify({ search: search.result, read: read.result }));
@@ -171,20 +171,20 @@ async function showProofPanel(ctx, title, rows) {
 
 export default {
   id: "past-chat-search-tool",
-  title: "Injected tools can search and read past OpenWork chats",
-  spec: "OpenWork injected tool surface for cross-session memory",
+  title: "Injected tools can search and read past RenWork chats",
+  spec: "RenWork injected tool surface for cross-session memory",
   steps: [
     {
       name: "Real app boots before tool proof",
       run: async (ctx) => {
-        await ctx.prove("The real OpenWork app is running for frame proof", {
+        await ctx.prove("The real RenWork app is running for frame proof", {
           action: async () => {
             await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "control API" });
             await ctx.waitFor("document.body.innerText.trim().length > 40", { label: "rendered app text" });
           },
           assert: async () => {
             const route = await ctx.eval("window.__openworkControl.snapshot().route");
-            ctx.assert(typeof route === "string" && route.length > 0, "OpenWork route was not available.");
+            ctx.assert(typeof route === "string" && route.length > 0, "RenWork route was not available.");
             ctx.log(`route: ${route}`);
           },
           screenshot: { name: "app-ready", rejectText: ["Something went wrong"] },
@@ -217,7 +217,7 @@ export default {
               ctx.assert(hit?.snippet?.match?.toLowerCase() === "raven launch", "Search snippet did not highlight the query.");
               ctx.assert(
                 server.requests.some((request) => request.pathname === "/workspace/ws_1/sessions/ses_alpha/messages" && request.search === "?limit=400"),
-                "Search did not load transcript messages through the OpenWork server API.",
+                "Search did not load transcript messages through the RenWork server API.",
               );
             },
             screenshot: { name: "session-search-hit", requireText: ["openwork_query session.search", "raven launch", "ses_alpha"] },

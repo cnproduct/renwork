@@ -112,7 +112,7 @@ export function OrgSelectionScreen({
               aria-hidden="true"
             />
             <span className="text-[15px] font-semibold tracking-tight text-[var(--dls-text-primary)]">
-              OpenWork
+              RenWork
             </span>
           </div>
 

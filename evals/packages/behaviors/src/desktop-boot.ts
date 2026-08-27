@@ -67,7 +67,7 @@ async function completeOrganizationOnboarding(app: Surface): Promise<void> {
       const labels = [...document.querySelectorAll("button")]
         .filter((button) => !button.disabled)
         .map((button) => (button.textContent ?? "").trim());
-      return ["Continue with organization", "Continue to workspace", "Continue without OpenWork Models", "Continue"]
+      return ["Continue with organization", "Continue to workspace", "Continue without RenWork Models", "Continue"]
         .find((candidate) => labels.includes(candidate)) ?? "";
     })()`);
     if (typeof label === "string" && label) {
@@ -120,7 +120,7 @@ export async function createAndSelectWorkspace(
   if (route.includes("/welcome")) {
     const workspace = await createLocalWorkspaceViaUi(app, input);
     await clickButton(app, "Skip and use the free model", { timeoutMs: 90_000 });
-    await waitForText(app, "How did you hear about OpenWork?", { timeoutMs: 90_000 });
+    await waitForText(app, "How did you hear about RenWork?", { timeoutMs: 90_000 });
     await clickButton(app, "Skip", { timeoutMs: 15_000 });
     // Only now is the workspace actually selected: resolving before the
     // onboarding steps finish reads an id the app has not adopted yet.

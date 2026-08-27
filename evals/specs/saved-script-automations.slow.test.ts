@@ -284,7 +284,7 @@ test("a Code Mode result becomes a cloud Automation and a durable artifact resul
   await setField(desktop, "Time", scheduledTime);
   await setField(desktop, "Timezone", "UTC");
   const automationReview = await visibleText(desktop);
-  expect(automationReview).toContain("OpenWork Cloud");
+  expect(automationReview).toContain("RenWork Cloud");
   expect(automationReview).toMatch(/exact script version/i);
   expect(automationReview).toMatch(/even when.*browser.*desktop.*closed/i);
   await click(desktop, "Create and activate");
@@ -298,14 +298,14 @@ test("a Code Mode result becomes a cloud Automation and a durable artifact resul
   await waitForText(desktop, "succeeded", { timeoutMs: 120_000 });
   await waitForText(desktop, scheduledMarker, { timeoutMs: 60_000 });
   const receipt = await visibleText(desktop);
-  expect(receipt).toContain("OpenWork Cloud");
+  expect(receipt).toContain("RenWork Cloud");
   expect(receipt).toMatch(/script version/i);
   expect(receipt).toMatch(/validated result/i);
   expect(receipt).not.toMatch(/execution thread/i);
 
   const shot = await screenshot(desktop);
   const seen = await validate(shot, [
-    "A succeeded Automation run shows OpenWork Cloud as its execution location",
+    "A succeeded Automation run shows RenWork Cloud as its execution location",
     "The run shows a saved Script version and a validated launch briefing result",
     "No desktop execution thread, model requirement, or error banner is visible",
   ]);

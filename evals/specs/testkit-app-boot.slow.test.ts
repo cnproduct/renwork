@@ -6,7 +6,7 @@ import { screenshot, validate } from "@openwork/fraimz";
 import { expectFrame } from "@openwork/fraimz/vitest";
 import { app, localMysqlIsRunning, needs, server, test } from "@openwork/testkit";
 
-const expectation = "The OpenWork workspace shell is visible and ready for a task";
+const expectation = "The RenWork workspace shell is visible and ready for a task";
 const appSpecsEnabled = process.env.OPENWORK_EVAL_APP_SPECS === "1";
 const localPlacement = process.env.OPENWORK_EVAL_DAYTONA !== "1" && !process.env.OPENWORK_EVAL_DEN_API_URL?.trim();
 const mysqlOpen = await localMysqlIsRunning();
@@ -41,7 +41,7 @@ test.skipIf(!appSpecsEnabled || !localPlacement || !mysqlOpen)(title, async ({ e
     const shot = await screenshot(desktopApp);
     const seen = await validate(shot, [expectation], {
       ask: async (request) => request.prompt.startsWith("Objectively describe")
-        ? JSON.stringify({ description: "An OpenWork workspace shell with navigation and a task composer." })
+        ? JSON.stringify({ description: "A RenWork workspace shell with navigation and a task composer." })
         : JSON.stringify({
           results: [{
             expectation,

@@ -118,7 +118,7 @@ export function LpParityTable() {
               <div>
                 <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--lp-muted)]">
                   <OpenWorkMark className="h-3.5 w-3.5 object-contain" />
-                  OpenWork
+                  RenWork
                 </div>
                 <OpenWorkCell support={row.openwork} />
               </div>
@@ -140,7 +140,7 @@ export function LpParityTable() {
           </div>
           <div className="flex w-40 items-center justify-center gap-2 text-[13px] font-semibold text-[var(--lp-ink)]">
             <OpenWorkMark className="h-5 w-5 object-contain" />
-            OpenWork
+            RenWork
           </div>
           <div className="w-40 text-center text-[13px] font-medium text-[var(--lp-muted)]">
             Claude Cowork

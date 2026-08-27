@@ -160,7 +160,7 @@ export default {
     {
       name: "Conversation opens normally",
       run: async (ctx) => {
-        await ctx.prove("OpenWork displays a normal session before the math proof starts", {
+        await ctx.prove("RenWork displays a normal session before the math proof starts", {
           voiceover: vo[0],
           action: async () => {
             await ensureSession(ctx);

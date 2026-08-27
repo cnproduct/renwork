@@ -34,8 +34,8 @@ export function registerConnectMcpServerIndex(input: {
   publicOrigin: string
 }) {
   input.server.registerResource("openwork-connect-mcp-servers", CONNECT_MCP_SERVER_INDEX_URI, {
-    title: "OpenWork Connect MCP servers",
-    description: "Member-authorized MCP servers available through OpenWork Connect.",
+    title: "RenWork Connect MCP servers",
+    description: "Member-authorized MCP servers available through RenWork Connect.",
     mimeType: "application/json",
   }, async () => ({
     contents: [{

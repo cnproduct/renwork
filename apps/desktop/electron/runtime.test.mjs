@@ -101,8 +101,8 @@ describe("commandMatchesPackagedSidecar", () => {
   it("matches packaged opencode sidecars with platform suffixes", () => {
     assert.equal(
       commandMatchesPackagedSidecar(
-        "/Applications/OpenWork.app/Contents/Resources/sidecars/opencode-aarch64-apple-darwin serve --hostname 127.0.0.1 --port 49174 --cors *",
-        ["/Applications/OpenWork.app/Contents/Resources/sidecars"],
+        "/Applications/RenWork.app/Contents/Resources/sidecars/opencode-aarch64-apple-darwin serve --hostname 127.0.0.1 --port 49174 --cors *",
+        ["/Applications/RenWork.app/Contents/Resources/sidecars"],
       ),
       true,
     );
@@ -112,7 +112,7 @@ describe("commandMatchesPackagedSidecar", () => {
     assert.equal(
       commandMatchesPackagedSidecar(
         "/usr/local/bin/opencode serve --hostname 127.0.0.1 --port 49174",
-        ["/Applications/OpenWork.app/Contents/Resources/sidecars"],
+        ["/Applications/RenWork.app/Contents/Resources/sidecars"],
       ),
       false,
     );

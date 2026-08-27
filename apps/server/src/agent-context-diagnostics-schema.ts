@@ -632,7 +632,7 @@ export const agentContextDiagnosticsReportSchema = z.object({
     if (!runtimeCloudMcp) {
       context.addIssue({
         code: "custom",
-        message: "cloud handshake evidence requires the retained runtime OpenWork Cloud entry",
+        message: "cloud handshake evidence requires the retained runtime RenWork Cloud entry",
         path: ["mcps"],
       });
     }

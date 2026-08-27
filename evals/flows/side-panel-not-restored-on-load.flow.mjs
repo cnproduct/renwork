@@ -183,7 +183,7 @@ export default {
           screenshot: {
             name: "extensions-open",
             requireText: ["Extensions (Legacy)"],
-            rejectText: ["Use OpenWork Models without API keys"],
+            rejectText: ["Use RenWork Models without API keys"],
           },
         });
       },

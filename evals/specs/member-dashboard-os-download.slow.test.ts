@@ -32,7 +32,7 @@ test(title, async ({ evidence, place }) => {
   const invitee = {
     email: `maya+${runId}@openwork.test`,
     name: "Maya Chen",
-    password: "OpenWorkEval123!",
+    password: "RenWorkEval123!",
   };
 
   await using den = await server({
@@ -118,10 +118,10 @@ test(title, async ({ evidence, place }) => {
 
   expect(dashboard.pathname).toBe("/dashboard");
   expect(dashboard.cta.startsWith("Download for")).toBe(true);
-  expect(dashboard.cta).not.toContain("Download OpenWork");
+  expect(dashboard.cta).not.toContain("Download RenWork");
   expect(dashboard.copyLink).toBe(true);
   evidence.fact(
-    "The member dashboard offers Download for this computer instead of Download OpenWork",
+    "The member dashboard offers Download for this computer instead of Download RenWork",
     `pathname=${dashboard.pathname}; cta=${dashboard.cta}; copyLink=${String(dashboard.copyLink)}`,
     dashboard.pathname === "/dashboard" && dashboard.cta.startsWith("Download for") && dashboard.copyLink === true,
   );

@@ -27,14 +27,14 @@ const ADMIN_CDP_URL = (process.env.OPENWORK_EVAL_WEB_CDP_ADMIN ?? "").trim().rep
 const MYSQL_CONTAINER = "openwork-web-local-mysql";
 const MYSQL_ARGS = ["exec", MYSQL_CONTAINER, "mysql", "-uroot", "-ppassword", "openwork_den", "-N", "-e"];
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const TYPE_ID_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
 const TYPE_ID_PREFIXES = {
   adminAllowlist: "aal",
 };
 const RUN_TAG = `${Date.now().toString(36)}-${randomBytes(2).toString("hex")}`;
 const OWNER_EMAIL = `delete-org-owner+${RUN_TAG}@acme.test`;
-const OWNER_PASSWORD = `OpenWork-${RUN_TAG}!`;
+const OWNER_PASSWORD = `RenWork-${RUN_TAG}!`;
 const ORG_NAME = `Orbit Test Lab ${RUN_TAG}`;
 const TARGET_EMAIL = `delete-me+${RUN_TAG}@acme.test`;
 

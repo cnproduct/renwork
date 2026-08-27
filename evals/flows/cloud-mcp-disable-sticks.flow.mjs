@@ -27,7 +27,7 @@
  * - OPENWORK_EVAL_DEN_TOKEN    Bearer session token for a seeded user
  */
 
-const CLOUD_TITLE = "OpenWork Cloud Control";
+const CLOUD_TITLE = "RenWork Cloud Control";
 const USER_STATE_KEY = "openwork.den.mcp.cloudControlUserState";
 const CLICK_ANY = "button, [role=button], a, div, article, li, label";
 
@@ -86,7 +86,7 @@ const scrollCloudRowExpr = `(() => {
 
 export default {
   id: "cloud-mcp-disable-sticks",
-  title: "Disabling the OpenWork Cloud Control MCP sticks across sync",
+  title: "Disabling the RenWork Cloud Control MCP sticks across sync",
   spec: "evals/cloud-mcp-agent-flows.md",
   requiredEnv: ["OPENWORK_EVAL_DEN_API_URL", "OPENWORK_EVAL_DEN_TOKEN"],
   steps: [
@@ -97,7 +97,7 @@ export default {
       },
     },
     {
-      name: "Sign in to OpenWork Cloud via desktop handoff",
+      name: "Sign in to RenWork Cloud via desktop handoff",
       run: async (ctx) => {
         const signedIn = await ctx.eval(
           "Boolean((localStorage.getItem('openwork.den.authToken') ?? '').trim())",
@@ -173,7 +173,7 @@ export default {
           },
           screenshot: {
             name: "cloud-mcp-configured",
-            claim: "OpenWork Cloud Control appears as a configured MCP after cloud sign-in.",
+            claim: "RenWork Cloud Control appears as a configured MCP after cloud sign-in.",
             requireText: [CLOUD_TITLE],
             rejectText: ["Something went wrong"],
             hashIncludes: "/settings/extensions/mcp",
@@ -202,7 +202,7 @@ export default {
           },
           screenshot: {
             name: "cloud-mcp-disabled",
-            claim: "OpenWork Cloud Control is Paused after the user disables it.",
+            claim: "RenWork Cloud Control is Paused after the user disables it.",
             requireText: [CLOUD_TITLE, "Paused"],
             rejectText: ["Something went wrong"],
             hashIncludes: "/settings/extensions/mcp",
@@ -249,7 +249,7 @@ export default {
           },
           screenshot: {
             name: "cloud-mcp-still-disabled",
-            claim: "OpenWork Cloud Control stays Paused after the settings remount sync tick.",
+            claim: "RenWork Cloud Control stays Paused after the settings remount sync tick.",
             requireText: [CLOUD_TITLE, "Paused"],
             rejectText: ["Something went wrong"],
             hashIncludes: "/settings/extensions/mcp",
@@ -282,7 +282,7 @@ export default {
           },
           screenshot: {
             name: "cloud-mcp-reenabled",
-            claim: "OpenWork Cloud Control leaves Paused after re-enable and the intent record is cleared.",
+            claim: "RenWork Cloud Control leaves Paused after re-enable and the intent record is cleared.",
             requireText: [CLOUD_TITLE],
             rejectText: ["Something went wrong"],
             hashIncludes: "/settings/extensions/mcp",

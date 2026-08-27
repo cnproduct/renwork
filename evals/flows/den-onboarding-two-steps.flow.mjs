@@ -6,7 +6,7 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 
 const DEN_WEB_URL = denWebUrl();
 const OWNER_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const OWNER_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const OWNER_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const ONBOARDING_PATH = "/dashboard/onboarding";
 const INFERENCE_PATH = "/dashboard/inference";
 const BYOK_PATH = "/dashboard/custom-llm-providers";
@@ -176,7 +176,7 @@ export default {
     {
       name: "Two ways to turn on a model",
       run: async (ctx) => {
-        await ctx.prove("Step two offers OpenWork Models or the owner's own provider key", {
+        await ctx.prove("Step two offers RenWork Models or the owner's own provider key", {
           voiceover: vo[2],
           action: async () => {
             await ctx.waitFor(
@@ -207,9 +207,9 @@ export default {
             witness(
               ctx,
               choices.links.length === 2
-                && choices.links.some((link) => link.label === "Use OpenWork Models" && link.href === INFERENCE_PATH)
+                && choices.links.some((link) => link.label === "Use RenWork Models" && link.href === INFERENCE_PATH)
                 && choices.links.some((link) => link.label === "Add your own key" && link.href === BYOK_PATH),
-              "Step two routes to OpenWork Models or to bring-your-own-key, and nowhere else",
+              "Step two routes to RenWork Models or to bring-your-own-key, and nowhere else",
               choices.links,
             );
             witness(
@@ -218,27 +218,27 @@ export default {
               "The bring-your-own-key path names the providers a team already pays for",
               choices.brands,
             );
-            witness(ctx, choices.recommended, "OpenWork Models is the recommended choice", choices.recommended);
+            witness(ctx, choices.recommended, "RenWork Models is the recommended choice", choices.recommended);
           },
           screenshot: {
             name: "model-choices",
-            claim: "Step two is two cards: OpenWork Models (recommended) or bring your own provider key.",
-            requireText: ["OpenWork Models", "RECOMMENDED", "Bring your own key", "Add your own key"],
+            claim: "Step two is two cards: RenWork Models (recommended) or bring your own provider key.",
+            requireText: ["RenWork Models", "RECOMMENDED", "Bring your own key", "Add your own key"],
             rejectText: ["Something went wrong"],
           },
         });
       },
     },
     {
-      name: "The recommended path lands on OpenWork Models",
+      name: "The recommended path lands on RenWork Models",
       run: async (ctx) => {
-        await ctx.prove("Following the recommended choice opens the workspace's OpenWork Models page", {
+        await ctx.prove("Following the recommended choice opens the workspace's RenWork Models page", {
           voiceover: vo[3],
           action: async () => {
-            await ctx.clickText("Use OpenWork Models");
+            await ctx.clickText("Use RenWork Models");
             await ctx.waitFor(`window.location.pathname === ${JSON.stringify(INFERENCE_PATH)}`, {
               timeoutMs: 30_000,
-              label: "OpenWork Models route",
+              label: "RenWork Models route",
             });
           },
           assert: async () => {
@@ -253,8 +253,8 @@ export default {
           },
           screenshot: {
             name: "openwork-models-page",
-            claim: "The recommended choice lands on OpenWork Models, where inference is switched on.",
-            requireText: ["OpenWork Models", "Frontier intelligence"],
+            claim: "The recommended choice lands on RenWork Models, where inference is switched on.",
+            requireText: ["RenWork Models", "Frontier intelligence"],
             rejectText: ["STEP 1 OF 2", "Something went wrong"],
             hashIncludes: "/inference",
           },

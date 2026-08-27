@@ -25,7 +25,7 @@ export default {
         await ctx.waitFor(
           `(() => {
             const text = document.body.innerText;
-            return text.includes("Settings") && (text.includes("Account") || text.includes("OpenWork Cloud"));
+            return text.includes("Settings") && (text.includes("Account") || text.includes("RenWork Cloud"));
           })()`,
           { timeoutMs: 30_000, label: "cloud account settings content" },
         );

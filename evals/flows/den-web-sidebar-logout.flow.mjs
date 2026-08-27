@@ -4,7 +4,7 @@ import { denWebUrl } from "./lib/den-web.mjs";
 const vo = await loadVoiceoverParagraphs("den-web-sidebar-logout");
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 
 const visibleSidebarFooter = `(() => {
   const sidebar = [...document.querySelectorAll('aside')].find((element) => getComputedStyle(element).display !== 'none');

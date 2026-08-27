@@ -43,7 +43,7 @@ export function FeedbackEmail({
     ["Entrypoint", entrypoint],
     ["Deployment", deployment],
     ["App version", appVersion],
-    ["OpenWork server", openworkServerVersion],
+    ["RenWork server", openworkServerVersion],
     ["OpenCode", opencodeVersion],
     ["OS", osLabel],
     ["Platform", platform],
@@ -53,10 +53,10 @@ export function FeedbackEmail({
   return (
     <Html>
       <Head />
-      <Preview>{name} sent an OpenWork {label} from {entrypoint || source || "unknown"}</Preview>
+      <Preview>{name} sent a RenWork {label} from {entrypoint || source || "unknown"}</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
-          <Text style={styles.eyebrow}>{isContact ? "OpenWork contact" : "OpenWork feedback"}</Text>
+          <Text style={styles.eyebrow}>{isContact ? "RenWork contact" : "RenWork feedback"}</Text>
           <Heading style={styles.heading}>{isContact ? "Contact message" : "Feedback"} from {name}</Heading>
           <Text style={styles.contact}>{email}</Text>
 

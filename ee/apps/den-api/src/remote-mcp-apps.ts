@@ -186,7 +186,7 @@ export function inspectRemoteMcpAppHtml(html: string) {
     digest,
     diagnostics: [
       "Self-contained HTML validated.",
-      "The cached HTML is exposed through standard MCP tools and resources; no embedded OpenWork runtime manifest is required.",
+      "The cached HTML is exposed through standard MCP tools and resources; no embedded RenWork runtime manifest is required.",
       "Runtime network, subframes, external resources, and base URI changes are blocked by the host CSP.",
     ],
   }

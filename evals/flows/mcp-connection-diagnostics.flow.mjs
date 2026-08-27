@@ -3,7 +3,7 @@ import { denApiFetch, openAdminConnections, signInApi } from "./lib/den-web.mjs"
 
 const vo = await loadVoiceoverParagraphs("mcp-connection-diagnostics");
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const CONNECTION_NAME = `diagnostic-unreachable-${Date.now()}`;
 const MCP_URL = "http://127.0.0.1:65534/mcp";
 const state = { adminSession: null };

@@ -15,7 +15,7 @@ export const BUILTIN_SHARE_PLUGIN_CAPABILITY = "skill:share-plugin"
 const CREATE_SKILL_SOURCE = `---
 name: create-skill
 description: |
-  Create a new OpenWork Cloud skill as a plugin with one skill component.
+  Create a new RenWork Cloud skill as a plugin with one skill component.
 
   Triggers when user mentions:
   - "create a skill"
@@ -161,7 +161,7 @@ Treat "this user" / "them" as:
 const SHARE_PLUGIN_SOURCE = `---
 name: share-plugin
 description: |
-  Share an OpenWork Cloud skill's plugin with a person, team, or organization.
+  Share a RenWork Cloud skill's plugin with a person, team, or organization.
 
   Triggers when user mentions:
   - "share this skill with"
@@ -209,7 +209,7 @@ export const BUILTIN_SKILLS: BuiltinSkillDefinition[] = [
     descriptor: {
       name: "create-skill",
       title: "Create Skill",
-      description: "Create a new OpenWork Cloud skill that its creator can use immediately.",
+      description: "Create a new RenWork Cloud skill that its creator can use immediately.",
       capability: BUILTIN_CREATE_SKILL_CAPABILITY,
       location: "skill://create-skill/SKILL.md",
     },
@@ -242,7 +242,7 @@ export const BUILTIN_SKILLS: BuiltinSkillDefinition[] = [
     descriptor: {
       name: "share-plugin",
       title: "Share Plugin",
-      description: "Share an OpenWork Cloud skill's plugin with a person, team, or organization.",
+      description: "Share a RenWork Cloud skill's plugin with a person, team, or organization.",
       capability: BUILTIN_SHARE_PLUGIN_CAPABILITY,
       location: "skill://share-plugin/SKILL.md",
     },
@@ -311,7 +311,7 @@ export function executeBuiltinSkillCapability(name: string): BuiltinSkillExecute
     kind: "skill",
     name: skill.descriptor.title,
     description: skill.descriptor.description,
-    provenance: "Built into OpenWork Cloud.",
+    provenance: "Built into RenWork Cloud.",
     content: skill.source,
   }
 }

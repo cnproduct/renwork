@@ -77,7 +77,7 @@ async function closeStaleDialogs(ctx) {
 async function dismissOpenWorkModelsDialog(ctx) {
   const clicked = await ctx.eval(`(() => {
     const button = [...document.querySelectorAll('button')]
-      .find((candidate) => (candidate.textContent ?? '').trim() === 'Continue without OpenWork Models');
+      .find((candidate) => (candidate.textContent ?? '').trim() === 'Continue without RenWork Models');
     button?.click();
     return Boolean(button);
   })()`);
@@ -151,7 +151,7 @@ async function openCloudAccount(ctx) {
   await ctx.waitFor(
     `(() => {
       const text = document.body?.innerText ?? '';
-      return text.includes('OpenWork Cloud') && (
+      return text.includes('RenWork Cloud') && (
         text.includes('Sign in') ||
         text.includes('Sign out') ||
         text.includes('Connected') ||
@@ -170,7 +170,7 @@ async function returnToApp(ctx) {
     await ctx.clickText("Back to app", { selector: "button", timeoutMs: 10_000 });
   }
   await dismissOpenWorkModelsDialog(ctx);
-  await ctx.waitFor("(() => { const text = document.body?.innerText ?? ''; return text.includes('Add workspace') || text.includes('Welcome to OpenWork'); })()", {
+  await ctx.waitFor("(() => { const text = document.body?.innerText ?? ''; return text.includes('Add workspace') || text.includes('Welcome to RenWork'); })()", {
     timeoutMs: 30_000,
     label: "workspace shell or welcome screen",
   });
@@ -179,7 +179,7 @@ async function returnToApp(ctx) {
 async function ensureWorkspaceShellForRemote(ctx) {
   await rememberPreviousWorkspace(ctx);
   await returnToApp(ctx);
-  const onWelcome = await ctx.eval("location.hash.includes('/welcome') || (document.body?.innerText ?? '').includes('Welcome to OpenWork')");
+  const onWelcome = await ctx.eval("location.hash.includes('/welcome') || (document.body?.innerText ?? '').includes('Welcome to RenWork')");
   if (onWelcome) {
     state.startedFromWelcome = true;
     if (state.originalPreferences === null) {
@@ -554,7 +554,7 @@ async function restoreFreshWelcome(ctx) {
     timeoutMs: 30_000,
     label: "welcome route restored",
   });
-  await ctx.waitFor("(document.body?.innerText ?? '').includes('Welcome to OpenWork')", {
+  await ctx.waitFor("(document.body?.innerText ?? '').includes('Welcome to RenWork')", {
     timeoutMs: 30_000,
     label: "welcome screen restored",
   });
@@ -567,7 +567,7 @@ async function restoreFreshWelcome(ctx) {
       label: "control API after late starter cleanup reload",
     });
   }
-  await ctx.waitFor("location.hash.includes('/welcome') && (document.body?.innerText ?? '').includes('Welcome to OpenWork')", {
+  await ctx.waitFor("location.hash.includes('/welcome') && (document.body?.innerText ?? '').includes('Welcome to RenWork')", {
     timeoutMs: 30_000,
     label: "welcome screen remained restored",
   });
@@ -595,7 +595,7 @@ async function nodeFetchFailure(url) {
 async function visibleRemoteError(ctx) {
   return ctx.eval(`(() => {
     const lines = (document.body?.innerText ?? '').split(/\\n+/).map((line) => line.trim()).filter(Boolean);
-    return lines.find((line) => /certificate|ERR_CERT|fetch failed|OpenWork server is unavailable/i.test(line)) ?? '';
+    return lines.find((line) => /certificate|ERR_CERT|fetch failed|RenWork server is unavailable/i.test(line)) ?? '';
   })()`);
 }
 
@@ -616,20 +616,20 @@ export default {
         await closeStaleDialogs(ctx);
 
         await ctx.prove("The Cloud account settings surface opens cleanly", {
-          claim: "Settings → Account renders the OpenWork Cloud account controls and does not show a generic fetch failure.",
+          claim: "Settings → Account renders the RenWork Cloud account controls and does not show a generic fetch failure.",
           voiceover: vo[0],
           action: async () => {
             await ensureDeveloperMode(ctx);
             await openCloudAccount(ctx);
           },
           assert: async () => {
-            await ctx.expectText("OpenWork Cloud");
+            await ctx.expectText("RenWork Cloud");
             await ctx.expectText("Cloud control plane URL");
             await ctx.expectNoText("fetch failed");
           },
           screenshot: {
             name: "cloud-account-ready",
-            requireText: ["OpenWork Cloud", "Cloud control plane URL"],
+            requireText: ["RenWork Cloud", "Cloud control plane URL"],
             rejectText: ["fetch failed", "Something went wrong"],
             hashIncludes: "/settings/cloud-account",
           },
@@ -657,7 +657,7 @@ export default {
             const errorText = await visibleRemoteError(ctx);
             ctx.assert(/certificate|ERR_CERT/i.test(errorText), `Expected a certificate-specific error, got: ${errorText}`);
             ctx.assert(!/TypeError:\s*fetch failed$/i.test(errorText), `Remote error was still a bare fetch failure: ${errorText}`);
-            ctx.assert(!errorText.includes("OpenWork server is unavailable"), `Remote error was swallowed into a generic availability message: ${errorText}`);
+            ctx.assert(!errorText.includes("RenWork server is unavailable"), `Remote error was swallowed into a generic availability message: ${errorText}`);
             ctx.output("self-signed-fetch-differential.json", JSON.stringify({
               selfSignedServer: serverUrl,
               visibleDesktopError: errorText,
@@ -667,7 +667,7 @@ export default {
           screenshot: {
             name: "remote-certificate-error",
             requireText: ["Remote server details", "ERR_CERT_AUTHORITY_INVALID"],
-            rejectText: ["OpenWork server is unavailable", "TypeError: fetch failed"],
+            rejectText: ["RenWork server is unavailable", "TypeError: fetch failed"],
           },
         });
       },
@@ -718,7 +718,7 @@ export default {
           screenshot: {
             name: "remote-worker-connected",
             requireText: [HTTP_REMOTE_WORKSPACE_NAME],
-            rejectText: ["Remote server details", "OpenWork server is unavailable", "fetch failed"],
+            rejectText: ["Remote server details", "RenWork server is unavailable", "fetch failed"],
           },
         });
       },
@@ -742,7 +742,7 @@ export default {
                 timeoutMs: 30_000,
                 label: "restored cloud-account route",
               });
-              await ctx.waitFor("(document.body?.innerText ?? '').includes('OpenWork Cloud')", {
+              await ctx.waitFor("(document.body?.innerText ?? '').includes('RenWork Cloud')", {
                 timeoutMs: 30_000,
                 label: "cloud account content after cleanup",
               });
@@ -752,9 +752,9 @@ export default {
           },
           assert: async () => {
             if (state.startedFromWelcome && !state.previousWorkspaceId) {
-              await ctx.expectText("Welcome to OpenWork");
+              await ctx.expectText("Welcome to RenWork");
             } else {
-              await ctx.expectText("OpenWork Cloud");
+              await ctx.expectText("RenWork Cloud");
             }
             await ctx.expectNoText(HTTP_REMOTE_WORKSPACE_NAME);
             await ctx.expectNoText("Remote server details");
@@ -762,7 +762,7 @@ export default {
           },
           screenshot: {
             name: state.startedFromWelcome && !state.previousWorkspaceId ? "welcome-recovered" : "cloud-account-recovered",
-            requireText: state.startedFromWelcome && !state.previousWorkspaceId ? ["Welcome to OpenWork"] : ["OpenWork Cloud"],
+            requireText: state.startedFromWelcome && !state.previousWorkspaceId ? ["Welcome to RenWork"] : ["RenWork Cloud"],
             rejectText: [HTTP_REMOTE_WORKSPACE_NAME, "Remote server details", "fetch failed", "Something went wrong"],
             hashIncludes: state.startedFromWelcome && !state.previousWorkspaceId ? "/welcome" : "/settings/cloud-account",
           },

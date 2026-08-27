@@ -159,7 +159,7 @@ export default {
       },
     },
     {
-      name: "OpenWork Cloud Control is connected — the unchanged existing surface still works",
+      name: "RenWork Cloud Control is connected — the unchanged existing surface still works",
       run: async (ctx) => {
         await ctx.prove("Adding search_capabilities did not break the existing, already-shipped Cloud Control connection.", {
           action: async () => {
@@ -169,11 +169,11 @@ export default {
             await revealHidden(ctx);
           },
           assert: async () => {
-            await ctx.expectText("OpenWork Cloud Control", { timeoutMs: 30_000 });
+            await ctx.expectText("RenWork Cloud Control", { timeoutMs: 30_000 });
           },
           screenshot: {
             name: "cloud-control-still-connected",
-            requireText: ["OpenWork Cloud Control"],
+            requireText: ["RenWork Cloud Control"],
             rejectText: ["Something went wrong"],
             hashIncludes: "/settings/extensions/mcp",
           },
@@ -368,7 +368,7 @@ export default {
               editor.focus();
               const data = new DataTransfer();
               data.setData('text/plain', ${JSON.stringify(
-                "On the OpenWork Cloud Control MCP, find and tell me the name of my current organization.",
+                "On the RenWork Cloud Control MCP, find and tell me the name of my current organization.",
               )});
               editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: data }));
               return { ok: true };

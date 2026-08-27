@@ -132,7 +132,7 @@ function installFixtureExpression() {
 async function prepareHandoffFixture(ctx) {
   await ctx.waitFor("Boolean(window.__openworkControl)", {
     timeoutMs: 60_000,
-    label: "OpenWork control API",
+    label: "RenWork control API",
   });
   await ctx.eval(installFixtureExpression(), { awaitPromise: true });
   const baseUrl = await ctx.eval("window.location.origin");

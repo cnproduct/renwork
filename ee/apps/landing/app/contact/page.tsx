@@ -5,8 +5,8 @@ import { SiteFooter } from "../../components/site-footer";
 import { baseOpenGraph } from "../../lib/seo";
 
 export const metadata = {
-  title: "OpenWork — Contact",
-  description: "Contact the OpenWork team for product, support, security, and sales questions.",
+  title: "RenWork — Contact",
+  description: "Contact the RenWork team for product, support, security, and sales questions.",
   alternates: {
     canonical: "/contact",
   },
@@ -36,7 +36,7 @@ export default function ContactPage() {
           <Link href="/" className="inline-flex items-center gap-3 text-[#011627]">
             <OpenWorkMark className="h-[30px] w-[38px]" />
             <span className="text-[1.2rem] font-semibold tracking-tight lowercase">
-              OpenWork
+              RenWork
             </span>
           </Link>
           <Link

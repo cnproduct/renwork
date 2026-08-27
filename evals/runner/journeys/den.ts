@@ -476,7 +476,7 @@ async function clickLastExactText(ctx: FlowContext, text: string, selector = "bu
 async function waitForAuthForm(ctx: FlowContext): Promise<void> {
   await ctx.waitFor(
     `document.body.innerText.includes('Sign in')
-      || document.body.innerText.includes('Start using OpenWork')
+      || document.body.innerText.includes('Start using RenWork')
       || Boolean(document.querySelector('input[type="email"], input[name="email"]'))`,
     { timeoutMs: 45_000, label: "den-web auth form" },
   );

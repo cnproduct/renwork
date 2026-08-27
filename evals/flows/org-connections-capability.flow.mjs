@@ -13,7 +13,7 @@ const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() ||
 const PLATFORM_ADMIN_EMAIL = process.env.OPENWORK_EVAL_PLATFORM_ADMIN_EMAIL?.trim() || "";
 const PLATFORM_ADMIN_PASSWORD = process.env.OPENWORK_EVAL_PLATFORM_ADMIN_PASSWORD?.trim() || "";
 const ORG_ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ORG_ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ORG_ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 
 const ORG_FILTER_INPUT = 'input[placeholder="Org name, slug, or id"]';
 const NOTION_NAME = "Notion";
@@ -182,7 +182,7 @@ export default {
     {
       name: "Frame 5",
       run: async (ctx) => {
-        await ctx.prove("OpenWork Connect shows Acme's Notion org connection as available to connect", {
+        await ctx.prove("RenWork Connect shows Acme's Notion org connection as available to connect", {
           voiceover: vo[4],
           action: async () => {
             await remountDesktopConnect(ctx);
@@ -216,7 +216,7 @@ export default {
     {
       name: "Frame 6",
       run: async (ctx) => {
-        await ctx.prove("Turning the capability back off removes Notion from OpenWork Connect", {
+        await ctx.prove("Turning the capability back off removes Notion from RenWork Connect", {
           voiceover: vo[5],
           action: async () => {
             await withClient(ctx, ADMIN_CDP_URL, async () => {
@@ -248,7 +248,7 @@ export default {
             ctx.assert(orgView.mcpConnections === false, "/v1/org still reported mcpConnections on after turning it off.");
 
             const visible = await desktopConnectOrgConnectionVisible(ctx, NOTION_NAME);
-            ctx.assert(!visible, "Notion org connection row still rendered in OpenWork Connect after disabling the capability.");
+            ctx.assert(!visible, "Notion org connection row still rendered in RenWork Connect after disabling the capability.");
             const usable = await fetchMcpConnections(ctx, "usable");
             ctx.assert(usable.length === 0, `Usable MCP connections were still visible after turning the capability off: ${JSON.stringify(usable)}`);
             ctx.output("mcp-connections-off-again", JSON.stringify({ admin, orgView, usable }, null, 2));
@@ -795,7 +795,7 @@ async function completeDesktopCloudOnboardingIfNeeded(ctx) {
     await ctx.waitFor("window.location.hash.includes('/workspace/')", { timeoutMs: 60_000, label: "workspace open after folder selection" });
   }
   await ctx.eval(`(() => {
-    const button = [...document.querySelectorAll('button')].find((candidate) => (candidate.textContent ?? '').trim() === 'Continue without OpenWork Models');
+    const button = [...document.querySelectorAll('button')].find((candidate) => (candidate.textContent ?? '').trim() === 'Continue without RenWork Models');
     button?.click();
     return true;
   })()`);
@@ -890,7 +890,7 @@ async function waitForDesktopConnectOrgConnection(ctx, name) {
     await ctx.control("extensions.refresh-marketplace").catch(() => {});
     await sleep(2_000);
   }
-  ctx.assert(false, `${name} org MCP connection did not render in OpenWork Connect.`);
+  ctx.assert(false, `${name} org MCP connection did not render in RenWork Connect.`);
 }
 
 async function waitForDesktopConnectOrgConnectionGone(ctx, name) {
@@ -900,5 +900,5 @@ async function waitForDesktopConnectOrgConnectionGone(ctx, name) {
     await ctx.control("extensions.refresh-marketplace").catch(() => {});
     await sleep(1_000);
   }
-  ctx.assert(false, `${name} org MCP connection did not disappear from OpenWork Connect.`);
+  ctx.assert(false, `${name} org MCP connection did not disappear from RenWork Connect.`);
 }

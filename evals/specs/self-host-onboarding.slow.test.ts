@@ -44,7 +44,7 @@ const title = missingRequirements.length > 0
 
 const OWNER_EMAIL = "morgan.owner@selfhost.test";
 const MEMBER_EMAIL = "riley.member@selfhost.test";
-const PASSWORD = "OpenWorkEval123!";
+const PASSWORD = "RenWorkEval123!";
 const ORGANIZATION_NAME = "Bluefin Robotics";
 const ORGANIZATION_SLUG = "bluefin";
 const MODEL_ID = "selfhost-proof-model";
@@ -224,11 +224,11 @@ test.skipIf(missingRequirements.length > 0 || daytonaPlacement || !mysqlOpen)(ti
   const landingText = await evalIn(browser, "document.body.innerText");
   const landingShot = await screenshot(browser);
   expect(landingText).toEqual(expect.any(String));
-  expect(landingText).toContain("Start using OpenWork");
+  expect(landingText).toContain("Start using RenWork");
   expect(landingText).toContain("Enter your email and we'll send you to the right sign-in step.");
   {
     const seen = await validate(landingShot, [
-      "The self-hosted account landing says Start using OpenWork",
+      "The self-hosted account landing says Start using RenWork",
       "An email entry action is visible",
       "No error or crash message is visible",
     ]);

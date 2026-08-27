@@ -349,7 +349,7 @@ const actionCreateAutomationSchema = z.object({
   if (!validPair) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Action-based Automations are created by Web and run in OpenWork Cloud.",
+      message: "Action-based Automations are created by Web and run in RenWork Cloud.",
       path: ["executionTarget"],
     })
   }

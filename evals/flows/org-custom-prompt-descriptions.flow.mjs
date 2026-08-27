@@ -171,7 +171,7 @@ async function ensureDesktopSession(ctx) {
 async function dismissDesktopOverlays(ctx) {
   await ctx.eval(`(() => {
     const continueButton = Array.from(document.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('Continue without OpenWork Models')
+      button.textContent?.includes('Continue without RenWork Models')
     );
     if (continueButton) {
       continueButton.click();

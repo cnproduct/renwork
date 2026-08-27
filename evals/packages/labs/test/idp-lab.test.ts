@@ -62,9 +62,9 @@ test("claim builder supports present, absent, and unexpected group claim shapes"
   const oddConfig = normalizeMockIdpConfig({ knobs: { groupClaims: "unexpected-shape" } });
   const odd = buildOidcClaims({ issuer: oddConfig.issuer, clientId: oddConfig.clientId, subject, knobs: oddConfig.knobs });
 
-  assert.deepEqual(present.groups, ["Engineering", "OpenWork Lab"]);
+  assert.deepEqual(present.groups, ["Engineering", "RenWork Lab"]);
   assert.equal("groups" in absent, false);
-  assert.deepEqual(odd.groups, { primary: "Engineering", all: ["Engineering", "OpenWork Lab"] });
+  assert.deepEqual(odd.groups, { primary: "Engineering", all: ["Engineering", "RenWork Lab"] });
 });
 
 test("email mismatch and guest-user knobs shape SSO subjects", () => {

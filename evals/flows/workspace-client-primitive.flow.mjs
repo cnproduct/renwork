@@ -29,12 +29,12 @@ async function waitForControl(ctx, label = "control API") {
 async function maybeSkipOnboardingPrompts(ctx) {
   const dismissedModels = await ctx.eval(`(() => {
     const dialog = Array.from(document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"], [data-radix-dialog-content]'))
-      .find((item) => (item.textContent || "").includes("OpenWork Models"));
+      .find((item) => (item.textContent || "").includes("RenWork Models"));
     if (!dialog) return false;
     const button = Array.from(dialog.querySelectorAll("button"))
       .find((item) => {
         const label = (item.textContent || "").trim();
-        return label.includes("Continue without OpenWork Models") || label === "Close" || item.getAttribute("aria-label") === "Close";
+        return label.includes("Continue without RenWork Models") || label === "Close" || item.getAttribute("aria-label") === "Close";
       });
     if (!button) return false;
     button.click();
@@ -42,8 +42,8 @@ async function maybeSkipOnboardingPrompts(ctx) {
   })()`);
   if (dismissedModels) {
     await ctx.waitFor(
-      `!Array.from(document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"], [data-radix-dialog-content]')).some((item) => (item.textContent || "").includes("OpenWork Models"))`,
-      { timeoutMs: 10_000, label: "OpenWork Models modal dismissed" },
+      `!Array.from(document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"], [data-radix-dialog-content]')).some((item) => (item.textContent || "").includes("RenWork Models"))`,
+      { timeoutMs: 10_000, label: "RenWork Models modal dismissed" },
     );
   }
   const choosingModel = await ctx.hasText("Skip and use the free model");

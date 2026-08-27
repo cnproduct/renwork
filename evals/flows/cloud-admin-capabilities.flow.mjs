@@ -27,7 +27,7 @@ function runFocusedTest(name) {
 
 export default {
   id: FLOW_ID,
-  title: "Platform admins use Den admin tools through the existing OpenWork Cloud connection",
+  title: "Platform admins use Den admin tools through the existing RenWork Cloud connection",
   kind: "internal",
   requiresApp: false,
   steps: [
@@ -81,8 +81,8 @@ export default {
           assert: async () => {
             const constants = await readFile(join(ROOT, "apps/app/src/app/constants.ts"), "utf8");
             const store = await readFile(join(ROOT, "apps/app/src/react-app/domains/connections/store.ts"), "utf8");
-            witness(ctx, constants.includes('serverName: "openwork-cloud"'), "OpenWork Cloud remains in the desktop catalog");
-            witness(ctx, !constants.includes('serverName: "openwork-admin"'), "The separate OpenWork Admin catalog entry is absent");
+            witness(ctx, constants.includes('serverName: "openwork-cloud"'), "RenWork Cloud remains in the desktop catalog");
+            witness(ctx, !constants.includes('serverName: "openwork-admin"'), "The separate RenWork Admin catalog entry is absent");
             witness(ctx, !store.includes('entry.serverName === "openwork-admin"'), "Desktop token injection no longer special-cases a local admin connection");
             ctx.output("Desktop connection catalog", "openwork-cloud: present\nopenwork-admin: absent\nadmin token special-case: absent");
           },

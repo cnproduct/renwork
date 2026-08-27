@@ -227,7 +227,7 @@ async function buildClientBundle(reactSource: string): Promise<string> {
       }
     };
     const app = new App(
-      { name: "OpenWork Generated Artifact", version: "1.0.0" },
+      { name: "RenWork Generated Artifact", version: "1.0.0" },
       {},
       { autoResize: true, strict: true },
     );

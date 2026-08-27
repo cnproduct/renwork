@@ -8,7 +8,7 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 
 export default {
   id: FLOW_ID,
-  title: "Settings labels distinguish legacy local extensions from OpenWork Connect",
+  title: "Settings labels distinguish legacy local extensions from RenWork Connect",
   kind: "user-facing",
   steps: [
     {
@@ -37,14 +37,14 @@ export default {
       },
     },
     {
-      name: "OpenWork Connect is the final sidebar item",
+      name: "RenWork Connect is the final sidebar item",
       run: async (ctx) => {
-        await ctx.prove("OpenWork Connect stays last in Cloud settings even when Memory is enabled", {
+        await ctx.prove("RenWork Connect stays last in Cloud settings even when Memory is enabled", {
           voiceover: vo[1],
-          claim: "The Cloud settings group shows OpenWork Connect with the beta badge after Memory, and OpenWork Connect is the final item in the full settings sidebar.",
+          claim: "The Cloud settings group shows RenWork Connect with the beta badge after Memory, and RenWork Connect is the final item in the full settings sidebar.",
           action: async () => {
             await waitForSettingsShell(ctx);
-            await ctx.clickText("OpenWork Connect", { selector: "button", timeoutMs: 30_000 });
+            await ctx.clickText("RenWork Connect", { selector: "button", timeoutMs: 30_000 });
             await ctx.waitFor("location.hash.includes('/settings/connect')", { timeoutMs: 30_000, label: "connect settings route" });
           },
           assert: async () => {
@@ -53,23 +53,23 @@ export default {
             const cloud = findGroup(nav, "Cloud");
             const cloudLabels = cloud.items.map((item) => item.label);
             const memoryIndex = cloudLabels.indexOf("Memory");
-            const connectIndex = cloudLabels.indexOf("OpenWork Connect");
+            const connectIndex = cloudLabels.indexOf("RenWork Connect");
             const allLabels = nav.groups.flatMap((group) => group.items.map((item) => item.label));
-            const connect = cloud.items.find((item) => item.label === "OpenWork Connect");
+            const connect = cloud.items.find((item) => item.label === "RenWork Connect");
 
             ctx.assert(memoryIndex !== -1, `Memory tab was not visible after enabling the feature flag: ${JSON.stringify(cloudLabels)}.`);
-            ctx.assert(connectIndex !== -1, `OpenWork Connect tab was missing: ${JSON.stringify(cloudLabels)}.`);
-            ctx.assert(memoryIndex < connectIndex, `Memory was not before OpenWork Connect: ${JSON.stringify(cloudLabels)}.`);
-            ctx.assert(cloudLabels[cloudLabels.length - 1] === "OpenWork Connect", `OpenWork Connect was not last in Cloud: ${JSON.stringify(cloudLabels)}.`);
-            ctx.assert(allLabels[allLabels.length - 1] === "OpenWork Connect", `OpenWork Connect was not last in the sidebar: ${JSON.stringify(allLabels)}.`);
+            ctx.assert(connectIndex !== -1, `RenWork Connect tab was missing: ${JSON.stringify(cloudLabels)}.`);
+            ctx.assert(memoryIndex < connectIndex, `Memory was not before RenWork Connect: ${JSON.stringify(cloudLabels)}.`);
+            ctx.assert(cloudLabels[cloudLabels.length - 1] === "RenWork Connect", `RenWork Connect was not last in Cloud: ${JSON.stringify(cloudLabels)}.`);
+            ctx.assert(allLabels[allLabels.length - 1] === "RenWork Connect", `RenWork Connect was not last in the sidebar: ${JSON.stringify(allLabels)}.`);
             ctx.assert(
               Boolean(connect?.badges.some((badge) => badge.toLowerCase() === "beta")),
-              `OpenWork Connect was missing the beta badge: ${JSON.stringify(connect)}.`,
+              `RenWork Connect was missing the beta badge: ${JSON.stringify(connect)}.`,
             );
           },
           screenshot: {
             name: "settings-sidebar-openwork-connect-last",
-            requireText: ["Cloud", "Memory", "OpenWork Connect", "BETA"],
+            requireText: ["Cloud", "Memory", "RenWork Connect", "BETA"],
             rejectText: ["Something went wrong"],
             hashIncludes: "/settings/connect",
           },

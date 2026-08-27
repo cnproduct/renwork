@@ -15,12 +15,12 @@ const vo = await loadVoiceoverParagraphs("den-sidebar-simplified");
 const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace(/\/+$/, "");
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? "").trim().replace(/\/+$/, "");
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const MEMBER_EMAIL = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test";
-const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
+const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
 
 const TOP_LEVEL = ["Dashboard", "Your Connections", "Extensions", "Models", "Members", "Analytics", "Settings"];
-const RETIRED_TOP_LEVEL = ["MCP Connections", "Integrations", "OpenWork Models", "LLM Providers", "Desktop Policies", "API Keys", "SCIM", "SSO", "Billing", "Org Settings"];
+const RETIRED_TOP_LEVEL = ["MCP Connections", "Integrations", "RenWork Models", "LLM Providers", "Desktop Policies", "API Keys", "SCIM", "SSO", "Billing", "Org Settings"];
 const NAV_TEXT = "(document.querySelector('nav')?.innerText ?? '')";
 
 function sleep(ms) {
@@ -265,7 +265,7 @@ export default {
     {
       name: "Frame 4",
       run: async (ctx) => {
-        await ctx.prove("Models holds OpenWork Models and LLM Providers side by side", {
+        await ctx.prove("Models holds RenWork Models and LLM Providers side by side", {
           voiceover: vo[3],
           action: async () => {
             await clickNav(ctx, "Models");
@@ -273,13 +273,13 @@ export default {
           assert: async () => {
             await ctx.waitFor("location.pathname.includes('/inference')", { timeoutMs: 15_000, label: "models route" });
             const children = await navChildLabels(ctx);
-            ctx.assert(children.some((label) => label.startsWith("OpenWork Models")), `Models children missing OpenWork Models: ${JSON.stringify(children)}`);
+            ctx.assert(children.some((label) => label.startsWith("RenWork Models")), `Models children missing RenWork Models: ${JSON.stringify(children)}`);
             ctx.assert(children.some((label) => label.startsWith("LLM Providers")), `Models children missing LLM Providers: ${JSON.stringify(children)}`);
           },
           screenshot: {
             name: "models-group",
-            claim: "The Models group shows OpenWork Models and LLM Providers as siblings.",
-            requireText: ["Models", "OpenWork Models", "LLM Providers"],
+            claim: "The Models group shows RenWork Models and LLM Providers as siblings.",
+            requireText: ["Models", "RenWork Models", "LLM Providers"],
             rejectText: ["Something went wrong"],
           },
         });

@@ -5,7 +5,7 @@ const FLOW_ID = "admin-desktop-skill-grants";
 const DEN_API_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_DEN_API_URL);
 const DEN_WEB_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_DEN_WEB_URL);
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const WORKSPACE_PATH = process.env.OPENWORK_EVAL_WORKSPACE_PATH?.trim() || "/tmp/openwork-admin-desktop-skill-grants";
 const RUN_TAG = Date.now();
 const APPROVED_TITLE = `Admin Access Approved Skill ${RUN_TAG}`;
@@ -69,11 +69,11 @@ export default {
               );
             }
             await ctx.expectText(ADMIN_EMAIL);
-            await ctx.expectText("OpenWork Cloud");
+            await ctx.expectText("RenWork Cloud");
           },
           screenshot: {
             name: "admin-den-management-context",
-            requireText: ["OpenWork Cloud", ADMIN_EMAIL, "Connected"],
+            requireText: ["RenWork Cloud", ADMIN_EMAIL, "Connected"],
             rejectText: ["Something went wrong"],
           },
         });

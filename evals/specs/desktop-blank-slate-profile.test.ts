@@ -15,20 +15,20 @@ test("any desktop build can launch with an isolated blank-slate profile", async 
   };
   const originalNormalEnv = { ...normalEnv };
   const normalProfile = prepareBlankSlateProfile({ argv: [], env: normalEnv });
-  const normal = resolveBlankSlateLaunch({ appName: "OpenWork Enterprise", profile: normalProfile });
-  expect(normal).toEqual({ enabled: false, appName: "OpenWork Enterprise", userDataPath: null });
+  const normal = resolveBlankSlateLaunch({ appName: "RenWork Enterprise", profile: normalProfile });
+  expect(normal).toEqual({ enabled: false, appName: "RenWork Enterprise", userDataPath: null });
   expect(normalEnv).toEqual(originalNormalEnv);
 
   const firstEnv: NodeJS.ProcessEnv = { OPENWORK_DESKTOP_DISTRIBUTION: "enterprise" };
   const secondEnv: NodeJS.ProcessEnv = {};
   const firstProfile = prepareBlankSlateProfile({ argv: ["--blank-slate"], env: firstEnv });
   const secondProfile = prepareBlankSlateProfile({ argv: ["--blank-slate"], env: secondEnv });
-  const first = resolveBlankSlateLaunch({ appName: "OpenWork Enterprise", profile: firstProfile });
-  const second = resolveBlankSlateLaunch({ appName: "OpenWork Enterprise", profile: secondProfile });
+  const first = resolveBlankSlateLaunch({ appName: "RenWork Enterprise", profile: firstProfile });
+  const second = resolveBlankSlateLaunch({ appName: "RenWork Enterprise", profile: secondProfile });
 
   try {
     expect(first.enabled).toBe(true);
-    expect(first.appName).toBe("OpenWork Enterprise - Test profile");
+    expect(first.appName).toBe("RenWork Enterprise - Test profile");
     expect(first.rootPath).not.toBe(second.rootPath);
     expect(first.userDataPath).not.toContain("com.differentai.openwork");
 
@@ -43,17 +43,17 @@ test("any desktop build can launch with an isolated blank-slate profile", async 
 
     const packageFlavorPreserved = firstEnv.OPENWORK_DESKTOP_DISTRIBUTION === "enterprise"
       && !("OPENWORK_DEV_MODE" in firstEnv)
-      && first.appName.startsWith("OpenWork Enterprise");
+      && first.appName.startsWith("RenWork Enterprise");
     expect(packageFlavorPreserved).toBe(true);
 
     const normalLaunchUnchanged = normal.userDataPath === null
-      && normal.appName === "OpenWork Enterprise"
+      && normal.appName === "RenWork Enterprise"
       && normalEnv.OPENWORK_DESKTOP_BOOTSTRAP_PATH === originalNormalEnv.OPENWORK_DESKTOP_BOOTSTRAP_PATH;
     expect(normalLaunchUnchanged).toBe(true);
 
     evidence.fact(
       "Blank-slate launches cannot read or overwrite the installed profile",
-      "Every Electron, OpenWork, OpenCode, home, XDG, and Windows mutable path is below one unique per-launch temporary root.",
+      "Every Electron, RenWork, OpenCode, home, XDG, and Windows mutable path is below one unique per-launch temporary root.",
       allPathOverridesIsolated && first.rootPath !== second.rootPath,
     );
     evidence.fact(

@@ -310,14 +310,14 @@ export function externalConnectionErrorHint(
   }
   if (externalMcpAuthErrorCode(error, message)) {
     const destination = credentialMode === "per_member"
-      ? "OpenWork Cloud -> Your Connections"
-      : "the OpenWork Cloud dashboard -> Connections"
-    return `The stored credential for "${connectionName}" is invalid or expired. Reconnect "${connectionName}" from ${destination}, then search again. OpenWork Cloud itself is still connected. ${LIVE_PROBE_HINT}`
+      ? "RenWork Cloud -> Your Connections"
+      : "the RenWork Cloud dashboard -> Connections"
+    return `The stored credential for "${connectionName}" is invalid or expired. Reconnect "${connectionName}" from ${destination}, then search again. RenWork Cloud itself is still connected. ${LIVE_PROBE_HINT}`
   }
   if (PROVIDER_ADMIN_ACTION_PATTERN.test(message)) {
-    return `The provider's server rejected the request for "${connectionName}": ${message}. A provider admin must fix it in the provider's own admin console, then search again. OpenWork Cloud itself is still connected. ${LIVE_PROBE_HINT}`
+    return `The provider's server rejected the request for "${connectionName}": ${message}. A provider admin must fix it in the provider's own admin console, then search again. RenWork Cloud itself is still connected. ${LIVE_PROBE_HINT}`
   }
-  return `The downstream provider for "${connectionName}" returned an error: ${message}. Ask an org admin to inspect "${connectionName}" in the OpenWork Cloud dashboard -> Connections, then search again. OpenWork Cloud itself is still connected. ${LIVE_PROBE_HINT}`
+  return `The downstream provider for "${connectionName}" returned an error: ${message}. Ask an org admin to inspect "${connectionName}" in the RenWork Cloud dashboard -> Connections, then search again. RenWork Cloud itself is still connected. ${LIVE_PROBE_HINT}`
 }
 
 function diagnosticConnectionAction(input: {
@@ -653,7 +653,7 @@ async function probeExternalMcpConnection(input: {
         score,
         summary: `[${connection.name}] OAuth provider settings changed and require administrator review.`,
         status: "error",
-        hint: `Ask an org admin to open OpenWork Cloud -> Connectors, review the live OAuth issuer for "${connection.name}", and reconnect if requested.`,
+        hint: `Ask an org admin to open RenWork Cloud -> Connectors, review the live OAuth issuer for "${connection.name}", and reconnect if requested.`,
         connectionStatus: buildExternalConnectionStatus({
           connection,
           state: "reauth_required",
@@ -684,7 +684,7 @@ async function probeExternalMcpConnection(input: {
           score,
           summary: `[${connection.name}] Available to you, but you haven't connected your ${connection.name} account yet.`,
           status: "needs_connection",
-          hint: `Ask the user to open OpenWork Cloud -> Your Connections and click Connect on "${connection.name}", then search again.`,
+          hint: `Ask the user to open RenWork Cloud -> Your Connections and click Connect on "${connection.name}", then search again.`,
           connectionStatus: buildExternalConnectionStatus({ connection, state: "needs_connection", errorCode: "not_connected", message }),
         }))
       }
@@ -700,7 +700,7 @@ async function probeExternalMcpConnection(input: {
         score,
         summary: `[${connection.name}] Available to your organization, but an admin hasn't connected it yet.`,
         status: "needs_connection",
-        hint: `Ask an org admin to open the OpenWork Cloud dashboard -> Connections and connect "${connection.name}", then search again.`,
+        hint: `Ask an org admin to open the RenWork Cloud dashboard -> Connections and connect "${connection.name}", then search again.`,
         connectionStatus: buildExternalConnectionStatus({ connection, state: "needs_connection", errorCode: "not_connected", message }),
       }))
     }
@@ -961,7 +961,7 @@ function advisorySchemaGuidance(
   return {
     advisory: true,
     providerCallAttempted: true,
-    message: "OpenWork forwarded the call to the provider. These local schema checks are guidance only; use the provider result as the source of truth.",
+    message: "RenWork forwarded the call to the provider. These local schema checks are guidance only; use the provider result as the source of truth.",
     warnings,
   }
 }
@@ -1069,7 +1069,7 @@ export async function executeExternalCapability(input: {
       return {
         ok: false,
         error: "needs_connection",
-        message: `You haven't connected your ${connection.name} account yet. Open OpenWork Cloud -> Your Connections and click Connect on "${connection.name}".`,
+        message: `You haven't connected your ${connection.name} account yet. Open RenWork Cloud -> Your Connections and click Connect on "${connection.name}".`,
         connectionStatus: buildExternalConnectionStatus({
           connection,
           state: "needs_connection",
@@ -1112,7 +1112,7 @@ export async function executeExternalCapability(input: {
         ok: false,
         error: "policy_blocked",
         capability: buildExternalCapabilityName(connection.id, input.toolName),
-        message: `${input.toolName} is no longer advertised as strictly read-only, so OpenWork blocked the Remote MCP App call.`,
+        message: `${input.toolName} is no longer advertised as strictly read-only, so RenWork blocked the Remote MCP App call.`,
         sameArgumentsRetryable: false,
         retry: { action: "search_capabilities", searchRequired: true },
       }
@@ -1125,7 +1125,7 @@ export async function executeExternalCapability(input: {
         ok: false,
         error: "policy_blocked",
         capability: buildExternalCapabilityName(connection.id, input.toolName),
-        message: `${input.toolName} now advertises a different input schema, so OpenWork blocked the Remote MCP App call until its cached revision is refreshed.`,
+        message: `${input.toolName} now advertises a different input schema, so RenWork blocked the Remote MCP App call until its cached revision is refreshed.`,
         sameArgumentsRetryable: false,
         retry: { action: "search_capabilities", searchRequired: true },
       }
@@ -1134,7 +1134,7 @@ export async function executeExternalCapability(input: {
     if (input.schemaDigest && input.schemaDigest !== schemaDigest) {
       schemaWarnings.push({
         code: "capability_schema_changed",
-        message: "The provider advertised a different capability schema after discovery, but OpenWork still forwarded the call.",
+        message: "The provider advertised a different capability schema after discovery, but RenWork still forwarded the call.",
         searchedSchemaDigest: input.schemaDigest,
         currentSchemaDigest: schemaDigest,
         suggestedAction: "If the provider call failed, call search_capabilities again and retry with the latest argumentsSchema. Do not retry solely because of this warning when the provider call succeeded.",
@@ -1158,7 +1158,7 @@ export async function executeExternalCapability(input: {
     if (!validation.ok && validation.error === "invalid_arguments") {
       schemaWarnings.push({
         code: "arguments_schema_mismatch",
-        message: "The arguments do not match the provider's advertised argumentsSchema, but OpenWork still forwarded the call because the provider may accept them.",
+        message: "The arguments do not match the provider's advertised argumentsSchema, but RenWork still forwarded the call because the provider may accept them.",
         issues: validation.issues,
         suggestedAction: "If the provider call failed, correct the listed issues and retry with changed arguments. Do not retry solely because of this warning when the provider call succeeded.",
       })

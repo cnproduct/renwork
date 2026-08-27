@@ -73,7 +73,7 @@ const title = missingRequirements.length > 0
   ? `org connector two members skipped — needs: ${missingRequirements.join(", ")}`
   : "two members each connect their own account to one org connector and call its tools";
 
-const password = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const password = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const aEmail = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test";
 const bEmail = process.env.OPENWORK_EVAL_MEMBER_B_EMAIL?.trim() || "riley.demo@acme.test";
 const modelId = process.env.OPENWORK_EVAL_MODEL?.trim() || "";
@@ -256,7 +256,7 @@ test(title, async ({ evidence, place }) => {
   {
     const shot = await screenshot(appB);
     const seen = await validate(shot, [
-      "An OpenWork session surface is visible with a task that used the connected organization tool",
+      "A RenWork session surface is visible with a task that used the connected organization tool",
       "No 'Something went wrong' crash message is visible",
     ]);
     expect(seen.ok, seen.why).toBe(true);

@@ -259,7 +259,7 @@ async function createWorkspaceFromWelcome(ctx: FlowContext, workspacePath: strin
 
     const clicked = await clickVisibleButton(ctx, [
       "Continue to workspace",
-      "Continue without OpenWork Models",
+      "Continue without RenWork Models",
       "Skip and use the free model",
       "Continue",
       "Skip",
@@ -344,7 +344,7 @@ async function completeDesktopCloudOnboardingIfNeeded(ctx: FlowContext): Promise
     const clicked = await clickVisibleButton(ctx, [
       "Continue with organization",
       "Continue to workspace",
-      "Continue without OpenWork Models",
+      "Continue without RenWork Models",
       "Skip and use the free model",
       "Continue",
       "Skip",
@@ -463,7 +463,7 @@ async function waitForAssistantActivity(ctx: FlowContext, timeoutMs: number): Pr
   await ctx.waitFor(`(() => {
     const normalize = (value) => (value ?? '').replace(/\s+/g, ' ').trim();
     const assistant = [...document.querySelectorAll('[data-message-role="assistant"], .markdown-content')]
-      .some((element) => normalize(element.textContent).length > 0 && normalize(element.textContent) !== 'OpenWork');
+      .some((element) => normalize(element.textContent).length > 0 && normalize(element.textContent) !== 'RenWork');
     const active = [...document.querySelectorAll('[aria-label]')]
       .some((element) => ['Thinking', 'Responding', 'Waiting', 'Session streaming', 'Session active'].includes(element.getAttribute('aria-label') ?? ''));
     return assistant || active;

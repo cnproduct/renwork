@@ -316,7 +316,7 @@ export function createConnectionsStore(options: {
     });
 
     if (hasOpenworkTarget && !canTryOpenworkServer) {
-      throw new Error("OpenWork server cannot read MCP config for this workspace.");
+      throw new Error("RenWork server cannot read MCP config for this workspace.");
     }
 
     if (!canTryOpenworkServer || !openworkClient || !openworkWorkspaceId) return null;
@@ -373,7 +373,7 @@ export function createConnectionsStore(options: {
       if (!fallbackOnError) {
         throw error instanceof Error
           ? error
-          : new Error("Computer Use helper app is unavailable. Restart OpenWork or reinstall the app.");
+          : new Error("Computer Use helper app is unavailable. Restart RenWork or reinstall the app.");
       }
       // Fall through to the published package command in the manifest/catalog.
     }
@@ -487,7 +487,7 @@ export function createConnectionsStore(options: {
     if (isRemoteWorkspace) {
       mutateState((current) => ({
         ...current,
-        mcpStatus: "OpenWork server unavailable. MCP config is read-only.",
+        mcpStatus: "RenWork server unavailable. MCP config is read-only.",
         mcpServers: [],
         mcpStatuses: {},
       }));
@@ -614,7 +614,7 @@ export function createConnectionsStore(options: {
       await resolveWritableOpenworkTarget();
 
     if (isRemoteWorkspace && !canUseOpenworkServer) {
-      const error = "OpenWork server unavailable. MCP config is read-only.";
+      const error = "RenWork server unavailable. MCP config is read-only.";
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
         reason: "openwork-server-unavailable",
@@ -623,7 +623,7 @@ export function createConnectionsStore(options: {
     }
 
     if (hasOpenworkTarget && !canUseOpenworkServer) {
-      const error = "OpenWork server MCP config is read-only.";
+      const error = "RenWork server MCP config is read-only.";
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
         reason: "openwork-server-read-only",
@@ -686,14 +686,14 @@ export function createConnectionsStore(options: {
 
       if (entry.managedBy === "openwork-connect") {
         if (slug !== CLOUD_MCP_SERVER_NAME) {
-          throw new Error("OpenWork Connect MCP metadata is invalid.");
+          throw new Error("RenWork Connect MCP metadata is invalid.");
         }
         if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-          throw new Error("OpenWork server is required to repair agent access to connected services.");
+          throw new Error("RenWork server is required to repair agent access to connected services.");
         }
         const context = await resolveCloudMcpOperationContext(entry.url);
         if (!context) {
-          throw new Error("Sign in to OpenWork Cloud and choose an organization first.");
+          throw new Error("Sign in to RenWork Cloud and choose an organization first.");
         }
         clearCloudMcpDisabledIntent(context);
         const result = await runOpenworkCloudMcpReconciler({
@@ -731,13 +731,13 @@ export function createConnectionsStore(options: {
 
       if (entry.managedOAuth) {
         if (isRemoteWorkspace || !isDesktopRuntime()) {
-          throw new Error("OpenWork-managed MCP OAuth is currently available for local desktop workspaces only.");
+          throw new Error("RenWork-managed MCP OAuth is currently available for local desktop workspaces only.");
         }
         if (entryType !== "remote" || !entry.url) {
-          throw new Error("OpenWork-managed OAuth requires a remote MCP URL.");
+          throw new Error("RenWork-managed OAuth requires a remote MCP URL.");
         }
         if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-          throw new Error("The local OpenWork server is required for managed MCP sign-in.");
+          throw new Error("The local RenWork server is required for managed MCP sign-in.");
         }
         const result = await openworkClient.addManagedMcp(openworkWorkspaceId, {
           name: slug,
@@ -795,7 +795,7 @@ export function createConnectionsStore(options: {
 
       if (entryType === "remote") {
         if (!resolvedUrl) {
-          throw new Error("Missing MCP URL. Is the OpenWork desktop app running?");
+          throw new Error("Missing MCP URL. Is the RenWork desktop app running?");
         }
         mcpEntryConfig["url"] = resolvedUrl;
         if (resolvedHeaders) {
@@ -1039,7 +1039,7 @@ export function createConnectionsStore(options: {
       try {
         const { openworkClient, openworkWorkspaceId, canUseOpenworkServer } = await resolveWritableOpenworkTarget();
         if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-          throw new Error("The local OpenWork server is required for managed MCP sign-in.");
+          throw new Error("The local RenWork server is required for managed MCP sign-in.");
         }
         mutateState((current) => ({ ...current, mcpStatus: null, mcpConnectingName: entry.name }));
         const result = await openworkClient.connectManagedMcp(openworkWorkspaceId, entry.name);
@@ -1089,12 +1089,12 @@ export function createConnectionsStore(options: {
       await resolveWritableOpenworkTarget();
 
     if (isRemoteWorkspace && !canUseOpenworkServer) {
-      setStateField("mcpStatus", "OpenWork server unavailable. MCP auth is read-only.");
+      setStateField("mcpStatus", "RenWork server unavailable. MCP auth is read-only.");
       return;
     }
 
     if (hasOpenworkTarget && !canUseOpenworkServer) {
-      setStateField("mcpStatus", "OpenWork server MCP auth is read-only.");
+      setStateField("mcpStatus", "RenWork server MCP auth is read-only.");
       return;
     }
 
@@ -1163,7 +1163,7 @@ export function createConnectionsStore(options: {
         await openworkClient.removeMcp(openworkWorkspaceId, name);
       } else {
         if (hasOpenworkTarget) {
-          setStateField("mcpStatus", "OpenWork server MCP config is read-only.");
+          setStateField("mcpStatus", "RenWork server MCP config is read-only.");
           return;
         }
         const projectDir = options.projectDir().trim();

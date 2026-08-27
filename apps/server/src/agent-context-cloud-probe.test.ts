@@ -115,7 +115,7 @@ afterEach(() => {
   delete process.env.OPENWORK_AGENT_DIAGNOSTICS_TRUSTED_ORIGINS;
 });
 
-describe("OpenWork Cloud catalog probe", () => {
+describe("RenWork Cloud catalog probe", () => {
   test("performs initialize, initialized notification, bounded tools/list, and session cleanup with allowlisted headers", async () => {
     let calls = 0;
     let deleteCalls = 0;

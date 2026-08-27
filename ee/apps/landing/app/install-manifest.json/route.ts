@@ -113,7 +113,7 @@ function buildManifest(release: GithubRelease) {
         _pref: pref,
         type,
         url: asset.browser_download_url,
-        ...(type === "dmg" ? { appName: "OpenWork.app" } : {}),
+        ...(type === "dmg" ? { appName: "RenWork.app" } : {}),
       };
     }
   }

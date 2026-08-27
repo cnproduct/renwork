@@ -12,11 +12,11 @@ const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? "http://localhost:
 const DEN_WEB_HOST = new URL(DEN_WEB_URL).host;
 const DEN_DESKTOP_POLICIES_URL = new URL("/dashboard/desktop-policies", DEN_WEB_URL).toString();
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
 const MEMBER_EMAIL = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test";
-const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
+const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
 const DEFAULT_POLICY_NAME = "Default desktop policy";
-const CLOUD_CONNECTION_NAMES = ["OpenWork Cloud Control", "OpenWork Cloud"];
+const CLOUD_CONNECTION_NAMES = ["RenWork Cloud Control", "RenWork Cloud"];
 const WRITE_SCOPES = ["mcp:read", "mcp:write"];
 
 type ParsedFetch = {
@@ -67,7 +67,7 @@ const state: FlowState = {
   organizationId: "",
   defaultPolicyId: "",
   defaultPolicyName: DEFAULT_POLICY_NAME,
-  cloudConnectionName: "OpenWork Cloud",
+  cloudConnectionName: "RenWork Cloud",
   searchMatches: [],
   searchMatchNames: [],
   patchResultText: "",
@@ -360,7 +360,7 @@ async function resolveCloudConnectionName(ctx: FlowContext): Promise<string> {
   for (const name of CLOUD_CONNECTION_NAMES) {
     if (await ctx.hasText(name)) return name;
   }
-  throw new Error("OpenWork Cloud connection name was not visible after revealing hidden extensions.");
+  throw new Error("RenWork Cloud connection name was not visible after revealing hidden extensions.");
 }
 
 async function ensureDesktopSignedIn(ctx: FlowContext): Promise<void> {
@@ -559,7 +559,7 @@ async function ensureMemberMcpToken(ctx: FlowContext): Promise<MintedMcpToken> {
 
 export default defineFlow({
   id: "desktop-policies-cloud-mcp",
-  title: "Desktop Policies are discoverable and enforce permissions through OpenWork Cloud MCP",
+  title: "Desktop Policies are discoverable and enforce permissions through RenWork Cloud MCP",
   kind: "user-facing",
   requiredEnv: ["OPENWORK_EVAL_DEN_API_URL", "OPENWORK_EVAL_DEN_TOKEN"],
   steps: [
@@ -588,7 +588,7 @@ export default defineFlow({
     {
       name: "Frame 1",
       run: async (ctx) => {
-        await ctx.prove("Capability search returns the desktop policy tools through OpenWork Cloud MCP", {
+        await ctx.prove("Capability search returns the desktop policy tools through RenWork Cloud MCP", {
           voiceover: vo[0],
           action: async () => {
             await ctx.navigateHash("/settings/extensions/mcp");

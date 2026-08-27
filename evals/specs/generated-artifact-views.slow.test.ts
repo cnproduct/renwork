@@ -397,7 +397,7 @@ test("the agent MCP exposes the custom Artifact view authoring lifecycle", { tim
 
   evidence.fact(
     "Custom Artifact view provider is available only on the Code Mode agent MCP",
-    "The saved Script appeared immediately as a metadata-only never-run Library Program inside its OpenWork Connect Plugin. The live provider then found and selected it through the constant-size catalog, built two custom React revisions, preserved both immutable resources, injected retained Artifact data through structuredContent, activated the second revision, rolled back to the first, retired the custom view back to the generic renderer without deleting either resource, and cleared the persisted selection.",
+    "The saved Script appeared immediately as a metadata-only never-run Library Program inside its RenWork Connect Plugin. The live provider then found and selected it through the constant-size catalog, built two custom React revisions, preserved both immutable resources, injected retained Artifact data through structuredContent, activated the second revision, rolled back to the first, retired the custom view back to the generic renderer without deleting either resource, and cleared the persisted selection.",
     true,
   )
   evidence.fact(

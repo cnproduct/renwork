@@ -108,7 +108,7 @@ function resourcePresentationMeta(value: unknown): { csp: McpAppCsp; prefersBord
   if (Object.keys(permissions).length > 0 || ui.domain !== undefined) {
     throw new McpAppHostError(
       "unsupported_resource_permissions",
-      "This OpenWork host slice does not grant device permissions or dedicated sandbox origins.",
+      "This RenWork host slice does not grant device permissions or dedicated sandbox origins.",
     );
   }
   return {
@@ -351,7 +351,7 @@ export async function callMcpAppTool(input: {
     if ((tool.annotations?.readOnlyHint !== true || tool.annotations?.destructiveHint === true) && !input.approved) {
       throw new McpAppHostError(
         "tool_requires_approval",
-        "This MCP App tool requires user approval before OpenWork can call it.",
+        "This MCP App tool requires user approval before RenWork can call it.",
       );
     }
     const result = await client.callTool({ name: input.name, arguments: input.arguments ?? {} });

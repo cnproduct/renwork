@@ -24,7 +24,7 @@ function routeUrl(ctx, path) {
 async function navigateToDownload(ctx) {
   await ctx.eval(`location.href = ${JSON.stringify(routeUrl(ctx, "/download"))}; true`);
   await ctx.waitFor(
-    `Boolean(document.querySelector(${JSON.stringify(CARD_SELECTOR)})) && document.body.innerText.includes("Download OpenWork")`,
+    `Boolean(document.querySelector(${JSON.stringify(CARD_SELECTOR)})) && document.body.innerText.includes("Download RenWork")`,
     { timeoutMs: 30_000, label: "/download light download card" },
   );
 }
@@ -41,7 +41,7 @@ function recordAssertion(ctx, assertion, passed, actual) {
 
 export default {
   id: FLOW_ID,
-  title: "Landing /download serves the light Download OpenWork card",
+  title: "Landing /download serves the light Download RenWork card",
   kind: "user-facing",
   spec: "evals/README.md",
   preserveTheme: true,
@@ -50,7 +50,7 @@ export default {
     {
       name: "/download renders the light-mode card",
       run: async (ctx) => {
-        await ctx.prove("/download renders the light-mode Download OpenWork card", {
+        await ctx.prove("/download renders the light-mode Download RenWork card", {
           voiceover: vo[0],
           action: async () => {
             await navigateToDownload(ctx);
@@ -63,7 +63,7 @@ export default {
               const channels = match ? [Number(match[1]), Number(match[2]), Number(match[3])] : [];
               return {
                 cardExists: Boolean(card),
-                bodyHasTitle: document.body.innerText.includes("Download OpenWork"),
+                bodyHasTitle: document.body.innerText.includes("Download RenWork"),
                 backgroundColor,
                 channels,
                 isLight: channels.length === 3 && channels.every((channel) => channel >= 240),
@@ -71,7 +71,7 @@ export default {
             })()`);
             recordAssertion(
               ctx,
-              "The Download OpenWork card exists on /download",
+              "The Download RenWork card exists on /download",
               actual.cardExists === true && actual.bodyHasTitle === true,
               actual,
             );
@@ -84,7 +84,7 @@ export default {
           },
           screenshot: {
             name: "download-light-card",
-            requireText: ["Download OpenWork"],
+            requireText: ["Download RenWork"],
           },
         });
       },

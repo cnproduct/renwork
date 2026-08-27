@@ -154,7 +154,7 @@ export async function ensureDesktopLocalOpenworkConnection(
     // of failing on the first empty answer.
     const info = await waitForReadyLocalOpenworkServerInfo();
     if (!isReadyLocalOpenworkServerInfo(info) || !info.baseUrl) {
-      throw new Error("OpenWork server did not become ready after activation.");
+      throw new Error("RenWork server did not become ready after activation.");
     }
 
     writeOpenworkServerSettings({

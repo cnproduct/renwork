@@ -32,7 +32,7 @@ const LEGACY_ORCHESTRATOR_DIR_NAME = ["openwork", "orchestrator"].join("-");
 const LEGACY_ORCHESTRATOR_AUTH_FILE = `${LEGACY_ORCHESTRATOR_DIR_NAME}-auth.json`;
 const paths = buildWindowsPaths(WIN_PROFILE);
 const WIN_PROFILE_USER = winBasename(WIN_PROFILE);
-const OUT_OF_BAND_BOOT_TASK_NAME = `OpenWorkNukeRetry-${RUN_TAG}`;
+const OUT_OF_BAND_BOOT_TASK_NAME = `RenWorkNukeRetry-${RUN_TAG}`;
 const OUT_OF_BAND_BOOT_CMD_PATH = winJoin(paths.windowsTemp, `openwork-nuke-retry-${RUN_TAG}.cmd`);
 let currentCdpUrl = CDP_URL;
 let currentInternalPort = INITIAL_INTERNAL_CDP_PORT;
@@ -267,10 +267,10 @@ do {
     $name=$null
     $alive=$false
     try { $proc=Get-Process -Id $pidValue -ErrorAction Stop; $name=$proc.ProcessName; $alive=$true } catch {}
-    $isOpenWork=$alive -and $name -eq 'OpenWork'
-    $last += [pscustomobject][ordered]@{ port=[int]$conn.LocalPort; localAddress=[string]$conn.LocalAddress; pid=$pidValue; processName=$name; processAlive=$alive; isOpenWork=$isOpenWork }
+    $isRenWork=$alive -and $name -eq 'RenWork'
+    $last += [pscustomobject][ordered]@{ port=[int]$conn.LocalPort; localAddress=[string]$conn.LocalAddress; pid=$pidValue; processName=$name; processAlive=$alive; isRenWork=$isRenWork }
   }
-  $match=@($last | Where-Object { $_.isOpenWork -and $_.port -ne $exclude } | Sort-Object port | Select-Object -First 1)
+  $match=@($last | Where-Object { $_.isRenWork -and $_.port -ne $exclude } | Sort-Object port | Select-Object -First 1)
   if($match.Count -gt 0){
     $result=[ordered]@{ found=$true; port=[int]$match[0].port; pid=[int]$match[0].pid; processName=[string]$match[0].processName; excludedPort=$exclude; candidates=$last }
     Write-Output ($result | ConvertTo-Json -Depth 6 -Compress)
@@ -335,7 +335,7 @@ function discoverAndRelayCdp(ctx, label, previousPort) {
   });
   ctx.output(`${label} cdp-discovery-json`, JSON.stringify(discovery, null, 2));
   if (discovery?.found !== true) {
-    throw new Error(`${label}: no active OpenWork.exe CDP listener found on ${CDP_DISCOVERY_PORTS.join(", ")} excluding ${previousPort}.`);
+    throw new Error(`${label}: no active RenWork.exe CDP listener found on ${CDP_DISCOVERY_PORTS.join(", ")} excluding ${previousPort}.`);
   }
   const internalPort = safeTcpPort(discovery.port);
   if (!internalPort) throw new Error(`${label}: invalid discovered CDP port ${JSON.stringify(discovery.port)}.`);
@@ -378,7 +378,7 @@ async function attachApp(ctx, timeoutMs = 90_000) {
   throw new Error(`Timed out after ${timeoutMs}ms attaching to ${currentCdpUrl}: ${lastError?.message ?? "unknown error"}`);
 }
 
-async function waitForAppShell(ctx, label = "OpenWork renderer") {
+async function waitForAppShell(ctx, label = "RenWork renderer") {
   await ctx.waitFor("document.readyState === 'complete'", { timeoutMs: 60_000, label: `${label} document complete` });
   await ctx.waitFor("Boolean(window.__OPENWORK_ELECTRON__)", { timeoutMs: 60_000, label: `${label} Electron bridge` });
 }
@@ -854,7 +854,7 @@ if(-not $stopped -or $existsAfter){ exit 46 }
 
 function discoverMainOpenWorkExecutableScript() {
   return `
-$processes=@(Get-CimInstance Win32_Process -Filter "Name = 'OpenWork.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.ExecutablePath -and ($null -eq $_.CommandLine -or $_.CommandLine -notmatch '--type=') } | Sort-Object ProcessId)
+$processes=@(Get-CimInstance Win32_Process -Filter "Name = 'RenWork.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.ExecutablePath -and ($null -eq $_.CommandLine -or $_.CommandLine -notmatch '--type=') } | Sort-Object ProcessId)
 $selected=$processes | Select-Object -First 1
 $candidates=@($processes | ForEach-Object { [ordered]@{ processId=[int]$_.ProcessId; executablePath=[string]$_.ExecutablePath; commandLine=[string]$_.CommandLine } })
 $exePath=$null
@@ -874,18 +874,18 @@ $cmdPath=${psQuote(OUT_OF_BAND_BOOT_CMD_PATH)}
 $runUser=${psQuote(WIN_PROFILE_USER)}
 $stopped=@();$remaining=@();$createOut=@();$runOut=@();$createExit=$null;$runExit=$null;$cmdText='';$errorText=''
 if(-not $exe -or -not (Test-Path -LiteralPath $exe)){
-  $result=[ordered]@{ executablePath=$exe; executableExists=$false; error='OpenWork executable path missing before out-of-band boot' }
+  $result=[ordered]@{ executablePath=$exe; executableExists=$false; error='RenWork executable path missing before out-of-band boot' }
   Write-Output ($result | ConvertTo-Json -Depth 4 -Compress)
   exit 53
 }
 try {
-  foreach($proc in @(Get-Process -Name OpenWork -ErrorAction SilentlyContinue)){
+  foreach($proc in @(Get-Process -Name RenWork -ErrorAction SilentlyContinue)){
     $entry=[ordered]@{ pid=$proc.Id; stopped=$false; error='' }
     try { Stop-Process -Id $proc.Id -Force -ErrorAction Stop; $entry.stopped=$true } catch { $entry.error=$_.Exception.Message }
     $stopped += [pscustomobject]$entry
   }
   Start-Sleep -Milliseconds 1000
-  foreach($proc in @(Get-Process -Name OpenWork -ErrorAction SilentlyContinue)){
+  foreach($proc in @(Get-Process -Name RenWork -ErrorAction SilentlyContinue)){
     $remaining += [pscustomobject][ordered]@{ pid=$proc.Id }
   }
   $cmdText=('@echo off','set OPENWORK_ELECTRON_REMOTE_DEBUG_PORT=','start "" "' + $exe + '"') -join [Environment]::NewLine
@@ -1047,7 +1047,7 @@ export default {
     {
       name: "Frame 1 — A tester's machine is full of real state",
       run: async (ctx) => {
-        await ctx.prove("The Windows tester profile has seeded OpenWork, OpenCode, bootstrap, orchestrator, Chromium, and renderer state", {
+        await ctx.prove("The Windows tester profile has seeded RenWork, OpenCode, bootstrap, orchestrator, Chromium, and renderer state", {
           voiceover: vo[0],
           action: async () => {
             await attachApp(ctx);
@@ -1105,7 +1105,7 @@ export default {
             await ctx.expectText("Danger zone");
             await ctx.expectText("Nuke & fresh start");
             await ctx.expectText("Nuke local state and start fresh?");
-            await ctx.expectText("This removes local OpenWork, OpenCode, browser, token, runtime, cache, and legacy runtime state on this device.");
+            await ctx.expectText("This removes local RenWork, OpenCode, browser, token, runtime, cache, and legacy runtime state on this device.");
             await ctx.expectText("WILL DELETE");
             await ctx.expectText("WILL SURVIVE");
             await ctx.expectText("Also delete bootstrap / organization server");
@@ -1117,7 +1117,7 @@ export default {
             name: "debug-danger-zone-nuke-dialog",
             requireText: [
               "Nuke local state and start fresh?",
-              "This removes local OpenWork, OpenCode, browser, token, runtime, cache, and legacy runtime state on this device.",
+              "This removes local RenWork, OpenCode, browser, token, runtime, cache, and legacy runtime state on this device.",
               "WILL DELETE",
               "WILL SURVIVE",
               "Also delete bootstrap / organization server",
@@ -1232,8 +1232,8 @@ export default {
             witness(ctx, hasPendingEvidence, "The pending retry file or newest receipt names the locked runtime.sqlite/config root", { pendingPaths, receiptPaths, pendingExists: afterLocked?.pendingExists });
             witness(ctx, state.killResult?.foundBefore === true && state.killResult?.stopped === true && state.killResult?.existsAfter === false, "Stop-Process terminated the detached PowerShell locker", state.killResult);
             witness(ctx, state.unlockProbe?.unlocked === true, "The runtime.sqlite exclusive handle was released before the retry boot", state.unlockProbe);
-            witness(ctx, state.executableProbe?.found === true && String(state.executableProbe?.executablePath ?? "").length > 0, "Harness discovered the main OpenWork.exe path before stopping the app", state.executableProbe);
-            witness(ctx, state.outOfBandBoot?.createExit === 0 && state.outOfBandBoot?.runExit === 0, "Interactive scheduled task launched a fresh OpenWork process without inherited remote debug port env", state.outOfBandBoot);
+            witness(ctx, state.executableProbe?.found === true && String(state.executableProbe?.executablePath ?? "").length > 0, "Harness discovered the main RenWork.exe path before stopping the app", state.executableProbe);
+            witness(ctx, state.outOfBandBoot?.createExit === 0 && state.outOfBandBoot?.runExit === 0, "Interactive scheduled task launched a fresh RenWork process without inherited remote debug port env", state.outOfBandBoot);
             witness(ctx, afterBoot?.pendingExists === false, "After the retry boot, .nuke-pending.json is gone", afterBoot);
             witness(ctx, afterBoot?.lockedExists === false, "After the retry boot, the formerly locked runtime.sqlite is gone", afterBoot);
           },

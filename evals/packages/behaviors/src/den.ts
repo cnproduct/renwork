@@ -284,9 +284,9 @@ export async function provisionOrg(den: DenRef, input: ProvisionOrgInput): Promi
   }
 
   const unique = `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 12)}`;
-  const password = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
+  const password = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
   const email = `openwork-eval-admin-${unique}@example.test`;
-  const name = `OpenWork Eval ${unique}`;
+  const name = `RenWork Eval ${unique}`;
   const signUp = await denFetch(den, "/api/auth/sign-up/email", {
     method: "POST",
     body: JSON.stringify({ email, name, password }),
@@ -313,7 +313,7 @@ export async function provisionOrg(den: DenRef, input: ProvisionOrgInput): Promi
     const member = await ensureMemberSession(den, admin, {
       email: memberEmail,
       password,
-      name: "OpenWork Eval Member",
+      name: "RenWork Eval Member",
       markVerifiedCmd: process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim(),
     });
     const orgs = await denFetch(den, "/v1/me/orgs", { headers: auth(member) });

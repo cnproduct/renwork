@@ -307,7 +307,7 @@ test.skipIf(!appSpecsEnabled || !apiUrl)(managedTitle, async () => {
   };
   const admin = await signIn(den, {
     email: process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test",
-    password: process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!",
+    password: process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!",
   });
   const state: ManagedModelState = {
     orgId: "",

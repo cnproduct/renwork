@@ -1,7 +1,7 @@
 import { ensureSessionWorkspace } from "./lib/session-workspace.mjs";
 
 const LONG_TITLE =
-  "Review the OpenWork desktop sidebar title reveal across a deliberately overflowing conversation name";
+  "Review the RenWork desktop sidebar title reveal across a deliberately overflowing conversation name";
 
 const READ_TITLE = `(() => {
   const title = [...document.querySelectorAll('[data-session-title-overflowing="true"] > [data-session-title-text]')]
@@ -94,7 +94,7 @@ export default {
           },
           screenshot: {
             name: "overflowing-title-mid-animation",
-            requireText: ["Review the OpenWork desktop sidebar"],
+            requireText: ["Review the RenWork desktop sidebar"],
           },
         });
       },

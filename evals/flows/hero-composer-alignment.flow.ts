@@ -102,7 +102,7 @@ export default defineFlow({
     {
       name: "New-task screen is visible on launch",
       run: async (ctx) => {
-        await ctx.prove("OpenWork lands on the empty new-task composer screen", {
+        await ctx.prove("RenWork lands on the empty new-task composer screen", {
           voiceover: vo[0],
           action: async () => {
             await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "control API" });

@@ -9,7 +9,7 @@ const requirements: NeedsSpec = {
 const missingRequirements = unmetNeeds(requirements, process.env);
 const title = missingRequirements.length > 0
   ? `Local managed MCP OAuth skipped — needs: ${missingRequirements.join(", ")}`
-  : "OpenWork owns local MCP OAuth while OpenCode consumes the gateway tools";
+  : "RenWork owns local MCP OAuth while OpenCode consumes the gateway tools";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -77,7 +77,7 @@ test(title, async ({ evidence, place }) => {
   expect(connected.body).toMatchObject({ status: "connected", hasCredential: true, enabled: true });
 
   evidence.fact(
-    "The desktop's embedded OpenWork server owns the provider OAuth callback and credential",
+    "The desktop's embedded RenWork server owns the provider OAuth callback and credential",
     `Created ${name}; the provider redirected to the local callback; public state reported connected with a credential present.`,
     connected.body.status === "connected" && connected.body.hasCredential === true,
   );

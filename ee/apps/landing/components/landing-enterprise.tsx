@@ -67,7 +67,7 @@ const deployments = [
   {
     tag: "ALPHA",
     tagClass: "text-[var(--lp-blue)]",
-    title: "OpenWork Web",
+    title: "RenWork Web",
     body: "The same workspace in the browser, with your org’s models, skills, and policies.",
     icon: Globe
   },
@@ -83,7 +83,7 @@ const deployments = [
     tag: "OPEN SOURCE",
     tagClass: "text-[var(--lp-muted)]",
     title: "Self-hosted",
-    body: "Run the full OpenWork stack in your VPC, under your operational controls.",
+    body: "Run the full RenWork stack in your VPC, under your operational controls.",
     icon: Server
   }
 ];
@@ -124,7 +124,7 @@ export function LandingEnterprise(props: Props) {
 
         <main className="mx-auto w-full max-w-[1176px] px-6 pb-8">
           <section className="pt-16 md:pt-[88px]">
-            <div className="text-[15px] text-[var(--lp-muted)]">OpenWork Enterprise</div>
+            <div className="text-[15px] text-[var(--lp-muted)]">RenWork Enterprise</div>
             <h1 className="mt-5 max-w-[760px] text-[46px] font-light leading-[51px] tracking-[-0.02em] md:text-[56px] md:leading-[61px]">
               <motion.span
                 className="block"
@@ -144,7 +144,7 @@ export function LandingEnterprise(props: Props) {
               </motion.span>
             </h1>
             <p className="mt-7 max-w-[760px] text-[18px] leading-[28px] text-[var(--lp-body)] md:text-[20px] md:leading-[30px]">
-              Your models, your infrastructure, your rules. OpenWork is open source end to end — adopt it for your whole company without handing your AI stack to a vendor.
+              Your models, your infrastructure, your rules. RenWork is open source end to end — adopt it for your whole company without handing your AI stack to a vendor.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
@@ -246,9 +246,9 @@ export function LandingEnterprise(props: Props) {
             <div className="max-w-[760px]">
               <div className="text-[13px] font-medium text-[var(--lp-blue)]">Central management</div>
               <h2 className="mt-3 text-[26px] font-semibold leading-[34px] tracking-[-0.015em]">Deploy skills, MCPs, and models to every seat from one place.</h2>
-              <p className="mt-3 text-[15px] leading-6 text-[var(--lp-body)]">Central management lives in OpenWork Cloud — and runs on your private instance too.</p>
+              <p className="mt-3 text-[15px] leading-6 text-[var(--lp-body)]">Central management lives in RenWork Cloud — and runs on your private instance too.</p>
             </div>
-            <a href="/cloud" className="lp-pill-primary shrink-0">Explore OpenWork Cloud →</a>
+            <a href="/cloud" className="lp-pill-primary shrink-0">Explore RenWork Cloud →</a>
           </section>
 
           <section className="mt-[120px]">

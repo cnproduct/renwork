@@ -647,7 +647,7 @@ async function clearStaleSurfaces(rootDir: string, log: (message: string) => voi
       await writeBootstrap(paths.bootstrapPath, opts.bootstrap);
       const [port, cdpPort] = await allocateFreePorts(2);
       if (port === undefined || cdpPort === undefined) throw new Error("Could not allocate Electron Vite/CDP ports.");
-      const appName = `OpenWork Eval ${name}`;
+      const appName = `RenWork Eval ${name}`;
       const appIdentifier = `com.differentai.openwork.eval.${sanitizeSlug(name)}`;
       const isolationEnv = electronSurfaceEnv(paths, { appName, appIdentifier, port, cdpPort });
       const env: NodeJS.ProcessEnv = { ...process.env, ...isolationEnv, ...opts.env };

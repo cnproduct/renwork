@@ -179,7 +179,7 @@ export default {
       },
     },
     {
-      name: "Sign in to OpenWork Cloud via desktop handoff",
+      name: "Sign in to RenWork Cloud via desktop handoff",
       run: async (ctx) => {
         const signedIn = await ctx.eval(
           "Boolean((localStorage.getItem('openwork.den.authToken') ?? '').trim())",

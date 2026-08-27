@@ -466,7 +466,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
           <InvitationHeading title="This invite can't be opened." copy={previewError ?? "This invite could not be loaded."} />
           <ActionGroup>
             <button type="button" className={primaryActionClassName} onClick={handleNotNow}>
-              Back to OpenWork Cloud
+              Back to RenWork Cloud
             </button>
           </ActionGroup>
         </OnboardingCard>
@@ -501,7 +501,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
           />
           <ActionGroup>
             <button type="button" className={primaryActionClassName} onClick={handleNotNow}>
-              Back to OpenWork Cloud
+              Back to RenWork Cloud
             </button>
           </ActionGroup>
         </OnboardingCard>
@@ -564,7 +564,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
           <InvitationDetails preview={preview} account={account} roleLabel={roleLabel} />
           <ActionGroup>
             <button type="button" className={primaryActionClassName} onClick={handleNotNow}>
-              Back to OpenWork Cloud
+              Back to RenWork Cloud
             </button>
           </ActionGroup>
         </OnboardingCard>
@@ -583,7 +583,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
           <InvitationDetails preview={preview} account={account} roleLabel={roleLabel} />
           <ActionGroup>
             <button type="button" className={primaryActionClassName} onClick={handleNotNow}>
-              Back to OpenWork Cloud
+              Back to RenWork Cloud
             </button>
           </ActionGroup>
         </OnboardingCard>

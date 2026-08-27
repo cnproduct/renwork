@@ -86,12 +86,12 @@ export function MarketplaceOnboardingScreen({
       <header className="mx-auto max-w-xl text-center">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Get started</p>
         <h1 className="mt-3 text-[30px] font-semibold leading-[1.15] tracking-[-0.04em] text-gray-950 sm:text-[34px]">
-          {requiredDone ? `${orgName} is ready.` : `Get the OpenWork app`}
+          {requiredDone ? `${orgName} is ready.` : `Get the RenWork app`}
         </h1>
         <p className="mx-auto mt-3 max-w-lg text-[15px] leading-6 text-gray-500">
           {requiredDone
             ? "The desktop app is installed and models are available. Jump into your dashboard whenever you're ready."
-            : "OpenWork runs on the desktop app. Install it, sign in, and this workspace syncs automatically."}
+            : "RenWork runs on the desktop app. Install it, sign in, and this workspace syncs automatically."}
         </p>
       </header>
 
@@ -118,12 +118,12 @@ export function MarketplaceOnboardingScreen({
       <section className="mt-12 grid gap-5">
         <DenSectionHeader
           align="center"
-          title="Then bring your own keys, or use OpenWork Models"
+          title="Then bring your own keys, or use RenWork Models"
           description={
             modelsLoading
-              ? "Checking whether OpenWork Models are already on…"
+              ? "Checking whether RenWork Models are already on…"
               : modelsEnabled
-                ? "OpenWork Models are on for this workspace."
+                ? "RenWork Models are on for this workspace."
                 : "Pick one now, change it whenever — both live under Models."
           }
           action={
@@ -138,7 +138,7 @@ export function MarketplaceOnboardingScreen({
           <DenChoiceCard
             testId="onboarding-choice-openwork-models"
             icon={<OpenWorkMark />}
-            title="OpenWork Models"
+            title="RenWork Models"
             subtitle="No API keys, nothing to configure"
             badge={<DenBadge tone="info">Recommended</DenBadge>}
             description="Hand-picked frontier and open models, billed per member. Turn it on and everyone has models in the app immediately."

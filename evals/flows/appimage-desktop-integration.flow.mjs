@@ -84,7 +84,7 @@ async function closeApp(ctx) {
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw new Error("OpenWork did not close before the AppImage relaunch.");
+  throw new Error("RenWork did not close before the AppImage relaunch.");
 }
 
 function launchAppImage(appImagePath) {
@@ -172,7 +172,7 @@ export default {
             record(ctx, validation.status === 0, "The installed launcher passes the freedesktop validator", validation.stderr.trim());
 
             const handler = run("xdg-mime", ["query", "default", MIME]);
-            record(ctx, handler.status === 0 && handler.stdout.trim() === DESKTOP_ID, "The OpenWork launcher is the selected openwork:// handler", handler.stdout.trim());
+            record(ctx, handler.status === 0 && handler.stdout.trim() === DESKTOP_ID, "The RenWork launcher is the selected openwork:// handler", handler.stdout.trim());
 
             const iconPath = path.join(DATA_HOME, "icons", "hicolor", "512x512", "apps", "com.differentai.openwork.png");
             const icon = run("file", [iconPath]);
@@ -222,7 +222,7 @@ export default {
             const managerPath = path.join(DATA_HOME, "applications", MANAGER_ID);
             const managerEntry = `[Desktop Entry]
 Type=Application
-Name=OpenWork
+Name=RenWork
 Exec="${MOVED_APPIMAGE}" %U
 TryExec=${MOVED_APPIMAGE}
 Icon=com.differentai.openwork
@@ -242,10 +242,10 @@ MimeType=${MIME};
           },
           assert: async () => {
             const status = await desktopStatus(ctx);
-            record(ctx, status.state === "managed_externally", "OpenWork recognizes the manager-owned launcher", status.state);
+            record(ctx, status.state === "managed_externally", "RenWork recognizes the manager-owned launcher", status.state);
             record(ctx, status.desktopEntryPath.endsWith(MANAGER_ID), "Status identifies the manager launcher", status.desktopEntryPath);
             const ownEntryExists = await access(path.join(DATA_HOME, "applications", DESKTOP_ID)).then(() => true, () => false);
-            record(ctx, !ownEntryExists, "OpenWork does not create a duplicate launcher");
+            record(ctx, !ownEntryExists, "RenWork does not create a duplicate launcher");
             const managerEntry = await readFile(path.join(DATA_HOME, "applications", MANAGER_ID), "utf8");
             record(ctx, managerEntry.includes(`Exec="${MOVED_APPIMAGE}" %U`), "The manager-owned launcher remains unchanged");
           },

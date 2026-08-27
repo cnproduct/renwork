@@ -61,7 +61,7 @@ function zipEntries() {
 
 export default {
   id: FLOW_ID,
-  title: "Organization downloads reuse the standard signed installer and configure OpenWork on first launch",
+  title: "Organization downloads reuse the standard signed installer and configure RenWork on first launch",
   kind: "user-facing",
   requiredEnv: [
     "OPENWORK_EVAL_DEN_WEB_URL",

@@ -32,7 +32,7 @@ test(title, async ({ evidence, place }) => {
   const invitee = {
     email: `maya+${runId}@openwork.test`,
     name: "Maya Chen",
-    password: "OpenWorkEval123!",
+    password: "RenWorkEval123!",
   };
 
   await using den = await server({
@@ -130,12 +130,12 @@ test(title, async ({ evidence, place }) => {
   expect(success.pathname).not.toBe("/install");
   expect(success.cta.startsWith("Download for")).toBe(true);
   expect(success.cta).not.toContain("Get the desktop app");
-  expect(success.openApp).toBe("Already have OpenWork? Open it.");
+  expect(success.openApp).toBe("Already have RenWork? Open it.");
   expect(success.connected).toBe(true);
   evidence.fact(
     "You're in offers Download for this computer instead of Get the desktop app",
     `pathname=${success.pathname}; cta=${success.cta}; openApp=${success.openApp}`,
-    success.pathname !== "/install" && success.cta.startsWith("Download for") && success.openApp === "Already have OpenWork? Open it.",
+    success.pathname !== "/install" && success.cta.startsWith("Download for") && success.openApp === "Already have RenWork? Open it.",
   );
 
   {
@@ -143,7 +143,7 @@ test(title, async ({ evidence, place }) => {
     const seen = await validate(shot, [
       "The heading says You're in",
       "The primary button starts with Download for",
-      "A secondary action says Already have OpenWork? Open it.",
+      "A secondary action says Already have RenWork? Open it.",
       "The page does not say Get the desktop app",
     ]);
     expect(seen.ok, seen.why).toBe(true);

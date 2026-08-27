@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const EMAIL_DOMAIN = "voice-eval.openwork.test";
-const PASSWORD = "OpenWorkVoiceEval123!";
+const PASSWORD = "RenWorkVoiceEval123!";
 const MOCK_INFERENCE_KEY = "ow_inf_voice_funnel";
 const DEFAULT_STRIPE_WEBHOOK_SECRET = "whsec_openwork_eval";
 const DEFAULT_STRIPE_PRICE_ID = "price_openwork_models_eval";
@@ -167,18 +167,18 @@ async function waitForNodeCondition(check, label, timeoutMs = 30_000) {
 
 export default {
   id: "openwork-models-voice-funnel",
-  title: "Sign up, pay for OpenWork Models, and start managed Voice Mode",
+  title: "Sign up, pay for RenWork Models, and start managed Voice Mode",
   spec: "evals/onboarding-welcome-flows.md#flow-28--openwork-models-path-explains-payment-before-value",
   requiredEnv: ["OPENWORK_EVAL_DEN_API_URL"],
   steps: [
     {
-      name: "Start mock OpenWork Models voice broker",
+      name: "Start mock RenWork Models voice broker",
       run: async (ctx) => {
         ctx.mockBroker = await startMockBroker();
         ctx.recordEvidence({
           type: "assertion",
           status: "passed",
-          assertion: "Managed voice broker fixture is listening for authenticated OpenWork Models session requests.",
+          assertion: "Managed voice broker fixture is listening for authenticated RenWork Models session requests.",
           actual: ctx.mockBroker.baseUrl,
         });
       },
@@ -224,7 +224,7 @@ export default {
       },
     },
     {
-      name: "Record paid OpenWork Models subscription",
+      name: "Record paid RenWork Models subscription",
       run: async (ctx) => {
         const secret = ctx.env.OPENWORK_EVAL_STRIPE_WEBHOOK_SECRET?.trim() || DEFAULT_STRIPE_WEBHOOK_SECRET;
         const priceId = ctx.env.OPENWORK_EVAL_STRIPE_INFERENCE_PRICE_ID?.trim() || DEFAULT_STRIPE_PRICE_ID;
@@ -243,14 +243,14 @@ export default {
 
         const billing = await denRequest(ctx, "/v1/billing", { token: ctx.den.token });
         ctx.assert(billing.response.ok, `Billing status failed: ${billing.response.status} ${billing.text.slice(0, 300)}`);
-        ctx.assert(billing.json?.billing?.stripe?.hasActiveSubscription === true, "Billing status did not show an active OpenWork Models subscription.");
-        ctx.recordEvidence({ type: "assertion", status: "passed", assertion: "The paid OpenWork Models subscription boundary is active for the new organization.", actual: billing.json.billing.stripe.subscription });
+        ctx.assert(billing.json?.billing?.stripe?.hasActiveSubscription === true, "Billing status did not show an active RenWork Models subscription.");
+        ctx.recordEvidence({ type: "assertion", status: "passed", assertion: "The paid RenWork Models subscription boundary is active for the new organization.", actual: billing.json.billing.stripe.subscription });
       },
     },
     {
       name: "Sign desktop app into the paid Den account",
       run: async (ctx) => {
-        await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "OpenWork control API" });
+        await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "RenWork control API" });
         await ctx.eval(`(() => {
           localStorage.setItem("openwork.den.baseUrl", ${JSON.stringify(apiBase(ctx))});
           localStorage.setItem("openwork.den.apiBaseUrl", ${JSON.stringify(apiBase(ctx))});
@@ -259,7 +259,7 @@ export default {
           window.location.reload();
           return true;
         })()`);
-        await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "OpenWork control API after auth reset" });
+        await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "RenWork control API after auth reset" });
 
         const handoff = await denRequest(ctx, "/v1/auth/desktop-handoff", {
           method: "POST",
@@ -324,7 +324,7 @@ export default {
           return true;
         })()`);
         await ctx.expectText("Sign out", { timeoutMs: 30_000 });
-        await ctx.screenshot("paid-den-account-signed-in", { claim: "Desktop is signed in to the newly paid OpenWork Models account.", requireText: ["Sign out"] });
+        await ctx.screenshot("paid-den-account-signed-in", { claim: "Desktop is signed in to the newly paid RenWork Models account.", requireText: ["Sign out"] });
       },
     },
     {
@@ -376,7 +376,7 @@ export default {
           const nameInput = document.querySelector('input[placeholder*="name" i], input[placeholder*="workspace" i]');
           if (nameInput) {
             const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
-            setter.call(nameInput, "OpenWork Models Voice Eval");
+            setter.call(nameInput, "RenWork Models Voice Eval");
             nameInput.dispatchEvent(new Event("input", { bubbles: true }));
             nameInput.dispatchEvent(new Event("change", { bubbles: true }));
           }
@@ -399,8 +399,8 @@ export default {
           return true;
         })()`);
 
-        await ctx.expectText("OpenWork Models", { timeoutMs: 30_000 });
-        await ctx.screenshot("workspace-created-via-ui", { claim: "Workspace was created through the Add workspace UI flow.", requireText: ["OpenWork Models"] });
+        await ctx.expectText("RenWork Models", { timeoutMs: 30_000 });
+        await ctx.screenshot("workspace-created-via-ui", { claim: "Workspace was created through the Add workspace UI flow.", requireText: ["RenWork Models"] });
       },
     },
     {
@@ -619,12 +619,12 @@ export default {
         }
 
         const request = await waitForNodeCondition(() => ctx.mockBroker.requests[0] ?? null, "managed voice broker request", 30_000);
-        ctx.assert(request.authorization === `Bearer ${MOCK_INFERENCE_KEY}`, "Voice Mode did not authenticate to the OpenWork Models broker with the paid inference key.");
+        ctx.assert(request.authorization === `Bearer ${MOCK_INFERENCE_KEY}`, "Voice Mode did not authenticate to the RenWork Models broker with the paid inference key.");
         ctx.assert(request.url === "/voice/realtime/session", "Voice Mode did not call the managed realtime session endpoint.");
         ctx.recordEvidence({
           type: "assertion",
           status: "passed",
-          assertion: "Voice Mode requested a managed OpenWork Models realtime session.",
+          assertion: "Voice Mode requested a managed RenWork Models realtime session.",
           actual: { method: request.method, url: request.url, authorization: "Bearer [redacted]" },
         });
 
@@ -632,7 +632,7 @@ export default {
         const bodyText = await ctx.eval("document.body.innerText");
         ctx.assert(
           !bodyText.includes("OpenAI API key missing"),
-          "Voice Mode showed a direct OpenAI API key missing error instead of using the managed OpenWork Models path.",
+          "Voice Mode showed a direct OpenAI API key missing error instead of using the managed RenWork Models path.",
         );
         ctx.recordEvidence({
           type: "assertion",
@@ -641,7 +641,7 @@ export default {
         });
 
         await ctx.screenshot("managed-voice-mode-started", {
-          claim: "Voice Mode started through the managed OpenWork Models session path via UI click.",
+          claim: "Voice Mode started through the managed RenWork Models session path via UI click.",
           requireText: ["Voice Mode"],
           rejectText: ["OpenAI API key missing"],
         });
@@ -695,7 +695,7 @@ export default {
         }
 
         await ctx.screenshot("voice-mode-active-with-transcript", {
-          claim: "Voice Mode is active through the managed OpenWork Models path, with timeline and connection state visible.",
+          claim: "Voice Mode is active through the managed RenWork Models path, with timeline and connection state visible.",
           requireText: ["Voice Mode"],
           rejectText: ["OpenAI API key missing"],
         });

@@ -45,7 +45,11 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
 }) {
-  const hasCustomMaxWidth = className && (className.includes("max-w-") || className.includes("w-") || className.includes("w-[") || className.includes("max-w-["));
+  const classNameText = typeof className === "string" ? className : "";
+  const hasCustomMaxWidth = classNameText.includes("max-w-")
+    || classNameText.includes("w-")
+    || classNameText.includes("w-[")
+    || classNameText.includes("max-w-[");
 
   return (
     <DialogPortal>

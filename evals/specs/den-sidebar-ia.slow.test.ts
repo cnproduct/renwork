@@ -142,7 +142,7 @@ test(title, async ({ evidence, place }) => {
   const adminHasExtensions = adminItems.some((item) => item === "Extensions" || item.startsWith("Extensions "));
   const adminHasYourConnections = adminItems.some((item) => item.includes("Your Connections"));
   const adminHasMyLibrary = adminItems.some((item) => item.includes("My Library"));
-  const adminHasOpenWorkWeb = adminItems.some((item) => item.includes("OpenWork Web"));
+  const adminHasOpenWorkWeb = adminItems.some((item) => item.includes("RenWork Web"));
 
   expect(adminSectionNames).toEqual(["work", "manage", "observability", "team"]);
   expect(adminHasMyLibrary).toBe(true);

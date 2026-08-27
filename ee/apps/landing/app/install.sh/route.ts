@@ -14,7 +14,7 @@
 export const dynamic = "force-static";
 
 const installScript = `#!/usr/bin/env sh
-# OpenWork bootstrap installer.
+# RenWork bootstrap installer.
 # Installs the \`openwork-bootstrap\` command into a user-writable bin dir.
 # No admin privileges, no npm, no npx.
 set -eu

@@ -43,7 +43,7 @@ async function navigateToDebugDiagnostics(ctx) {
     localStorage.setItem("openwork.developerMode", "1");
     return true;
   })()`);
-  await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "OpenWork control API" });
+  await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "RenWork control API" });
   const workspaceId = await ctx.eval(`(() => {
     const route = window.__openworkControl?.snapshot?.().route ?? location.hash;
     return (String(route).match(/\\/workspace\\/([^/]+)/) ?? [])[1]
@@ -61,7 +61,7 @@ async function navigateToDebugDiagnostics(ctx) {
 }
 
 async function navigateToConnect(ctx) {
-  await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "OpenWork control API" });
+  await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label: "RenWork control API" });
   const workspaceId = await ctx.eval(`(() => {
     const route = window.__openworkControl?.snapshot?.().route ?? location.hash;
     return (String(route).match(/\\/workspace\\/([^/]+)/) ?? [])[1]
@@ -265,7 +265,7 @@ export default {
               const mutating = ["POST", "PUT", "PATCH", "DELETE"].includes(entry.method);
               return mutating && /(refresh|reload|reconnect|\/opencode-config(?:\/|$)|\/config(?:\/|$)|\/mcp(?:\/|$)|\/connect\/state(?:\/|$))/i.test(entry.pathname);
             });
-            ctx.assert(exchange.forwarded === true, "The diagnostics request was not forwarded to the real OpenWork server.");
+            ctx.assert(exchange.forwarded === true, "The diagnostics request was not forwarded to the real RenWork server.");
             ctx.assert(exchange.responseStatus === 200, `The real diagnostics route returned ${exchange.responseStatus}.`);
             ctx.assert(
               Object.keys(request).sort().join(",") === "organizationConnections,organizationConnectionsProbe",
@@ -286,7 +286,7 @@ export default {
           },
           screenshot: {
             name: "agent-diagnostics-real-bounded-run",
-            claim: "Settings Debug displays the report returned by the real OpenWork diagnostics route.",
+            claim: "Settings Debug displays the report returned by the real RenWork diagnostics route.",
             requireText: ["Agent diagnostics report", "Diagnostics directly requests no configuration mutation"],
             rejectText: ["Agent diagnostics could not complete", "Something went wrong"],
             hashIncludes: "/settings/debug",
@@ -306,7 +306,7 @@ export default {
             const { report } = actualDiagnosticsExchange(await observerLog(ctx));
             const engineReadChecks = ENGINE_READ_CHECKS.map((id) => report.checks.find((check) => check.id === id));
             const effective = report.agent.evidenceSource === "effective-engine";
-            ctx.assert(report.agent.configuredOpenworkAgent.state === "present", "The reported OpenWork agent was absent or disabled.");
+            ctx.assert(report.agent.configuredOpenworkAgent.state === "present", "The reported RenWork agent was absent or disabled.");
             ctx.assert(report.agent.configuredOpenworkAgent.mode === "primary", `Unexpected agent mode: ${report.agent.configuredOpenworkAgent.mode}`);
             ctx.assert(
               Object.values(report.agent.configuredOpenworkAgent.prompt.markers).every(Boolean),
@@ -360,7 +360,7 @@ export default {
               };
             })()`);
             ctx.assert(
-              rendered.report.includes(effective ? "Effective OpenWork agent" : "Configured OpenWork agent"),
+              rendered.report.includes(effective ? "Effective RenWork agent" : "Configured RenWork agent"),
               "The report did not label the agent evidence scope.",
             );
             for (const marker of ["search_capabilities", "execute_capability", "Memory marker"]) {
@@ -381,7 +381,7 @@ export default {
           screenshot: {
             name: "agent-diagnostics-real-injection-intent",
             claim: "Agent markers, plugin labels, and the real MCP inventory state are visibly labeled as effective engine evidence or configured fallback intent.",
-            requireText: ["OpenWork agent", "search_capabilities", "execute_capability", "openwork-extensions-preview", "MCP inventory"],
+            requireText: ["RenWork agent", "search_capabilities", "execute_capability", "openwork-extensions-preview", "MCP inventory"],
             rejectText: ["Something went wrong"],
           },
         });
@@ -516,7 +516,7 @@ export default {
           screenshot: {
             name: "agent-diagnostics-real-action-and-copy",
             claim: "The real cloud check names an owner and recovery action, and the exact sanitized response is copyable.",
-            requireText: ["OpenWork Cloud tool catalog", "Owner", "Recommended action"],
+            requireText: ["RenWork Cloud tool catalog", "Owner", "Recommended action"],
             rejectText: ["Bearer ", "https://", "Error:"],
           },
         });

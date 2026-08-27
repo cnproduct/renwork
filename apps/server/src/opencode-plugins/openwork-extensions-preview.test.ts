@@ -217,7 +217,7 @@ function startFakeOpenWorkServer() {
   return { requests };
 }
 
-describe("OpenWorkExtensionsPreview MCP Apps result preservation", () => {
+describe("RenWorkExtensionsPreview MCP Apps result preservation", () => {
   test("keeps standard MCP UI result fields in completed tool metadata", async () => {
     const plugin = await OpenWorkExtensionsPreview();
     const output: Record<string, unknown> = {
@@ -286,7 +286,7 @@ describe("OpenWorkExtensionsPreview MCP Apps result preservation", () => {
   });
 });
 
-describe("OpenWorkExtensionsPreview session tools", () => {
+describe("RenWorkExtensionsPreview session tools", () => {
   test("plugin entry exposes only the factory export for the OpenCode loader", () => {
     expect(Object.keys(OpenWorkExtensionsPreviewEntry)).toEqual(["OpenWorkExtensionsPreview"]);
   });
@@ -459,7 +459,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
     expect(output.system.join("\n")).not.toContain(OPENWORK_CLOUD_SKILL_AUTHORING_INSTRUCTION);
     expect(output.system[0]).not.toContain("not ready");
     expect(output.system[0]).not.toContain("Repair and test");
-    expect(output.system[0]).not.toContain("Do not use OpenWork documentation tools");
+    expect(output.system[0]).not.toContain("Do not use RenWork documentation tools");
   });
 
   test("reads a transcript by session id without opening the UI", async () => {
@@ -487,7 +487,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
     ]);
   });
 
-  test("creates and starts multiple sessions through the OpenWork backend", async () => {
+  test("creates and starts multiple sessions through the RenWork backend", async () => {
     const fake = startFakeOpenWorkServer();
     const plugin = await OpenWorkExtensionsPreview({ directory: "/tmp/archive" });
 
@@ -549,7 +549,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
   });
 });
 
-describe("OpenWorkExtensionsPreview semantic tool surface", () => {
+describe("RenWorkExtensionsPreview semantic tool surface", () => {
   test("exposes only the three semantic tools", async () => {
     const plugin = await OpenWorkExtensionsPreview();
     const tools = Object.keys(plugin.tool).sort();

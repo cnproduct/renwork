@@ -47,7 +47,7 @@ const DIRECT_UPLOAD_BODY_MAX_BYTES = DIRECT_UPLOAD_MAX_BYTES + (256 * 1024)
 const DIRECT_UPLOAD_MAX_FILES = 10
 const GMAIL_REPLY_SUBJECT_RE = /^\s*(re|fwd?)\s*:/i
 
-const CONNECT_GOOGLE_ACCOUNT_MESSAGE = "Connect your Google account first: open Settings > Connect and use Connect your account on the Google Workspace row, or connect from the OpenWork Cloud dashboard."
+const CONNECT_GOOGLE_ACCOUNT_MESSAGE = "Connect your Google account first: open Settings > Connect and use Connect your account on the Google Workspace row, or connect from the RenWork Cloud dashboard."
 
 const createDraftBodySchema = z.object({
   to: z.string().trim().min(3).max(320).describe("Recipient email address."),
@@ -323,7 +323,7 @@ export function missingScope(account: ConnectedAccountRow, anyOf: string[]): boo
 }
 
 function missingPermissionMessage(label: string): string {
-  return `Your connected Google account is missing the ${label} permission. An admin can enable it on the Google Workspace connector in OpenWork Cloud -> Connectors; then reconnect your account in Settings -> Extensions.`
+  return `Your connected Google account is missing the ${label} permission. An admin can enable it on the Google Workspace connector in RenWork Cloud -> Connectors; then reconnect your account in Settings -> Extensions.`
 }
 
 async function googleWorkspaceToken(input: {
@@ -1228,7 +1228,7 @@ export function registerGoogleWorkspaceRoutes<T extends { Variables: OrgRouteVar
     describeRoute({
       tags: ["Capability Sources"],
       summary: "Share a Google Drive file with a person or the organization",
-      description: "Creates a Drive permission for one file using the calling member's Google Workspace account. To share with one person pass type=user plus emailAddress; to share with the entire organization pass type=domain plus the org's Google Workspace domain (e.g. openworklabs.com). Sharing files not created through OpenWork needs the Full Drive access feature enabled by an admin.",
+      description: "Creates a Drive permission for one file using the calling member's Google Workspace account. To share with one person pass type=user plus emailAddress; to share with the entire organization pass type=domain plus the org's Google Workspace domain (e.g. openworklabs.com). Sharing files not created through RenWork needs the Full Drive access feature enabled by an admin.",
       responses: {
         200: jsonResponse("Google Drive file shared.", shareDriveFileResponseSchema),
         400: jsonResponse("The share request was invalid.", invalidRequestSchema),

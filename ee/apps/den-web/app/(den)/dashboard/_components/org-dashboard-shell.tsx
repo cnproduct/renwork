@@ -109,7 +109,7 @@ function OpenWorkMark({ className = "h-9 w-auto" }: { className?: string }) {
       viewBox="0 0 834 649"
       fill="none"
       className={className}
-      aria-label="OpenWork"
+      aria-label="RenWork"
     >
       <path
         fill="#011627"
@@ -279,10 +279,10 @@ function getDashboardPageTitle(pathname: string, orgSlug: string | null) {
     return "Diagnostics";
   }
   if (pathname.startsWith(getInferenceRoute(orgSlug))) {
-    return "OpenWork Models";
+    return "RenWork Models";
   }
   if (pathname.startsWith(getWebRoute(orgSlug))) {
-    return "OpenWork Web";
+    return "RenWork Web";
   }
   if (pathname.startsWith(getLibraryRoute(orgSlug))) {
     return "My Library";
@@ -437,7 +437,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
     ...(showWeb
       ? [{
           href: activeOrg ? getWebRoute(activeOrg.slug) : "#",
-          label: "OpenWork Web",
+          label: "RenWork Web",
           icon: Globe,
           badge: "Alpha",
         }]
@@ -457,7 +457,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         badge: "Providers",
         children: [
           ...(showOpenWorkModels
-            ? [{ href: getInferenceRoute(activeOrg.slug), label: "OpenWork Models" }]
+            ? [{ href: getInferenceRoute(activeOrg.slug), label: "RenWork Models" }]
             : []),
           { href: getCustomLlmProvidersRoute(activeOrg.slug), label: "Bring your Own Keys" },
         ],
@@ -577,7 +577,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         aria-haspopup="dialog"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <OrgMark name={activeOrg?.name ?? "OpenWork"} />
+          <OrgMark name={activeOrg?.name ?? "RenWork"} />
           <div className="min-w-0">
             <p className="truncate text-[14px] font-medium text-gray-900">
               {activeOrg?.name ?? "Loading..."}
@@ -604,7 +604,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         >
           <div className="min-w-0 px-3 py-1.5">
             <p className="truncate text-[13px] font-medium text-gray-900">
-              {user?.email ?? "OpenWork user"}
+              {user?.email ?? "RenWork user"}
             </p>
           </div>
           

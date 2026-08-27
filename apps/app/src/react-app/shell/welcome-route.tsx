@@ -192,7 +192,7 @@ export function WelcomeRoute() {
           list = null;
         }
         if (!list) {
-          throw new Error("OpenWork server is unavailable. Start or reconnect the server before creating a workspace.");
+          throw new Error("RenWork server is unavailable. Start or reconnect the server before creating a workspace.");
         }
         const createdId =
           resolveWorkspaceListSelectedId(list) ||
@@ -313,7 +313,7 @@ export function WelcomeRoute() {
           }
         }
         if (!list) {
-          throw new Error("OpenWork server is unavailable. Start or reconnect the server before connecting a remote workspace.");
+          throw new Error("RenWork server is unavailable. Start or reconnect the server before connecting a remote workspace.");
         }
         const createdId =
           resolveWorkspaceListSelectedId(list) ||

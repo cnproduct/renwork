@@ -19,7 +19,7 @@ afterEach(async () => {
   await setDenBootstrapConfig({ baseUrl: DEFAULT_DEN_BASE_URL, requireSignin: false });
 });
 
-describe("OpenWork Models promo eligibility", () => {
+describe("RenWork Models promo eligibility", () => {
   test("allows promotions on the default Den URL after normalization", () => {
     expect(isOpenWorkModelsPromoEligibleForDenBaseUrl(`${HOSTED_DEFAULT_DEN_BASE_URL}/api/den/`)).toBe(true);
   });
@@ -33,7 +33,7 @@ describe("OpenWork Models promo eligibility", () => {
   });
 });
 
-describe("hasOpenWorkModelsAvailable", () => {
+describe("hasRenWorkModelsAvailable", () => {
   test("requires a connected openwork provider with at least one model", () => {
     expect(
       hasOpenWorkModelsAvailable({
@@ -50,7 +50,7 @@ describe("hasOpenWorkModelsAvailable", () => {
   });
 });
 
-describe("shouldShowOpenWorkModelsSyncing", () => {
+describe("shouldShowRenWorkModelsSyncing", () => {
   test("only reports a real pending workspace reload", () => {
     expect(shouldShowOpenWorkModelsSyncing({
       entitled: true,

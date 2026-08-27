@@ -171,7 +171,7 @@ export default {
     {
       name: "Brand identity prepared",
       run: async (ctx) => {
-        await ctx.prove("OpenWork fetches and prepares the selected organization's desktop identity", {
+        await ctx.prove("RenWork fetches and prepares the selected organization's desktop identity", {
           voiceover: vo[1],
           action: async () => {
             await ctx.clickText("Continue to workspace", { timeoutMs: 10_000 });
@@ -216,7 +216,7 @@ export default {
           },
           screenshot: {
             name: "application-update-downloaded",
-            requireText: ["Application update downloaded", "Restart OpenWork"],
+            requireText: ["Application update downloaded", "Restart RenWork"],
           },
         });
       },
@@ -230,13 +230,13 @@ export default {
             await ctx.clickText("Why restart?", { selector: "summary", timeoutMs: 10_000 });
           },
           assert: async () => {
-            await ctx.expectText("Restart OpenWork");
+            await ctx.expectText("Restart RenWork");
             await ctx.expectText("Continue without restarting");
             await ctx.expectText("refreshes the workspace name and icon");
           },
           screenshot: {
             name: "one-restart-choice",
-            requireText: ["Restart OpenWork", "Continue without restarting", "refreshes the workspace name and icon"],
+            requireText: ["Restart RenWork", "Continue without restarting", "refreshes the workspace name and icon"],
           },
         });
       },
@@ -247,7 +247,7 @@ export default {
         await ctx.prove("The coordinated restart resumes directly into the selected branded workspace", {
           voiceover: vo[4],
           action: async () => {
-            await ctx.clickText("Restart OpenWork", { timeoutMs: 10_000 });
+            await ctx.clickText("Restart RenWork", { timeoutMs: 10_000 });
             await ctx.waitFor("window.__openworkOnboardingInstallCalled === true", {
               timeoutMs: 10_000,
               label: "coordinated updater install",

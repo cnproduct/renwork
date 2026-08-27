@@ -44,7 +44,7 @@ const OLD_BLOCK_MESSAGE = "Attachments become available once the task starts.";
 // path writes into lives under the dev data dir, not $HOME.
 const DEV_PROFILE_DIR = "/home/daytona/.config/com.differentai.openwork.dev";
 const DEV_HOME = `${DEV_PROFILE_DIR}/openwork-dev-data/home`;
-const CHAT_WORKSPACE_PATH = `${DEV_HOME}/OpenWork Chat`;
+const CHAT_WORKSPACE_PATH = `${DEV_HOME}/RenWork Chat`;
 
 const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const execFileAsync = promisify(execFile);
@@ -164,7 +164,7 @@ async function dismissOpenWorkModelsModal(ctx) {
       const dialogs = Array.from(document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"]'));
       return dialogs.some((item) => (item.textContent || "").includes(${JSON.stringify(MODEL_UPSELL_TITLE)})) ? null : true;
     })()`,
-    { timeoutMs: 20_000, label: "OpenWork Models upsell dismissed" },
+    { timeoutMs: 20_000, label: "RenWork Models upsell dismissed" },
   );
 }
 

@@ -143,7 +143,7 @@ async function restartEngine(ctx) {
     'window.__OPENWORK_ELECTRON__.invokeDesktop("engineRestart", {})',
     { awaitPromise: true },
   );
-  ctx.log("Engine restarted (simulates quitting and reopening OpenWork).");
+  ctx.log("Engine restarted (simulates quitting and reopening RenWork).");
   // Give the engine a moment to boot before the next status read.
   await new Promise((resolve) => setTimeout(resolve, 8_000));
 }
@@ -243,7 +243,7 @@ export default {
       },
     },
     {
-      name: "Token expires and the API is unreachable while OpenWork reopens",
+      name: "Token expires and the API is unreachable while RenWork reopens",
       run: async (ctx) => {
         // Restarting the mock wipes its in-memory access tokens (= expiry);
         // stopping it entirely reproduces the wake-from-sleep outage.
@@ -268,7 +268,7 @@ export default {
       },
     },
     {
-      name: "API returns; OpenWork silently re-authenticates with the stored refresh token",
+      name: "API returns; RenWork silently re-authenticates with the stored refresh token",
       run: async (ctx) => {
         await startMock(ctx); // fresh instance: old access tokens invalid, request log empty
 

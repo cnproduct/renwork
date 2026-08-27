@@ -61,7 +61,7 @@ function failure(code: string, overrides: Partial<CloudFailure> = {}): CloudFail
 function expectNoDegradedSteering(instruction: string): void {
   expect(instruction).not.toMatch(/not ready/i);
   expect(instruction).not.toContain("Repair and test");
-  expect(instruction).not.toContain("Do not use OpenWork documentation tools");
+  expect(instruction).not.toContain("Do not use RenWork documentation tools");
   expect(instruction).not.toContain("Do not substitute docs");
   expect(instruction).not.toContain("as a substitute for performing an action against a connected service");
   expect(instruction).not.toMatch(/do NOT use/i);
@@ -102,7 +102,7 @@ describe("composeSteeringFromEngineMcpStatus", () => {
   });
 });
 
-describe("composeOpenWorkExtensionDiscoveryInstruction", () => {
+describe("composeRenWorkExtensionDiscoveryInstruction", () => {
   test("keeps the fallback instruction byte-identical when state is unavailable or generic discovery is gated", () => {
     expect(OPENWORK_EXTENSION_DISCOVERY_INSTRUCTION).toBe(UNCHANGED_EXTENSION_DISCOVERY_INSTRUCTION);
     expect(composeOpenWorkExtensionDiscoveryInstruction(null)).toBe(UNCHANGED_EXTENSION_DISCOVERY_INSTRUCTION);
@@ -168,7 +168,7 @@ describe("composeOpenWorkExtensionDiscoveryInstruction", () => {
       firstFailure: {
         code: "provider_tool_projection_missing",
         stage: "provider_projection",
-        recommendedAction: "Update OpenWork",
+        recommendedAction: "Update RenWork",
         message: "missing",
       },
     })));
@@ -196,7 +196,7 @@ describe("composeOpenWorkExtensionDiscoveryInstruction", () => {
       firstFailure: {
         code: "cloud_mcp_missing",
         stage: "desired_config",
-        recommendedAction: "Connect OpenWork Cloud",
+        recommendedAction: "Connect RenWork Cloud",
         message: "missing",
       },
     })), connectCatalogEnabled: false })).toBe(OPENWORK_CONNECT_SIGN_IN_INSTRUCTION);
@@ -333,7 +333,7 @@ describe("composeOpenWorkExtensionDiscoveryInstruction", () => {
   });
 });
 
-describe("resolveOpenWorkExtensionDiscoveryInstruction", () => {
+describe("resolveRenWorkExtensionDiscoveryInstruction", () => {
   test("uses engine connected status without fetching server connect state", async () => {
     const requests: unknown[] = [];
     const client = engineMcpClient({ data: { "openwork-cloud": { status: "connected" } } }, requests);

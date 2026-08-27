@@ -63,7 +63,7 @@ function readShellConfig(): ShellConfig {
     const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("openwork.shell-config");
     if (!raw) return DEFAULT_SHELL_CONFIG;
     const parsed = JSON.parse(raw);
-    const resolvedAppName = (!parsed.appName || parsed.appName === "OpenWork") ? "RenWork · 人人易AI" : parsed.appName;
+    const resolvedAppName = (!parsed.appName || parsed.appName === "RenWork") ? "RenWork · 人人易AI" : parsed.appName;
     return { ...DEFAULT_SHELL_CONFIG, ...parsed, appName: resolvedAppName, cloudSignin: false };
   } catch {
     return DEFAULT_SHELL_CONFIG;
