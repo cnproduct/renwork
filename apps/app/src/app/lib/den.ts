@@ -20,6 +20,17 @@ import {
   renworkPlanCatalogSchema,
   type RenworkPlanCatalog,
 } from "@openwork/types/renwork-commerce";
+import {
+  renworkBuyerSearchResponseSchema,
+  renworkBuyerUnlockQuoteResponseSchema,
+  renworkBuyerUnlockResponseSchema,
+  type RenworkBuyerSearchRequest,
+  type RenworkBuyerSearchResponse,
+  type RenworkBuyerUnlockQuoteRequest,
+  type RenworkBuyerUnlockQuoteResponse,
+  type RenworkBuyerUnlockRequest,
+  type RenworkBuyerUnlockResponse,
+} from "@openwork/types/renwork-buyer-growth";
 
 // Re-export the shared schema under the local alias so React consumers
 // (e.g. the cloud domain's desktop-config provider) can import it alongside
@@ -2485,6 +2496,45 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
         method: "GET",
       });
       return renworkPlanCatalogSchema.parse(payload);
+    },
+
+    async searchRenworkBuyers(
+      organizationId: string,
+      input: RenworkBuyerSearchRequest,
+    ): Promise<RenworkBuyerSearchResponse> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/renwork/buyer-growth/search", {
+        method: "POST",
+        token,
+        organizationId,
+        body: input,
+      });
+      return renworkBuyerSearchResponseSchema.parse(payload);
+    },
+
+    async quoteRenworkBuyerUnlock(
+      organizationId: string,
+      input: RenworkBuyerUnlockQuoteRequest,
+    ): Promise<RenworkBuyerUnlockQuoteResponse> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/renwork/buyer-growth/quote", {
+        method: "POST",
+        token,
+        organizationId,
+        body: input,
+      });
+      return renworkBuyerUnlockQuoteResponseSchema.parse(payload);
+    },
+
+    async unlockRenworkBuyerContact(
+      organizationId: string,
+      input: RenworkBuyerUnlockRequest,
+    ): Promise<RenworkBuyerUnlockResponse> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/renwork/buyer-growth/unlock", {
+        method: "POST",
+        token,
+        organizationId,
+        body: input,
+      });
+      return renworkBuyerUnlockResponseSchema.parse(payload);
     },
 
     async getDesktopConfig(orgId?: string | null): Promise<DenDesktopConfig> {

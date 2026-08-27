@@ -18,6 +18,7 @@ import {
   Pin,
   PinOff,
   Plus,
+  Radar,
   Search,
   Share2,
   Trash2,
@@ -894,6 +895,8 @@ export type AppSidebarProps = {
   automationsActive?: boolean;
   automationsNeedAttention?: boolean;
   onOpenAutomations?: () => void;
+  buyerGrowthActive?: boolean;
+  onOpenBuyerGrowth?: () => void;
   /** Opens the cross-session message search dialog (Cmd/Ctrl+Shift+F). */
   onOpenSessionSearch?: () => void;
   /** Back/forward across recently viewed conversations, rendered at the top of the sidebar. */
@@ -1207,6 +1210,14 @@ export function AppSidebar(props: AppSidebarProps) {
                   </span>
                 )}
                 onSelect={props.onOpenAutomations}
+              />
+            ) : null}
+            {props.onOpenBuyerGrowth ? (
+              <SidebarDestination
+                active={props.buyerGrowthActive === true}
+                icon={Radar}
+                label="AI 找客户"
+                onSelect={props.onOpenBuyerGrowth}
               />
             ) : null}
             <SidebarDestination

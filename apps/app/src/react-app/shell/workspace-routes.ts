@@ -19,6 +19,10 @@ export function automationsRoute() {
   return "/automations";
 }
 
+export function buyerGrowthRoute() {
+  return "/buyer-growth";
+}
+
 export function globalSettingsRoute(tab: SettingsTab) {
   return `/settings/${tab}`;
 }

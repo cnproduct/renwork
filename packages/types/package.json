@@ -34,6 +34,11 @@
       "development": "./src/renwork-commerce.ts",
       "default": "./src/renwork-commerce.ts"
     },
+    "./renwork-buyer-growth": {
+      "types": "./src/renwork-buyer-growth.ts",
+      "development": "./src/renwork-buyer-growth.ts",
+      "default": "./src/renwork-buyer-growth.ts"
+    },
     "./automations": {
       "types": "./src/automations.ts",
       "development": "./src/automations.ts",

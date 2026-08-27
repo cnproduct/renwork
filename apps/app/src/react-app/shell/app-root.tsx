@@ -447,6 +447,14 @@ export function AppRoot() {
                 }
               />
               <Route
+                path="/buyer-growth"
+                element={
+                  <DevProfiler id="BuyerGrowthRoute">
+                    <SessionRoute />
+                  </DevProfiler>
+                }
+              />
+              <Route
                 path="/workspace/:workspaceId/extensions/*"
                 element={
                   <DevProfiler id="SessionRoute">

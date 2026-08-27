@@ -8,6 +8,7 @@ export default defineConfig({
     "openwork-context": "src/openwork-context.ts",
     "openwork-provider": "src/openwork-provider.ts",
     "renwork-commerce": "src/renwork-commerce.ts",
+    "renwork-buyer-growth": "src/renwork-buyer-growth.ts",
     "automations": "src/automations.ts",
     "dynamic-artifacts": "src/dynamic-artifacts.ts",
     "den/desktop-app-restrictions": "src/den/desktop-app-restrictions.ts",

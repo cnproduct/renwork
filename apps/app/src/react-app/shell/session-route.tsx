@@ -93,6 +93,7 @@ import { useLocal } from "@/react-app/kernel/local-provider";
 import { usePlatform } from "@/react-app/kernel/platform";
 import { SessionPage, type OpenSessionTab } from "@/react-app/domains/session/chat/session-page";
 import { AutomationsPage } from "@/react-app/domains/automations/automations-page";
+import { BuyerGrowthPage } from "@/react-app/domains/buyer-growth/buyer-growth-page";
 import { automationsStateChangedEvent } from "@/react-app/domains/automations/automation-events";
 import type { NewTaskComposerContext } from "@/react-app/domains/session/chat/new-task-composer";
 import { isDesktopProviderBlocked } from "@/app/cloud/desktop-app-restrictions";
@@ -211,6 +212,7 @@ import {
   globalExtensionsRoute,
   legacySessionRoute,
   automationsRoute,
+  buyerGrowthRoute,
   workspaceExtensionsRoute,
   workspaceSessionRoute,
   workspaceSettingsRoute,
@@ -472,6 +474,7 @@ export function SessionRoute() {
   const navigate = useNavigate();
   const location = useLocation();
   const automationsRouteRequested = /^\/automations(?:\/|$)/.test(location.pathname);
+  const buyerGrowthRouteActive = /^\/buyer-growth(?:\/|$)/.test(location.pathname);
   const platform = usePlatform();
   const denAuth = useDenAuth();
   const { config: shellConfig } = useShellConfig();
@@ -2641,10 +2644,12 @@ export function SessionRoute() {
           }}
         />
       }
-      primaryTitle={automationsRouteActive ? "Automations" : undefined}
-      primarySlot={automationsRouteActive ? (
-        <AutomationsPage providerCatalog={providerCatalog} openworkClient={client} />
-      ) : undefined}
+      primaryTitle={buyerGrowthRouteActive ? "AI 找客户" : automationsRouteActive ? "Automations" : undefined}
+      primarySlot={buyerGrowthRouteActive
+        ? <BuyerGrowthPage workspaceId={selectedWorkspaceId} />
+        : automationsRouteActive
+          ? <AutomationsPage providerCatalog={providerCatalog} openworkClient={client} />
+          : undefined}
       terminalOpen={terminalOpen}
       onTerminalOpenChange={setTerminalOpen}
       onSessionTabsChange={(tabs) => {
@@ -2663,6 +2668,10 @@ export function SessionRoute() {
         startupPhase: effectiveLoading ? "nativeInit" : "ready",
         automationsActive: automationsRouteActive,
         automationsNeedAttention,
+        buyerGrowthActive: buyerGrowthRouteActive,
+        onOpenBuyerGrowth: () => {
+          navigate(buyerGrowthRoute());
+        },
         onOpenAutomations: automationsNavigationAvailable
           ? () => {
               navigate(automationsRoute());
