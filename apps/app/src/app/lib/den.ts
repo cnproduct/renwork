@@ -20,6 +20,10 @@ import type {
   CreateAutomation,
   UpdateAutomation,
 } from "@openwork/types/automations";
+import {
+  renworkPlanCatalogSchema,
+  type RenworkPlanCatalog,
+} from "@openwork/types/renwork-commerce";
 
 // Re-export the shared schema under the local alias so React consumers
 // (e.g. the cloud domain's desktop-config provider) can import it alongside
@@ -2508,6 +2512,13 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
         throw new DenApiError(500, "invalid_app_version_payload", "App version response was missing version details.");
       }
       return appVersionMetadata;
+    },
+
+    async getRenworkPlanCatalog(): Promise<RenworkPlanCatalog> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/renwork/commerce/catalog", {
+        method: "GET",
+      });
+      return renworkPlanCatalogSchema.parse(payload);
     },
 
     async getDesktopConfig(orgId?: string | null): Promise<DenDesktopConfig> {
