@@ -51,11 +51,12 @@ export async function signInDesktopAs(app: Surface, den: DenRef, member: DenSess
     timeoutMs: 60_000,
     label: "active org resolved",
   });
-  // A first-time member lands on organization onboarding; a member whose app
-  // already has a workspace can come straight back to it.
-  await waitFor(app, `window.location.hash.includes("/onboarding") || /\\/(workspace|session)/.test(window.location.hash)`, {
+  // A first-time RenWork member chooses cloud or local runtime on welcome; older
+  // flows may still use organization onboarding, while returning members can
+  // come straight back to a workspace.
+  await waitFor(app, `window.location.hash.includes("/welcome") || window.location.hash.includes("/onboarding") || /\\/(workspace|session)/.test(window.location.hash)`, {
     timeoutMs: 60_000,
-    label: "organization onboarding or workspace route",
+    label: "runtime choice, organization onboarding, or workspace route",
   });
 }
 

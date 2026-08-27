@@ -15,11 +15,12 @@ const workspaceStorePath = fileURLToPath(
 const mainPath = fileURLToPath(new URL("../../apps/desktop/electron/main.mjs", import.meta.url));
 
 test("the three desktop builds own sign-in policy; no installer bundle rewrites it", async ({ evidence }) => {
-  // Build contract: public is open, cloud forces sign-in, enterprise forces
-  // sign-in plus activation against a self-hosted control plane.
-  expect(PUBLIC_DESKTOP_DISTRIBUTION).toMatchObject({ flavor: "public", requireSignin: false, requireActivation: false });
+  // Production build contract: identity comes before runtime choice for public,
+  // cloud, and enterprise. Enterprise activation remains a separate bootstrap
+  // policy instead of being implied by the flavor constant.
+  expect(PUBLIC_DESKTOP_DISTRIBUTION).toMatchObject({ flavor: "public", requireSignin: true, requireActivation: false });
   expect(CLOUD_DESKTOP_DISTRIBUTION).toMatchObject({ flavor: "cloud", requireSignin: true, requireActivation: false });
-  expect(ENTERPRISE_DESKTOP_DISTRIBUTION).toMatchObject({ flavor: "enterprise", requireSignin: true, requireActivation: true });
+  expect(ENTERPRISE_DESKTOP_DISTRIBUTION).toMatchObject({ flavor: "enterprise", requireSignin: true, requireActivation: false });
 
   // Packaged builds trust only immutable package metadata, never the environment.
   expect(resolveDesktopDistribution({ isPackaged: true, packageFlavor: "cloud", environmentFlavor: "public" }).flavor).toBe("cloud");
@@ -28,7 +29,7 @@ test("the three desktop builds own sign-in policy; no installer bundle rewrites 
 
   evidence.fact(
     "Sign-in policy is fixed per build flavor",
-    "public !requireSignin; cloud requireSignin; enterprise requireSignin+requireActivation; packaged builds ignore the environment flavor override",
+    "public, cloud, and enterprise require identity before runtime selection; packaged builds ignore the environment flavor override",
     true,
   );
 

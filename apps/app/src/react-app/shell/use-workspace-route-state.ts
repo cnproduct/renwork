@@ -852,16 +852,15 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
   ]);
 
   // Redirect to /welcome when no workspaces exist and the user hasn't
-  // completed onboarding. Desktop only does this for the default hosted
-  // bootstrap; org-bound desktops should keep their sign-in gate instead.
+  // completed onboarding. Signed-out org-bound desktops keep their sign-in
+  // gate; once authenticated, every distribution can reach runtime selection.
   useEffect(() => {
     if (loading) return;
     if (workspaces.length > 0) return;
     if (local.prefs.hasCompletedOnboarding) return;
     if (denAuth.status === "checking") return;
-    if (denAuth.isSignedIn) return;
     if (isDesktopRuntime()) {
-      if (readDenBootstrapConfig().source !== "default") return;
+      if (readDenBootstrapConfig().source !== "default" && !denAuth.isSignedIn) return;
     }
     navigate("/welcome", { replace: true });
   }, [denAuth.isSignedIn, denAuth.status, loading, local.prefs.hasCompletedOnboarding, navigate, workspaces.length]);

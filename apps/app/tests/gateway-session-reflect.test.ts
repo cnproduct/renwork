@@ -56,7 +56,7 @@ describe("gateway Den session reflection", () => {
     });
   });
 
-  test("a stored gateway token suppresses the signed-out welcome surface", async () => {
+  test("a stored gateway token holds welcome only until the session is confirmed", async () => {
     installGatewayWindow();
     await initializeDenBootstrapConfig();
 
@@ -83,7 +83,7 @@ describe("gateway Den session reflection", () => {
         hasStoredAuthToken: true,
         isSignedIn: true,
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       shouldHoldWelcomeForDenSession({
         authStatus: "signed_out",
@@ -93,7 +93,7 @@ describe("gateway Den session reflection", () => {
     ).toBe(false);
   });
 
-  test("a stored token holds the welcome surface only for transient or signed-in auth", () => {
+  test("a stored token holds the welcome surface only while auth is checking", () => {
     expect(
       shouldHoldWelcomeForDenSession({
         authStatus: "checking",
@@ -107,7 +107,7 @@ describe("gateway Den session reflection", () => {
         hasStoredAuthToken: true,
         isSignedIn: true,
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       shouldHoldWelcomeForDenSession({
         authStatus: "unavailable",

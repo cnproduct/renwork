@@ -91,7 +91,12 @@ const PROBE_EXPRESSION = `(() => {
   const buttonLabels = [...document.querySelectorAll("button")].map((button) => (button.textContent ?? "").trim());
   const taskUi = text.includes("What do you need done?") || buttonLabels.includes("Run task");
   const needsWorkspace = text.includes("Create or connect a workspace");
-  const welcome = text.includes("Welcome to OpenWork");
+  // Product-branded onboarding is interactive even when it no longer uses
+  // the legacy English heading. Stable test ids cover both the account gate
+  // and the authenticated runtime-choice surface without coupling readiness
+  // to translated marketing copy.
+  const welcome = text.includes("Welcome to OpenWork")
+    || Boolean(document.querySelector('[data-testid="renwork-signup"], [data-testid="verified-account"]'));
   // The product's own active-workspace state; the route is only a fallback
   // because a selected workspace does not always appear in the hash.
   const stored = localStorage.getItem("openwork.react.activeWorkspace");

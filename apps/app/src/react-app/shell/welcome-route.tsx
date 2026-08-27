@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useCallback, useEffect, useReducer, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useReducer, useRef, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router";
 
 import { t } from "../../i18n";
@@ -18,24 +18,23 @@ import { canCreateWorkspaces } from "../../app/lib/workspace-creation-policy";
 import { createClient, unwrap } from "../../app/lib/opencode";
 import { useLocal } from "../kernel/local-provider";
 import { usePlatform } from "../kernel/platform";
-import { WelcomePage } from "../domains/onboarding/welcome-page";
-import { ProviderSelectionStep } from "../domains/onboarding/provider-selection-step";
+import {
+  WelcomePage,
+  type ModelSourceOption,
+} from "../domains/onboarding/welcome-page";
 import { AttributionStep, type AttributionSource } from "../domains/onboarding/attribution-step";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
 import type { CreateWorkspaceOptions } from "../domains/workspace/types";
 import {
   getOpenWorkModelsActionUrl,
   hideOpenWorkModelsPromo,
-  useOpenWorkModelsPromoEligibility,
   markOpenWorkModelsStartupPromoShown,
 } from "../domains/cloud/openwork-models-promo";
 import { useDenAuth } from "../domains/cloud/den-auth-provider";
-import { JoinOrganizationDialog } from "../domains/cloud/join-organization-dialog";
 import { resolveOpenworkConnection } from "./openwork-connection";
 import { captureAnalyticsEvent } from "../../app/lib/analytics";
 import { buildOpenworkWorkspaceBaseUrl, createOpenworkServerClient } from "../../app/lib/openwork-server";
-import { buildDenAuthUrl, DEFAULT_DEN_BASE_URL, readDenSettings } from "../../app/lib/den";
-import { markDesktopSignInInitiated } from "../../app/lib/den-sign-in-intent";
+import { readDenSettings } from "../../app/lib/den";
 import { denSettingsChangedEvent } from "../../app/lib/den-session-events";
 import { writeActiveWorkspaceId, writeLastSessionFor, writeWorkspaceProjectDimension } from "./session-memory";
 import { workspaceSessionRoute } from "./workspace-routes";
@@ -70,10 +69,8 @@ type WelcomeState = {
   createError: string | null;
   remoteBusy: boolean;
   remoteError: string | null;
-  providerStep: boolean;
   attributionStep: boolean;
   pendingRoute: string | null;
-  pendingWorkspaceId: string | null;
   pendingSessionId: string | null;
 };
 
@@ -86,8 +83,7 @@ type WelcomeAction =
   | { type: "remote:start" }
   | { type: "remote:error"; error: string }
   | { type: "remote:finish" }
-  | { type: "provider-step"; workspaceId: string; sessionId: string | null }
-  | { type: "attribution-step"; route: string };
+  | { type: "attribution-step"; route: string; sessionId: string | null };
 
 const initialWelcomeState: WelcomeState = {
   modalOpen: false,
@@ -95,10 +91,8 @@ const initialWelcomeState: WelcomeState = {
   createError: null,
   remoteBusy: false,
   remoteError: null,
-  providerStep: false,
   attributionStep: false,
   pendingRoute: null,
-  pendingWorkspaceId: null,
   pendingSessionId: null,
 };
 
@@ -120,10 +114,13 @@ function welcomeReducer(state: WelcomeState, action: WelcomeAction): WelcomeStat
       return { ...state, remoteError: action.error };
     case "remote:finish":
       return { ...state, remoteBusy: false };
-    case "provider-step":
-      return { ...state, providerStep: true, pendingWorkspaceId: action.workspaceId, pendingSessionId: action.sessionId };
     case "attribution-step":
-      return { ...state, providerStep: false, attributionStep: true, pendingRoute: action.route };
+      return {
+        ...state,
+        attributionStep: true,
+        pendingRoute: action.route,
+        pendingSessionId: action.sessionId,
+      };
   }
 }
 
@@ -131,9 +128,8 @@ function welcomeReducer(state: WelcomeState, action: WelcomeAction): WelcomeStat
  * WelcomeRoute: full-screen welcome page shown on first launch when
  * the user has no workspaces and has not completed onboarding.
  *
- * Clicking "Get started" opens the CreateWorkspaceModal. Once a
- * workspace is created, provider and attribution onboarding runs before
- * hasCompletedOnboarding is set and the user is redirected to /session.
+ * The authenticated runtime choice creates a workspace, applies the selected
+ * model path, then runs attribution onboarding before redirecting to /session.
  */
 export function WelcomeRoute() {
   const navigate = useNavigate();
@@ -141,9 +137,7 @@ export function WelcomeRoute() {
   const platform = usePlatform();
   const denAuth = useDenAuth();
   const [state, dispatch] = useReducer(welcomeReducer, initialWelcomeState);
-  const [manualFolder, setManualFolder] = useState("");
-  const [joinOrganizationOpen, setJoinOrganizationOpen] = useState(false);
-  const showOpenWorkModelsPromo = useOpenWorkModelsPromoEligibility();
+  const pendingModelSourceRef = useRef<ModelSourceOption>("managed");
   const denAuthTokenSnapshot = useSyncExternalStore(
     subscribeToDenSettings,
     readDenAuthTokenSnapshot,
@@ -154,6 +148,7 @@ export function WelcomeRoute() {
     hasStoredAuthToken: Boolean(denAuthTokenSnapshot),
     isSignedIn: denAuth.isSignedIn,
   });
+  const denSettings = readDenSettings();
 
   // If user already completed onboarding, redirect away immediately.
   useEffect(() => {
@@ -161,12 +156,6 @@ export function WelcomeRoute() {
       navigate("/session", { replace: true });
     }
   }, [local.prefs.hasCompletedOnboarding, navigate]);
-
-  useEffect(() => {
-    if (denAuth.isSignedIn) {
-      navigate("/onboarding", { replace: true });
-    }
-  }, [denAuth.isSignedIn, navigate]);
 
   const markOnboardingComplete = useCallback(() => {
     local.setPrefs((prev) => ({ ...prev, hasCompletedOnboarding: true }));
@@ -209,8 +198,8 @@ export function WelcomeRoute() {
           resolveWorkspaceListSelectedId(list) ||
           list.workspaces[list.workspaces.length - 1]?.id ||
           "";
-        let targetWorkspaceId = createdId;
-        let targetWorkspace = list.workspaces.find((workspace: WorkspaceInfo) => workspace.id === createdId) ?? null;
+        const targetWorkspaceId = createdId;
+        const targetWorkspace = list.workspaces.find((workspace: WorkspaceInfo) => workspace.id === createdId) ?? null;
         let targetSessionId: string | null = null;
         if (createdId) {
           await workspaceSetSelected(createdId).catch(() => undefined);
@@ -253,8 +242,25 @@ export function WelcomeRoute() {
           if (targetSessionId) writeLastSessionFor(targetWorkspaceId, targetSessionId);
         }
         dispatch({ type: "close" });
-        // Show the provider selection step before navigating to the session.
-        dispatch({ type: "provider-step", workspaceId: targetWorkspaceId, sessionId: targetSessionId });
+        const route = targetWorkspaceId
+          ? workspaceSessionRoute(targetWorkspaceId, targetSessionId)
+          : "/session";
+        const selectedModelSource = pendingModelSourceRef.current;
+
+        if (selectedModelSource === "managed") {
+          platform.openLink(getOpenWorkModelsActionUrl(true, "sign-in"));
+          dispatch({ type: "attribution-step", route, sessionId: targetSessionId });
+        } else if (selectedModelSource === "byok") {
+          hideOpenWorkModelsPromo();
+          markOpenWorkModelsStartupPromoShown();
+          dispatch({
+            type: "attribution-step",
+            route: `${route}?onboarding=1`,
+            sessionId: targetSessionId,
+          });
+        } else {
+          dispatch({ type: "attribution-step", route, sessionId: targetSessionId });
+        }
 
       } catch (error) {
         dispatch({
@@ -265,7 +271,7 @@ export function WelcomeRoute() {
         dispatch({ type: "create:finish" });
       }
     },
-    [],
+    [platform],
   );
 
   const handleCreateRemote = useCallback(
@@ -335,7 +341,8 @@ export function WelcomeRoute() {
     [markOnboardingComplete, navigate],
   );
 
-  const handleGetStarted = useCallback(async () => {
+  const handleGetStarted = useCallback(async (option: ModelSourceOption) => {
+    pendingModelSourceRef.current = option;
     if (!isDesktopRuntime()) {
       if (!canCreateWorkspaces()) return;
       // Non-desktop: fall back to the modal for remote workspace creation.
@@ -355,26 +362,6 @@ export function WelcomeRoute() {
     if (!folder) return;
     await handleCreateWorkspace("starter", folder);
   }, [handleCreateWorkspace]);
-
-  const handleSelectFolder = useCallback(async () => {
-    const picked = await pickDirectory({ title: t("onboarding.authorize_folder") });
-    const folder = typeof picked === "string" ? picked : null;
-    if (!folder) return;
-    await handleCreateWorkspace("starter", folder);
-  }, [handleCreateWorkspace]);
-
-  const handleUseManualFolder = useCallback(async () => {
-    const folder = manualFolder.trim();
-    if (!folder) return;
-    await handleCreateWorkspace("starter", folder);
-  }, [handleCreateWorkspace, manualFolder]);
-
-  const handleTeamSignIn = useCallback(() => {
-    markOnboardingComplete();
-    const settings = readDenSettings();
-    markDesktopSignInInitiated();
-    platform.openLink(buildDenAuthUrl(settings.baseUrl || DEFAULT_DEN_BASE_URL, "sign-in"));
-  }, [markOnboardingComplete, platform]);
 
   const finishOnboarding = useCallback(() => {
     markOnboardingComplete();
@@ -408,27 +395,11 @@ export function WelcomeRoute() {
   return (
     <>
       <WelcomePage
-        onContinue={async (option) => {
-          if (option === "managed") {
-            await handleGetStarted();
-          } else if (option === "local") {
-            await handleGetStarted();
-          } else if (option === "byok") {
-            hideOpenWorkModelsPromo();
-            markOpenWorkModelsStartupPromoShown();
-            await handleGetStarted();
-          }
-        }}
+        onContinue={handleGetStarted}
         busy={state.createBusy}
         error={state.createError}
-      />
-      <JoinOrganizationDialog
-        open={joinOrganizationOpen}
-        onOpenChange={setJoinOrganizationOpen}
-        onConnected={() => {
-          markOnboardingComplete();
-          setJoinOrganizationOpen(false);
-        }}
+        accountLabel={denAuth.user?.email || denAuth.user?.name}
+        organizationName={denSettings.activeOrgName}
       />
       <CreateWorkspaceModal
         open={state.modalOpen}
@@ -451,35 +422,6 @@ export function WelcomeRoute() {
             : t("app.local_disabled_reason")
         }
       />
-      {state.providerStep ? (
-        <ProviderSelectionStep
-          showOpenWorkModels={showOpenWorkModelsPromo}
-          onOpenWorkModels={() => {
-            // Land on the OpenWork Models value-prop page when already
-            // signed in to Den; otherwise start sign-up. Previously this
-            // always opened a bare sign-up page — payment before value.
-            platform.openLink(getOpenWorkModelsActionUrl(denAuth.isSignedIn, "sign-up"));
-            const route = state.pendingWorkspaceId
-              ? workspaceSessionRoute(state.pendingWorkspaceId, state.pendingSessionId)
-              : "/session";
-            dispatch({ type: "attribution-step", route });
-          }}
-          onBringYourOwn={() => {
-            markOpenWorkModelsStartupPromoShown();
-            hideOpenWorkModelsPromo();
-            const route = state.pendingWorkspaceId
-              ? workspaceSessionRoute(state.pendingWorkspaceId, state.pendingSessionId)
-              : "/session";
-            dispatch({ type: "attribution-step", route: `${route}?onboarding=1` });
-          }}
-          onSkip={() => {
-            const route = state.pendingWorkspaceId
-              ? workspaceSessionRoute(state.pendingWorkspaceId, state.pendingSessionId)
-              : "/session";
-            dispatch({ type: "attribution-step", route });
-          }}
-        />
-      ) : null}
       {state.attributionStep ? (
         <AttributionStep
           onSubmit={handleAttributionSubmit}

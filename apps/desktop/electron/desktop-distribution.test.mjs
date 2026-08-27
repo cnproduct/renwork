@@ -21,9 +21,9 @@ describe("resolveDesktopDistribution", () => {
       }),
       {
         flavor: "cloud",
-        appName: "OpenWork Cloud",
-        appIdentifier: "com.differentai.openwork",
-        protocolScheme: "openwork",
+        appName: "RenWork Cloud",
+        appIdentifier: "com.renrenyi.renwork",
+        protocolScheme: "renwork",
         requireSignin: true,
         requireActivation: false,
       },
@@ -39,23 +39,34 @@ describe("resolveDesktopDistribution", () => {
 
     assert.deepEqual(distribution, {
       flavor: "enterprise",
-      appName: "OpenWork Enterprise",
-      appIdentifier: "com.differentai.openwork",
-      protocolScheme: "openwork",
+      appName: "RenWork Enterprise",
+      appIdentifier: "com.renrenyi.renwork",
+      protocolScheme: "renwork",
       requireSignin: true,
-      requireActivation: true,
+      requireActivation: false,
     });
   });
 
   it("does not let an environment variable turn a packaged public build into enterprise", () => {
-    assert.equal(
-      resolveDesktopDistribution({
-        isPackaged: true,
-        packageFlavor: "public",
-        environmentFlavor: "enterprise",
-      }).flavor,
-      "public",
-    );
+    const distribution = resolveDesktopDistribution({
+      isPackaged: true,
+      packageFlavor: "public",
+      environmentFlavor: "enterprise",
+    });
+
+    assert.equal(distribution.flavor, "public");
+    assert.equal(distribution.requireSignin, true);
+  });
+
+  it("fails closed to the sign-in-required public flavor when package metadata is missing", () => {
+    const distribution = resolveDesktopDistribution({
+      isPackaged: true,
+      packageFlavor: undefined,
+      environmentFlavor: "standalone",
+    });
+
+    assert.equal(distribution.flavor, "public");
+    assert.equal(distribution.requireSignin, true);
   });
 
   it("allows development runs to exercise the enterprise flavor", () => {
@@ -72,16 +83,16 @@ describe("resolveDesktopDistribution", () => {
 
 describe("desktopActivationRequired", () => {
   it("uses the distribution default when bootstrap policy is absent", () => {
-    assert.equal(desktopActivationRequired(ENTERPRISE_DESKTOP_DISTRIBUTION, {}), true);
+    assert.equal(desktopActivationRequired(ENTERPRISE_DESKTOP_DISTRIBUTION, {}), false);
     assert.equal(desktopActivationRequired(CLOUD_DESKTOP_DISTRIBUTION, {}), false);
     assert.equal(desktopActivationRequired(PUBLIC_DESKTOP_DISTRIBUTION, {}), false);
   });
 
-  it("keeps the Enterprise artifact authoritative over bootstrap opt-out", () => {
+  it("allows an Enterprise artifact without an activation requirement", () => {
     assert.equal(desktopActivationRequired(
       ENTERPRISE_DESKTOP_DISTRIBUTION,
       { requireActivation: false },
-    ), true);
+    ), false);
   });
 
   it("accepts completed activation from the Enterprise bootstrap file", () => {
