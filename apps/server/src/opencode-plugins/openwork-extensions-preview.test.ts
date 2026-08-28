@@ -347,7 +347,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
         .find((affordance) => affordance.id === "connect.capability.execute")?.executor,
     ).toEqual({
       kind: "tool",
-      tool: "openwork-cloud_execute_capability",
+      tool: "renwork-cloud_execute_capability",
     });
   });
 
