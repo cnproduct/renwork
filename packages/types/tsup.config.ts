@@ -7,6 +7,7 @@ export default defineConfig({
     "openwork-affordance": "src/openwork-affordance.ts",
     "openwork-context": "src/openwork-context.ts",
     "openwork-provider": "src/openwork-provider.ts",
+    "renwork-semantic-tools": "src/renwork-semantic-tools.ts",
     "automations": "src/automations.ts",
     "dynamic-artifacts": "src/dynamic-artifacts.ts",
     "den/desktop-app-restrictions": "src/den/desktop-app-restrictions.ts",

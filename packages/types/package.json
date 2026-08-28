@@ -29,6 +29,11 @@
       "development": "./src/openwork-provider.ts",
       "default": "./src/openwork-provider.ts"
     },
+    "./renwork-semantic-tools": {
+      "types": "./src/renwork-semantic-tools.ts",
+      "development": "./src/renwork-semantic-tools.ts",
+      "default": "./src/renwork-semantic-tools.ts"
+    },
     "./automations": {
       "types": "./src/automations.ts",
       "development": "./src/automations.ts",

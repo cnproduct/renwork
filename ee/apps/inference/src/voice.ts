@@ -8,42 +8,16 @@ import {
 } from "@openwork-ee/den-db"
 import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
 import type { DenTypeId } from "@openwork-ee/utils/typeid"
+import {
+  RENWORK_VOICE_REALTIME_MODEL,
+  RENWORK_VOICE_REALTIME_TOOLS,
+  RENWORK_VOICE_TRANSCRIPTION_MODEL,
+  renworkVoiceRealtimeInstructions,
+} from "@openwork/types/renwork-semantic-tools"
 import { env } from "./env.js"
 import { findActiveInferenceKey } from "./keys.js"
 import { ensureUsableBuckets } from "./limits.js"
 import { db } from "./db.js"
-
-const OPENWORK_VOICE_REALTIME_MODEL = "gpt-realtime-2"
-const OPENWORK_VOICE_TRANSCRIPTION_MODEL = "gpt-4o-transcribe"
-
-const OPENWORK_VOICE_REALTIME_TOOLS = [
-  {
-    type: "function",
-    name: "openwork_snapshot",
-    description: "Read the current OpenWork UI control snapshot: route, status, narration, and visible action metadata.",
-    parameters: { type: "object", properties: {}, additionalProperties: false },
-  },
-  {
-    type: "function",
-    name: "openwork_list_actions",
-    description: "List semantic OpenWork UI actions. Call this before openwork_execute_action when you do not know the exact action id.",
-    parameters: { type: "object", properties: {}, additionalProperties: false },
-  },
-  {
-    type: "function",
-    name: "openwork_execute_action",
-    description: "Execute a semantic OpenWork UI action by id. Prefer this over screen coordinates or DOM guessing.",
-    parameters: {
-      type: "object",
-      properties: {
-        actionId: { type: "string", description: "The action id from openwork_list_actions, such as composer.set_text or composer.send." },
-        args: { type: "object", description: "Optional JSON arguments for the action.", additionalProperties: true },
-      },
-      required: ["actionId"],
-      additionalProperties: false,
-    },
-  },
-]
 
 function readApiKey(request: Request) {
   const auth = request.headers.get("authorization")
@@ -92,35 +66,12 @@ function formatResetMessage(windowEndAt: Date): string {
   return `It resets in ${Math.ceil(seconds / 3600)} hours.`
 }
 
-function openworkVoiceRealtimeInstructions() {
-  return `# Role and Objective
-
-You are OpenWork Voice Mode, a voice-first control layer inside OpenWork.
-Help the user control OpenWork by using the semantic OpenWork UI tools.
-
-# Tool Policy
-
-- Prefer openwork_snapshot, openwork_list_actions, and openwork_execute_action over visual guessing.
-- If the user asks to write or draft something, use composer.set_text.
-- If the user asks to send or run the current prompt, use composer.send.
-- For navigation, settings, session, transcript, and composer work, inspect the action list first if the action id is unknown.
-- Do not claim an action completed until the tool succeeds.
-- Ask for confirmation before destructive actions such as deleting a session.
-
-# Voice Style
-
-- Be concise, calm, and direct.
-- If audio is unclear, ask the user to repeat it instead of guessing.
-- Ignore background speech that is not addressed to OpenWork.
-- Summarize tool results briefly and offer the next useful step.`
-}
-
 async function createOpenAiRealtimeClientSecret(input: unknown, openworkRequestId: string) {
   if (!env.openAiRealtimeApiKey) {
     return Response.json({ error: { message: "Managed voice is not configured.", type: "invalid_request_error", code: "openai_realtime_key_missing" } }, { status: 503 })
   }
 
-  const model = readStringField(input, "model") || OPENWORK_VOICE_REALTIME_MODEL
+  const model = readStringField(input, "model") || RENWORK_VOICE_REALTIME_MODEL
   const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
     method: "POST",
     headers: {
@@ -134,7 +85,7 @@ async function createOpenAiRealtimeClientSecret(input: unknown, openworkRequestI
         output_modalities: ["audio"],
         audio: {
           input: {
-            transcription: { model: OPENWORK_VOICE_TRANSCRIPTION_MODEL, language: "en" },
+            transcription: { model: RENWORK_VOICE_TRANSCRIPTION_MODEL, language: "en" },
             turn_detection: {
               type: "server_vad",
               threshold: 0.58,
@@ -145,9 +96,9 @@ async function createOpenAiRealtimeClientSecret(input: unknown, openworkRequestI
             },
           },
         },
-        instructions: openworkVoiceRealtimeInstructions(),
+        instructions: renworkVoiceRealtimeInstructions(),
         tool_choice: "auto",
-        tools: OPENWORK_VOICE_REALTIME_TOOLS,
+        tools: RENWORK_VOICE_REALTIME_TOOLS,
       },
     }),
   })
@@ -176,8 +127,8 @@ async function createOpenAiRealtimeClientSecret(input: unknown, openworkRequestI
     clientSecret,
     expiresAt,
     model,
-    transcriptionModel: OPENWORK_VOICE_TRANSCRIPTION_MODEL,
-    tools: OPENWORK_VOICE_REALTIME_TOOLS.map((tool) => tool.name),
+    transcriptionModel: RENWORK_VOICE_TRANSCRIPTION_MODEL,
+    tools: RENWORK_VOICE_REALTIME_TOOLS.map((tool) => tool.name),
     source: "openwork-models",
     openworkRequestId,
   })
