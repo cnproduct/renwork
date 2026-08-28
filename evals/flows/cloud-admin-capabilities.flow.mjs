@@ -76,15 +76,15 @@ export default {
     {
       name: "The desktop keeps Cloud and removes the separate admin connector",
       run: async (ctx) => {
-        await ctx.prove("The desktop catalog contains renwork-cloud but no openwork-admin entry", {
+        await ctx.prove("The desktop catalog contains openwork-cloud but no openwork-admin entry", {
           voiceover: vo[3],
           assert: async () => {
             const constants = await readFile(join(ROOT, "apps/app/src/app/constants.ts"), "utf8");
             const store = await readFile(join(ROOT, "apps/app/src/react-app/domains/connections/store.ts"), "utf8");
-            witness(ctx, constants.includes('serverName: "renwork-cloud"'), "RenWork Cloud remains in the desktop catalog");
+            witness(ctx, constants.includes('serverName: "openwork-cloud"'), "OpenWork Cloud remains in the desktop catalog");
             witness(ctx, !constants.includes('serverName: "openwork-admin"'), "The separate OpenWork Admin catalog entry is absent");
             witness(ctx, !store.includes('entry.serverName === "openwork-admin"'), "Desktop token injection no longer special-cases a local admin connection");
-            ctx.output("Desktop connection catalog", "renwork-cloud: present\nopenwork-admin: absent\nadmin token special-case: absent");
+            ctx.output("Desktop connection catalog", "openwork-cloud: present\nopenwork-admin: absent\nadmin token special-case: absent");
           },
         });
       },

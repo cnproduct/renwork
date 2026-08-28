@@ -162,7 +162,7 @@ async function readRuntimeCloudControlMcp(ctx) {
     const base = 'http://127.0.0.1:' + port + '/workspace/' + ${JSON.stringify(state.workspaceId ?? "")};
     const [response, healthResponse] = await Promise.all([
       fetch(base + '/mcp', { headers }),
-      fetch(base + '/mcp/renwork-cloud/health?probe=1', { headers }),
+      fetch(base + '/mcp/openwork-cloud/health?probe=1', { headers }),
     ]);
     const [text, healthText] = await Promise.all([response.text(), healthResponse.text()]);
     let payload = null;
@@ -172,7 +172,7 @@ async function readRuntimeCloudControlMcp(ctx) {
     if (!response.ok) return { ok: false, reason: 'mcp endpoint failed', status: response.status, text };
     if (!healthResponse.ok) return { ok: false, reason: 'health endpoint failed', status: healthResponse.status, text: healthText };
     const items = payload?.items ?? [];
-    const entry = items.find((item) => item.name === 'renwork-cloud');
+    const entry = items.find((item) => item.name === 'openwork-cloud');
     const engineSync = payload?.engineSync?.status ?? null;
     const directTools = health?.tools?.direct?.present ?? [];
     return {

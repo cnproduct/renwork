@@ -90,7 +90,7 @@ async function startMockBroker() {
         expiresAt: 987654321,
         model: "gpt-realtime-2",
         transcriptionModel: "gpt-4o-transcribe",
-        tools: ["renwork_context", "renwork_query", "renwork_execute"],
+        tools: ["openwork_snapshot", "openwork_list_actions", "openwork_execute_action"],
         source: "openwork-models",
       }));
     });

@@ -83,7 +83,7 @@ export default {
             await ctx.expectText("Fetched Google Workspace Calendar Events");
             // Sentence line, not a JSON card: no raw braces in the visible line.
             const rawJson = await ctx.eval(`(() => {
-              const el = [...document.querySelectorAll('[data-capability-call="renwork-cloud_execute_capability"]')][0];
+              const el = [...document.querySelectorAll('[data-capability-call="openwork-cloud_execute_capability"]')][0];
               return el ? el.textContent.includes("{") : null;
             })()`);
             ctx.assert(rawJson === false, "Capability line leaks raw JSON while collapsed.");

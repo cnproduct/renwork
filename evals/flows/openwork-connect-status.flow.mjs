@@ -195,7 +195,7 @@ async function installHealthFailureProbe(ctx) {
     window.fetch = async (input, init) => {
       const response = await originalFetch(input, init);
       const url = typeof input === "string" ? input : input?.url || String(input);
-      if (!url.includes("/mcp/renwork-cloud/")) return response;
+      if (!url.includes("/mcp/openwork-cloud/")) return response;
       let health;
       try { health = await response.clone().json(); } catch { return response; }
       if (!health || typeof health !== "object" || !("usable" in health)) return response;
@@ -208,7 +208,7 @@ async function installHealthFailureProbe(ctx) {
     bridge.invokeDesktop = async (command, ...args) => {
       const response = await originalInvoke(command, ...args);
       const url = String(args[0] || "");
-      if (command !== "__fetch" || !url.includes("/mcp/renwork-cloud/") || !response?.body) return response;
+      if (command !== "__fetch" || !url.includes("/mcp/openwork-cloud/") || !response?.body) return response;
       let health;
       try { health = JSON.parse(response.body); } catch { return response; }
       if (!health || typeof health !== "object" || !("usable" in health)) return response;

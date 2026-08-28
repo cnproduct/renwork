@@ -182,7 +182,7 @@ async function readRuntimeCloudControlMcp(ctx) {
     try { payload = JSON.parse(text); } catch {}
     if (!response.ok) return { ok: false, reason: 'mcp endpoint failed', status: response.status, text };
     const items = payload?.items ?? [];
-    const entry = items.find((item) => item.name === 'renwork-cloud');
+    const entry = items.find((item) => item.name === 'openwork-cloud');
     const engineSync = payload?.engineSync?.status ?? null;
     return {
       ok: Boolean(entry?.config?.url?.includes('/mcp/agent') && entry?.config?.headers?.Authorization && entry?.config?.oauth === false && engineSync === 'ok'),
