@@ -1,8 +1,10 @@
 import { relations } from "drizzle-orm"
 import {
   bigint,
+  boolean,
   index,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   timestamp,
@@ -15,6 +17,9 @@ import { MemberTable, OrganizationTable } from "./org"
 
 export const InferenceKeyStatus = ["active", "revoked"] as const
 export const InferenceOrgUpstreamProviderKeyStatus = ["active", "revoked"] as const
+export const RenCreditWalletStatus = ["active", "suspended"] as const
+export const RenCreditReservationStatus = ["reserved", "captured", "released"] as const
+export const RenCreditLedgerEntryTypes = ["grant", "reserve", "capture", "release", "refund", "adjustment"] as const
 
 export const InferenceKeyTable = mysqlTable(
   "inference_keys",
@@ -156,6 +161,109 @@ export const InferenceUsageLedgerBucketChargeTable = mysqlTable(
   ],
 )
 
+/** Cloud-authoritative tenant balance. Values are RenCredit micro-units. */
+export const RenCreditWalletTable = mysqlTable(
+  "rencredit_wallets",
+  {
+    organization_id: denTypeIdColumn("organization", "organization_id").notNull().primaryKey(),
+    available_microcredits: bigint("available_microcredits", { mode: "number" }).notNull().default(0),
+    reserved_microcredits: bigint("reserved_microcredits", { mode: "number" }).notNull().default(0),
+    status: mysqlEnum("status", RenCreditWalletStatus).notNull().default("active"),
+    version: int("version").notNull().default(1),
+    ...timestamps,
+  },
+)
+
+/** Immutable pricing snapshot plus the mutable settlement state for one run. */
+export const RenCreditReservationTable = mysqlTable(
+  "rencredit_reservations",
+  {
+    id: denTypeIdColumn("renCreditReservation", "id").notNull().primaryKey(),
+    organization_id: denTypeIdColumn("organization", "organization_id").notNull(),
+    org_membership_id: denTypeIdColumn("member", "org_membership_id").notNull(),
+    inference_key_id: denTypeIdColumn("inferenceKey", "inference_key_id").notNull(),
+    run_id: varchar("run_id", { length: 255 }).notNull(),
+    idempotency_key: varchar("idempotency_key", { length: 255 }).notNull(),
+    model_sku: varchar("model_sku", { length: 255 }).notNull(),
+    catalog_version: varchar("catalog_version", { length: 255 }).notNull(),
+    route_id: varchar("route_id", { length: 255 }).notNull(),
+    provider_id: varchar("provider_id", { length: 255 }).notNull(),
+    upstream_model_id: varchar("upstream_model_id", { length: 255 }).notNull(),
+    billing_mode: varchar("billing_mode", { length: 32 }).notNull(),
+    reserved_microcredits: bigint("reserved_microcredits", { mode: "number" }).notNull(),
+    captured_microcredits: bigint("captured_microcredits", { mode: "number" }).notNull().default(0),
+    released_microcredits: bigint("released_microcredits", { mode: "number" }).notNull().default(0),
+    estimated_usage: json("estimated_usage").notNull(),
+    actual_usage: json("actual_usage"),
+    pricing_snapshot: json("pricing_snapshot").notNull(),
+    status: mysqlEnum("status", RenCreditReservationStatus).notNull().default("reserved"),
+    provider_response_id: varchar("provider_response_id", { length: 255 }),
+    failure_code: varchar("failure_code", { length: 128 }),
+    has_result: boolean("has_result").notNull().default(false),
+    expires_at: timestamp("expires_at", { fsp: 3 }).notNull(),
+    settled_at: timestamp("settled_at", { fsp: 3 }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("rencredit_reservations_org_idempotency").on(table.organization_id, table.idempotency_key),
+    uniqueIndex("rencredit_reservations_org_run").on(table.organization_id, table.run_id),
+    index("rencredit_reservations_org_status").on(table.organization_id, table.status),
+    index("rencredit_reservations_inference_key").on(table.inference_key_id),
+  ],
+)
+
+/** Append-only double-entry audit rows. Application code never updates these rows. */
+export const RenCreditLedgerEntryTable = mysqlTable(
+  "rencredit_ledger_entries",
+  {
+    id: denTypeIdColumn("renCreditLedgerEntry", "id").notNull().primaryKey(),
+    organization_id: denTypeIdColumn("organization", "organization_id").notNull(),
+    reservation_id: denTypeIdColumn("renCreditReservation", "reservation_id"),
+    entry_type: mysqlEnum("entry_type", RenCreditLedgerEntryTypes).notNull(),
+    idempotency_key: varchar("idempotency_key", { length: 255 }).notNull(),
+    amount_microcredits: bigint("amount_microcredits", { mode: "number" }).notNull(),
+    available_delta_microcredits: bigint("available_delta_microcredits", { mode: "number" }).notNull(),
+    reserved_delta_microcredits: bigint("reserved_delta_microcredits", { mode: "number" }).notNull(),
+    available_balance_after: bigint("available_balance_after", { mode: "number" }).notNull(),
+    reserved_balance_after: bigint("reserved_balance_after", { mode: "number" }).notNull(),
+    wallet_version_after: int("wallet_version_after").notNull(),
+    reason_code: varchar("reason_code", { length: 128 }).notNull(),
+    metadata: json("metadata"),
+    created_at: timestamps.created_at,
+  },
+  (table) => [
+    uniqueIndex("rencredit_ledger_org_idempotency").on(table.organization_id, table.idempotency_key),
+    index("rencredit_ledger_org_created").on(table.organization_id, table.created_at),
+    index("rencredit_ledger_reservation").on(table.reservation_id),
+  ],
+)
+
+/** Provider-reported usage events; unique per tenant/provider response for retry safety. */
+export const RenCreditUsageEventTable = mysqlTable(
+  "rencredit_usage_events",
+  {
+    id: denTypeIdColumn("renCreditUsageEvent", "id").notNull().primaryKey(),
+    organization_id: denTypeIdColumn("organization", "organization_id").notNull(),
+    reservation_id: denTypeIdColumn("renCreditReservation", "reservation_id").notNull(),
+    provider_response_id: varchar("provider_response_id", { length: 255 }).notNull(),
+    provider_id: varchar("provider_id", { length: 255 }).notNull(),
+    model_sku: varchar("model_sku", { length: 255 }).notNull(),
+    input_tokens: int("input_tokens").notNull().default(0),
+    output_tokens: int("output_tokens").notNull().default(0),
+    reasoning_tokens: int("reasoning_tokens").notNull().default(0),
+    cache_read_tokens: int("cache_read_tokens").notNull().default(0),
+    cache_write_tokens: int("cache_write_tokens").notNull().default(0),
+    accuracy: mysqlEnum("accuracy", ["reported", "estimated"]).notNull(),
+    occurred_at: timestamp("occurred_at", { fsp: 3 }).notNull(),
+    created_at: timestamps.created_at,
+  },
+  (table) => [
+    uniqueIndex("rencredit_usage_org_provider_response").on(table.organization_id, table.provider_response_id),
+    index("rencredit_usage_reservation").on(table.reservation_id),
+    index("rencredit_usage_org_created").on(table.organization_id, table.created_at),
+  ],
+)
+
 export const inferenceKeyRelations = relations(InferenceKeyTable, ({ many, one }) => ({
   organization: one(OrganizationTable, {
     fields: [InferenceKeyTable.organization_id],
@@ -243,3 +351,7 @@ export const inferenceOrgUsageBucket = InferenceOrgUsageBucketTable
 export const inferenceOrgUpstreamProviderKey = InferenceOrgUpstreamProviderKeyTable
 export const inferenceUsageLedgerEntry = InferenceUsageLedgerEntryTable
 export const inferenceUsageLedgerBucketCharge = InferenceUsageLedgerBucketChargeTable
+export const renCreditWallet = RenCreditWalletTable
+export const renCreditReservation = RenCreditReservationTable
+export const renCreditLedgerEntry = RenCreditLedgerEntryTable
+export const renCreditUsageEvent = RenCreditUsageEventTable

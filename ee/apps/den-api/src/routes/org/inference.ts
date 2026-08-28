@@ -2,6 +2,7 @@ import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
 import { getInferenceStatus, setInferenceEnabled } from "../../inference.js"
+import { getRenCreditWallet, listRenCreditLedger } from "../../rencredit-ledger.js"
 import { organizationHasActiveInferenceSubscription } from "../../stripe-billing.js"
 import { jsonValidator, orgRoleRoute } from "../../middleware/index.js"
 import { forbiddenSchema, invalidRequestSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
@@ -41,6 +42,37 @@ const inferenceProviderMissingSchema = z.object({
 }).meta({ ref: "InferenceProviderMissingError" })
 
 export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariables }>(app: Hono<T>) {
+  app.get(
+    "/v1/rencredit/wallet",
+    orgRoleRoute(["member"]),
+    async (c) => {
+      const payload = c.get("organizationContext")
+      const wallet = await getRenCreditWallet(payload.organization.id)
+      return c.json({
+        ok: true,
+        wallet: wallet ?? {
+          organization_id: payload.organization.id,
+          available_microcredits: 0,
+          reserved_microcredits: 0,
+          status: "active",
+          version: 0,
+        },
+      })
+    },
+  )
+
+  app.get(
+    "/v1/rencredit/ledger",
+    orgRoleRoute(["admin"]),
+    async (c) => {
+      const payload = c.get("organizationContext")
+      const rawLimit = Number(c.req.query("limit") ?? "50")
+      const limit = Number.isSafeInteger(rawLimit) ? rawLimit : 50
+      const entries = await listRenCreditLedger(payload.organization.id, limit)
+      return c.json({ ok: true, entries })
+    },
+  )
+
   app.get(
     "/v1/inference",
     describeRoute({
