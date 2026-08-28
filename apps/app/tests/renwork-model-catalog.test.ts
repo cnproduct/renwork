@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { RenWorkPublicModelCatalog } from "@openwork/rencredit-metering";
 
 import { catalogModelOptions, renWorkTierLabel } from "../src/react-app/domains/models/renwork-model-catalog";
@@ -55,5 +57,12 @@ describe("RenWork member model catalog", () => {
       models: [{ ...catalog.models[0]!, billingMode: "free" }],
     };
     expect(catalogModelOptions(freeCatalog)[0]?.option.isFree).toBe(true);
+  });
+
+  test("includes the RenCredit workspace package in the pruned gateway image", () => {
+    const dockerfile = readFileSync(join(import.meta.dir, "..", "..", "..", "packaging", "docker", "Dockerfile.den-gateway"), "utf8");
+    expect(dockerfile).toContain("COPY packages/rencredit-metering/package.json");
+    expect(dockerfile).toContain("COPY packages/rencredit-metering /app/packages/rencredit-metering");
+    expect(dockerfile).toContain("pnpm --dir /app/packages/rencredit-metering run build");
   });
 });
