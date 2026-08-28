@@ -1,5 +1,6 @@
 import type { ServerConfig, WorkspaceInfo } from "./types.js";
 import { resolveWorkspaceOpencodeConnection } from "./opencode-connection.js";
+import { loopbackFetch } from "./server-fetch.js";
 import {
   type LocalAutomationTask,
   type LocalAutomationRunLog,
@@ -84,7 +85,7 @@ async function executeTask(
     }
 
     // 1. Create a background session
-    const sessionRes = await fetch(`${baseUrl.replace(/\/+$/, "")}/sessions`, {
+    const sessionRes = await loopbackFetch(`${baseUrl.replace(/\/+$/, "")}/sessions`, {
       method: "POST",
       headers,
       body: JSON.stringify({
@@ -112,7 +113,7 @@ async function executeTask(
       promptPayload.modelId = task.model.modelId;
     }
 
-    const promptRes = await fetch(`${baseUrl.replace(/\/+$/, "")}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
+    const promptRes = await loopbackFetch(`${baseUrl.replace(/\/+$/, "")}/sessions/${encodeURIComponent(sessionId)}/prompt`, {
       method: "POST",
       headers,
       body: JSON.stringify(promptPayload),

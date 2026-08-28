@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import os from "node:os";
 import { ApiError } from "../errors.js";
+import { externalFetch } from "../server-fetch.js";
 import type { ServerConfig, TokenScope, WorkspaceInfo } from "../types.js";
 import { addRoute, type RequestContext, type Route } from "./registry.js";
 
@@ -267,7 +268,7 @@ export function registerCustomProviderRoutes(options: {
     // 1. Try GET /models first
     const modelsURL = `${cleanBaseURL}/models`;
     try {
-      const response = await fetch(modelsURL, {
+      const response = await externalFetch(modelsURL, {
         headers,
         signal: AbortSignal.timeout(6000),
       });
@@ -303,7 +304,7 @@ export function registerCustomProviderRoutes(options: {
     const probeModel = testModel || (type === "openrouter" ? "stealth/ox-alpha" : type === "ollama" ? "qwen3.5:27b" : "deepseek-ai/DeepSeek-V3");
 
     try {
-      const probeResponse = await fetch(chatURL, {
+      const probeResponse = await externalFetch(chatURL, {
         method: "POST",
         headers: {
           ...headers,
@@ -370,7 +371,7 @@ export function registerCustomProviderRoutes(options: {
     const host = queryURL.replace(/\/v1\/?$/, "").replace(/\/+$/, "");
 
     try {
-      const response = await fetch(`${host}/api/tags`, {
+      const response = await externalFetch(`${host}/api/tags`, {
         signal: AbortSignal.timeout(4000),
       });
       if (!response.ok) {

@@ -3,28 +3,26 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 /**
- * The packaged builds bundle this app's OpenCode plugins with `--target node`,
- * so every workspace import resolves through the exporting package's own
- * conditions. A subpath that points at `dist/` only resolves after that package
- * has been built, which the Docker and alpha pipelines do not guarantee — and
- * neither typechecks nor bun tests take that route, so nothing catches it
- * before merge. Keep every subpath resolvable from source.
+ * Production Node runtimes cannot execute TypeScript source from a workspace
+ * package. Runtime-bearing exports therefore resolve to built JavaScript by
+ * default, while local development keeps resolving directly from source. The
+ * Docker, alpha, and test pipelines must build this package before production
+ * resolution is exercised.
  */
 describe("@openwork/types package exports", () => {
   const manifest = JSON.parse(
     readFileSync(resolve(import.meta.dir, "../../../packages/types/package.json"), "utf8"),
   ) as { exports: Record<string, Record<string, string> | string> };
 
-  test("every subpath resolves from source under every condition", () => {
-    const buildDependent = Object.entries(manifest.exports).flatMap(([subpath, target]) => {
+  test("built runtime subpaths resolve to JavaScript by default and source in development", () => {
+    const invalid = Object.entries(manifest.exports).flatMap(([subpath, target]) => {
       const conditions = typeof target === "string" ? { default: target } : target;
-      const offending = Object.entries(conditions)
-        .filter(([, value]) => typeof value === "string" && value.includes("/dist/"))
-        .map(([condition]) => condition);
-      return offending.length > 0 ? [`${subpath} (${offending.join(", ")})`] : [];
+      if (!("default" in conditions) || !conditions.default?.startsWith("./dist/")) return [];
+      const valid = conditions.development?.startsWith("./src/");
+      return valid ? [] : [subpath];
     });
 
-    expect(buildDependent).toEqual([]);
+    expect(invalid).toEqual([]);
   });
 
   test("the runtime subpaths this app imports are declared", () => {
@@ -32,7 +30,8 @@ describe("@openwork/types package exports", () => {
     // the type-only subpaths that surrounded it when it was introduced.
     expect(manifest.exports["./automations"]).toMatchObject({
       types: "./src/automations.ts",
-      default: "./src/automations.ts",
+      development: "./src/automations.ts",
+      default: "./dist/automations.js",
     });
   });
 });
