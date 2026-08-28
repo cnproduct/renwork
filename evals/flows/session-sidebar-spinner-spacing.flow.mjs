@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { loadVoiceoverParagraphs } from "../runner/voiceover.mjs";
 
 const vo = await loadVoiceoverParagraphs("session-sidebar-spinner-spacing");
-const LONG_TITLE = "RenWork diagnostics authorization with a deliberately long session title";
+const LONG_TITLE = "OpenWork diagnostics authorization with a deliberately long session title";
 const FIXTURE_WORKSPACE = resolve(
   process.env.OPENWORK_EVAL_ARTIFACTS_DIR ?? "evals/results",
   "..",
@@ -118,7 +118,7 @@ export default {
           },
           screenshot: {
             name: "session-title-truncates-beside-left-spinner",
-            requireText: ["RenWork diagnostics authorization"],
+            requireText: ["OpenWork diagnostics authorization"],
           },
         });
       },

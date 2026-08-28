@@ -20,7 +20,7 @@ async function openInstallPage(ctx) {
   state.installPageUrl = minted.body?.installPageUrl ?? null;
   ctx.assert(typeof state.installPageUrl === "string", "Install-link response was missing installPageUrl.");
   await ctx.eval(`location.replace(${JSON.stringify(state.installPageUrl)})`).catch(() => undefined);
-  await ctx.waitFor(`document.body.innerText.includes('Download RenWork for ${ORG_NAME}')`, {
+  await ctx.waitFor(`document.body.innerText.includes('Download OpenWork for ${ORG_NAME}')`, {
     timeoutMs: 45_000,
     label: "organization install page",
   });
@@ -84,7 +84,7 @@ export default {
             ctx.assert(geometry && Math.abs(geometry.cardCenter - geometry.viewportCenter) < 4, `Install card was not centered: ${JSON.stringify(geometry)}`);
             await redactInstallLinkForEvidence(ctx);
           },
-          screenshot: { name: "frame-1-centered-install-card", sandboxCapture: true, textTargetUrlIncludes: "/install?token=", requireText: [`Download RenWork for ${ORG_NAME}`] },
+          screenshot: { name: "frame-1-centered-install-card", sandboxCapture: true, textTargetUrlIncludes: "/install?token=", requireText: [`Download OpenWork for ${ORG_NAME}`] },
         });
       },
     },

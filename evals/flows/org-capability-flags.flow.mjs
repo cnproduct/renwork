@@ -16,7 +16,7 @@ const PLATFORM_ADMIN_PASSWORD = process.env.OPENWORK_EVAL_PLATFORM_ADMIN_PASSWOR
 // its own capabilities. He takes part through his API session only — the whole
 // visible demo happens in the platform admin's browser.
 const ORG_ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ORG_ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ORG_ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 
 const ORG_FILTER_INPUT = 'input[placeholder="Org name, slug, or id"]';
 

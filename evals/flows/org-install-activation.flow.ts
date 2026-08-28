@@ -5,7 +5,7 @@ import { loadVoiceoverParagraphs } from "../runner/voiceover.ts";
 import { denApiFetch, denApiUrl, denWebUrl } from "./lib/den-web.mjs";
 
 const FLOW_ID = "org-install-activation";
-const INVITE_PASSWORD = "RenWorkDemo!123";
+const INVITE_PASSWORD = "OpenWorkDemo!123";
 const BROWSER_TIMEOUT_MS = 20_000;
 const vo = await loadVoiceoverParagraphs(FLOW_ID);
 
@@ -269,7 +269,7 @@ async function acceptInvitationAndOpenWelcome(ctx: FlowContext): Promise<void> {
 
 async function openInstallGuide(ctx: FlowContext): Promise<void> {
   await ctx.trustedClick("[data-testid=join-org-get-app]");
-  await ctx.waitForText("Download the RenWork installer", { timeoutMs: BROWSER_TIMEOUT_MS });
+  await ctx.waitForText("Download the OpenWork installer", { timeoutMs: BROWSER_TIMEOUT_MS });
   const href = await ctx.eval(`window.location.href`);
   state.installLink = requiredString(href, "install link");
 }
@@ -286,7 +286,7 @@ async function loadActivationHandoff(ctx: FlowContext): Promise<void> {
   ctx.assert(config.response.ok && isRecord(config.body), `install config failed (${config.response.status})`);
   if (!isRecord(config.body)) return;
   state.activationUrl = requiredString(config.body.activationUrl, "activation URL");
-  state.connectUrl = requiredString(config.body.connectUrl, "RenWork connect URL");
+  state.connectUrl = requiredString(config.body.connectUrl, "OpenWork connect URL");
 }
 
 async function startDownloadWithoutFetchingAsset(ctx: FlowContext): Promise<void> {
@@ -365,7 +365,7 @@ async function deliverConnectLinkToDesktop(ctx: FlowContext): Promise<void> {
 
 async function acceptDesktopConnection(ctx: FlowContext): Promise<void> {
   await ctx.trustedClick("[data-testid=connect-confirm-accept]");
-  await ctx.waitForText("Welcome to RenWork", { timeoutMs: 45_000 });
+  await ctx.waitForText("Welcome to OpenWork", { timeoutMs: 45_000 });
 }
 
 async function signInInvitee(ctx: FlowContext): Promise<void> {
@@ -410,7 +410,7 @@ async function completeDesktopSignedInJourney(ctx: FlowContext): Promise<void> {
       || document.body.innerText.includes("No resources have been configured for this organization yet.")
       || location.hash.includes("/session")
       || location.hash.includes("/workspace/")
-      || document.body.innerText.includes("RenWork Cloud")`,
+      || document.body.innerText.includes("OpenWork Cloud")`,
     { timeoutMs: 60_000, label: "post-sign-in desktop surface" },
   );
 
@@ -432,7 +432,7 @@ async function completeDesktopSignedInJourney(ctx: FlowContext): Promise<void> {
     label: "workspace route",
   });
   await ctx.navigateHash("/settings/cloud-account");
-  await ctx.waitForText("RenWork Cloud", { timeoutMs: 45_000 });
+  await ctx.waitForText("OpenWork Cloud", { timeoutMs: 45_000 });
   await ctx.waitForText("Sign out", { timeoutMs: 45_000 });
 }
 
@@ -469,7 +469,7 @@ async function assertBrandedWelcome(ctx: FlowContext): Promise<void> {
 }
 
 async function assertInstallRecommendation(ctx: FlowContext): Promise<void> {
-  await ctx.expectText("Download the RenWork installer");
+  await ctx.expectText("Download the OpenWork installer");
   await ctx.expectText("For your device");
   await ctx.expectText("Continue on your computer");
 }
@@ -492,8 +492,8 @@ async function assertBrowserConnected(ctx: FlowContext): Promise<void> {
   const orgName = requiredString(ctx.env.OPENWORK_EVAL_ORG_NAME, "OPENWORK_EVAL_ORG_NAME");
   await ctx.expectText(`Connected to ${orgName}`);
   await ctx.expectText(`${orgName}'s setup and branding are ready`);
-  await ctx.expectText("Return to RenWork");
-  await ctx.expectText("Copy this RenWork link");
+  await ctx.expectText("Return to OpenWork");
+  await ctx.expectText("Copy this OpenWork link");
 }
 
 async function assertSignedInDesktop(ctx: FlowContext): Promise<void> {
@@ -554,7 +554,7 @@ const flow = defineFlow({
             assert: async () => assertInstallRecommendation(ctx),
             screenshot: {
               name: "platform-aware-install-recommendation",
-              requireText: ["Download the RenWork installer", "For your device", "Continue on your computer"],
+              requireText: ["Download the OpenWork installer", "For your device", "Continue on your computer"],
             },
           });
         });
@@ -585,7 +585,7 @@ const flow = defineFlow({
             await withWeb(ctx, async () => {
               await loadActivationHandoff(ctx);
               await navigate(ctx, state.activationUrl);
-              await ctx.waitForText("Open RenWork", { timeoutMs: BROWSER_TIMEOUT_MS });
+              await ctx.waitForText("Open OpenWork", { timeoutMs: BROWSER_TIMEOUT_MS });
               await ctx.expectText(requiredString(ctx.env.OPENWORK_EVAL_ORG_NAME, "OPENWORK_EVAL_ORG_NAME"));
             });
             await useDesktop(ctx);
@@ -619,7 +619,7 @@ const flow = defineFlow({
             assert: async () => assertBrowserConnected(ctx),
             screenshot: {
               name: "connected-browser-status",
-              requireText: ["Connected to", "Return to RenWork", "Copy this RenWork link"],
+              requireText: ["Connected to", "Return to OpenWork", "Copy this OpenWork link"],
             },
           });
         });
@@ -636,7 +636,7 @@ const flow = defineFlow({
             assert: async () => assertSignedInDesktop(ctx),
             screenshot: {
               name: "signed-in-branded-desktop",
-              requireText: ["RenWork Cloud", state.inviteeEmail, "Sign out"],
+              requireText: ["OpenWork Cloud", state.inviteeEmail, "Sign out"],
             },
           });
         } finally {

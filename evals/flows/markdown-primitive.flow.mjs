@@ -134,7 +134,7 @@ export default {
     {
       name: "Conversation opens normally",
       run: async (ctx) => {
-        await ctx.prove("RenWork displays a normal session before the Markdown proof starts", {
+        await ctx.prove("OpenWork displays a normal session before the Markdown proof starts", {
           voiceover: vo[0],
           action: async () => {
             await ensureSession(ctx);
@@ -199,7 +199,7 @@ export default {
           },
           screenshot: {
             name: "chat-markdown-rendered",
-            requireText: ["Markdown proof heading", "bold proof text", "RenWork link"],
+            requireText: ["Markdown proof heading", "bold proof text", "OpenWork link"],
             rejectText: ["Something went wrong"],
           },
         });

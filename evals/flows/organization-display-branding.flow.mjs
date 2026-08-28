@@ -157,7 +157,7 @@ cat "$file"
 
 export default {
   id: "organization-display-branding",
-  title: "Organization display branding reaches download, setup, and desktop while RenWork's signed identity stays stable",
+  title: "Organization display branding reaches download, setup, and desktop while OpenWork's signed identity stays stable",
   kind: "user-facing",
   requiredEnv: [
     "OPENWORK_EVAL_DEN_API_URL",
@@ -192,7 +192,7 @@ export default {
             await openAdminPanel(ctx);
             await adminEnsureFreshAuth(ctx);
             await navigateAdminOrgSettings(ctx);
-            await setInputByPlaceholder(ctx, "RenWork", APP_NAME);
+            await setInputByPlaceholder(ctx, "OpenWork", APP_NAME);
             await setInputByPlaceholder(ctx, "https://example.com/logo.svg", state.logoUrl);
             await clickSaveSettings(ctx);
           },
@@ -201,7 +201,7 @@ export default {
             ctx.assert(config.brandAppName === APP_NAME, `brandAppName was ${config.brandAppName}`);
             ctx.assert(config.brandLogoUrl === state.logoUrl, `brandLogoUrl was ${config.brandLogoUrl}`);
             await panelEval(ctx, `(() => {
-              const input = Array.from(document.querySelectorAll('input')).find((candidate) => candidate.placeholder === 'RenWork');
+              const input = Array.from(document.querySelectorAll('input')).find((candidate) => candidate.placeholder === 'OpenWork');
               input?.scrollIntoView({ block: 'center' });
               return input?.value ?? null;
             })()`);
@@ -258,7 +258,7 @@ export default {
     {
       name: "Frame 4",
       run: async (ctx) => {
-        await ctx.prove("Branding survives a fresh desktop process while app and updater identity remain RenWork-compatible", {
+        await ctx.prove("Branding survives a fresh desktop process while app and updater identity remain OpenWork-compatible", {
           voiceover: vo[3],
           action: async () => {
             await relaunchDesktop(ctx);

@@ -19,10 +19,10 @@ const ADMIN_CDP_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_WEB_CDP_ADMIN);
 const INVITEE_CDP_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_WEB_CDP_INVITEE);
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const RUN_TAG = Date.now().toString(36);
 const MEMBER_EMAIL = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || `riley.first.connection+${RUN_TAG}@acme.test`;
-const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
+const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
 const BOOTSTRAP_PATH = process.env.OPENWORK_EVAL_BOOTSTRAP_PATH?.trim()
   || path.join(makeTempDir("openwork-first-connection-bootstrap-"), "desktop-bootstrap.json");
 
@@ -132,9 +132,9 @@ export default {
               });
             },
             assert: async () => {
-              await ctx.expectText("Download RenWork for Acme Robotics");
+              await ctx.expectText("Download OpenWork for Acme Robotics");
               await ctx.expectText("Apple Silicon (M1+)");
-              await ctx.expectText("Download the RenWork installer");
+              await ctx.expectText("Download the OpenWork installer");
               await ctx.expectText("Open the installer and paste this link:");
               await ctx.expectText("Sign in");
               await ctx.expectText("Waiting for sign-in");
@@ -153,7 +153,7 @@ export default {
             },
             screenshot: {
               name: "invitee-acme-install-checklist",
-              requireText: ["Download RenWork for Acme Robotics", "Download the RenWork installer", "Open the installer and paste this link:", "Waiting for sign-in"],
+              requireText: ["Download OpenWork for Acme Robotics", "Download the OpenWork installer", "Open the installer and paste this link:", "Waiting for sign-in"],
             },
           });
         }, { targetId: state.installPageTargetId });
@@ -174,12 +174,12 @@ export default {
               const redirect = requireRedirectWitness(state.frame3DownloadRedirect);
               witness(ctx, redirect.status === 302, "The macOS desktop download returns a redirect instead of mutating the artifact", redirect);
               witness(ctx, redirect.location === redirect.expectedLocation, "The redirect Location is the exact standard macOS desktop release asset", redirect);
-              await ctx.expectText("Download RenWork for Acme Robotics");
+              await ctx.expectText("Download OpenWork for Acme Robotics");
               await ctx.expectText("Open the installer and paste this link:");
             },
             screenshot: {
               name: "standard-desktop-download-redirect",
-              requireText: ["Download RenWork for Acme Robotics", "Open the installer and paste this link:", "Waiting for sign-in"],
+              requireText: ["Download OpenWork for Acme Robotics", "Open the installer and paste this link:", "Waiting for sign-in"],
             },
           });
         }, { targetId: state.installPageTargetId });
@@ -189,7 +189,7 @@ export default {
       name: "Frame 4",
       run: async (ctx) => {
         useDesktopClient(ctx);
-        await ctx.prove("A plain first-run desktop asks whether to use RenWork Cloud or join an organization, and pasting Acme's link binds it to Acme's server", {
+        await ctx.prove("A plain first-run desktop asks whether to use OpenWork Cloud or join an organization, and pasting Acme's link binds it to Acme's server", {
           voiceover: vo[3],
           // "Suppose someone skips all that and installs the plain OpenWork app instead: "
           action: async () => {
@@ -206,22 +206,22 @@ export default {
               return true;
             })()`);
             await ensureDesktopReady(ctx);
-            await ctx.waitForText("Use RenWork Cloud", { timeoutMs: 45_000 });
+            await ctx.waitForText("Use OpenWork Cloud", { timeoutMs: 45_000 });
             await ctx.waitFor("Boolean(document.querySelector('[data-testid=\"welcome-join-org\"]'))", {
               timeoutMs: 30_000,
               label: "welcome join organization fork",
             });
-            await ctx.expectText("Use RenWork Cloud");
+            await ctx.expectText("Use OpenWork Cloud");
             await ctx.expectText("Join your organization");
             await clickSelector(ctx, '[data-testid="welcome-join-org"]', "join organization fork");
             await ctx.waitForText("Join your organization", { timeoutMs: 20_000 });
             await ctx.fill("#join-organization-input", requireStateValue(state.installPageUrl, "install page URL"));
             await clickExactText(ctx, "Connect", "button");
             await ctx.waitForText(`Connected to ${new URL(state.installConfig.webUrl).host}`, { timeoutMs: 30_000 });
-            await ctx.waitForText("Sign in to RenWork", { timeoutMs: 60_000 });
+            await ctx.waitForText("Sign in to OpenWork", { timeoutMs: 60_000 });
           },
           assert: async () => {
-            await ctx.expectText("Sign in to RenWork");
+            await ctx.expectText("Sign in to OpenWork");
             const bootstrap = await invokeDesktop(ctx, "getDesktopBootstrapConfig");
             witness(ctx, bootstrap?.requireSignin === true, "Pasting the install link writes a required sign-in bootstrap", bootstrap);
             witness(ctx, cleanBaseUrl(bootstrap?.baseUrl) === cleanBaseUrl(state.installConfig.webUrl), "The desktop bootstrap points at Acme's web server", bootstrap);
@@ -230,9 +230,9 @@ export default {
             witness(ctx, String(serverText).includes(serverHost), "The forced sign-in surface shows Acme's organization server", serverText);
             ctx.output("desktop-bootstrap-after-welcome-paste", JSON.stringify(bootstrap, null, 2));
             await ctx.screenshot("plain-desktop-join-org-paste-forced-signin", {
-              claim: "A plain first-run desktop asks whether to use RenWork Cloud or join an organization, and pasting Acme's link binds it to Acme's server.",
+              claim: "A plain first-run desktop asks whether to use OpenWork Cloud or join an organization, and pasting Acme's link binds it to Acme's server.",
               voiceover: vo[4],
-              requireText: ["Welcome to RenWork", "Sign in to RenWork", `Connected to ${serverHost}`],
+              requireText: ["Welcome to OpenWork", "Sign in to OpenWork", `Connected to ${serverHost}`],
               rejectText: ["Pick a folder"],
             });
           },
@@ -248,9 +248,9 @@ export default {
           // "The desktop opens sign-in for Acme Robotics with the browser handling the ha"
           action: async () => {
             await ensureDesktopReady(ctx);
-            await ctx.waitForText("Sign in to RenWork", { timeoutMs: 60_000 });
+            await ctx.waitForText("Sign in to OpenWork", { timeoutMs: 60_000 });
             await stubDesktopExternalOpenCapture(ctx);
-            await clickExactText(ctx, "Sign in to RenWork", "button");
+            await clickExactText(ctx, "Sign in to OpenWork", "button");
             state.browserSignInUrl = await ctx.waitFor(
               `(() => {
                 const captured = typeof window.__capturedBrowserSigninUrl === 'string'
@@ -272,14 +272,14 @@ export default {
               await signInOnCurrentDenWebPage(ctx, MEMBER_EMAIL, MEMBER_PASSWORD, { captureDesktopHandoff: true });
               state.copiedDesktopUrl = await ctx.waitFor(
                 "typeof window.__capturedSignin === 'string' && window.__capturedSignin.startsWith('openwork://den-auth') && window.__capturedSignin",
-                { timeoutMs: 45_000, label: "captured browser-minted RenWork sign-in link" },
+                { timeoutMs: 45_000, label: "captured browser-minted OpenWork sign-in link" },
               );
               state.copiedDesktopGrant = new URL(state.copiedDesktopUrl).searchParams.get("grant") ?? "";
-              witness(ctx, state.copiedDesktopGrant.length > 0, "The browser-minted RenWork URL carries a handoff grant", redactUrlParam(state.copiedDesktopUrl, "grant"));
+              witness(ctx, state.copiedDesktopGrant.length > 0, "The browser-minted OpenWork URL carries a handoff grant", redactUrlParam(state.copiedDesktopUrl, "grant"));
             }, { targetId: state.authTargetId });
 
             useDesktopClient(ctx);
-            await deliverDeepLinkToDesktop(ctx, requireStateValue(state.copiedDesktopUrl, "browser-minted RenWork sign-in URL"));
+            await deliverDeepLinkToDesktop(ctx, requireStateValue(state.copiedDesktopUrl, "browser-minted OpenWork sign-in URL"));
             await ctx.waitFor("(localStorage.getItem('openwork.den.activeOrgName') ?? '').includes('Acme Robotics')", {
               timeoutMs: 60_000,
               label: "desktop signed into Acme",
@@ -321,7 +321,7 @@ export default {
           },
           screenshot: {
             name: "desktop-stays-on-acme-after-cancel",
-            requireText: ["RenWork Cloud", "Acme Robotics", "Sign out"],
+            requireText: ["OpenWork Cloud", "Acme Robotics", "Sign out"],
             rejectText: ["Switch organization server?", "Something went wrong"],
           },
         });
@@ -347,14 +347,14 @@ export default {
             },
             assert: async () => {
               await ctx.expectText("Connected");
-              await ctx.expectText("RenWork is set up for Acme Robotics");
+              await ctx.expectText("OpenWork is set up for Acme Robotics");
               const connected = await ctx.eval("document.querySelector('[data-testid=\"install-connected\"]')?.textContent ?? ''");
               witness(ctx, String(connected).includes("Connected") && String(connected).includes("Acme Robotics"), "Step three on the install page reports Connected for Acme Robotics", connected);
               ctx.output("desktop-handoff-status", JSON.stringify({ grant: state.copiedDesktopGrant ? "[captured]" : "", installPageReloaded: state.usedInstallPageReload }, null, 2));
             },
             screenshot: {
               name: "install-page-connected-to-acme",
-              requireText: ["Download the RenWork installer", "Open the installer and paste this link:", "Connected", "RenWork is set up for Acme Robotics"],
+              requireText: ["Download the OpenWork installer", "Open the installer and paste this link:", "Connected", "OpenWork is set up for Acme Robotics"],
             },
           });
         }, { targetId: state.installPageTargetId });
@@ -630,7 +630,7 @@ async function signInToDenWeb(ctx, email, password) {
 async function signInOnCurrentDenWebPage(ctx, email, password, { captureDesktopHandoff = false } = {}) {
   await ctx.waitFor(
     `document.body.innerText.includes('Sign in')
-      || document.body.innerText.includes('Start using RenWork')
+      || document.body.innerText.includes('Start using OpenWork')
       || Boolean(document.querySelector('input[type="email"], input[name="email"]'))`,
     { timeoutMs: 45_000, label: "sign-in screen" },
   );
@@ -855,7 +855,7 @@ async function completeDesktopSignedInJourney(ctx) {
       || document.body.innerText.includes("No resources have been configured for this organization yet.")
       || location.hash.includes('/session')
       || location.hash.includes('/workspace/')
-      || document.body.innerText.includes("RenWork Cloud")`,
+      || document.body.innerText.includes("OpenWork Cloud")`,
     { timeoutMs: 60_000, label: "post-sign-in desktop surface" },
   );
 
@@ -878,7 +878,7 @@ async function completeDesktopSignedInJourney(ctx) {
   }
 
   await ctx.navigateHash("/settings/cloud-account");
-  await ctx.waitForText("RenWork Cloud", { timeoutMs: 45_000 });
+  await ctx.waitForText("OpenWork Cloud", { timeoutMs: 45_000 });
   await ctx.waitForText("Sign out", { timeoutMs: 45_000 });
   await ctx.expectText("Acme Robotics", { timeoutMs: 45_000 });
   await ctx.expectText(MEMBER_EMAIL, { timeoutMs: 45_000 });

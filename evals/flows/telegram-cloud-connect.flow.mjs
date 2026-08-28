@@ -27,7 +27,7 @@ import {
 const vo = await loadVoiceoverParagraphs("telegram-cloud-connect");
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MOCK_SERVER_URL = (process.env.OPENWORK_EVAL_CLOUD_CONNECT_MOCK_URL ?? "http://127.0.0.1:3979")
   .trim()
   .replace(/\/+$/, "");
@@ -40,7 +40,7 @@ const TELEGRAM_CHAT_ID = 42001;
 const PAIRING_UPDATE_ID = 81_001;
 const TASK_UPDATE_ID = 81_002;
 const AFTER_DISCONNECT_UPDATE_ID = 81_003;
-const TASK_PROMPT = "Summarize the launch notes in my RenWork workspace";
+const TASK_PROMPT = "Summarize the launch notes in my OpenWork workspace";
 const OUTBOUND_TEXT = "Launch update: the support handoff is ready.";
 const SEND_MESSAGE_PATH = "/v1/capabilities/telegram/send-message";
 
@@ -199,7 +199,7 @@ async function executeSendMessageCapability(ctx, capability) {
 
 export default {
   id: "telegram-cloud-connect",
-  title: "An admin securely pairs one private Telegram chat to one healthy RenWork Cloud worker and can disconnect it fail-closed",
+  title: "An admin securely pairs one private Telegram chat to one healthy OpenWork Cloud worker and can disconnect it fail-closed",
   kind: "user-facing",
   preserveTheme: true,
   requiredEnv: ["OPENWORK_EVAL_DEN_API_URL", "OPENWORK_EVAL_DEN_WEB_URL"],
@@ -283,7 +283,7 @@ export default {
             await ctx.expectText("Create a Telegram bot");
             await ctx.expectText("Choose a ready worker");
             await ctx.expectText(WORKER_NAME);
-            await ctx.expectText("stable public HTTPS RenWork API URL");
+            await ctx.expectText("stable public HTTPS OpenWork API URL");
             await ctx.expectText("private text chats only");
             const form = await ctx.eval(`(() => {
               const token = document.querySelector('[data-testid="telegram-bot-token"]');
@@ -420,7 +420,7 @@ export default {
 
             await ctx.waitFor("Boolean(document.querySelector('[data-testid=\"telegram-paired\"]'))", {
               timeoutMs: 45_000,
-              label: "paired Telegram private chat in RenWork",
+              label: "paired Telegram private chat in OpenWork",
             });
             await closeTelegramDialog(ctx);
             await openTelegramDialog(ctx);
@@ -438,17 +438,17 @@ export default {
               paired: connection.body?.connection?.pairing?.paired,
               chat: connection.body?.connection?.pairing?.chat,
             });
-            witness(ctx, connection.body?.connection?.pairing?.chat?.username === "openwork_tester", "RenWork identifies the paired private account without exposing its numeric chat ID.", connection.body?.connection?.pairing?.chat);
+            witness(ctx, connection.body?.connection?.pairing?.chat?.username === "openwork_tester", "OpenWork identifies the paired private account without exposing its numeric chat ID.", connection.body?.connection?.pairing?.chat);
             ctx.output("telegram-pairing-confirmation.json", JSON.stringify({
               acceptedUpdateId: PAIRING_UPDATE_ID,
               paired: connection.body.connection.pairing.paired,
               privateChat: connection.body.connection.pairing.chat,
-              botConfirmation: "Connected. Messages in this private chat will now go to your selected RenWork worker.",
+              botConfirmation: "Connected. Messages in this private chat will now go to your selected OpenWork worker.",
             }, null, 2));
           },
           screenshot: {
             name: "telegram-private-chat-paired",
-            claim: "RenWork shows that exactly one private Telegram account is paired and is the only chat allowed to create worker tasks.",
+            claim: "OpenWork shows that exactly one private Telegram account is paired and is the only chat allowed to create worker tasks.",
             requireText: ["Bot and webhook connected", `@${BOT_USERNAME}`, WORKER_NAME, "Private chat paired", "@openwork_tester", "Only this chat can send tasks to the worker"],
             rejectText: ["Not paired yet", "Telegram needs attention", "Something went wrong"],
           },
@@ -474,11 +474,11 @@ export default {
               mockState,
               (cloud) => (
                 cloud.worker?.sessions?.some((session) => session.prompt === TASK_PROMPT)
-                && cloud.telegram?.sentMessages?.some((message) => message.text === `RenWork worker reply: ${TASK_PROMPT}`)
+                && cloud.telegram?.sentMessages?.some((message) => message.text === `OpenWork worker reply: ${TASK_PROMPT}`)
               ),
             );
             const workerSession = completedCloud.worker.sessions.find((session) => session.prompt === TASK_PROMPT);
-            const reply = completedCloud.telegram.sentMessages.find((message) => message.text === `RenWork worker reply: ${TASK_PROMPT}`);
+            const reply = completedCloud.telegram.sentMessages.find((message) => message.text === `OpenWork worker reply: ${TASK_PROMPT}`);
             state.taskMessageId = workerSession?.messageId ?? null;
             state.taskReply = reply?.text ?? null;
 
@@ -501,7 +501,7 @@ export default {
             witness(ctx, /^msg_[a-f0-9]{32}$/.test(state.taskMessageId ?? ""), "The worker prompt carries a deterministic, retry-stable Telegram message ID.", {
               messageId: state.taskMessageId,
             });
-            witness(ctx, state.taskReply === `RenWork worker reply: ${TASK_PROMPT}`, "The final selected-worker answer is sent back through the same Telegram bot.", {
+            witness(ctx, state.taskReply === `OpenWork worker reply: ${TASK_PROMPT}`, "The final selected-worker answer is sent back through the same Telegram bot.", {
               reply: state.taskReply,
             });
 

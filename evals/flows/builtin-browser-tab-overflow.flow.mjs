@@ -106,7 +106,7 @@ async function ensureWorkspaceAndSession(ctx) {
   }
 
   await ctx.eval(`(() => {
-    for (const label of ['Continue without RenWork Models', 'Close']) {
+    for (const label of ['Continue without OpenWork Models', 'Close']) {
       const button = Array.from(document.querySelectorAll('button')).find((candidate) =>
         candidate.textContent?.trim() === label && !candidate.disabled
       );

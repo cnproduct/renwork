@@ -28,7 +28,7 @@ async function serverRequest(ctx, path, options = {}) {
     const invoke = window.__OPENWORK_ELECTRON__.invokeDesktop;
     const info = await invoke("openworkServerInfo");
     const baseUrl = String(info?.baseUrl || info?.connectUrl || "").replace(/\\/+$/, "");
-    if (!baseUrl) throw new Error("RenWork server URL is unavailable");
+    if (!baseUrl) throw new Error("OpenWork server URL is unavailable");
     const headers = { "content-type": "application/json" };
     const token = info?.ownerToken || info?.clientToken || "";
     if (token) headers.authorization = "Bearer " + token;

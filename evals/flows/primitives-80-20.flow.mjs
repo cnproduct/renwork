@@ -17,9 +17,9 @@ const MARKDOWN_PROMPT = [
   "console.log(\"primitive proof\");",
   "```",
   "",
-  "[RenWork docs](https://openwork.dev)",
+  "[OpenWork docs](https://openwork.dev)",
 ].join("\n");
-const MARKDOWN_TEXT_MARKERS = ["Primitive Markdown Proof", "inlineToken", "console.log", "RenWork docs"];
+const MARKDOWN_TEXT_MARKERS = ["Primitive Markdown Proof", "inlineToken", "console.log", "OpenWork docs"];
 const NEW_SESSION_PROMPT = "Reply with exactly: primitive cleanup response ok";
 const NEW_SESSION_RESPONSE = "primitive cleanup response ok";
 const ERROR_TEXT = [
@@ -335,8 +335,8 @@ function windowRoute(state) {
 }
 
 async function assertBootState(ctx, state) {
-  ctx.assert(state.connected === true, `RenWork server is not connected: ${JSON.stringify(state)}`);
-  ctx.assert(state.tokenPresent === true, `RenWork token is missing: ${JSON.stringify(state)}`);
+  ctx.assert(state.connected === true, `OpenWork server is not connected: ${JSON.stringify(state)}`);
+  ctx.assert(state.tokenPresent === true, `OpenWork token is missing: ${JSON.stringify(state)}`);
   ctx.assert(Boolean(state.selectedWorkspaceId), `No selected workspace: ${JSON.stringify(state)}`);
   ctx.assert(state.routeError === null, `Route reported an error: ${JSON.stringify(state.routeError)}`);
   await ctx.expectText("Search sessions");
@@ -396,7 +396,7 @@ async function inspectExtensionsSurface(ctx) {
       hasMarketplace: text.includes("Marketplace"),
       hasRefresh: text.includes("Refresh"),
       hasAddApp: text.includes("Add App") || text.includes("Available apps") || text.includes("No apps connected yet"),
-      hasConnectPath: text.includes("RenWork Connect") || text.includes("Open Connect") || text.includes("Marketplace content now lives in Connect") || text.includes("My Extensions"),
+      hasConnectPath: text.includes("OpenWork Connect") || text.includes("Open Connect") || text.includes("Marketplace content now lives in Connect") || text.includes("My Extensions"),
     };
   })()`);
 }
@@ -408,7 +408,7 @@ async function reloadRendererClient(ctx) {
 
 export default {
   id: "primitives-80-20",
-  title: "Primitive cleanup leaves the user-facing RenWork journey unchanged",
+  title: "Primitive cleanup leaves the user-facing OpenWork journey unchanged",
   kind: "user-facing",
   precondition: async (ctx) => {
     await waitForControl(ctx);
@@ -433,7 +433,7 @@ export default {
     {
       name: "Existing workspace boots cleanly",
       run: async (ctx) => {
-        await ctx.prove("RenWork lands on an existing workspace session surface with no migration or error warning", {
+        await ctx.prove("OpenWork lands on an existing workspace session surface with no migration or error warning", {
           voiceover: vo[0],
           action: async () => {
             await routeSession(ctx);
@@ -472,7 +472,7 @@ export default {
             ctx.assert(info.ok === true, `Markdown renderer did not expose the expected DOM: ${JSON.stringify(info)}`);
             ctx.assert(info.hasCodeBlock === true && info.codeText.includes("console.log"), `Code block is missing: ${JSON.stringify(info)}`);
             ctx.assert(info.hasInlineCode === true && info.inlineCodeText.includes("inlineToken"), `Inline code is missing: ${JSON.stringify(info)}`);
-            ctx.assert(info.hasLink === true && info.linkText.includes("RenWork docs"), `Link is missing: ${JSON.stringify(info)}`);
+            ctx.assert(info.hasLink === true && info.linkText.includes("OpenWork docs"), `Link is missing: ${JSON.stringify(info)}`);
             ctx.assert(info.linkTarget === "_blank", `Link target changed: ${JSON.stringify(info)}`);
           },
           screenshot: {
@@ -553,7 +553,7 @@ export default {
     {
       name: "Restart restores durable workspace state",
       run: async (ctx) => {
-        await ctx.prove("Reopening RenWork restores the workspace, session history, settings route, and server connection", {
+        await ctx.prove("Reopening OpenWork restores the workspace, session history, settings route, and server connection", {
           voiceover: vo[4],
           action: async () => {
             ctx.assert(Boolean(createdSessionId), "No created session id is available for restart proof.");
@@ -585,7 +585,7 @@ export default {
           },
           screenshot: {
             name: "restarted-connect-settings-restored",
-            requireText: ["RenWork Connect", "Connect for teams"],
+            requireText: ["OpenWork Connect", "Connect for teams"],
             rejectText: ERROR_TEXT,
             hashIncludes: "/settings/connect",
           },

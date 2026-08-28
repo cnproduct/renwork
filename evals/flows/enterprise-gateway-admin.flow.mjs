@@ -42,7 +42,7 @@ const DEFAULT_MEMBER_EMAIL = "member@example.com";
 const WORKSPACE_ENV = "OPENWORK_EVAL_ENTERPRISE_ADMIN_WORKSPACE";
 const DEFAULT_WORKSPACE = "/workspace/enterprise-admin";
 
-const PROMPT_INCIDENTS = "Use RenWork Connect capabilities to find the enterprise incident gateway. Search for the right capability, then ask the gateway for my open incidents assigned to me using its enterprise graph query capability. Do not use lookup_incident_records. I need the incident numbers, priorities, and short descriptions.";
+const PROMPT_INCIDENTS = "Use OpenWork Connect capabilities to find the enterprise incident gateway. Search for the right capability, then ask the gateway for my open incidents assigned to me using its enterprise graph query capability. Do not use lookup_incident_records. I need the incident numbers, priorities, and short descriptions.";
 const PROMPT_INCIDENTS_RETRY = "I completed the enterprise incident gateway sign-in. Retry the same enterprise graph query for my open incidents assigned to me, still without using lookup_incident_records.";
 const PROMPT_CREATE_SKILL = "Create a skill from what we just learned and save it to our org: whenever I ask about my incidents, always use enterprise_graph_query scoped to assigned_to=me (never lookup_incident_records), default to open status, and present a table with number, priority, and short description. Name it my-incidents.";
 
@@ -64,7 +64,7 @@ export default {
       },
     },
     {
-      name: "Create Admin's fresh workspace with RenWork Connect ready",
+      name: "Create Admin's fresh workspace with OpenWork Connect ready",
       run: async (ctx) => {
         await clickThroughLingeringOnboarding(ctx);
         const folder = workspaceFolder(ctx, WORKSPACE_ENV, DEFAULT_WORKSPACE);

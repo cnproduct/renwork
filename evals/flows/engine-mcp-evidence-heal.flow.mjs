@@ -194,7 +194,7 @@ export default {
     {
       name: "Frame 1 — The repro seeds the slow first handshake and records the original failure",
       run: async (ctx) => {
-        await ctx.prove("The repro run forced the first RenWork Cloud handshake past the registration window and captured the initial failure evidence", {
+        await ctx.prove("The repro run forced the first OpenWork Cloud handshake past the registration window and captured the initial failure evidence", {
           voiceover: vo[0],
           assert: async () => {
             const seed = seedPhase();
@@ -228,7 +228,7 @@ export default {
             const health = own(healed, "health");
             ctx.output("healed-health", JSON.stringify(health ?? null, null, 2));
             witness(ctx, isRecord(healed), "The repro evidence includes phases.healed", healed);
-            witness(ctx, isHealthConnected(health), "The driver's healed health poll observed a usable or connected RenWork Cloud MCP", health);
+            witness(ctx, isHealthConnected(health), "The driver's healed health poll observed a usable or connected OpenWork Cloud MCP", health);
           },
         });
       },

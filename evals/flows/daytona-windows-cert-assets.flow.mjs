@@ -130,7 +130,7 @@ export default {
             const skillPath = join(ROOT, ".opencode", "skills", "daytona-windows-cert", "SKILL.md");
             const skill = await readFile(skillPath, "utf8");
             const commands = [
-              "schtasks /end /tn RenWorkTlsRepro",
+              "schtasks /end /tn OpenWorkTlsRepro",
               "setup-openwork-tls-repro.ps1 -Cleanup",
               "daytona sandbox delete <ID>",
               "gh release delete <tag> --yes",

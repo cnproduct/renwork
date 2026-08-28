@@ -33,9 +33,9 @@ const CUSTOM_PROVIDER = {
   updatedAt: "2026-07-15T00:00:00.000Z",
 };
 const PROMO_REJECT_TEXT = [
-  "Use RenWork Models",
-  "Use RenWork Models without API keys",
-  "Continue without RenWork Models",
+  "Use OpenWork Models",
+  "Use OpenWork Models without API keys",
+  "Continue without OpenWork Models",
   "Sign in to unlock hosted frontier models",
   "Subscribe to use hosted frontier models",
   "Subscribe to add this model",
@@ -231,7 +231,7 @@ async function startCustomDenServer() {
   };
 }
 
-async function waitForControl(ctx, label = "RenWork control API") {
+async function waitForControl(ctx, label = "OpenWork control API") {
   await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 60_000, label });
 }
 
@@ -300,7 +300,7 @@ async function createDedicatedWorkspace(ctx) {
       const info = await window.__OPENWORK_ELECTRON__?.invokeDesktop?.("openworkServerInfo");
       return Boolean(info?.running && info.port && info.clientToken);
     })()`,
-    { timeoutMs: 30_000, label: "RenWork server auth for workspace setup" },
+    { timeoutMs: 30_000, label: "OpenWork server auth for workspace setup" },
   );
   state.workspaceDir = ctx.env.OPENWORK_EVAL_WORKSPACE_DIR?.trim() || join(tmpdir(), `${FLOW_ID}-${Date.now()}`);
   await mkdir(state.workspaceDir, { recursive: true });
@@ -327,7 +327,7 @@ async function createDedicatedWorkspace(ctx) {
       body: JSON.stringify({ folderPath: state.workspaceDir, name: "Custom Den Promo Eval", preset: "starter" }),
     });
   } catch (error) {
-    throw new Error(`Could not reach RenWork server at ${baseUrl}: ${error?.message ?? error}`);
+    throw new Error(`Could not reach OpenWork server at ${baseUrl}: ${error?.message ?? error}`);
   }
   const text = await response.text();
   const payload = text ? JSON.parse(text) : null;
@@ -391,7 +391,7 @@ async function assertNoPromoText(ctx, surface) {
   ctx.recordEvidence({
     type: "assertion",
     status: found.length === 0 ? "passed" : "failed",
-    assertion: `${surface} does not contain RenWork Models subscribe or promo copy.`,
+    assertion: `${surface} does not contain OpenWork Models subscribe or promo copy.`,
     actual: found,
   });
   ctx.assert(found.length === 0, `${surface} still contains promo copy: ${found.join(", ")}`);
@@ -519,7 +519,7 @@ async function cleanup(ctx) {
 
 export default {
   id: FLOW_ID,
-  title: "Custom Den deployments do not promote RenWork Models",
+  title: "Custom Den deployments do not promote OpenWork Models",
   kind: "user-facing",
   steps: [
     {
@@ -546,23 +546,23 @@ export default {
     {
       name: "Frame 1",
       run: async (ctx) => {
-        await ctx.prove("The default RenWork Cloud Den still exposes RenWork Models normally", {
+        await ctx.prove("The default OpenWork Cloud Den still exposes OpenWork Models normally", {
           voiceover: vo[0],
           action: async () => {
             await resetToDefaultDen(ctx);
             await closeDialogs(ctx);
             await ctx.navigateHash(`/workspace/${state.workspaceId}/settings/ai`);
             await ctx.waitForText("Providers", { timeoutMs: 60_000 });
-            await ctx.waitForText("RenWork Models", { timeoutMs: 30_000 });
+            await ctx.waitForText("OpenWork Models", { timeoutMs: 30_000 });
           },
           assert: async () => {
-            await ctx.expectText("RenWork Models");
+            await ctx.expectText("OpenWork Models");
             await ctx.expectText("Providers");
             await ctx.expectText("Connected");
           },
           screenshot: {
             name: "frame-1-default-den-openwork-models",
-            requireText: ["Providers", "RenWork Models", "Connected"],
+            requireText: ["Providers", "OpenWork Models", "Connected"],
             rejectText: ["Something went wrong"],
           },
         });
@@ -571,21 +571,21 @@ export default {
     {
       name: "Frame 2",
       run: async (ctx) => {
-        await ctx.prove("The default Den model picker still lists RenWork Models for eligible users", {
+        await ctx.prove("The default Den model picker still lists OpenWork Models for eligible users", {
           voiceover: vo[1],
           action: async () => {
             await closeDialogs(ctx);
             await ctx.eval(promoResetScript());
             await openModelPicker(ctx);
-            await ctx.waitForText("RenWork Models", { timeoutMs: 30_000 });
+            await ctx.waitForText("OpenWork Models", { timeoutMs: 30_000 });
           },
           assert: async () => {
-            await ctx.expectText("RenWork Models");
+            await ctx.expectText("OpenWork Models");
             await ctx.expectText("Models");
           },
           screenshot: {
             name: "frame-2-default-den-model-picker-promo",
-            requireText: ["Models", "RenWork Models"],
+            requireText: ["Models", "OpenWork Models"],
             rejectText: ["Something went wrong"],
           },
         });
@@ -624,7 +624,7 @@ export default {
     {
       name: "Frame 4",
       run: async (ctx) => {
-        await ctx.prove("On the custom Den, the model picker shows normal available models without RenWork Models promos", {
+        await ctx.prove("On the custom Den, the model picker shows normal available models without OpenWork Models promos", {
           voiceover: vo[3],
           action: async () => {
             await ctx.eval(`(() => {
@@ -654,7 +654,7 @@ export default {
     {
       name: "Frame 5",
       run: async (ctx) => {
-        await ctx.prove("Custom Den suppresses RenWork Models promos across startup, status, AI settings, provider setup, welcome, and first-task surfaces", {
+        await ctx.prove("Custom Den suppresses OpenWork Models promos across startup, status, AI settings, provider setup, welcome, and first-task surfaces", {
           voiceover: vo[4],
           action: async () => {
             await closeDialogs(ctx);

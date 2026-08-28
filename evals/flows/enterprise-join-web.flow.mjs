@@ -171,7 +171,7 @@ export default {
           screenshot: {
             name: "enterprise-installer-download",
             claim: "The desktop-app CTA yields an installer or guided-install URL for this organization.",
-            requireText: ["Download RenWork", "Download the RenWork installer"],
+            requireText: ["Download OpenWork", "Download the OpenWork installer"],
             rejectText: ["Something went wrong"],
           },
         });
@@ -216,7 +216,7 @@ function newMemberDisplayName(ctx) {
 }
 
 function enterpriseAppName(ctx) {
-  return envText(ctx, "OPENWORK_EVAL_ENTERPRISE_APP_NAME") || "RenWork";
+  return envText(ctx, "OPENWORK_EVAL_ENTERPRISE_APP_NAME") || "OpenWork";
 }
 
 function password(ctx) {

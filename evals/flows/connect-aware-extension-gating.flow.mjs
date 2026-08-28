@@ -71,7 +71,7 @@ async function listActions(ctx) {
 
 export default {
   id: FLOW_ID,
-  title: "Connect flag gates dead legacy Google Workspace actions and redirects the agent to RenWork Cloud",
+  title: "Connect flag gates dead legacy Google Workspace actions and redirects the agent to OpenWork Cloud",
   kind: "internal",
   spec: "evals/voiceovers/connect-aware-extension-gating.md",
   steps: [

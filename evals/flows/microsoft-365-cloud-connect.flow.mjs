@@ -24,7 +24,7 @@ import {
 const vo = await loadVoiceoverParagraphs("microsoft-365-cloud-connect");
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MOCK_SERVER_URL = (process.env.OPENWORK_EVAL_CLOUD_CONNECT_MOCK_URL ?? "http://127.0.0.1:3979")
   .trim()
   .replace(/\/+$/, "");
@@ -373,7 +373,7 @@ export default {
             await ctx.expectText("Microsoft 365 is connected");
             ctx.switchBack();
             const closed = await fetch(`${ctx.cdpBaseUrl.replace(/\/$/, "")}/json/close/${encodeURIComponent(oauthTab.id)}`).catch(() => null);
-            witness(ctx, Boolean(closed?.ok), "The completed OAuth popup closes before returning to RenWork.", {
+            witness(ctx, Boolean(closed?.ok), "The completed OAuth popup closes before returning to OpenWork.", {
               status: closed?.status ?? null,
             });
           },
@@ -638,7 +638,7 @@ export default {
             });
             const file = await authenticatedApi("/v1/capabilities/microsoft-365/drive-files", {
               method: "PUT",
-              body: JSON.stringify({ path: "RenWork/permission-parity.txt", content: "Microsoft 365 permission parity verified." }),
+              body: JSON.stringify({ path: "OpenWork/permission-parity.txt", content: "Microsoft 365 permission parity verified." }),
             });
             const chats = await authenticatedApi("/v1/capabilities/microsoft-365/teams-chats?maxResults=5");
             const chatId = chats.body.chats?.[0]?.id;
@@ -677,7 +677,7 @@ export default {
               ctx,
               requests.some((request) => request.path === "/graph/v1.0/me/messages" && request.method === "POST")
                 && requests.some((request) => request.path === "/graph/v1.0/me/events" && request.method === "POST")
-                && requests.some((request) => request.path === "/graph/v1.0/me/drive/root:/RenWork/permission-parity.txt:/content" && request.method === "PUT")
+                && requests.some((request) => request.path === "/graph/v1.0/me/drive/root:/OpenWork/permission-parity.txt:/content" && request.method === "PUT")
                 && requests.some((request) => request.path === "/graph/v1.0/chats/chat-openwork-test/messages" && request.method === "POST"),
               "The end-to-end proof reaches the deterministic Microsoft Graph mutation endpoints with the expected HTTP methods.",
               requests.map((request) => ({ method: request.method, path: request.path })),

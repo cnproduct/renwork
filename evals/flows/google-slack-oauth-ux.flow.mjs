@@ -365,7 +365,7 @@ function reauthReadyScript() {
   return `(() => {
     const dialog = document.querySelector('[role="dialog"]');
     const text = dialog?.textContent ?? '';
-    const helperOk = text.includes('RenWork retries the pending action automatically');
+    const helperOk = text.includes('OpenWork retries the pending action automatically');
     const hasGoogle = text.includes('Continue with Google');
     const hasPassword = text.includes('Verify password');
     const hasSso = text.includes('Continue with organization SSO');
@@ -549,7 +549,7 @@ export default {
             const actual = await ctx.eval(reauthDialogStateScript());
             ctx.assert(actual.visible === true, "Reauth dialog should be visible.");
             ctx.assert(actual.text.includes(SECURITY_MESSAGE), `Reauth guidance missing: ${actual.text}`);
-            ctx.assert(actual.text.includes("RenWork retries the pending action automatically"), `Reauth helper missing automatic retry copy: ${actual.text}`);
+            ctx.assert(actual.text.includes("OpenWork retries the pending action automatically"), `Reauth helper missing automatic retry copy: ${actual.text}`);
             if (state.authProviders.includes("google")) {
               ctx.assert(actual.hasGoogle === true, `Seeded Google auth provider should expose Continue with Google. Providers: ${JSON.stringify(state.authProviders)}. Dialog: ${actual.text}`);
             } else {
@@ -560,8 +560,8 @@ export default {
             name: "google-workspace-reauth-security-check",
             claim: "The security check explains why it appeared and gives a clear way to continue before retrying the save.",
             requireText: state.authProviders.includes("google")
-              ? [SECURITY_MESSAGE, "SECURITY CHECK", "RenWork retries the pending action automatically", "Continue with Google"]
-              : [SECURITY_MESSAGE, "SECURITY CHECK", "RenWork retries the pending action automatically"],
+              ? [SECURITY_MESSAGE, "SECURITY CHECK", "OpenWork retries the pending action automatically", "Continue with Google"]
+              : [SECURITY_MESSAGE, "SECURITY CHECK", "OpenWork retries the pending action automatically"],
             rejectText: ["Confirm it's you to continue"],
           },
         });
@@ -700,7 +700,7 @@ export default {
           },
           screenshot: {
             name: "slack-style-redirect-url-copy-handoff",
-            claim: "After creation, RenWork shows the exact redirect URL and a Copy button before teammates connect.",
+            claim: "After creation, OpenWork shows the exact redirect URL and a Copy button before teammates connect.",
             requireText: ["Almost done", "redirect URL", "/connect/callback", "Copy"],
             rejectText: ["Something went wrong", "Failed to add connection"],
           },

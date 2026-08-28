@@ -7,7 +7,7 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 if (!vo) throw new Error(`Missing approved voice-over script for ${FLOW_ID}.`);
 
 const EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 
 async function setViewport(ctx: FlowContext, width: number): Promise<void> {
   ctx.assert(Boolean(ctx.client), "A browser CDP client is required.");

@@ -28,7 +28,7 @@ import { join } from "node:path";
 
 export const SHARED = {
   OWNER_EMAIL: "alex@acme.test",
-  PASSWORD: "RenWorkDemo123!",
+  PASSWORD: "OpenWorkDemo123!",
   SKILL_NAME: "laptop-refresh-policy",
   SKILL_DESCRIPTION: "Check whether a laptop is eligible for refresh per IT policy.",
   MCP_NAME: "acme-servicenow",
@@ -153,7 +153,7 @@ export default {
     {
       name: "App A boots; owner signs in via desktop handoff",
       run: async (ctx) => {
-        await ctx.prove("Owner is signed in to RenWork Cloud", {
+        await ctx.prove("Owner is signed in to OpenWork Cloud", {
           action: async () => {
             await ctx.waitFor("Boolean(window.__openworkControl)", { timeoutMs: 90_000, label: "control API" });
             const status = await authStatus(ctx);

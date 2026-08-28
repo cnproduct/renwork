@@ -37,9 +37,9 @@ import { execSync } from "node:child_process";
 const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace(/\/+$/, "");
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? DEN_API_URL).trim().replace(/\/+$/, "");
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MEMBER_EMAIL = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test";
-const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
+const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const MOCK_SERVER_URL = (process.env.MOCK_OAUTH_MCP_URL ?? "http://127.0.0.1:3978").trim().replace(/\/+$/, "");
 const RUN_TAG = Date.now();
@@ -178,7 +178,7 @@ export default {
       },
     },
     {
-      name: "Member signs the desktop app into RenWork Cloud (real handoff grant)",
+      name: "Member signs the desktop app into OpenWork Cloud (real handoff grant)",
       run: async (ctx) => {
         const alreadySignedIn = await ctx.eval("Boolean((localStorage.getItem('openwork.den.authToken') ?? '').trim())");
         if (!alreadySignedIn) {
@@ -245,14 +245,14 @@ export default {
         await ctx.waitFor("window.location.hash.includes('/workspace/')", { timeoutMs: 60_000, label: "workspace open" });
         // Dismiss the OpenWork Models upsell if it appears.
         await ctx.eval(`(() => {
-          const btn = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continue without RenWork Models');
+          const btn = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continue without OpenWork Models');
           btn?.click();
           return true;
         })()`);
       },
     },
     {
-      name: "RenWork Cloud Control auto-configures with the member's token",
+      name: "OpenWork Cloud Control auto-configures with the member's token",
       run: async (ctx) => {
         // The auto-sync runs while the settings route is mounted — same as a
         // real user visiting settings once after sign-in.
@@ -266,14 +266,14 @@ export default {
           { timeoutMs: 120_000, label: "openwork.den.mcp.sync marker" },
         );
         ctx.log(`marker: ${await ctx.eval("localStorage.getItem('openwork.den.mcp.sync')")}`);
-        await ctx.prove("RenWork Cloud Control is configured in the member's app", {
+        await ctx.prove("OpenWork Cloud Control is configured in the member's app", {
           assert: async () => {
-            await ctx.expectText("RenWork Cloud Control", { timeoutMs: 30_000 });
+            await ctx.expectText("OpenWork Cloud Control", { timeoutMs: 30_000 });
           },
           screenshot: {
             name: "desktop-cloud-control-configured",
-            claim: "The member's desktop app auto-configured the RenWork Cloud Control connection after cloud sign-in.",
-            requireText: ["RenWork Cloud Control"],
+            claim: "The member's desktop app auto-configured the OpenWork Cloud Control connection after cloud sign-in.",
+            requireText: ["OpenWork Cloud Control"],
             rejectText: ["Something went wrong"],
           },
         });
@@ -300,7 +300,7 @@ export default {
               "Boolean(document.querySelector('[contenteditable=\"true\"][data-lexical-editor=\"true\"]'))",
               { timeoutMs: 30_000, label: "composer" },
             );
-            const prompt = `Use the RenWork Cloud Control connection: call search_capabilities with query "echo", then call execute_capability with the exact match name and body {"text":"${ECHO_TEXT}"}. Reply with the exact text the tool returned.`;
+            const prompt = `Use the OpenWork Cloud Control connection: call search_capabilities with query "echo", then call execute_capability with the exact match name and body {"text":"${ECHO_TEXT}"}. Reply with the exact text the tool returned.`;
             await ctx.eval(`(() => {
               const editor = document.querySelector('[contenteditable="true"][data-lexical-editor="true"]');
               editor.focus();

@@ -7,8 +7,8 @@ const execFile = promisify(execFileCallback);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const PROBE_SCRIPT = `
-  const { RenWorkExtensionsPreview } = await import("./apps/server/src/opencode-plugins/openwork-extensions-preview.ts");
-  const plugin = await RenWorkExtensionsPreview();
+  const { OpenWorkExtensionsPreview } = await import("./apps/server/src/opencode-plugins/openwork-extensions-preview.ts");
+  const plugin = await OpenWorkExtensionsPreview();
   const output = { system: [] };
   await plugin["experimental.chat.system.transform"](undefined, output);
   console.log(JSON.stringify({ tools: Object.keys(plugin.tool).sort(), system: output.system.join("\\n") }));
@@ -38,16 +38,16 @@ function witness(ctx, condition, assertion, actual) {
 
 export default {
   id: "ui-control-tools-opt-in",
-  title: "Built-in RenWork agent surface is semantic-only",
+  title: "Built-in OpenWork agent surface is semantic-only",
   kind: "internal",
   requiresApp: false,
   steps: [
     {
-      name: "Only semantic RenWork tools are registered",
+      name: "Only semantic OpenWork tools are registered",
       run: async (ctx) => {
         let result = null;
         await ctx.prove("The preview plugin exposes openwork_context/query/execute only", {
-          voiceover: "The bundled RenWork plugin no longer registers legacy session, extension, browser, or UI-control tool aliases. Agents use the three semantic tools and affordance ids from openwork_context.",
+          voiceover: "The bundled OpenWork plugin no longer registers legacy session, extension, browser, or UI-control tool aliases. Agents use the three semantic tools and affordance ids from openwork_context.",
           action: async () => {
             result = await probeSemanticTools();
             ctx.output("semantic tool surface", pretty(result));

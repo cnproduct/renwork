@@ -69,30 +69,30 @@ export default {
       },
     },
     {
-      name: "Default view keeps directory apps discoverable and hides inactive built-in RenWork MCPs",
+      name: "Default view keeps directory apps discoverable and hides inactive built-in OpenWork MCPs",
       run: async (ctx) => {
         const directoryEntry = await ctx.hasText("Notion") ? "Notion" : "Linear";
         const hasDirectoryEntry = await ctx.hasText(directoryEntry);
         ctx.assert(hasDirectoryEntry, "Expected at least one MCP directory entry (Notion/Linear) in quick connect.");
-        await ctx.expectNoText("RenWork UI Control");
+        await ctx.expectNoText("OpenWork UI Control");
         await ctx.screenshot("mcp-view-default-hidden", {
-          claim: "Extensions shows public directory apps while inactive built-in RenWork MCPs are hidden by default.",
+          claim: "Extensions shows public directory apps while inactive built-in OpenWork MCPs are hidden by default.",
           voiceover: "Settings shows the extension directory with public apps while inactive internal control entries stay out of the default list.",
           requireText: [directoryEntry],
-          rejectText: ["RenWork UI Control", "Something went wrong"],
+          rejectText: ["OpenWork UI Control", "Something went wrong"],
           hashIncludes: "/settings/extensions/mcp",
         });
       },
     },
     {
-      name: "Show hidden reveals built-in RenWork MCPs",
+      name: "Show hidden reveals built-in OpenWork MCPs",
       run: async (ctx) => {
         await revealHidden(ctx);
-        await ctx.expectText("RenWork UI Control", { timeoutMs: 15_000 });
+        await ctx.expectText("OpenWork UI Control", { timeoutMs: 15_000 });
         await ctx.screenshot("mcp-view-built-ins-revealed", {
-          claim: "Show hidden reveals inactive built-in RenWork MCP entries.",
-          voiceover: "Choosing Show hidden brings back RenWork UI Control for anyone who wants to manage it.",
-          requireText: ["RenWork UI Control"],
+          claim: "Show hidden reveals inactive built-in OpenWork MCP entries.",
+          voiceover: "Choosing Show hidden brings back OpenWork UI Control for anyone who wants to manage it.",
+          requireText: ["OpenWork UI Control"],
           rejectText: ["Something went wrong"],
           hashIncludes: "/settings/extensions/mcp",
         });

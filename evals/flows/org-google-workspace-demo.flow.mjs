@@ -28,9 +28,9 @@ const vo = await loadVoiceoverParagraphs("org-google-workspace-demo");
 const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace(/\/+$/, "");
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? DEN_API_URL.replace("127.0.0.1", "localhost")).trim().replace(/\/+$/, "");
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MEMBER_EMAIL = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test";
-const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
+const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const MOCK_SERVER_URL = (process.env.MOCK_OAUTH_MCP_URL ?? "http://127.0.0.1:3978").trim().replace(/\/+$/, "");
 const RUN_TAG = Date.now();
@@ -160,7 +160,7 @@ async function ensureWorkspace(ctx) {
     await sleep(1_000);
   }
   await ctx.eval(`(() => {
-    const btn = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continue without RenWork Models');
+    const btn = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continue without OpenWork Models');
     btn?.click();
     return true;
   })()`, { awaitPromise: true });
@@ -170,7 +170,7 @@ async function createFreshEvalWorkspace(ctx) {
   await ensureWorkspace(ctx);
   await ctx.waitFor(
     "Boolean(localStorage.getItem('openwork.server.port') && localStorage.getItem('openwork.server.token') && localStorage.getItem('openwork.server.hostToken'))",
-    { timeoutMs: 30_000, label: "RenWork server auth for workspace setup" },
+    { timeoutMs: 30_000, label: "OpenWork server auth for workspace setup" },
   );
   let created = null;
   const deadline = Date.now() + 60_000;
@@ -386,7 +386,7 @@ export default {
               return Boolean(card);
             })()`);
             ctx.assert(opened, "Could not open the org Google Workspace card.");
-            await ctx.expectText("RenWork stores this sign-in", { timeoutMs: 15_000 });
+            await ctx.expectText("OpenWork stores this sign-in", { timeoutMs: 15_000 });
             state.clickedAt = new Date().toISOString();
             const clicked = await ctx.eval(`(() => {
               const dialog = document.querySelector('[role="dialog"]');
@@ -461,19 +461,19 @@ export default {
           action: async () => {
             await openMcpSettings(ctx);
             await revealHidden(ctx);
-            await ctx.expectText("RenWork Cloud Control", { timeoutMs: 30_000 });
+            await ctx.expectText("OpenWork Cloud Control", { timeoutMs: 30_000 });
             const alreadyConnected = await ctx.eval(`(() => {
-              const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('RenWork Cloud Control'));
+              const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('OpenWork Cloud Control'));
               return Boolean(card?.textContent.includes('Connected'));
             })()`);
             if (!alreadyConnected) {
               const openedCard = await ctx.eval(`(() => {
-                const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('RenWork Cloud Control'));
+                const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('OpenWork Cloud Control'));
                 card?.scrollIntoView({ block: 'center' });
                 card?.click();
                 return Boolean(card);
               })()`);
-              ctx.assert(openedCard, "Could not open the RenWork Cloud Control card.");
+              ctx.assert(openedCard, "Could not open the OpenWork Cloud Control card.");
               await ctx.expectText("Manage your org", { timeoutMs: 15_000 });
               const clicked = await ctx.eval(`(() => {
                 const dialog = document.querySelector('[role="dialog"]');
@@ -481,14 +481,14 @@ export default {
                 button?.click();
                 return Boolean(button);
               })()`);
-              ctx.assert(clicked, "Could not click Connect for RenWork Cloud Control.");
+              ctx.assert(clicked, "Could not click Connect for OpenWork Cloud Control.");
             }
             await ctx.waitFor(
               `(() => {
-                const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('RenWork Cloud Control'));
+                const card = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('OpenWork Cloud Control'));
                 return Boolean(card?.textContent.includes('Connected'));
               })()`,
-              { timeoutMs: 60_000, label: "RenWork Cloud Control connected card" },
+              { timeoutMs: 60_000, label: "OpenWork Cloud Control connected card" },
             );
             await ctx.clickText("Refresh", { timeoutMs: 15_000 }).catch(() => {});
             let runtime = null;
@@ -511,7 +511,7 @@ export default {
               if (runtime?.ok) break;
               await sleep(1_000);
             }
-            ctx.assert(runtime?.ok, `Runtime RenWork Cloud Control MCP never became ready: ${JSON.stringify(runtime)}`);
+            ctx.assert(runtime?.ok, `Runtime OpenWork Cloud Control MCP never became ready: ${JSON.stringify(runtime)}`);
 
             await ctx.navigateHash(`/workspace/${state.workspaceId}/session`);
             await ctx.waitFor("window.location.hash.includes('/session')", { timeoutMs: 20_000 });
@@ -523,7 +523,7 @@ export default {
             await ctx.control("session.create_task");
             await ctx.waitFor("window.location.hash.includes('/session/ses_')", { timeoutMs: 30_000, label: "fresh task session" });
             await ctx.waitFor("Boolean(document.querySelector('[contenteditable=\"true\"][data-lexical-editor=\"true\"]'))", { timeoutMs: 30_000, label: "composer" });
-            const prompt = `Use the RenWork Cloud Control connection: call search_capabilities with query "gmail draft", then call execute_capability on the Gmail draft capability. For the body arguments use: to = customer@example.com, subject = ${DRAFT_SUBJECT}, body = Thanks for the call today. Reply with the draft id the tool returned.`;
+            const prompt = `Use the OpenWork Cloud Control connection: call search_capabilities with query "gmail draft", then call execute_capability on the Gmail draft capability. For the body arguments use: to = customer@example.com, subject = ${DRAFT_SUBJECT}, body = Thanks for the call today. Reply with the draft id the tool returned.`;
             await ctx.control("composer.set_text", { text: prompt });
             await ctx.waitFor(
               "window.__openworkControl?.listActions?.().find((a) => a.id === 'composer.send')?.disabled === false",

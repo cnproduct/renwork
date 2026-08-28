@@ -75,7 +75,7 @@ async function resetToDefaultWelcome(ctx) {
     location.reload();
     return true;
   })()`, { awaitPromise: true });
-  await ctx.waitForText("Using RenWork on-premises?", { timeoutMs: 60_000 });
+  await ctx.waitForText("Using OpenWork on-premises?", { timeoutMs: 60_000 });
 }
 
 async function finishOnboardingEnoughForSettings(ctx) {
@@ -101,9 +101,9 @@ async function finishOnboardingEnoughForSettings(ctx) {
       const state = await ctx.waitFor(`(() => {
         const text = document.body.innerText;
         if (text.includes("Power your first task")) return "provider";
-        if (text.includes("How did you hear about RenWork?")) return "attribution";
+        if (text.includes("How did you hear about OpenWork?")) return "attribution";
         if (location.hash.includes("/workspace/") || location.hash.includes("#/session")) return "done";
-        if (text.includes("RenWork server is unavailable") || text.includes("Failed to create workspace")) return "fallback";
+        if (text.includes("OpenWork server is unavailable") || text.includes("Failed to create workspace")) return "fallback";
         return null;
       })()`, { timeoutMs: 120_000, label: "workspace creation or onboarding step" }).catch(() => "fallback");
 
@@ -113,7 +113,7 @@ async function finishOnboardingEnoughForSettings(ctx) {
 
       const attribution = await ctx.waitFor(`(() => {
         const text = document.body.innerText;
-        if (text.includes("How did you hear about RenWork?")) return "ready";
+        if (text.includes("How did you hear about OpenWork?")) return "ready";
         if (!location.hash.startsWith("#/welcome")) return "done";
         return null;
       })()`, { timeoutMs: 30_000, label: "attribution or app route" }).catch(() => "fallback");
@@ -158,12 +158,12 @@ export default {
           },
           assert: async () => {
             await ctx.expectText("Pick a folder to get started");
-            await ctx.expectText("Using RenWork on-premises?");
+            await ctx.expectText("Using OpenWork on-premises?");
             await ctx.expectNoText(`Connected to ${ORG_HOST}`);
           },
           screenshot: {
             name: "frame-1",
-            requireText: ["Pick a folder to get started", "Using RenWork on-premises?"],
+            requireText: ["Pick a folder to get started", "Using OpenWork on-premises?"],
             rejectText: [`Connected to ${ORG_HOST}`, "Something went wrong"],
           },
         });
@@ -176,7 +176,7 @@ export default {
           voiceover: vo[1],
           action: async () => {
             await closeDialogs(ctx);
-            await ctx.clickText("Using RenWork on-premises?");
+            await ctx.clickText("Using OpenWork on-premises?");
             await ctx.fill('input[placeholder="https://openwork.yourcompany.com"]', ORG_URL);
           },
           assert: async () => {
@@ -216,7 +216,7 @@ export default {
           screenshot: {
             name: "frame-3",
             requireText: [`Connected to ${ORG_HOST}`, "Change"],
-            rejectText: ["Using RenWork on-premises?", "Something went wrong"],
+            rejectText: ["Using OpenWork on-premises?", "Something went wrong"],
           },
         });
       },
@@ -247,26 +247,26 @@ export default {
     {
       name: "Frame 5",
       run: async (ctx) => {
-        await ctx.prove("Reset returns to standard RenWork Cloud and the welcome link state", {
+        await ctx.prove("Reset returns to standard OpenWork Cloud and the welcome link state", {
           voiceover: vo[4],
           action: async () => {
             await assertAdvancedOrganizationServerFirst(ctx);
             await ctx.clickText("Reset", { selector: "[data-section] button" });
-            await ctx.waitForText("Using standard RenWork Cloud.", { timeoutMs: 30_000 });
+            await ctx.waitForText("Using standard OpenWork Cloud.", { timeoutMs: 30_000 });
             await ctx.eval(`${writeOnboardingPrefScript(false)}`);
             await ctx.navigateHash("/welcome");
             await ctx.eval("location.reload()");
-            await ctx.waitForText("Using RenWork on-premises?", { timeoutMs: 60_000 });
+            await ctx.waitForText("Using OpenWork on-premises?", { timeoutMs: 60_000 });
           },
           assert: async () => {
-            await ctx.expectText("Using RenWork on-premises?");
+            await ctx.expectText("Using OpenWork on-premises?");
             await ctx.expectNoText(`Connected to ${ORG_HOST}`);
             const stored = await ctx.eval(`localStorage.getItem("openwork.den.baseUrl")`);
             ctx.assert(stored === DEFAULT_DEN_BASE_URL, `Expected reset control plane URL to be ${DEFAULT_DEN_BASE_URL}, got ${stored}`);
           },
           screenshot: {
             name: "frame-5",
-            requireText: ["Using RenWork on-premises?"],
+            requireText: ["Using OpenWork on-premises?"],
             rejectText: [`Connected to ${ORG_HOST}`, "Something went wrong"],
           },
         });
@@ -291,10 +291,10 @@ export default {
                 location.reload();
                 return true;
               })()`);
-              await ctx.waitForText("Sign in with RenWork Cloud", { timeoutMs: 60_000 });
+              await ctx.waitForText("Sign in with OpenWork Cloud", { timeoutMs: 60_000 });
               await ctx.expectNoText("Developer mode only");
-              await ctx.expectText("Using RenWork on-premises?");
-              await ctx.clickText("Using RenWork on-premises?");
+              await ctx.expectText("Using OpenWork on-premises?");
+              await ctx.clickText("Using OpenWork on-premises?");
               await ctx.expectText("Connect to your organization's server");
               await ctx.expectText("Paste the server URL your IT team shared.");
               await ctx.fill('input[placeholder="https://openwork.yourcompany.com"]', ORG_URL);

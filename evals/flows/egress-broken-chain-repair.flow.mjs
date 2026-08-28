@@ -125,7 +125,7 @@ export default {
         let plain;
         let repaired;
         let disabled;
-        await ctx.prove("Leaf-only TLS chains fail plainly, product repair succeeds, the kill switch fails again, and RenWork product diagnostics name the chain fault", {
+        await ctx.prove("Leaf-only TLS chains fail plainly, product repair succeeds, the kill switch fails again, and OpenWork product diagnostics name the chain fault", {
           voiceover: vo[0],
           action: async () => {
             lab = await startEgressLab({ profile: "broken-chain" });

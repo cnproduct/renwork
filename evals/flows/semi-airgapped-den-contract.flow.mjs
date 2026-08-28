@@ -286,7 +286,7 @@ export default {
               "test",
               "test/egress-diagnostics.test.ts",
               "-t",
-              "defaults to the RenWork Labs diagnostic host and accepts an operator override",
+              "defaults to the OpenWork Labs diagnostic host and accepts an operator override",
             ];
             result = run("bun", args, DEN_API_ROOT);
             output = commandOutput("bun", args, DEN_API_ROOT, result);

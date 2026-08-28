@@ -6,7 +6,7 @@ const FLOW_ID = "join-org-invite-clean";
 const vo = await loadVoiceoverParagraphs(FLOW_ID);
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const DEFAULT_INVITEE_EMAIL = "join-org-invite-clean@acme.test";
 const RUN_TAG = `${Date.now().toString(36)}-${randomBytes(2).toString("hex")}`;
 const FALLBACK_INVITEE_EMAIL = `join-org-invite-clean+${RUN_TAG}@acme.test`;

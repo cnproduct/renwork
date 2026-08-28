@@ -11,7 +11,7 @@ import { denApiFetch, openYourConnections, signInApi, signInViaBrowser } from ".
 const vo = await loadVoiceoverParagraphs("your-connections-admin-shared-connect");
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MOCK_SERVER_URL = (process.env.MOCK_OAUTH_MCP_URL ?? "http://127.0.0.1:3978").trim().replace(/\/+$/, "");
 const RUN_TAG = Date.now();
 const CONNECTION_NAME = `shared-tool-${RUN_TAG}`;

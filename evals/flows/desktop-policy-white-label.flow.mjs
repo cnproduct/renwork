@@ -76,7 +76,7 @@ export default {
         ctx.assert(!logo, "Expected no brand logo at baseline.");
 
         await ctx.screenshot("baseline", {
-          claim: "App renders with default RenWork accent and no brand logo.",
+          claim: "App renders with default OpenWork accent and no brand logo.",
         });
       },
     },

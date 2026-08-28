@@ -5,9 +5,9 @@ import { denApiFetch, denWebUrl, openYourConnections, signInApi, signInViaBrowse
 const vo = await loadVoiceoverParagraphs("org-google-workspace-reconnect");
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MEMBER_EMAIL = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test";
-const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
+const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const MOCK_SERVER_URL = (process.env.MOCK_OAUTH_MCP_URL ?? "http://127.0.0.1:3978").trim().replace(/\/+$/, "");
 const GOOGLE_CLIENT_ID = "google-client-id";
@@ -194,11 +194,11 @@ async function waitForMemberStatus(ctx, expectedScopes) {
 
 async function approveMockConsent(ctx) {
   const clicked = await ctx.eval(`(() => {
-    const button = [...document.querySelectorAll('button')].find((entry) => (entry.textContent ?? '').trim() === 'Approve RenWork');
+    const button = [...document.querySelectorAll('button')].find((entry) => (entry.textContent ?? '').trim() === 'Approve OpenWork');
     button?.click();
     return Boolean(button);
   })()`);
-  ctx.assert(clicked, "Mock OAuth consent page did not show an Approve RenWork button.");
+  ctx.assert(clicked, "Mock OAuth consent page did not show an Approve OpenWork button.");
   await ctx.waitForText("Connected", { timeoutMs: 30_000 });
 }
 
@@ -377,7 +377,7 @@ export default {
           screenshot: {
             name: "org-google-workspace-reconnect-consent-scopes",
             claim: "The reconnect consent page shows the newly requested Gmail read and Calendar event scopes before approval.",
-            requireText: ["Mock MCP OAuth", "Requested scopes", "https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/calendar.events", "Approve RenWork"],
+            requireText: ["Mock MCP OAuth", "Requested scopes", "https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/calendar.events", "Approve OpenWork"],
             rejectText: ["Connection failed"],
           },
         });

@@ -17,9 +17,9 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 if (!vo) throw new Error(`Missing approved voice-over script for ${FLOW_ID}.`);
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MAYA_EMAIL = "maya.firstboot@acme.test";
-const MAYA_PASSWORD = "RenWorkDemo123!";
+const MAYA_PASSWORD = "OpenWorkDemo123!";
 const ORG_SLUG = "acme-robotics-demo";
 const ORG_NAME = "Acme Robotics";
 const ENGINEERING_TEAM = "Engineering";
@@ -249,7 +249,7 @@ export default {
                 await ctx.screenshot("maya-installs-openwork-guide", {
                   claim: "Maya reaches Acme's install/download guide before opening her first desktop session.",
                   voiceover: vo[4],
-                  requireText: ["Download RenWork", "Download the RenWork installer", "Open RenWork"],
+                  requireText: ["Download OpenWork", "Download the OpenWork installer", "Open OpenWork"],
                   rejectText: ERROR_TEXT,
                 });
               });
@@ -295,7 +295,7 @@ export default {
             screenshot: {
               name: "maya-first-desktop-boot-ready",
               requireText: ["Run task"],
-              rejectText: ["Choose your organization", "You have access to the following resources.", "Continue to workspace", "Restart RenWork", RELOAD_TEXT],
+              rejectText: ["Choose your organization", "You have access to the following resources.", "Continue to workspace", "Restart OpenWork", RELOAD_TEXT],
               hashIncludes: "/session",
             },
           });
@@ -333,7 +333,7 @@ export default {
             screenshot: {
               name: "maya-model-picker-acme-only",
               requireText: ["GPT-5.4", "GPT-5.5"],
-              rejectText: ["OpenCode Zen", "Use RenWork Models", "Subscribe to add this model", "no longer available"],
+              rejectText: ["OpenCode Zen", "Use OpenWork Models", "Subscribe to add this model", "no longer available"],
             },
           });
         } finally {
@@ -388,7 +388,7 @@ export default {
           screenshot: {
             name: "quiet-boot-no-reload-churn",
             requireText: ["Run task"],
-            rejectText: [RELOAD_TEXT, "Restart RenWork"],
+            rejectText: [RELOAD_TEXT, "Restart OpenWork"],
             hashIncludes: "/session",
           },
         });
@@ -1163,15 +1163,15 @@ async function openInstallGuideFromJoinSuccess(ctx) {
     timeoutMs: 45_000,
     label: "install guide page",
   });
-  await ctx.waitForText("Download the RenWork installer", { timeoutMs: 30_000 });
+  await ctx.waitForText("Download the OpenWork installer", { timeoutMs: 30_000 });
   await ctx.eval(`(() => {
     const button = [...document.querySelectorAll('button')]
-      .find((entry) => (entry.textContent ?? '').includes('I already have RenWork'));
+      .find((entry) => (entry.textContent ?? '').includes('I already have OpenWork'));
     button?.scrollIntoView({ block: 'center', inline: 'center' });
     button?.click();
     return Boolean(button);
   })()`);
-  await ctx.waitForText("Open RenWork", { timeoutMs: 30_000 });
+  await ctx.waitForText("Open OpenWork", { timeoutMs: 30_000 });
 }
 
 async function signInMayaByEmail(ctx) {
@@ -1194,8 +1194,8 @@ async function getOpenworkServerInfo(ctx) {
   const baseUrl = String(info?.baseUrl || info?.connectUrl || (info?.port ? `http://127.0.0.1:${info.port}` : "")).replace(/\/+$/, "");
   const token = String(info?.clientToken || info?.ownerToken || "").trim();
   const hostToken = String(info?.hostToken || "").trim();
-  ctx.assert(Boolean(baseUrl), "RenWork server base URL is available.");
-  ctx.assert(Boolean(token), "RenWork server client token is available.");
+  ctx.assert(Boolean(baseUrl), "OpenWork server base URL is available.");
+  ctx.assert(Boolean(token), "OpenWork server client token is available.");
   return { baseUrl, token, hostToken };
 }
 
@@ -1528,7 +1528,7 @@ async function clickFirstBootOnboardingIfVisible(ctx) {
       button?.click();
       return Boolean(button);
     };
-    for (const label of ['Continue with organization', 'Continue to workspace', 'Restart RenWork']) {
+    for (const label of ['Continue with organization', 'Continue to workspace', 'Restart OpenWork']) {
       if (clickButton(label)) return label;
     }
     if (body.includes('Choose your organization')) {

@@ -11,7 +11,7 @@ const DEN_WEB_URL = clean(process.env.OPENWORK_EVAL_DEN_WEB_URL);
 const WEB_CDP_URL = clean(process.env.OPENWORK_EVAL_WEB_CDP_ADMIN);
 const DEN_TOKEN = process.env.OPENWORK_EVAL_DEN_TOKEN?.trim() || "";
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const BRANDED_APP_NAME = "Acme Work";
 const BRAND_LOGO_URL = `${DEN_WEB_URL}/openwork-logo-transparent.svg`;
@@ -218,15 +218,15 @@ export default {
             })()`);
             witness(ctx, Boolean(state.installToken), "The page came from a real organization install token", "token redacted");
             witness(ctx, state.organizationName === "Acme Robotics", "The guide identifies the exact organization", state.organizationName);
-            await ctx.expectText("Download the RenWork installer");
+            await ctx.expectText("Download the OpenWork installer");
             await ctx.expectText("Open the installer and paste this link:");
             await ctx.expectText("Sign in");
-            await ctx.expectNoText("RenWork Enterprise");
+            await ctx.expectNoText("OpenWork Enterprise");
           },
           screenshot: {
             name: "keyless-three-step-guide",
-            requireText: ["Download the RenWork installer", "Open the installer and paste this link:", "Sign in", "Acme Robotics"],
-            rejectText: ["RenWork Enterprise"],
+            requireText: ["Download the OpenWork installer", "Open the installer and paste this link:", "Sign in", "Acme Robotics"],
+            rejectText: ["OpenWork Enterprise"],
           },
         }));
       },
@@ -264,7 +264,7 @@ export default {
         },
         screenshot: {
           name: "standard-installer-no-wait",
-          requireText: ["Download the RenWork installer", "Open the installer and paste this link:", "keep this page open"],
+          requireText: ["Download the OpenWork installer", "Open the installer and paste this link:", "keep this page open"],
           rejectText: ["Preparing your", "ZIP"],
         },
       })),
@@ -417,15 +417,15 @@ export default {
               ].join("\n"));
             },
             assert: async () => {
-              await ctx.expectText("Download the RenWork installer");
+              await ctx.expectText("Download the OpenWork installer");
               await ctx.expectText("Open the installer and paste this link:");
               await ctx.expectNoText("custom installer");
-              await ctx.expectNoText("RenWork Enterprise");
+              await ctx.expectNoText("OpenWork Enterprise");
             },
             screenshot: {
               name: "same-installer-future-signed-mode",
-              requireText: ["Download the RenWork installer", "Open the installer and paste this link:", "The installer only continues with a valid link"],
-              rejectText: ["custom installer", "RenWork Enterprise"],
+              requireText: ["Download the OpenWork installer", "Open the installer and paste this link:", "The installer only continues with a valid link"],
+              rejectText: ["custom installer", "OpenWork Enterprise"],
             },
           }));
         } finally {

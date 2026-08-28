@@ -7,9 +7,9 @@ import { denApiFetch, openAdminConnections, openYourConnections, signInApi, sign
 const vo = await loadVoiceoverParagraphs("org-google-workspace-scopes");
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MEMBER_EMAIL = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test";
-const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
+const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const MOCK_SERVER_URL = (process.env.MOCK_OAUTH_MCP_URL ?? "http://127.0.0.1:3978").trim().replace(/\/+$/, "");
 const RUN_TAG = Date.now();
@@ -249,11 +249,11 @@ async function waitForSavedFeatures(ctx) {
 
 async function approveMockConsent(ctx) {
   const clicked = await ctx.eval(`(() => {
-    const button = [...document.querySelectorAll('button')].find((entry) => (entry.textContent ?? '').trim() === 'Approve RenWork');
+    const button = [...document.querySelectorAll('button')].find((entry) => (entry.textContent ?? '').trim() === 'Approve OpenWork');
     button?.click();
     return Boolean(button);
   })()`);
-  ctx.assert(clicked, "Mock OAuth consent page did not show an Approve RenWork button.");
+  ctx.assert(clicked, "Mock OAuth consent page did not show an Approve OpenWork button.");
   await ctx.waitForText("Connected", { timeoutMs: 30_000 });
 }
 
@@ -428,7 +428,7 @@ export default {
           },
           assert: async () => {
             assertExactStringSet(ctx, state.authorizeScopes, EXPECTED_MEMBER_SCOPES, "Authorize URL scopes");
-            await ctx.waitFor("document.body.innerText.includes('Mock MCP OAuth') && document.body.innerText.includes('Approve RenWork')", {
+            await ctx.waitFor("document.body.innerText.includes('Mock MCP OAuth') && document.body.innerText.includes('Approve OpenWork')", {
               timeoutMs: 30_000,
               label: "mock Google consent page",
             });
@@ -436,7 +436,7 @@ export default {
           screenshot: {
             name: "org-google-workspace-scope-consent",
             claim: "The member reaches the mock Google consent step after Den generated the exact selected scope set.",
-            requireText: ["Mock MCP OAuth", "Approve RenWork"],
+            requireText: ["Mock MCP OAuth", "Approve OpenWork"],
             rejectText: ["Connection failed"],
           },
         });

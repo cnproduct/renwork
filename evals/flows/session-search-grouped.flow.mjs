@@ -31,7 +31,7 @@ export default {
         await ctx.prove("Sidebar exposes a Search sessions entry", {
           claim: "The sidebar shows a 'Search sessions' button with its keyboard shortcut, so cross-message search is one click away.",
           voiceover:
-            "This is RenWork. Every workspace and conversation lives in the sidebar on the left. At the very top there is a new entry: Search sessions. Cross-message search used to be hidden behind a keyboard shortcut — now it is one click away, and the shortcut hint is printed right on the button.",
+            "This is OpenWork. Every workspace and conversation lives in the sidebar on the left. At the very top there is a new entry: Search sessions. Cross-message search used to be hidden behind a keyboard shortcut — now it is one click away, and the shortcut hint is printed right on the button.",
           assert: async () => {
             await ctx.expectText("Search sessions");
           },

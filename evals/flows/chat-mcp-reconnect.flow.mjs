@@ -12,7 +12,7 @@ const MOCK_SERVER_URL = `http://127.0.0.1:${MOCK_PORT}`;
 const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace(/\/+$/, "");
 const DEN_ORIGIN = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? DEN_API_URL.replace("127.0.0.1", "localhost")).trim().replace(/\/+$/, "");
 const DEMO_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const DEMO_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const DEMO_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const CONNECTION_PREFIX = "Research Vault";
 const CONNECTION_NAME = `${CONNECTION_PREFIX} ${Date.now()}`;
 const WORKSPACE_PATH = "/tmp/openwork-chat-mcp-reconnect";
@@ -203,20 +203,20 @@ async function readRuntimeCloudControlMcp(ctx) {
 async function ensureCloudControlReady(ctx) {
   await openMcpSettings(ctx);
   await revealHidden(ctx);
-  await ctx.expectText("RenWork Cloud Control", { timeoutMs: 60_000 });
+  await ctx.expectText("OpenWork Cloud Control", { timeoutMs: 60_000 });
 
   const alreadyConnected = await ctx.eval(`(() => {
-    const card = [...document.querySelectorAll('button')].find((entry) => entry.textContent.includes('RenWork Cloud Control'));
+    const card = [...document.querySelectorAll('button')].find((entry) => entry.textContent.includes('OpenWork Cloud Control'));
     return Boolean(card?.textContent.includes('Connected'));
   })()`);
   if (!alreadyConnected) {
     const opened = await ctx.eval(`(() => {
-      const card = [...document.querySelectorAll('button')].find((entry) => entry.textContent.includes('RenWork Cloud Control'));
+      const card = [...document.querySelectorAll('button')].find((entry) => entry.textContent.includes('OpenWork Cloud Control'));
       card?.scrollIntoView({ block: 'center' });
       card?.click();
       return Boolean(card);
     })()`);
-    ctx.assert(opened, "Could not open the RenWork Cloud Control card.");
+    ctx.assert(opened, "Could not open the OpenWork Cloud Control card.");
     await ctx.expectText("Manage your org", { timeoutMs: 15_000 });
     const connected = await ctx.eval(`(() => {
       const dialog = document.querySelector('[role="dialog"]');
@@ -225,19 +225,19 @@ async function ensureCloudControlReady(ctx) {
       button?.click();
       return Boolean(button);
     })()`);
-    ctx.assert(connected, "Could not connect RenWork Cloud Control for the eval workspace.");
+    ctx.assert(connected, "Could not connect OpenWork Cloud Control for the eval workspace.");
   }
 
   await ctx.waitFor(`(() => {
-    const card = [...document.querySelectorAll('button')].find((entry) => entry.textContent.includes('RenWork Cloud Control'));
+    const card = [...document.querySelectorAll('button')].find((entry) => entry.textContent.includes('OpenWork Cloud Control'));
     return Boolean(card?.textContent.includes('Connected'));
-  })()`, { timeoutMs: 60_000, label: "RenWork Cloud Control connected card" });
+  })()`, { timeoutMs: 60_000, label: "OpenWork Cloud Control connected card" });
   await ctx.control("extensions.refresh-marketplace").catch(() => undefined);
 
   const runtime = await waitFor(async () => {
     const current = await readRuntimeCloudControlMcp(ctx);
     return current?.ok ? current : null;
-  }, "Runtime RenWork Cloud Control MCP config never became ready.", 60_000);
+  }, "Runtime OpenWork Cloud Control MCP config never became ready.", 60_000);
   ctx.log(`Runtime Cloud Control ready: ${JSON.stringify({ names: runtime.names, engineSync: runtime.engineSync, health: runtime.health })}`);
 }
 
@@ -273,7 +273,7 @@ async function advanceVisibleOnboarding(ctx) {
     return clickExactButtonIfPresent(ctx, "Use this folder");
   }
   if (await clickExactButtonIfPresent(ctx, "Skip and use the free model")) return true;
-  if (await clickExactButtonIfPresent(ctx, "Continue without RenWork Models")) return true;
+  if (await clickExactButtonIfPresent(ctx, "Continue without OpenWork Models")) return true;
   if (await clickExactButtonIfPresent(ctx, "Skip")) return true;
   if (await clickExactButtonIfPresent(ctx, "Continue with organization")) return true;
   return clickExactButtonIfPresent(ctx, "Continue to workspace");
@@ -283,7 +283,7 @@ async function ensureWorkspace(ctx) {
   await mkdir(WORKSPACE_PATH, { recursive: true });
   await ctx.waitFor(
     "Boolean(localStorage.getItem('openwork.server.port') && localStorage.getItem('openwork.server.token') && localStorage.getItem('openwork.server.hostToken'))",
-    { timeoutMs: 60_000, label: "RenWork server auth for eval workspace" },
+    { timeoutMs: 60_000, label: "OpenWork server auth for eval workspace" },
   );
   const created = await ctx.eval(`(async () => {
     const port = localStorage.getItem('openwork.server.port');
@@ -492,7 +492,7 @@ export default {
             ctx.assert(expired.response.ok && expired.body.expiredAccessTokens > 0 && expired.body.expiredRefreshTokens > 0, `Mock credentials were not invalidated: ${JSON.stringify(expired.body)}`);
             await createFreshTask(ctx);
             const exactCapability = `mcp:${state.connectionId}:mock_echo`;
-            await sendPrompt(ctx, `Use RenWork Cloud Control to call the Research Vault mock echo capability. Follow the normal sequence: first search_capabilities for "Research Vault mock echo", then execute the exact returned capability named ${exactCapability} with body {"text":"expired credential proof"}. Continue through the execute call and report its result.`);
+            await sendPrompt(ctx, `Use OpenWork Cloud Control to call the Research Vault mock echo capability. Follow the normal sequence: first search_capabilities for "Research Vault mock echo", then execute the exact returned capability named ${exactCapability} with body {"text":"expired credential proof"}. Continue through the execute call and report its result.`);
           },
           assert: async () => {
             await ctx.waitFor("Boolean(document.querySelector('[data-testid=\"chat-mcp-reconnect-action\"]'))", { timeoutMs: 180_000, label: "inline MCP reconnect action" });
@@ -648,7 +648,7 @@ export default {
           action: async () => {
             await createFreshTask(ctx);
             const exactCapability = `mcp:${state.connectionId}:mock_echo`;
-            await sendPrompt(ctx, `Use RenWork Cloud Control to call the Research Vault mock echo capability. Follow the normal sequence: first search_capabilities for "Research Vault mock echo", then execute the exact returned capability named ${exactCapability} with body {"text":"${ECHO_TEXT}"}. Continue through the execute call and reply with exactly the returned text.`);
+            await sendPrompt(ctx, `Use OpenWork Cloud Control to call the Research Vault mock echo capability. Follow the normal sequence: first search_capabilities for "Research Vault mock echo", then execute the exact returned capability named ${exactCapability} with body {"text":"${ECHO_TEXT}"}. Continue through the execute call and reply with exactly the returned text.`);
           },
           assert: async () => {
             await ctx.waitFor(
@@ -676,7 +676,7 @@ export default {
           action: async () => {
             await createFreshTask(ctx);
             const exactCapability = `mcp:${state.connectionId}:${PROVIDER_ERROR_TOOL}`;
-            await sendPrompt(ctx, `Use RenWork Cloud Control to call the Research Vault provider policy check. Follow the normal sequence: first search_capabilities for "Research Vault provider policy check", then execute the exact returned capability named ${exactCapability} with body {}. Continue through the execute call and report its result.`);
+            await sendPrompt(ctx, `Use OpenWork Cloud Control to call the Research Vault provider policy check. Follow the normal sequence: first search_capabilities for "Research Vault provider policy check", then execute the exact returned capability named ${exactCapability} with body {}. Continue through the execute call and report its result.`);
           },
           assert: async () => {
             await ctx.waitFor("Boolean(document.querySelector('[aria-label^=\"Error attribution: Provider error\"]'))", { timeoutMs: 180_000, label: "provider error attribution" });

@@ -20,7 +20,7 @@ const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? "").trim().replace(/\/+$/, "");
 const DEN_BROWSER_API_URL = DEN_API_URL.replace("://127.0.0.1", "://localhost");
 const DEMO_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const DEMO_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const DEMO_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MYSQL_CONTAINER = process.env.OPENWORK_EVAL_DEN_MYSQL_CONTAINER?.trim() || "openwork-web-local-mysql";
 const MOCK_PORT = Number(process.env.OPENWORK_EVAL_DURABLE_AUTH_MCP_PORT ?? 4521);
 const MOCK_BASE = `http://127.0.0.1:${MOCK_PORT}`;
@@ -30,7 +30,7 @@ const CONNECTION_PREFIX = "durable-auth-shared-";
 const FIRST_CONNECTION = `${CONNECTION_PREFIX}baseline-${RUN_TAG}`;
 const SECOND_CONNECTION = `${CONNECTION_PREFIX}stale-session-${RUN_TAG}`;
 const ECHO_TEXT = `durable auth refresh ${RUN_TAG}`;
-const LOCAL_DRAFT = "Local draft remains available while RenWork Cloud reconnects";
+const LOCAL_DRAFT = "Local draft remains available while OpenWork Cloud reconnects";
 const WORKSPACE_PATH = `/tmp/openwork-durable-auth-mcp-${RUN_TAG}`;
 const COPY_INSTALL_LINK_SELECTOR = '[data-testid="copy-install-link"]';
 const SECURITY_MESSAGE = "For security, confirm it's you before changing workspace settings.";
@@ -195,7 +195,7 @@ async function cleanupDesktopEvalWorkspaces(ctx) {
   });
   const cleanup = await ctx.eval(`(async () => {
     const info = await window.__OPENWORK_ELECTRON__.invokeDesktop('openworkServerInfo', {});
-    if (!info?.baseUrl) return { deleted: 0, failed: ['RenWork server info unavailable'] };
+    if (!info?.baseUrl) return { deleted: 0, failed: ['OpenWork server info unavailable'] };
     const token = info.ownerToken || info.clientToken;
     const headers = token ? { authorization: 'Bearer ' + token } : {};
     const listed = await fetch(info.baseUrl + '/workspaces', { headers });
@@ -262,7 +262,7 @@ async function completeDesktopOnboarding(ctx) {
       state.workspacePrepared = true;
     } else {
       const advanced = await ctx.eval(`(() => {
-        const labels = ["Continue with organization", "Continue to workspace", "Continue without RenWork Models", "Continue"];
+        const labels = ["Continue with organization", "Continue to workspace", "Continue without OpenWork Models", "Continue"];
         const button = [...document.querySelectorAll('button')].find((candidate) => labels.includes((candidate.textContent ?? '').trim()) && !candidate.disabled);
         button?.click();
         return Boolean(button);
@@ -334,7 +334,7 @@ async function openDenWebTab(ctx) {
     link.id = 'durable-auth-open-dashboard';
     link.href = ${JSON.stringify(DEN_WEB_URL)};
     link.target = '_blank';
-    link.textContent = 'Open RenWork dashboard';
+    link.textContent = 'Open OpenWork dashboard';
     link.style.position = 'fixed';
     link.style.left = '12px';
     link.style.bottom = '12px';
@@ -342,13 +342,13 @@ async function openDenWebTab(ctx) {
     document.body.appendChild(link);
     return true;
   })()`);
-  const switching = ctx.switchToNewTab({ timeoutMs: 20_000, label: "RenWork dashboard" });
+  const switching = ctx.switchToNewTab({ timeoutMs: 20_000, label: "OpenWork dashboard" });
   await sleep(750);
   await ctx.trustedClick("#durable-auth-open-dashboard");
   await switching;
   await ctx.waitFor(
     `location.origin === ${JSON.stringify(new URL(DEN_WEB_URL).origin)} && document.readyState !== 'loading'`,
-    { timeoutMs: 30_000, label: "RenWork dashboard document" },
+    { timeoutMs: 30_000, label: "OpenWork dashboard document" },
   );
   if (ctx.client?.send) {
     await ctx.client.send("Network.clearBrowserCookies", {});
@@ -394,7 +394,7 @@ async function submitSharedConnectionAndConsent(ctx) {
   const noOpenWorkReauth = await ctx.eval(`!document.body.innerText.includes(${JSON.stringify(SECURITY_MESSAGE)})`);
   await ctx.switchToNewTab({ timeoutMs: 20_000, label: "provider consent" });
   await ctx.waitForText("Mock MCP OAuth", { timeoutMs: 30_000 });
-  await ctx.clickText("Approve RenWork", { timeoutMs: 15_000 });
+  await ctx.clickText("Approve OpenWork", { timeoutMs: 15_000 });
   await ctx.waitForText("Connected", { timeoutMs: 30_000 });
   return noOpenWorkReauth;
 }
@@ -457,9 +457,9 @@ async function openDesktopMcpSettings(ctx) {
   await ctx.waitForText("Add Custom App", { timeoutMs: 45_000 });
   const showingHidden = await ctx.eval("document.body.innerText.includes('Showing hidden')");
   if (!showingHidden) await ctx.clickText("Show hidden", { timeoutMs: 20_000 }).catch(() => {});
-  await ctx.waitForText("RenWork Cloud Control", { timeoutMs: 90_000 });
+  await ctx.waitForText("OpenWork Cloud Control", { timeoutMs: 90_000 });
   await ctx.waitFor(`(() => {
-    const leaves = [...document.querySelectorAll('*')].filter((element) => element.children.length === 0 && (element.textContent ?? '').trim() === 'RenWork Cloud Control');
+    const leaves = [...document.querySelectorAll('*')].filter((element) => element.children.length === 0 && (element.textContent ?? '').trim() === 'OpenWork Cloud Control');
     for (const leaf of leaves) {
       let node = leaf;
       for (let depth = 0; depth < 8 && node; depth += 1) {
@@ -472,7 +472,7 @@ async function openDesktopMcpSettings(ctx) {
       }
     }
     return false;
-  })()`, { timeoutMs: 120_000, label: "RenWork Cloud Control Ready" });
+  })()`, { timeoutMs: 120_000, label: "OpenWork Cloud Control Ready" });
 }
 
 async function expireAndRefreshSharedMcp(ctx) {
@@ -517,7 +517,7 @@ async function ensureLocalDraft(ctx) {
       ).then(() => true).catch(() => false);
       if (!created) await sleep(1_000);
     }
-    ctx.assert(created, "RenWork did not create a local task after the engine restart.");
+    ctx.assert(created, "OpenWork did not create a local task after the engine restart.");
   }
   await ctx.waitFor("window.__openworkControl?.listActions?.().find((action) => action.id === 'composer.set_text')?.disabled === false", {
     timeoutMs: 60_000,
@@ -532,14 +532,14 @@ async function ensureLocalDraft(ctx) {
 
 async function simulateCloudPartition(ctx) {
   await ctx.control("eval.auth.set-base-url", { baseUrl: "http://127.0.0.1:1" });
-  await ctx.waitForText("RenWork Cloud is temporarily unavailable.", { timeoutMs: 30_000 });
+  await ctx.waitForText("OpenWork Cloud is temporarily unavailable.", { timeoutMs: 30_000 });
   await waitForDesktopAuthStatus(ctx, "unavailable");
 }
 
 async function restoreCloudConnectivity(ctx) {
   await ctx.control("eval.auth.set-base-url", { baseUrl: DEN_API_URL });
   await waitForDesktopAuthStatus(ctx, "signed_in", 60_000);
-  await ctx.waitFor("!document.body.innerText.includes('RenWork Cloud is temporarily unavailable.')", {
+  await ctx.waitFor("!document.body.innerText.includes('OpenWork Cloud is temporarily unavailable.')", {
     timeoutMs: 30_000,
     label: "Cloud reconnect banner cleared",
   });
@@ -651,7 +651,7 @@ async function openLegacyMcpAuthorization(ctx) {
 
 export default {
   id: FLOW_ID,
-  title: "Active RenWork and MCP sessions renew silently while real security boundaries still hold",
+  title: "Active OpenWork and MCP sessions renew silently while real security boundaries still hold",
   kind: "user-facing",
   spec: "evals/voiceovers/durable-auth-mcp.md",
   requiredEnv: [
@@ -697,7 +697,7 @@ export default {
           },
           screenshot: {
             name: "shared-mcp-connected-once",
-            claim: "The shared MCP appears Connected in RenWork Cloud after one provider consent.",
+            claim: "The shared MCP appears Connected in OpenWork Cloud after one provider consent.",
             requireText: ["Connected", FIRST_CONNECTION],
             rejectText: ["Connection failed", SECURITY_MESSAGE],
           },
@@ -727,8 +727,8 @@ export default {
           screenshot: {
             name: "desktop-session-renewed",
             claim: "Cloud Account remains signed in after the server renews an eight-day-old active session.",
-            requireText: ["RenWork Cloud", "Sign out"],
-            rejectText: ["Paste sign-in code", "RenWork Cloud is temporarily unavailable."],
+            requireText: ["OpenWork Cloud", "Sign out"],
+            rejectText: ["Paste sign-in code", "OpenWork Cloud is temporarily unavailable."],
             hashIncludes: "/settings/cloud-account",
           },
         });
@@ -764,7 +764,7 @@ export default {
           screenshot: {
             name: "mcp-silent-refresh-ready",
             claim: "The engine-facing Cloud Control MCP is Ready after refresh-only recovery.",
-            requireText: ["RenWork Cloud Control", "Ready"],
+            requireText: ["OpenWork Cloud Control", "Ready"],
             rejectText: ["Sign in needed", SECURITY_MESSAGE, "Applying changes before sign-in", "Reloading OpenCode config"],
             hashIncludes: "/settings/extensions/mcp",
           },
@@ -776,7 +776,7 @@ export default {
       run: async (ctx) => {
         await ensureLocalDraft(ctx);
         try {
-          await ctx.prove("A temporary Cloud outage preserves Maya's local work and session while RenWork reconnects", {
+          await ctx.prove("A temporary Cloud outage preserves Maya's local work and session while OpenWork reconnects", {
             voiceover: vo[3],
             action: async () => {
               await simulateCloudPartition(ctx);
@@ -791,7 +791,7 @@ export default {
             screenshot: {
               name: "cloud-outage-local-work-retained",
               claim: "The reconnecting banner appears over the still-usable local task and retained draft.",
-              requireText: ["RenWork Cloud is temporarily unavailable.", "Local work remains available. Reconnecting automatically.", LOCAL_DRAFT],
+              requireText: ["OpenWork Cloud is temporarily unavailable.", "Local work remains available. Reconnecting automatically.", LOCAL_DRAFT],
               rejectText: ["Paste sign-in code"],
               hashIncludes: "/session",
             },
@@ -823,14 +823,14 @@ export default {
           assert: async () => {
             const requests = (await mockRequests()).filter((entry) => entry.at >= state.secondConsentStartedAt);
             const authorizeCount = requests.filter((entry) => entry.method === "GET" && entry.path === "/authorize").length;
-            recordAssertion(ctx, "RenWork did not insert its own identity check before provider consent", state.secondConnectionSkippedReauth === true, null);
+            recordAssertion(ctx, "OpenWork did not insert its own identity check before provider consent", state.secondConnectionSkippedReauth === true, null);
             recordAssertion(ctx, "The second shared MCP needed exactly one provider consent", authorizeCount === 1, { authorizeCount, requests });
             await ctx.expectText("Connected");
             await ctx.expectText(SECOND_CONNECTION);
           },
           screenshot: {
             name: "stale-session-direct-provider-consent",
-            claim: "The second shared MCP appears Connected without an intervening RenWork security check.",
+            claim: "The second shared MCP appears Connected without an intervening OpenWork security check.",
             requireText: ["Connected", SECOND_CONNECTION],
             rejectText: ["Connection failed", SECURITY_MESSAGE],
           },
@@ -897,8 +897,8 @@ export default {
           screenshot: {
             name: "signout-revokes-session-and-mcp",
             claim: "Cloud Account is signed out, and server assertions confirm its bearer and MCP token are revoked.",
-            requireText: ["RenWork Cloud", "Paste sign-in code"],
-            rejectText: ["Sign out", "RenWork Cloud is temporarily unavailable."],
+            requireText: ["OpenWork Cloud", "Paste sign-in code"],
+            rejectText: ["Sign out", "OpenWork Cloud is temporarily unavailable."],
             hashIncludes: "/settings/cloud-account",
           },
         });
@@ -925,9 +925,9 @@ export default {
           },
           screenshot: {
             name: "legacy-mcp-offline-access-authorizes",
-            claim: "A previously registered MCP client reaches RenWork workspace authorization after requesting offline access.",
+            claim: "A previously registered MCP client reaches OpenWork workspace authorization after requesting offline access.",
             targetUrlIncludes: "/mcp/select-organization",
-            requireText: ["Where should this client work?", "RenWork", "Authorize and continue"],
+            requireText: ["Where should this client work?", "OpenWork", "Authorize and continue"],
             rejectText: ["The following scopes are invalid", "No authorization code received"],
           },
         });

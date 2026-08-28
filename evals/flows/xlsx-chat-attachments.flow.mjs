@@ -258,15 +258,15 @@ async function attachXlsxFile(ctx) {
 
 async function dismissOpenWorkModelsModal(ctx) {
   const result = await ctx.eval(`(() => {
-    const dialog = Array.from(document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"], [data-radix-dialog-content]')).find((item) => (item.textContent || "").includes("RenWork Models"));
+    const dialog = Array.from(document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"], [data-radix-dialog-content]')).find((item) => (item.textContent || "").includes("OpenWork Models"));
     if (!dialog) return { dismissed: false };
-    const button = Array.from(dialog.querySelectorAll("button")).find((item) => (item.textContent || "").trim().includes("Continue without RenWork Models") || item.getAttribute("aria-label") === "Close");
+    const button = Array.from(dialog.querySelectorAll("button")).find((item) => (item.textContent || "").trim().includes("Continue without OpenWork Models") || item.getAttribute("aria-label") === "Close");
     if (!button) return { dismissed: false };
     button.click();
     return { dismissed: true };
   })()`);
   if (!result?.dismissed) return;
-  await ctx.waitFor(`!Array.from(document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"], [data-radix-dialog-content]')).some((item) => (item.textContent || "").includes("RenWork Models"))`, { timeoutMs: 10_000, label: "RenWork Models modal dismissed" });
+  await ctx.waitFor(`!Array.from(document.querySelectorAll('[role="dialog"], [data-slot="dialog-content"], [data-radix-dialog-content]')).some((item) => (item.textContent || "").includes("OpenWork Models"))`, { timeoutMs: 10_000, label: "OpenWork Models modal dismissed" });
 }
 
 function sentXlsxCardExpr() {

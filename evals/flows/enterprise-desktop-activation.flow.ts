@@ -57,7 +57,7 @@ export default defineFlow({
         await ctx.screenshot("enterprise-activation-required", {
           claim: "A fresh enterprise installation shows only the Den activation gate.",
           requireText: [
-            "RenWork Enterprise",
+            "OpenWork Enterprise",
             "Activate this app from your Den portal.",
             "Sign-in stays required",
             "Waiting for an activation link from Den",

@@ -25,7 +25,7 @@ import { join } from "node:path";
 
 const SHARED = {
   MEMBER_EMAIL: "riley@acme.test",
-  PASSWORD: "RenWorkDemo123!",
+  PASSWORD: "OpenWorkDemo123!",
   SKILL_NAME: "laptop-refresh-policy",
   MCP_NAME: "acme-servicenow",
   OAUTH_CLIENT_ID: "acme-desktop-client",

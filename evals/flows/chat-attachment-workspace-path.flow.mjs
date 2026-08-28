@@ -206,7 +206,7 @@ export default {
             const digest = await readSandboxFileDigest(ctx, filePath);
             assertEvidence(ctx, digest.bytes === EXPECTED_BYTES.length, "Uploaded PDF byte count matches the image-only PDF fixture", `${digest.bytes} bytes`);
             assertEvidence(ctx, digest.sha256 === EXPECTED_SHA256, "Uploaded PDF sha256 matches the image-only PDF fixture exactly", digest.sha256);
-            assertEvidence(ctx, !text.toLowerCase().includes("ocr complete"), "The prompt does not claim RenWork performed native OCR", text);
+            assertEvidence(ctx, !text.toLowerCase().includes("ocr complete"), "The prompt does not claim OpenWork performed native OCR", text);
             ctx.output("Docling-ready path", filePath);
           },
           screenshot: { name: "docling-ready-path", requireText: [FILENAME] },

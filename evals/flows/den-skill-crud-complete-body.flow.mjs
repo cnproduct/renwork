@@ -9,7 +9,7 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const ADMIN_EMAIL =
   process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
 const ADMIN_PASSWORD =
-  process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+  process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 
 const unique = Date.now().toString(36);
 const state = {

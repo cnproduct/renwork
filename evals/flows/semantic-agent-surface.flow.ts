@@ -163,12 +163,12 @@ async function semanticContext(ctx: FlowContext) {
 
 export default defineFlow({
   id: "semantic-agent-surface",
-  title: "People and agents share one semantic RenWork context",
+  title: "People and agents share one semantic OpenWork context",
   kind: "user-facing",
   precondition: async (ctx) => {
     await ctx.waitFor("Boolean(window.__openworkControl)", {
       timeoutMs: 60_000,
-      label: "RenWork control API",
+      label: "OpenWork control API",
     });
     const state = await ctx.waitFor(`(() => {
       const control = window.__openworkControl;

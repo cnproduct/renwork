@@ -86,18 +86,18 @@ export default {
       },
     },
     {
-      name: "RenWork Cloud Control is hidden by default and revealed as a configured app",
+      name: "OpenWork Cloud Control is hidden by default and revealed as a configured app",
       run: async (ctx) => {
         await ctx.navigateHash("/settings/extensions/mcp");
         await ctx.expectHashIncludes("/settings/extensions/mcp");
         await ctx.waitForText("Add Custom App", { timeoutMs: 30_000 });
-        await ctx.expectNoText("RenWork Cloud Control");
+        await ctx.expectNoText("OpenWork Cloud Control");
         await revealHidden(ctx);
-        await ctx.expectText("RenWork Cloud Control", { timeoutMs: 30_000 });
+        await ctx.expectText("OpenWork Cloud Control", { timeoutMs: 30_000 });
         await ctx.screenshot("cloud-mcp-configured", {
-          claim: "RenWork Cloud Control is auto-configured while hidden by default, then appears after Show hidden.",
-          voiceover: "After signing in to RenWork Cloud the connection is already configured and enabled, and it only shows up once the user reveals hidden extensions.",
-          requireText: ["RenWork Cloud Control", "Showing hidden"],
+          claim: "OpenWork Cloud Control is auto-configured while hidden by default, then appears after Show hidden.",
+          voiceover: "After signing in to OpenWork Cloud the connection is already configured and enabled, and it only shows up once the user reveals hidden extensions.",
+          requireText: ["OpenWork Cloud Control", "Showing hidden"],
           rejectText: ["Something went wrong"],
           hashIncludes: "/settings/extensions/mcp",
         });

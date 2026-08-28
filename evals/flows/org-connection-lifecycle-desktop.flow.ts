@@ -15,9 +15,9 @@ const MOCK_SERVER_SCRIPT = join(ROOT, "scripts", "mock-oauth-mcp-server.mjs");
 const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace(/\/+$/, "");
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? DEN_API_URL.replace("127.0.0.1", "localhost")).trim().replace(/\/+$/, "");
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MEMBER_EMAIL = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test";
-const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
+const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const MOCK_PORT = Number(process.env.OPENWORK_EVAL_LIFECYCLE_MOCK_PORT || 3979);
 const MOCK_LOCAL_URL = `http://127.0.0.1:${MOCK_PORT}`;
@@ -250,7 +250,7 @@ async function ensureWorkspace(ctx: FlowContext): Promise<void> {
     { timeoutMs: 10_000, label: "workspace route or create action" },
   );
   await ctx.eval(`(() => {
-    const btn = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continue without RenWork Models');
+    const btn = [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === 'Continue without OpenWork Models');
     btn?.click();
     return true;
   })()`, { awaitPromise: true });
@@ -276,7 +276,7 @@ async function createFreshEvalWorkspace(ctx: FlowContext): Promise<void> {
   await ensureWorkspace(ctx);
   await ctx.waitFor(
     "Boolean(localStorage.getItem('openwork.server.port') && localStorage.getItem('openwork.server.token') && localStorage.getItem('openwork.server.hostToken'))",
-    { timeoutMs: 30_000, label: "RenWork server auth for workspace setup" },
+    { timeoutMs: 30_000, label: "OpenWork server auth for workspace setup" },
   );
   let created: unknown = null;
   const deadline = Date.now() + 60_000;
@@ -515,7 +515,7 @@ async function waitForMockAuthorizeRequest(ctx: FlowContext, clickedAt: string):
   ctx.assert(
     redirectUri.includes("/v1/mcp-connections/")
       && (redirectUri.includes("/oauth/callback") || redirectUri.includes(requireStateString(state.connectionId, "connection id"))),
-    `Authorize redirect_uri was not a RenWork MCP connection callback: ${redirectUri}`,
+    `Authorize redirect_uri was not an OpenWork MCP connection callback: ${redirectUri}`,
   );
 }
 

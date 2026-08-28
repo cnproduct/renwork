@@ -80,7 +80,7 @@ export default defineScenario({
           });
 
           await ctx.on(surface, async () => {
-            await ctx.prove("If the IdP returns a different email, RenWork rejects the invite coherently and does not loop", {
+            await ctx.prove("If the IdP returns a different email, OpenWork rejects the invite coherently and does not loop", {
               voiceover: vo[1],
               action: async () => {
                 await expectInviteEmailPrevalidated(ctx, {

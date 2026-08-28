@@ -21,7 +21,7 @@ import {
 // Narration is loaded from the approved script (evals/voiceovers/managed-brand-asset-uploads.md).
 // The runner fails this flow if the narration drifts from that script.
 const vo = await loadVoiceoverParagraphs("managed-brand-asset-uploads");
-const ADMIN_PASSWORD = "RenWorkDemo123!";
+const ADMIN_PASSWORD = "OpenWorkDemo123!";
 const RAW_REAUTH_MESSAGE = "For security, confirm it's you before changing workspace settings.";
 
 let firstAssets = null;

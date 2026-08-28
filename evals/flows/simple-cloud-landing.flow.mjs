@@ -47,7 +47,7 @@ async function openSignedOutRoot(ctx) {
     return true;
   })()`);
   await ctx.waitFor(
-    `document.body.innerText.includes('Start using RenWork') && Boolean(document.querySelector('input[type="email"]'))`,
+    `document.body.innerText.includes('Start using OpenWork') && Boolean(document.querySelector('input[type="email"]'))`,
     { timeoutMs: 30_000, label: "simple email-first auth panel" },
   );
 }
@@ -166,13 +166,13 @@ export default {
             const state = await readLandingState(ctx);
             recordAssertion(ctx, "The frame is centered and bounded to 600px", Boolean(state.frame) && state.frame.width <= 604 && Math.abs((state.frame.left + state.frame.right) / 2 - state.viewport.width / 2) <= 4, state);
             recordAssertion(ctx, "Desktop shows the visual panel and form side by side, with the form wider", Boolean(state.visual?.visible && state.form?.visible) && state.form.width > state.visual.width && state.visual.left < state.form.left, state);
-            recordAssertion(ctx, "The left panel has exactly one shader canvas and the old marketing content is absent", state.visualCanvasCount === 1 && !state.text.includes("RenWork Cloud") && !state.text.includes("One setup, every seat.") && !state.text.includes("Shared config"), state);
+            recordAssertion(ctx, "The left panel has exactly one shader canvas and the old marketing content is absent", state.visualCanvasCount === 1 && !state.text.includes("OpenWork Cloud") && !state.text.includes("One setup, every seat.") && !state.text.includes("Shared config"), state);
             recordAssertion(ctx, "The initial form is email-first with one Next button", state.emailInputs === 1 && state.passwordInputs === 0 && state.visibleButtons.length === 1 && state.visibleButtons[0] === "Next", state);
           },
           screenshot: {
             name: "desktop-focused-split-layout",
-            requireText: ["Start using RenWork", "EMAIL", "Next"],
-            rejectText: ["RenWork Cloud", "One setup, every seat.", "Shared config", "Cloud agents", "Your models"],
+            requireText: ["Start using OpenWork", "EMAIL", "Next"],
+            rejectText: ["OpenWork Cloud", "One setup, every seat.", "Shared config", "Cloud agents", "Your models"],
           },
         });
       },
@@ -198,7 +198,7 @@ export default {
           },
           screenshot: {
             name: "email-next-action",
-            requireText: ["Start using RenWork", "EMAIL", "Checking..."],
+            requireText: ["Start using OpenWork", "EMAIL", "Checking..."],
             rejectText: ["Password", "Continue with Google", "Create account"],
           },
         });
@@ -232,7 +232,7 @@ export default {
     {
       name: "Responsive mobile state",
       run: async (ctx) => {
-        await ctx.prove("On mobile the decorative panel disappears and the compact RenWork logo leads the form", {
+        await ctx.prove("On mobile the decorative panel disappears and the compact OpenWork logo leads the form", {
           voiceover: vo[3],
           action: async () => {
             await applyViewport(ctx, 390, 820, true);
@@ -241,13 +241,13 @@ export default {
           assert: async () => {
             const state = await readLandingState(ctx);
             recordAssertion(ctx, "The decorative shader panel is hidden on mobile", Boolean(state.visual) && state.visual.visible === false, state);
-            recordAssertion(ctx, "The compact RenWork mobile brand and account form are centered", Boolean(state.mobileBrand?.visible && state.form?.visible && state.frame) && state.mobileBrandText.includes("RenWork") && state.frame.width <= state.viewport.width && Math.abs((state.frame.left + state.frame.right) / 2 - state.viewport.width / 2) <= 4, state);
+            recordAssertion(ctx, "The compact OpenWork mobile brand and account form are centered", Boolean(state.mobileBrand?.visible && state.form?.visible && state.frame) && state.mobileBrandText.includes("OpenWork") && state.frame.width <= state.viewport.width && Math.abs((state.frame.left + state.frame.right) / 2 - state.viewport.width / 2) <= 4, state);
             recordAssertion(ctx, "Mobile remains the same email-first form", state.emailInputs === 1 && state.passwordInputs === 0 && state.visibleButtons.length === 1 && state.visibleButtons[0] === "Next", state);
           },
           screenshot: {
             name: "mobile-centered-form",
-            requireText: ["RenWork", "Start using RenWork", "EMAIL", "Next"],
-            rejectText: ["RenWork Cloud", "One setup, every seat.", "Shared config", "Cloud agents", "Your models"],
+            requireText: ["OpenWork", "Start using OpenWork", "EMAIL", "Next"],
+            rejectText: ["OpenWork Cloud", "One setup, every seat.", "Shared config", "Cloud agents", "Your models"],
           },
         });
       },

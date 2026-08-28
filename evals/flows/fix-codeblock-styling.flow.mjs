@@ -12,7 +12,7 @@ const SAMPLE_CODE = [
   "  return `Hello, ${name}!`;",
   "}",
   "",
-  'console.log(greet("RenWork"));',
+  'console.log(greet("OpenWork"));',
 ].join("\n");
 const PROMPT = `Reply with only this fenced JavaScript code block and preserve every space and newline:\n\n\`\`\`js\n${SAMPLE_CODE}\n\`\`\``;
 
@@ -97,7 +97,7 @@ async function waitForHighlightedCodeBlock(ctx) {
     `(() => Array.from(document.querySelectorAll(${JSON.stringify(CODE_BLOCK_SELECTOR)}))
       .some((block) => block.matches("[data-openwork-shiki]")
         && block.textContent.includes("function greet")
-        && block.textContent.includes("RenWork")
+        && block.textContent.includes("OpenWork")
         && block.querySelector('[data-openwork-code-copy][aria-label="Copy code block"] [data-openwork-code-copy-icon]:not([hidden])')
         && block.querySelector("[data-openwork-code-copy] [data-openwork-code-copy-check-icon][hidden]")))()`,
     { timeoutMs: 120_000, label: "highlighted assistant code block with copy button" },
@@ -107,7 +107,7 @@ async function waitForHighlightedCodeBlock(ctx) {
 function codeBlockInfoExpression() {
   return `(() => {
     const block = Array.from(document.querySelectorAll(${JSON.stringify(CODE_BLOCK_SELECTOR)}))
-      .find((candidate) => candidate.textContent.includes("function greet") && candidate.textContent.includes("RenWork"));
+      .find((candidate) => candidate.textContent.includes("function greet") && candidate.textContent.includes("OpenWork"));
     if (!block) return { ok: false, reason: "code block not found" };
     const button = block.querySelector("[data-openwork-code-copy]");
     const copyIcon = button?.querySelector("[data-openwork-code-copy-icon]");

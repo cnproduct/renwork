@@ -5,7 +5,7 @@ const DEN_API_URL = (process.env.OPENWORK_EVAL_DEN_API_URL ?? "").trim().replace
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? "http://localhost:3005").trim().replace(/\/+$/, "");
 const DESKTOP_URL = (process.env.OPENWORK_EVAL_DESKTOP_URL ?? "http://localhost:5173").trim().replace(/\/+$/, "");
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const POLICY_NAME = "Product onboarding prompts";
 const ORG_PROMPTS = [
   "Summarize the latest customer feedback and identify the top three product opportunities.",
@@ -80,7 +80,7 @@ async function enterDenPolicies(ctx) {
 
 export default {
   id: "policy-onboarding-prompts",
-  title: "Desktop policies replace RenWork starter suggestions for assigned teams",
+  title: "Desktop policies replace OpenWork starter suggestions for assigned teams",
   kind: "user-facing",
   requiredEnv: ["OPENWORK_EVAL_DEN_API_URL", "OPENWORK_EVAL_DEN_TOKEN"],
   steps: [
@@ -96,7 +96,7 @@ export default {
     {
       name: "Frame 1",
       run: async (ctx) => {
-        await ctx.prove("RenWork supplies useful local suggestions without organization configuration", {
+        await ctx.prove("OpenWork supplies useful local suggestions without organization configuration", {
           voiceover: vo[0],
           action: async () => {
             await ctx.waitForText("Try one of these:", { timeoutMs: 30_000 });
@@ -219,7 +219,7 @@ export default {
     {
       name: "Frame 5",
       run: async (ctx) => {
-        await ctx.prove("Assigned members see organization prompts while RenWork remains the fallback", {
+        await ctx.prove("Assigned members see organization prompts while OpenWork remains the fallback", {
           voiceover: vo[4],
           action: async () => {
             await ctx.clickText("Create policy");

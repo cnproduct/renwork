@@ -40,7 +40,7 @@ async function waitForInstaller(ctx) {
         && text.includes("Developers: point your own agent at your org")
         && text.includes(${JSON.stringify(MCP_SERVER_URL)});
     })()`,
-    { timeoutMs: 30_000, label: "RenWork Connect installer" },
+    { timeoutMs: 30_000, label: "OpenWork Connect installer" },
   );
   await ctx.eval(`document.querySelector("#connect-mcp-install")?.scrollIntoView({ block: "start", behavior: "instant" }); true`);
 }
@@ -67,7 +67,7 @@ async function grantDocsClipboardPermissions(ctx) {
 
 export default {
   id: "docs-openwork-connect",
-  title: "Use the RenWork Connect installer from the docs or landing page",
+  title: "Use the OpenWork Connect installer from the docs or landing page",
   kind: "user-facing",
   preserveTheme: true,
   requiredEnv: ["OPENWORK_EVAL_DOCS_URL", "OPENWORK_EVAL_LANDING_URL"],
@@ -75,7 +75,7 @@ export default {
     {
       name: "Frame 1",
       run: async (ctx) => {
-        await ctx.prove("The RenWork Connect docs put the complete client installer at the top of the page.", {
+        await ctx.prove("The OpenWork Connect docs put the complete client installer at the top of the page.", {
           voiceover: vo[0],
           action: async () => {
             await navigate(ctx, `${baseUrl("OPENWORK_EVAL_DOCS_URL")}/cloud/run-in-the-cloud/cloud-mcp`);
@@ -264,7 +264,7 @@ export default {
     {
       name: "Frame 5",
       run: async (ctx) => {
-        await ctx.prove("The landing page keeps the same RenWork Connect installer, including Codex and ChatGPT Desktop.", {
+        await ctx.prove("The landing page keeps the same OpenWork Connect installer, including Codex and ChatGPT Desktop.", {
           voiceover: vo[4],
           action: async () => {
             await navigate(ctx, `${baseUrl("OPENWORK_EVAL_LANDING_URL")}/#connect-mcp`);

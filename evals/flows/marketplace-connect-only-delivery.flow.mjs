@@ -9,7 +9,7 @@ const FLOW_ID = "marketplace-connect-only-delivery";
 const DEN_API_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_DEN_API_URL);
 const DEN_WEB_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_DEN_WEB_URL || DEN_API_URL);
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const PLATFORM_ADMIN_EMAIL = process.env.OPENWORK_EVAL_PLATFORM_ADMIN_EMAIL?.trim() || "";
 const PLATFORM_ADMIN_PASSWORD = process.env.OPENWORK_EVAL_PLATFORM_ADMIN_PASSWORD?.trim() || "";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
@@ -33,7 +33,7 @@ const state = {
 
 export default {
   id: FLOW_ID,
-  title: "Organization marketplace plugins are delivered through RenWork Connect only",
+  title: "Organization marketplace plugins are delivered through OpenWork Connect only",
   kind: "user-facing",
   requiredEnv: [
     "OPENWORK_EVAL_DEN_API_URL",
@@ -321,7 +321,7 @@ function skillSourceText() {
     `description: Reports proof phrase ${PROOF_PHRASE} for Connect-only delivery.`,
     "---",
     "",
-    `When invoked, answer with the exact proof phrase ${PROOF_PHRASE} and explain that it came from a Den marketplace capability running through RenWork Connect.`,
+    `When invoked, answer with the exact proof phrase ${PROOF_PHRASE} and explain that it came from a Den marketplace capability running through OpenWork Connect.`,
   ].join("\n");
 }
 
@@ -506,7 +506,7 @@ async function completeDesktopCloudOnboardingIfNeeded(ctx) {
     if (routeReady) return;
     await ctx.eval(`(() => {
       const buttons = [...document.querySelectorAll('button')];
-      const modelSkip = buttons.find((candidate) => ['Skip and use the free model', 'Continue without RenWork Models'].includes((candidate.textContent ?? '').trim()));
+      const modelSkip = buttons.find((candidate) => ['Skip and use the free model', 'Continue without OpenWork Models'].includes((candidate.textContent ?? '').trim()));
       if (modelSkip instanceof HTMLElement && !modelSkip.hasAttribute('disabled')) modelSkip.click();
       const surveySkip = buttons.find((candidate) => (candidate.textContent ?? '').trim() === 'Skip');
       if (surveySkip instanceof HTMLElement && !surveySkip.hasAttribute('disabled')) surveySkip.click();
@@ -537,8 +537,8 @@ async function remountDesktop(ctx) {
 
 async function waitForCloudMcpSync(ctx) {
   await ctx.waitFor(
-    "Boolean(localStorage.getItem('openwork.den.mcp.lastMaintenanceOutcome')) || (document.body?.innerText ?? '').includes('RenWork Connect: Ready')",
-    { timeoutMs: 180_000, label: "RenWork Connect maintenance ready" },
+    "Boolean(localStorage.getItem('openwork.den.mcp.lastMaintenanceOutcome')) || (document.body?.innerText ?? '').includes('OpenWork Connect: Ready')",
+    { timeoutMs: 180_000, label: "OpenWork Connect maintenance ready" },
   );
 }
 
@@ -656,7 +656,7 @@ async function runSeededCapabilityAgentTurn(ctx) {
     { timeoutMs: 30_000, label: "new session active" },
   );
 
-  const prompt = `Use the RenWork Cloud Control capability named ${SKILL_NAME}. Search for it first, execute the matched capability, and tell me the exact proof phrase.`;
+  const prompt = `Use the OpenWork Cloud Control capability named ${SKILL_NAME}. Search for it first, execute the matched capability, and tell me the exact proof phrase.`;
   const pasted = await ctx.eval(`(() => {
     const editor = document.querySelector('[contenteditable="true"][data-lexical-editor="true"]')
       || document.querySelector('[contenteditable="true"]');
@@ -702,7 +702,7 @@ async function seedLegacyLocalImport(ctx) {
     const baseUrl = String(info?.baseUrl ?? "").replace(/\\/+$/, "");
     const token = String(info?.ownerToken || info?.clientToken || "").trim();
     const workspaceId = (location.hash.match(/\\/workspace\\/([^/]+)/) || [])[1] || localStorage.getItem("openwork.react.activeWorkspace") || "";
-    if (!baseUrl || !token || !workspaceId) return { ok: false, reason: "Missing RenWork server connection" };
+    if (!baseUrl || !token || !workspaceId) return { ok: false, reason: "Missing OpenWork server connection" };
     const response = await fetch(baseUrl + "/workspace/" + encodeURIComponent(workspaceId) + "/cloud-plugins", {
       method: "POST",
       headers: { authorization: "Bearer " + token, "content-type": "application/json" },
@@ -729,7 +729,7 @@ async function workspaceServerJson(ctx, path) {
     const baseUrl = String(info?.baseUrl ?? "").replace(/\\/+$/, "");
     const token = String(info?.ownerToken || info?.clientToken || "").trim();
     const workspaceId = (location.hash.match(/\\/workspace\\/([^/]+)/) || [])[1] || localStorage.getItem("openwork.react.activeWorkspace") || "";
-    if (!baseUrl || !token || !workspaceId) throw new Error("Missing RenWork server connection");
+    if (!baseUrl || !token || !workspaceId) throw new Error("Missing OpenWork server connection");
     const response = await fetch(baseUrl + "/workspace/" + encodeURIComponent(workspaceId) + ${JSON.stringify(path)}, {
       headers: { authorization: "Bearer " + token },
     });

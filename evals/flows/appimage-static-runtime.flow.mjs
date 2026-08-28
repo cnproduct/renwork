@@ -28,7 +28,7 @@ function record(ctx, condition, assertion, actual = "") {
 
 export default {
   id: FLOW_ID,
-  title: "RenWork AppImage runs without FUSE2 and remains updateable",
+  title: "OpenWork AppImage runs without FUSE2 and remains updateable",
   kind: "internal",
   requiredEnv: ["OPENWORK_EVAL_DAYTONA_SANDBOX"],
   steps: [
@@ -61,9 +61,9 @@ printf 'DEV_FUSE=present\\n'
       },
     },
     {
-      name: "The fixed AppImage reaches a working RenWork session",
+      name: "The fixed AppImage reaches a working OpenWork session",
       run: async (ctx) => {
-        await ctx.prove("The static-runtime AppImage starts and serves the packaged RenWork UI", {
+        await ctx.prove("The static-runtime AppImage starts and serves the packaged OpenWork UI", {
           voiceover: vo[1],
           assert: async () => {
             const appImage = ctx.env.OPENWORK_EVAL_APPIMAGE_PATH || DEFAULT_APPIMAGE;
@@ -80,13 +80,13 @@ grep 'GET /workspaces 200' /tmp/appimage-fix-launch.log
 `);
             record(ctx, output.includes("type2-runtime/commit/dd6cebe"), "The AppImage reports the static type-two runtime");
             record(ctx, output.includes("/tmp/.mount_openwo"), "The packaged AppImage process is running from its mounted image");
-            record(ctx, output.includes('"title": "RenWork"'), "The packaged Electron CDP target is ready");
+            record(ctx, output.includes('"title": "OpenWork"'), "The packaged Electron CDP target is ready");
             record(ctx, output.includes("GET /workspaces 200"), "The packaged embedded server answers workspace requests");
             ctx.output("Packaged AppImage runtime", output.trim());
           },
           screenshot: {
             name: "packaged-appimage-ready",
-            requireText: ["RenWork", "New session", "Ready for new tasks"],
+            requireText: ["OpenWork", "New session", "Ready for new tasks"],
             rejectText: ["Something went wrong"],
             hashIncludes: ["/workspace/"],
           },

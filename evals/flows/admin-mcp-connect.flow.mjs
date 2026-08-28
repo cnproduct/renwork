@@ -21,7 +21,7 @@
  * - OPENWORK_EVAL_DEN_TOKEN    Bearer session token for the admin account
  */
 
-const ADMIN_TITLE = "RenWork Admin Analytics";
+const ADMIN_TITLE = "OpenWork Admin Analytics";
 const WORKSPACE_FOLDER = "/workspace/admin-mcp-test";
 
 const CLICK_ANY = "button, [role=button], a, div, article, li, label";
@@ -127,7 +127,7 @@ export default {
           },
           screenshot: {
             name: "admin-entry-revealed",
-            claim: "RenWork Admin Analytics appears in MCP settings after Show hidden.",
+            claim: "OpenWork Admin Analytics appears in MCP settings after Show hidden.",
             requireText: [ADMIN_TITLE],
             rejectText: ["Something went wrong"],
             hashIncludes: "/settings/extensions/mcp",
@@ -184,7 +184,7 @@ export default {
           },
           screenshot: {
             name: "admin-mcp-connected",
-            claim: "RenWork Admin Analytics shows Connected — admin MCP attached end-to-end.",
+            claim: "OpenWork Admin Analytics shows Connected — admin MCP attached end-to-end.",
             requireText: [ADMIN_TITLE, "Connected"],
             rejectText: ["Something went wrong"],
             hashIncludes: "/settings/extensions/mcp",

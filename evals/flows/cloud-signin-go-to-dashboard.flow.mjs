@@ -10,7 +10,7 @@ const vo = await loadVoiceoverParagraphs("cloud-signin-go-to-dashboard");
 
 const DEN_WEB_URL = (process.env.OPENWORK_EVAL_DEN_WEB_URL ?? "").trim().replace(/\/+$/, "");
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -103,13 +103,13 @@ export default {
           assert: async () => {
             await ctx.waitFor(`(() => {
               const text = document.body.innerText;
-              return text.includes("You're signed in.") && text.includes("Go to dashboard") && text.includes("Open RenWork") && location.pathname === "/";
+              return text.includes("You're signed in.") && text.includes("Go to dashboard") && text.includes("Open OpenWork") && location.pathname === "/";
             })()`, { timeoutMs: 30_000, label: "signed-in desktop handoff card" });
           },
           screenshot: {
             name: "signed-in-handoff-card",
             claim: "The signed-in handoff card appears with the dashboard escape hatch.",
-            requireText: ["You're signed in.", "Go to dashboard", "Open RenWork"],
+            requireText: ["You're signed in.", "Go to dashboard", "Open OpenWork"],
             rejectText: ["Something went wrong"],
           },
         });

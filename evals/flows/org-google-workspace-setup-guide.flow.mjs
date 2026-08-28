@@ -7,9 +7,9 @@ import { denApiFetch, openAdminConnections, signInApi, signInViaBrowser } from "
 const vo = await loadVoiceoverParagraphs("org-google-workspace-setup-guide");
 
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MEMBER_EMAIL = process.env.OPENWORK_EVAL_MEMBER_EMAIL?.trim() || "jordan.demo@acme.test";
-const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "RenWorkDemo123!";
+const MEMBER_PASSWORD = process.env.OPENWORK_EVAL_MEMBER_PASSWORD?.trim() || "OpenWorkDemo123!";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
 const MOCK_SERVER_URL = (process.env.MOCK_OAUTH_MCP_URL ?? "http://127.0.0.1:3978").trim().replace(/\/+$/, "");
 const RUN_TAG = Date.now();
@@ -313,7 +313,7 @@ export default {
           },
           assert: async () => {
             assertRedirectUriMatch(ctx, parseRedirectUri(state.authorizeUrl), state.redirectUri, "Authorize/API");
-            await ctx.waitFor("document.body.innerText.includes('Mock MCP OAuth') && document.body.innerText.includes('Approve RenWork')", {
+            await ctx.waitFor("document.body.innerText.includes('Mock MCP OAuth') && document.body.innerText.includes('Approve OpenWork')", {
               timeoutMs: 30_000,
               label: "mock Google consent page",
             });
@@ -321,7 +321,7 @@ export default {
           screenshot: {
             name: "org-google-workspace-setup-guide-consent-redirect",
             claim: "The member reaches Google consent after Den generated an authorize URL with the exact setup redirect URI.",
-            requireText: ["Mock MCP OAuth", "Approve RenWork"],
+            requireText: ["Mock MCP OAuth", "Approve OpenWork"],
             rejectText: ["Connection failed"],
           },
         });

@@ -10,7 +10,7 @@ const FLOW_ID = "runtime-config-ownership";
 const vo = await loadVoiceoverParagraphs(FLOW_ID);
 
 const CARD_TITLE = "Runtime config ownership";
-const CARD_RULE = "RenWork writes only the managed runtime config file; user OpenCode config stays user-owned.";
+const CARD_RULE = "OpenWork writes only the managed runtime config file; user OpenCode config stays user-owned.";
 const REDACTED_CONTENT_LABEL = "Redacted managed file";
 const REDACTED_CONTENT_VISIBLE_LABEL = "REDACTED MANAGED FILE";
 const DISABLED_PROVIDER = "anthropic";
@@ -31,7 +31,7 @@ const LEGACY_CONTENT = `${LEGACY_HEADER}{
   },
   "agent": {
     "openwork": {
-      "description": "Legacy RenWork agent left by an older build",
+      "description": "Legacy OpenWork agent left by an older build",
       "mode": "primary"
     }
   },
@@ -113,8 +113,8 @@ async function getServerInfo(ctx) {
   const baseUrl = String(info?.baseUrl || info?.connectUrl || "").replace(/\/+$/, "");
   const token = String(info?.ownerToken || info?.clientToken || "").trim();
   const hostToken = String(info?.hostToken || "").trim();
-  ctx.assert(Boolean(baseUrl), "RenWork server base URL is unavailable.");
-  ctx.assert(Boolean(token), "RenWork server token is unavailable.");
+  ctx.assert(Boolean(baseUrl), "OpenWork server base URL is unavailable.");
+  ctx.assert(Boolean(token), "OpenWork server token is unavailable.");
   return { baseUrl, token, hostToken };
 }
 
@@ -314,26 +314,26 @@ async function openRedactedManagedFile(ctx) {
 
 async function restartOpenworkServerFromDebug(ctx) {
   await openDebugSettings(ctx);
-  await ctx.clickText("Restart RenWork server", { selector: "button", timeoutMs: 30_000 });
+  await ctx.clickText("Restart OpenWork server", { selector: "button", timeoutMs: 30_000 });
   await ctx.waitFor(`(() => {
     const text = document.body.innerText;
-    return text.includes("Restarted RenWork server.") || text.includes("Failed to restart RenWork server.");
+    return text.includes("Restarted OpenWork server.") || text.includes("Failed to restart OpenWork server.");
   })()`, {
     timeoutMs: 90_000,
-    label: "RenWork server restart result",
+    label: "OpenWork server restart result",
   });
   const text = await ctx.eval("document.body.innerText");
-  ctx.assert(!text.includes("Failed to restart RenWork server."), "RenWork server restart failed.");
+  ctx.assert(!text.includes("Failed to restart OpenWork server."), "OpenWork server restart failed.");
   await ctx.eval("location.reload()");
   await ctx.waitFor("Boolean(window.__openworkControl)", {
     timeoutMs: 60_000,
-    label: "control API after RenWork server restart",
+    label: "control API after OpenWork server restart",
   });
 }
 
 async function setDisabledProviderThroughServer(ctx) {
   const { workspaceId } = await ensureWorkspace(ctx);
-  ctx.log("Using the RenWork server runtime-config route as the provider-toggle fallback for this isolated eval.");
+  ctx.log("Using the OpenWork server runtime-config route as the provider-toggle fallback for this isolated eval.");
   const result = await fetchOpenworkJson(ctx, `/workspace/${encodeURIComponent(workspaceId)}/runtime-config/disabled-providers`, {
     method: "POST",
     body: { providers: [DISABLED_PROVIDER] },
@@ -385,7 +385,7 @@ function assertSweepState(ctx, state) {
 
 export default {
   id: FLOW_ID,
-  title: "Runtime config is owned by RenWork's managed file without mutating personal OpenCode config",
+  title: "Runtime config is owned by OpenWork's managed file without mutating personal OpenCode config",
   kind: "user-facing",
   steps: [
     {
@@ -416,7 +416,7 @@ export default {
     {
       name: "Restart runs the one-time cleanup with backup evidence",
       run: async (ctx) => {
-        await ctx.prove("The server restart sweeps RenWork-owned leftovers, preserves user-owned config, and reports the backup", {
+        await ctx.prove("The server restart sweeps OpenWork-owned leftovers, preserves user-owned config, and reports the backup", {
           voiceover: vo[1],
           action: async () => {
             await enableDeveloperMode(ctx);

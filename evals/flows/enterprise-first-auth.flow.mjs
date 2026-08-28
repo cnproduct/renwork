@@ -40,7 +40,7 @@ import {
 const DEFAULT_NEW_MEMBER_EMAIL = "new.member@example.com";
 const WORKSPACE_ENV = "OPENWORK_EVAL_ENTERPRISE_NEW_MEMBER_WORKSPACE";
 const DEFAULT_WORKSPACE = "/workspace/enterprise-first-auth";
-const PROMPT = "Use RenWork Cloud capabilities to find and use the `my-incidents` skill, then report the open incidents assigned to me.";
+const PROMPT = "Use OpenWork Cloud capabilities to find and use the `my-incidents` skill, then report the open incidents assigned to me.";
 const PROMPT_AFTER_JIT = "The enterprise incident gateway sign-in is complete. Start fresh without reusing prior results: find and use `my-incidents` / `enterprise_graph_query` with `assigned_to: me` and `status: open`, then report my open incidents.";
 const JIT_COMPLETE_SENTINEL = "OPENWORK_ENTERPRISE_JIT_COMPLETE_SENTINEL";
 
@@ -59,17 +59,17 @@ export default {
     {
       name: "Frame: first open",
       run: async (ctx) => {
-        await ctx.prove("A just-installed enterprise desktop app opens to the RenWork welcome screen", {
+        await ctx.prove("A just-installed enterprise desktop app opens to the OpenWork welcome screen", {
           action: async () => {
-            await ctx.waitForText("Welcome to RenWork", { timeoutMs: 90_000 });
+            await ctx.waitForText("Welcome to OpenWork", { timeoutMs: 90_000 });
           },
           assert: async () => {
-            await ctx.expectText("Welcome to RenWork");
+            await ctx.expectText("Welcome to OpenWork");
           },
           screenshot: {
             name: "enterprise-first-open",
-            claim: "The first launch starts from the generic RenWork welcome screen before the member signs in.",
-            requireText: ["Welcome to RenWork"],
+            claim: "The first launch starts from the generic OpenWork welcome screen before the member signs in.",
+            requireText: ["Welcome to OpenWork"],
             rejectText: ["Something went wrong"],
           },
         });
@@ -132,25 +132,25 @@ export default {
       },
     },
     {
-      name: "Continue to workspace and wait for RenWork Connect",
+      name: "Continue to workspace and wait for OpenWork Connect",
       run: async (ctx) => {
         await clickTextStartingWith(ctx, "Continue to workspace", "button, [role=button]", 30_000);
         await ctx.waitFor("Boolean((localStorage.getItem('openwork.den.authToken') ?? '').trim())", { timeoutMs: 60_000, label: "desktop Den auth token" });
         const shell = await ctx.waitFor(`(() => {
           const text = document.body.innerText || '';
-          return text.includes('RenWork Connect') || text.includes('Run task') || location.hash.includes('/workspace') || location.hash.includes('/welcome');
+          return text.includes('OpenWork Connect') || text.includes('Run task') || location.hash.includes('/workspace') || location.hash.includes('/welcome');
         })()`, { timeoutMs: 90_000, label: "desktop app shell after org provisioning" });
         assertEvidence(ctx, Boolean(shell), "The signed-in desktop app shell is visible after org provisioning", await desktopAuthState(ctx));
         const folder = workspaceFolder(ctx, WORKSPACE_ENV, DEFAULT_WORKSPACE);
         state.workspaceId = await ensureLocalWorkspaceBeforeConnectPollIfNeeded(ctx, folder);
         if (state.workspaceId) {
-          assertEvidence(ctx, true, "A local workspace is created from the welcome route before polling RenWork Connect", {
+          assertEvidence(ctx, true, "A local workspace is created from the welcome route before polling OpenWork Connect", {
             folder,
             workspaceId: state.workspaceId,
           });
         }
         const ready = await waitForOpenWorkConnectReady(ctx);
-        assertEvidence(ctx, ready.ready, "RenWork Connect reaches Ready on the factory-fresh app", ready);
+        assertEvidence(ctx, ready.ready, "OpenWork Connect reaches Ready on the factory-fresh app", ready);
       },
     },
     {

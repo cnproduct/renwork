@@ -19,7 +19,7 @@ const execFileAsync = promisify(execFile);
 const DEN_WEB_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_DEN_WEB_URL);
 const MYSQL_CONTAINER = process.env.OPENWORK_EVAL_DEN_MYSQL_CONTAINER?.trim() ?? "";
 const DEMO_EMAIL = "alex@acme.test";
-const DEMO_PASSWORD = "RenWorkDemo123!";
+const DEMO_PASSWORD = "OpenWorkDemo123!";
 const SECURITY_MESSAGE = "For security, confirm it's you before changing workspace settings.";
 const GOOGLE_ACCOUNT_ID = "acc_01kwx81tc6f208pn04555rws17";
 

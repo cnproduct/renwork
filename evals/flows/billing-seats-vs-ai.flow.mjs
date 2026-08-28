@@ -24,7 +24,7 @@ const DEN_WEB_URL = denWebUrl();
 const ADMIN_CDP_URL = (process.env.OPENWORK_EVAL_WEB_CDP_ADMIN ?? "").trim().replace(/\/+$/, "");
 const ADMIN_TOKEN = (process.env.OPENWORK_EVAL_DEN_TOKEN ?? "").trim();
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 
 const state = {
   adminBrowserSignedIn: false,
@@ -257,7 +257,7 @@ export default {
               // "OpenWork Users" was the old seats card title; the sidebar still
               // links to OpenWork Models, so only the retired card name is rejected.
               requireText: ["Your subscriptions", "Team seats", "AI model access", "Total"],
-              rejectText: ["RenWork Users"],
+              rejectText: ["OpenWork Users"],
             },
           });
         });
@@ -304,7 +304,7 @@ export default {
             screenshot: {
               name: "seats-card",
               requireText: ["Team seats", "Manage members"],
-              rejectText: ["RenWork Users"],
+              rejectText: ["OpenWork Users"],
             },
           });
         });

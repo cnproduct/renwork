@@ -185,7 +185,7 @@ export default {
     {
       name: "Frame 3 — Download selects the highest allowed version",
       run: async (ctx) => {
-        await ctx.prove("Clicking download returns RenWork Enterprise 0.17.38 instead of the disallowed 0.17.39 release", {
+        await ctx.prove("Clicking download returns OpenWork Enterprise 0.17.38 instead of the disallowed 0.17.39 release", {
           voiceover: vo[2],
           action: async () => {
             state.restrictedDownload = await fetchInstallerDownload(state.memberInstallToken);

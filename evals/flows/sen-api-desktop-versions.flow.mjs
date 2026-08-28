@@ -7,7 +7,7 @@ import {
 
 const vo = await loadVoiceoverParagraphs("sen-api-desktop-versions");
 const DEMO_EMAIL = "alex@acme.test";
-const DEMO_PASSWORD = "RenWorkDemo123!";
+const DEMO_PASSWORD = "OpenWorkDemo123!";
 
 function recordAssertion(ctx, assertion, passed, actual) {
   ctx.recordEvidence({
@@ -28,7 +28,7 @@ async function openDesktopVersionSettings(ctx) {
     location.reload();
     return true;
   }).catch(() => true)`, { awaitPromise: true });
-  await ctx.waitFor(`document.body.innerText.includes('Start using RenWork') && Boolean(document.querySelector('input[type="email"]'))`, {
+  await ctx.waitFor(`document.body.innerText.includes('Start using OpenWork') && Boolean(document.querySelector('input[type="email"]'))`, {
     timeoutMs: 30_000,
     label: "email-first sign-in",
   });

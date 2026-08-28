@@ -7,7 +7,7 @@ const vo = await loadVoiceoverParagraphs(FLOW_ID);
 const DEN_API_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_DEN_API_URL);
 const DEN_WEB_URL = cleanBaseUrl(process.env.OPENWORK_EVAL_DEN_WEB_URL || DEN_API_URL);
 const ADMIN_EMAIL = process.env.OPENWORK_EVAL_DEMO_EMAIL?.trim() || "alex@acme.test";
-const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "RenWorkDemo123!";
+const ADMIN_PASSWORD = process.env.OPENWORK_EVAL_DEMO_PASSWORD?.trim() || "OpenWorkDemo123!";
 const PLATFORM_ADMIN_EMAIL = process.env.OPENWORK_EVAL_PLATFORM_ADMIN_EMAIL?.trim() || "";
 const PLATFORM_ADMIN_PASSWORD = process.env.OPENWORK_EVAL_PLATFORM_ADMIN_PASSWORD?.trim() || "";
 const MARK_VERIFIED_CMD = process.env.OPENWORK_EVAL_MARK_VERIFIED_CMD?.trim() || "";
@@ -282,7 +282,7 @@ function skillSourceText() {
     `description: ${SKILL_DESCRIPTION}`,
     "---",
     "",
-    "When invoked, explain that this marketplace skill is active through RenWork Connect.",
+    "When invoked, explain that this marketplace skill is active through OpenWork Connect.",
   ].join("\n");
 }
 
@@ -452,7 +452,7 @@ async function completeDesktopCloudOnboardingIfNeeded(ctx) {
     await ctx.waitFor("window.location.hash.includes('/workspace/')", { timeoutMs: 60_000, label: "workspace open after folder selection" });
   }
   await ctx.eval(`(() => {
-    const button = [...document.querySelectorAll('button')].find((candidate) => (candidate.textContent ?? '').trim() === 'Continue without RenWork Models');
+    const button = [...document.querySelectorAll('button')].find((candidate) => (candidate.textContent ?? '').trim() === 'Continue without OpenWork Models');
     button?.click();
     return true;
   })()`);
