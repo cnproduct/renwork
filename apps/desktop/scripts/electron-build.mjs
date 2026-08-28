@@ -50,6 +50,9 @@ run(nodeCmd, [resolve(__dirname, "prepare-sidecar.mjs"), "--force", "--outdir", 
 run(nodeCmd, [resolve(__dirname, "prepare-computer-use-helper.mjs"), "--force", "--outdir", electronHelperDir], desktopRoot);
 run(nodeCmd, [resolve(__dirname, "prepare-runtime-node-modules.mjs"), "--outdir", packagedRuntimeRoot], desktopRoot);
 writeSentryBuildConfig();
+// Vite resolves workspace packages through their production exports in clean
+// CI checkouts, so build the RenCredit library before compiling the renderer.
+run(pnpmCmd, ["--filter", "@openwork/rencredit-metering", "build"], repoRoot);
 // The server imports RenWork's semantic voice constants at runtime. Build and
 // vendor that tiny ESM module so packaged Electron never tries to execute the
 // TypeScript source from a workspace package under node_modules.

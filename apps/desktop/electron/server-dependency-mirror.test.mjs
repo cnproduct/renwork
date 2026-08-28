@@ -43,4 +43,11 @@ describe("server dependency mirror", () => {
     assert.match(electronBuildScript, /renwork-semantic-tools\.js/);
     assert.match(electronBuildScript, /from \"\.\/renwork-semantic-tools\.js\"/);
   });
+
+  it("builds the RenCredit workspace package before compiling the renderer", () => {
+    const rencreditBuild = electronBuildScript.indexOf('"@openwork/rencredit-metering", "build"');
+    const rendererBuild = electronBuildScript.indexOf('"--filter", "@openwork/app", "build"');
+    assert.ok(rencreditBuild >= 0, "expected an explicit RenCredit package build");
+    assert.ok(rendererBuild > rencreditBuild, "RenCredit must build before the renderer");
+  });
 });
