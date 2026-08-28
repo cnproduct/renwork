@@ -148,6 +148,30 @@ export function getCapabilityCallSentence(
   const query = options?.includeQuery === false ? null : extractQuery(part.input)
   const quoted = query ? ` “${query}”` : ""
 
+  if (toolName === "openwork_context") {
+    return {
+      service: "RenWork",
+      present: "读取 RenWork 上下文",
+      past: "读取 RenWork 上下文",
+    }
+  }
+
+  if (toolName === "openwork_execute") {
+    return {
+      service: "RenWork",
+      present: "执行 RenWork 操作",
+      past: "执行 RenWork 操作",
+    }
+  }
+
+  if (toolName === "openwork_query") {
+    return {
+      service: "RenWork",
+      present: "查询 RenWork 数据",
+      past: "查询 RenWork 数据",
+    }
+  }
+
   if (toolName.endsWith("search_capabilities")) {
     return {
       service: null,
@@ -247,4 +271,3 @@ export function getCapabilityCallSentence(
     past: `${verbPhrase(toolName, "past")}${suffix}`,
   }
 }
-

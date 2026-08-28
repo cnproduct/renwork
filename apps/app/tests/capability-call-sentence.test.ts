@@ -14,7 +14,36 @@ function executeCapability(input: unknown): DynamicToolUIPart {
   } as DynamicToolUIPart;
 }
 
+function localRenWorkTool(toolName: string): DynamicToolUIPart {
+  return {
+    type: "dynamic-tool",
+    toolName,
+    toolCallId: "call_local_renwork",
+    state: "output-available",
+    input: {},
+    output: { ok: true },
+  } as DynamicToolUIPart;
+}
+
 describe("capability call sentences", () => {
+  test("brands local RenWork tool activity without exposing legacy tool ids", () => {
+    expect(getCapabilityCallSentence(localRenWorkTool("openwork_context"))).toMatchObject({
+      service: "RenWork",
+      present: "读取 RenWork 上下文",
+      past: "读取 RenWork 上下文",
+    });
+    expect(getCapabilityCallSentence(localRenWorkTool("openwork_execute"))).toMatchObject({
+      service: "RenWork",
+      present: "执行 RenWork 操作",
+      past: "执行 RenWork 操作",
+    });
+    expect(getCapabilityCallSentence(localRenWorkTool("openwork_query"))).toMatchObject({
+      service: "RenWork",
+      present: "查询 RenWork 数据",
+      past: "查询 RenWork 数据",
+    });
+  });
+
   test("names an org MCP capability instead of falling back to 'a capability'", () => {
     const part = executeCapability({
       name: "mcp:emc_01kx2kfb42f6d94y1s1j992jhf:query_granola_meetings",
