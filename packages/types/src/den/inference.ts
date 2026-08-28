@@ -114,6 +114,33 @@ export const RENWORK_MODEL_CATALOG = {
     enabled: true,
     usageFactor: 1,
   },
+  // Stable RenWork product SKUs. Keep these after the upstream aliases so
+  // reverse lookups for legacy receipts continue to resolve to their original
+  // upstream alias during the compatibility window.
+  "renwork-auto": {
+    upstreamModel: "deepseek/deepseek-v4-flash",
+    displayName: "RenWork: 智能 Auto",
+    enabled: true,
+    usageFactor: 1,
+  },
+  "renwork-standard": {
+    upstreamModel: "deepseek/deepseek-v4-flash",
+    displayName: "RenWork: 标准",
+    enabled: true,
+    usageFactor: 0.13,
+  },
+  "renwork-professional": {
+    upstreamModel: "moonshotai/kimi-k2.6",
+    displayName: "RenWork: 专业",
+    enabled: true,
+    usageFactor: 1,
+  },
+  "renwork-ultimate": {
+    upstreamModel: "z-ai/glm-5.2",
+    displayName: "RenWork: 极致",
+    enabled: true,
+    usageFactor: 2.8,
+  },
 } as const;
 
 /** @deprecated Compatibility export for existing clients and saved automations. */

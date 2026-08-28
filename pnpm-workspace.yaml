@@ -11,6 +11,7 @@ minimumReleaseAgeExclude:
 packages:
   - "apps/*"
   - "packages/*"
+  - "deploy/cloud-api-server"
   - "ee/apps/*"
   - "ee/packages/*"
 

@@ -1,4 +1,11 @@
-const EMPTY_USAGE = { inputTokens: null, outputTokens: null, costMicros: null }
+const EMPTY_USAGE = {
+  inputTokens: null,
+  outputTokens: null,
+  reasoningTokens: null,
+  cacheReadTokens: null,
+  cacheWriteTokens: null,
+  costMicros: null,
+}
 
 function serializedError(value) {
   if (value instanceof Error) return value.message
@@ -67,12 +74,21 @@ function assistantResult(snapshot) {
   let resultSummary = null
   let inputTokens = 0
   let outputTokens = 0
+  let reasoningTokens = 0
+  let cacheReadTokens = 0
+  let cacheWriteTokens = 0
   let sawInput = false
   let sawOutput = false
+  let sawReasoning = false
+  let sawCacheRead = false
+  let sawCacheWrite = false
   for (const message of assistants) {
     const tokens = message?.info?.tokens
     if (Number.isFinite(tokens?.input)) { inputTokens += Number(tokens.input); sawInput = true }
     if (Number.isFinite(tokens?.output)) { outputTokens += Number(tokens.output); sawOutput = true }
+    if (Number.isFinite(tokens?.reasoning)) { reasoningTokens += Number(tokens.reasoning); sawReasoning = true }
+    if (Number.isFinite(tokens?.cache?.read)) { cacheReadTokens += Number(tokens.cache.read); sawCacheRead = true }
+    if (Number.isFinite(tokens?.cache?.write)) { cacheWriteTokens += Number(tokens.cache.write); sawCacheWrite = true }
     for (const part of Array.isArray(message?.parts) ? message.parts : []) {
       if (part?.type === "text" && typeof part.text === "string" && part.text.trim()) {
         resultSummary = part.text.trim().slice(0, 20_000)
@@ -84,6 +100,9 @@ function assistantResult(snapshot) {
     usage: {
       inputTokens: sawInput ? inputTokens : null,
       outputTokens: sawOutput ? outputTokens : null,
+      reasoningTokens: sawReasoning ? reasoningTokens : null,
+      cacheReadTokens: sawCacheRead ? cacheReadTokens : null,
+      cacheWriteTokens: sawCacheWrite ? cacheWriteTokens : null,
       costMicros: null,
     },
   }

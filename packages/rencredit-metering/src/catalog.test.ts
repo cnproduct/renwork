@@ -1,0 +1,62 @@
+import { describe, expect, test } from "bun:test";
+
+import { requireSuperAdmin, toPublicModelCatalog, validateAdminModelCatalog } from "./catalog.js";
+import { createDefaultRenWorkModelCatalog } from "./default-catalog.js";
+import { createTestCatalog } from "./test-fixtures.js";
+
+describe("RenWork model catalog", () => {
+  test("publishes stable model SKUs without exposing routes or provider secrets", () => {
+    const catalog = createTestCatalog();
+    const publicCatalog = toPublicModelCatalog(catalog, new Date("2026-08-28T12:00:00.000Z"));
+
+    expect(publicCatalog.models).toHaveLength(1);
+    expect(publicCatalog.models[0]).toEqual({
+      sku: "renwork-standard",
+      providerID: "renwork",
+      modelID: "renwork-standard",
+      displayName: "RenWork 标准",
+      description: "适合日常任务",
+      tier: "standard",
+      autoEligible: true,
+      contextWindow: 128_000,
+      tags: ["快速"],
+      displayMultiplierBps: 10_000,
+      effectiveDisplayMultiplierBps: 5_000,
+      promotionLabel: "限时 5 折",
+      promotionEndsAt: "2026-09-01T00:00:00.000Z",
+    });
+    expect(JSON.stringify(publicCatalog)).not.toContain("openrouter");
+    expect(JSON.stringify(publicCatalog)).not.toContain("credentialRef");
+  });
+
+  test("rejects published models without a working route", () => {
+    const catalog = createTestCatalog();
+    catalog.models[0]!.routes = [];
+    expect(() => validateAdminModelCatalog(catalog)).toThrow("requires an enabled route");
+  });
+
+  test("only the super administrator can access provider configuration", () => {
+    expect(() => requireSuperAdmin("member")).toThrow("super_admin");
+    expect(() => requireSuperAdmin("tenant_admin")).toThrow("super_admin");
+    expect(() => requireSuperAdmin("super_admin")).not.toThrow();
+  });
+
+  test("ships four executable RenWork product SKUs and keeps the default secret server-side", () => {
+    const catalog = createDefaultRenWorkModelCatalog(new Date("2026-08-28T12:00:00.000Z"));
+    const publicCatalog = toPublicModelCatalog(catalog);
+    expect(publicCatalog.models.map((model) => model.sku)).toEqual([
+      "renwork-auto",
+      "renwork-standard",
+      "renwork-professional",
+      "renwork-ultimate",
+    ]);
+    expect(catalog.providers[0]?.credentialRef).toBe("env://OPENROUTER_API_KEY");
+    expect(JSON.stringify(publicCatalog)).not.toContain("OPENROUTER_API_KEY");
+  });
+
+  test("rejects raw provider credentials in administrator catalog payloads", () => {
+    const catalog = createTestCatalog();
+    catalog.providers[0]!.credentialRef = "sk-raw-key-must-never-be-stored-here";
+    expect(() => validateAdminModelCatalog(catalog)).toThrow("secret:// or env://");
+  });
+});

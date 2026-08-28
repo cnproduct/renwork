@@ -6,6 +6,10 @@ import {
   AUTOMATION_MODEL_ATTENTION_CAPABILITY,
   AUTOMATION_MODEL_ATTENTION_CAPABILITY_HEADER,
 } from "@openwork/types/automations";
+import {
+  parsePublicModelCatalog,
+  type RenWorkPublicModelCatalog,
+} from "@openwork/rencredit-metering";
 import type {
   AutomationDetail,
   AutomationDesktopRunnerRegistration,
@@ -2513,6 +2517,19 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
         organizationId: orgId,
       });
       return normalizeDenDesktopConfig(payload);
+    },
+
+    async getRenWorkModelCatalog(orgId: string): Promise<RenWorkPublicModelCatalog> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/models/catalog", {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      const catalog = parsePublicModelCatalog(payload);
+      if (!catalog) {
+        throw new DenApiError(500, "invalid_model_catalog_payload", "RenWork model catalog response was invalid.");
+      }
+      return catalog;
     },
 
     async getResourceSnapshot(orgId?: string | null): Promise<DenResourceSnapshot> {

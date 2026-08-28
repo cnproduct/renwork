@@ -171,6 +171,9 @@ export type AutomationError = z.infer<typeof automationErrorSchema>
 export const automationUsageSchema = z.object({
   inputTokens: z.number().int().nonnegative().nullable(),
   outputTokens: z.number().int().nonnegative().nullable(),
+  reasoningTokens: z.number().int().nonnegative().nullable().default(null),
+  cacheReadTokens: z.number().int().nonnegative().nullable().default(null),
+  cacheWriteTokens: z.number().int().nonnegative().nullable().default(null),
   costMicros: z.number().int().nonnegative().nullable(),
 })
 export type AutomationUsage = z.infer<typeof automationUsageSchema>
