@@ -1,5 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
+import { setLocale } from "../src/i18n";
 
 import { ExtensionsView } from "../src/react-app/domains/settings/pages/extensions-view";
 import type { PluginsExtensionsStore } from "../src/react-app/domains/settings/pages/plugins-view";
@@ -26,6 +27,9 @@ const extensions: PluginsExtensionsStore = {
   activePluginGuide: () => null,
   setActivePluginGuide: () => {},
 };
+
+beforeEach(() => setLocale("en"));
+afterEach(() => setLocale("zh"));
 
 describe("Library state tabs", () => {
   test("renders the Ready to use count without a connected-app chip", () => {

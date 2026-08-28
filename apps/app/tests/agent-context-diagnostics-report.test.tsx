@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   AGENT_CONTEXT_DIAGNOSTIC_CHECK_IDS,
@@ -9,11 +9,15 @@ import {
 } from "@openwork/types/agent-context-diagnostics";
 
 import { serializeAgentContextDiagnosticsReport } from "../src/app/lib/agent-context-diagnostics";
+import { setLocale } from "../src/i18n";
 import {
   AgentContextDiagnosticsErrorNotice,
   AgentContextDiagnosticsReportView,
   organizationConnectionState,
 } from "../src/react-app/domains/settings/pages/agent-context-diagnostics-report";
+
+beforeEach(() => setLocale("en"));
+afterEach(() => setLocale("zh"));
 
 function healthyReport(): AgentContextDiagnosticsReport {
   const passiveEngineCheckIds = new Set([
@@ -179,7 +183,7 @@ describe("AgentContextDiagnosticsReportView", () => {
     expect(html).toContain("config.remote");
     expect(html).toContain("Registration record: Connected");
     expect(html).toContain("Configured default-agent intent");
-    expect(html).toContain("Configured OpenWork agent");
+    expect(html).toContain("Configured RenWork agent");
     expect(html).toContain("Configured enabled");
     expect(html).toContain("Configured headers present · values redacted");
     expect(html).toContain("Live connection status not queried");
@@ -243,7 +247,7 @@ describe("AgentContextDiagnosticsReportView", () => {
     );
 
     expect(html).toContain("Effective default agent");
-    expect(html).toContain("Effective OpenWork agent");
+    expect(html).toContain("Effective RenWork agent");
     expect(html).toContain("Effective plugin labels");
     expect(html).toContain("Effective configuration observed");
     expect(html).toContain("Disabled by tool policy");

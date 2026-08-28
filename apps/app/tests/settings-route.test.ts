@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { setLocale } from "../src/i18n";
 
 import {
   extensionsPathForRoute,
@@ -11,6 +12,9 @@ import {
   getWorkspaceSettingsTabs,
   isSettingsTabActive,
 } from "../src/react-app/domains/settings/shell/settings-page";
+
+beforeEach(() => setLocale("en"));
+afterEach(() => setLocale("zh"));
 
 describe("settings route parsing", () => {
   test("parses the first-class Extensions route for direct workspace navigation and reloads", () => {

@@ -1,7 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PendingPermission } from "../src/app/types";
+import { setLocale } from "../src/i18n";
 
 import {
   PermissionApprovalPanel,
@@ -26,6 +27,9 @@ function pendingPermission(overrides: Partial<PendingPermission> = {}): PendingP
 }
 
 describe("permission approval modal helpers", () => {
+  beforeEach(() => setLocale("en"));
+  afterEach(() => setLocale("zh"));
+
   test("surfaces risk-bearing metadata as review rows", () => {
     expect(
       permissionDetailRows({

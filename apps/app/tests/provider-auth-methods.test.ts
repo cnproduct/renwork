@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import { createClient } from "../src/app/lib/opencode";
 import type { ProviderListItem, WorkspaceDisplay } from "../src/app/types";
+import { setLocale } from "../src/i18n";
 import { createProviderAuthStore } from "../src/react-app/domains/connections/provider-auth/store";
 
 const originalWindow = globalThis.window;
@@ -98,9 +99,12 @@ function createTestStore(workerType: "local" | "remote") {
 afterEach(() => {
   Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   Object.defineProperty(globalThis, "fetch", { configurable: true, value: originalFetch });
+  setLocale("zh");
 });
 
 describe("OpenAI provider auth methods", () => {
+  beforeEach(() => setLocale("en"));
+
   test("desktop local workers offer non-headless OAuth", async () => {
     installWindow({
       origin: "http://localhost:3000",

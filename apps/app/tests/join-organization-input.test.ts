@@ -76,17 +76,19 @@ describe("welcome one-field contract", () => {
     expect(source).toContain('clearDenSession({ includeBaseUrls: false });');
   });
 
-  test("the welcome page has one join door and no separate server-URL affordance", () => {
+  test("the account-first welcome page shows tenant context and runtime choices", () => {
     const pageSource = readFileSync(welcomePagePath, "utf8");
     const routeSource = readFileSync(welcomeRoutePath, "utf8");
 
-    expect(pageSource).toContain('data-testid="welcome-team-signin"');
-    expect(pageSource).toContain('data-testid="welcome-use-without-cloud"');
-    expect(pageSource).toContain('data-testid="welcome-join-org"');
+    expect(pageSource).toContain('data-testid="verified-account"');
+    expect(pageSource).toContain('data-testid="runtime-managed"');
+    expect(pageSource).toContain('data-testid="runtime-local"');
+    expect(pageSource).toContain('data-testid="runtime-byok"');
+    expect(pageSource).not.toContain('data-testid="welcome-join-org"');
     expect(pageSource).not.toContain("OrganizationServerAffordance");
     expect(pageSource).not.toContain("organizationServerUrl");
     expect(routeSource).not.toContain("OrganizationServerAffordance");
     expect(routeSource).not.toContain("handleOrganizationServerSave");
-    expect(routeSource).toContain("<JoinOrganizationDialog");
+    expect(routeSource).not.toContain("<JoinOrganizationDialog");
   });
 });

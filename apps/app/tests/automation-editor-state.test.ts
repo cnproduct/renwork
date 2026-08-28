@@ -6,12 +6,12 @@ const read = (relative: string) =>
   readFileSync(join(import.meta.dir, "..", relative), "utf8")
 
 describe("Automation editor state", () => {
-  test("background detail refetches do not replace unsaved edits", () => {
+  test("editing copies a task into local form state so background refetches do not replace unsaved edits", () => {
     const page = read("src/react-app/domains/automations/automations-page.tsx")
-    expect(page).toContain("initialKey={detail.revision.id}")
-
-    const editor = read("src/react-app/domains/automations/automation-editor.tsx")
-    expect(editor).toContain("appliedInitialKey.current === props.initialKey")
-    expect(editor).toContain("appliedInitialKey.current = props.initialKey")
+    expect(page).toContain("const openEditModal = (task: LocalAutomationTask) =>")
+    expect(page).toContain("setEditingTask(task)")
+    expect(page).toContain("setFormName(task.name)")
+    expect(page).toContain("setFormInstructions(task.instructions)")
+    expect(page).toContain("id: editingTask?.id")
   })
 })

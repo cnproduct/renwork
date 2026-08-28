@@ -27,7 +27,7 @@ describe("Automations availability", () => {
     expect(source).not.toContain("featureFlags?.automations")
     expect(source).toContain("automationsEnabled && automationsRouteRequested")
     expect(source).toContain("!automationsEnabled || !denAuth.isSignedIn")
-    expect(source).toContain("automationsEnabled && automationsSupported")
+    expect(source).toContain("const automationsNavigationAvailable = automationsEnabled")
   })
 
   test("the runner bridge registers on desktop without an opt-in", () => {
@@ -44,7 +44,7 @@ describe("Automations availability", () => {
   test("the in-chat proposal tool only blocks on sign-in", () => {
     const proposal = read("src/components/tools/openwork-automation-proposal.tsx")
     expect(proposal).not.toContain("automationsEnabled")
-    expect(proposal).toContain("Sign in to OpenWork Cloud")
+    expect(proposal).toContain("请先登录以创建并激活该自动化任务。")
     expect(proposal).toContain("resolveProposalModel")
     expect(proposal).toContain("data-automation-model-resolution")
   })

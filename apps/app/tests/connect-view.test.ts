@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { setLocale } from "../src/i18n";
 
 import type { OpenworkCloudMcpHealth } from "../src/app/lib/openwork-server";
 import { readyCloudMcpToolIds } from "../src/react-app/domains/settings/cloud/agent-access-card";
@@ -15,6 +16,9 @@ const agentAccessSource = readFileSync(
   fileURLToPath(new URL("../src/react-app/domains/settings/cloud/agent-access-card.tsx", import.meta.url)),
   "utf8",
 );
+
+beforeEach(() => setLocale("en"));
+afterEach(() => setLocale("zh"));
 
 function cloudHealth(usable: boolean): OpenworkCloudMcpHealth {
   return {

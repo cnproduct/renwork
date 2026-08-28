@@ -36,14 +36,14 @@ const EVIDENCE_LABEL_KEYS: Record<AgentContextDiagnosticEvidenceKind, string> = 
 };
 
 const OWNER_LABEL_KEYS: Record<AgentContextDiagnosticOwner, string> = {
-  "openwork-client": "connect.diagnostics_owner_openwork_client",
-  "openwork-server": "connect.diagnostics_owner_openwork_server",
+  "openwork-client": "connect.diagnostics_owner_renwork_client",
+  "openwork-server": "connect.diagnostics_owner_renwork_server",
   "opencode-engine": "connect.diagnostics_owner_opencode_engine",
   "network-admin": "connect.diagnostics_owner_network_admin",
   "organization-admin": "connect.diagnostics_owner_organization_admin",
   member: "connect.diagnostics_owner_member",
   "member-and-organization-admin": "connect.diagnostics_owner_member_and_organization_admin",
-  "openwork-support": "connect.diagnostics_owner_openwork_support",
+  "openwork-support": "connect.diagnostics_owner_renwork_support",
 };
 
 const PERMISSION_LABEL_KEYS: Record<AgentContextToolPermission, string> = {

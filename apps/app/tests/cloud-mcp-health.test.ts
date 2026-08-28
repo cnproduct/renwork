@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import type { DenMcpToken } from "../src/app/lib/den";
+import { setLocale } from "../src/i18n";
 import type { OpenworkCloudMcpFailure, OpenworkCloudMcpHealth, OpenworkCloudMcpReconcilePayload } from "../src/app/lib/openwork-server";
 import {
   __setCloudMcpUserStateStorageForTest,
@@ -133,7 +134,11 @@ function health(input: { usable: boolean; failure?: OpenworkCloudMcpFailure | nu
 }
 
 describe("OpenWork Cloud MCP reconciler", () => {
-  beforeEach(() => installStorageStub());
+  beforeEach(() => {
+    setLocale("en");
+    installStorageStub();
+  });
+  afterEach(() => setLocale("zh"));
 
   test("uses the minted web proxy resource instead of a stale direct API fallback", () => {
     const payload = buildOpenworkCloudMcpReconcilePayload({
@@ -435,7 +440,7 @@ describe("OpenWork Cloud MCP reconciler", () => {
     const canonicalProjectionFailure = {
       ...failure("provider_tool_projection_missing"),
       stage: "provider_projection" as const,
-      recommendedAction: "Choose a model that can use OpenWork Cloud tools",
+      recommendedAction: "Choose a model that can use RenWork Cloud tools",
     };
     expect(cloudMcpFailureStageLabel({
       signedIn: true,
@@ -450,7 +455,7 @@ describe("OpenWork Cloud MCP reconciler", () => {
     })).toMatchObject({
       statusLabel: "Degraded",
       stageLabel: "Current model can’t use Cloud tools",
-      recommendedAction: "Choose a model that can use OpenWork Cloud tools.",
+      recommendedAction: "Choose a model that can use RenWork Cloud tools.",
     });
 
     const summary = cloudMcpDisplaySummary({

@@ -116,16 +116,14 @@ describe("enterprise desktop activation", () => {
   });
 
   test("matches the desktop login gate without guessing a Den portal URL", () => {
-    for (const marker of [
-      'type="2x2"',
-      "size={20.3}",
-      "scale={1.19}",
-      "frame={264559.21}",
+    expect(signInSurfaceSource).toContain("<RenWorkBrandMark");
+    expect(signInSurfaceSource).toContain('data-testid="renwork-signup"');
+    expect(signInSurfaceSource).toContain('data-testid="renwork-signin"');
+    expect(signInSurfaceSource).toContain("先连接账号，再决定运行位置");
+    expect(activationGateSource).toContain("<RenWorkBrandMark");
+    expect(activationGateSource).toContain(
       'className="w-full max-w-[720px] rounded-3xl border border-border bg-background',
-    ]) {
-      expect(signInSurfaceSource).toContain(marker);
-      expect(activationGateSource).toContain(marker);
-    }
+    );
     expect(activationGateSource).not.toContain("Open Den portal");
     expect(activationGateSource).not.toContain("openDesktopUrl");
   });
