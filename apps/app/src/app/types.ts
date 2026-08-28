@@ -191,6 +191,7 @@ export const SETTINGS_TAB_VALUES = [
   "cloud-providers",
   "skills",
   "memory",
+  "computer-history",
   "extensions",
   "environment",
   "advanced",

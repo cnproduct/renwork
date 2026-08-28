@@ -90,8 +90,10 @@ async function waitForTaskUi(app: Surface, workspaceId: string): Promise<string>
     const routeReady = match?.[1] === ${JSON.stringify(workspaceId)};
     const text = document.body.innerText;
     const runTask = [...document.querySelectorAll("button")]
-      .some((button) => (button.textContent ?? "").trim() === "Run task");
-    return routeReady && (text.includes("What do you need done?") || runTask);
+      .some((button) => ["Run task", "运行任务"].includes((button.textContent ?? "").trim()));
+    return routeReady && (text.includes("What do you need done?")
+      || text.includes("今天需要为您完成什么外贸任务？")
+      || runTask);
   })()`, { timeoutMs: 120_000, label: `workspace ${workspaceId} task UI` });
   return currentHash(app);
 }
@@ -117,9 +119,24 @@ export async function createAndSelectWorkspace(
   let workspaceId = "";
   const route = await currentHash(app);
   if (route.includes("/welcome")) {
-    const workspace = await createLocalWorkspaceViaUi(app, input);
+    const modelSourceContinue = await evalIn(app, `(() => {
+      const labels = [...document.querySelectorAll("button")]
+        .filter((button) => !button.disabled)
+        .map((button) => (button.textContent ?? "").trim());
+      return ["Continue", "继续"].find((candidate) => labels.includes(candidate)) ?? "";
+    })()`);
+    const workspace = typeof modelSourceContinue === "string" && modelSourceContinue
+      ? { id: "" }
+      : await createLocalWorkspaceViaUi(app, input);
+    if (typeof modelSourceContinue === "string" && modelSourceContinue) {
+      await clickButton(app, modelSourceContinue, { timeoutMs: 30_000 });
+    }
     await clickButton(app, "Skip and use the free model", { timeoutMs: 90_000 });
-    await waitForText(app, "How did you hear about OpenWork?", { timeoutMs: 90_000 });
+    await waitFor(app, `document.body.innerText.includes("How did you hear about OpenWork?")
+      || document.body.innerText.includes("How did you hear about RenWork?")`, {
+      timeoutMs: 90_000,
+      label: "RenWork attribution step",
+    });
     await clickButton(app, "Skip", { timeoutMs: 15_000 });
     // Only now is the workspace actually selected: resolving before the
     // onboarding steps finish reads an id the app has not adopted yet.

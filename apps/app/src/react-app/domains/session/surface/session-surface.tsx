@@ -55,6 +55,7 @@ import { SessionDebugPanel } from "./debug-panel";
 import { deriveRenderedSessionMessages, resolveRenderedSessionSnapshot } from "./session-render-state";
 import { useLocal } from "@/react-app/kernel/local-provider";
 import { resolveAttachmentFileMetadata } from "@/react-app/domains/session/sync/attachment-file-part";
+import { clearSessionDraft, getSessionDraft } from "@/react-app/domains/session/sync/draft-store";
 import { deriveSessionRenderModel } from "@/react-app/domains/session/sync/transition-controller";
 import { useSessionScrollController } from "./scroll-controller";
 import { SessionScrollOverlay } from "./scroll-overlay";
@@ -815,6 +816,14 @@ export function SessionSurface(props: SessionSurfaceProps) {
     initializedAutoOpenSessionRef.current = null;
     setVerifiedOpenTargets([]);
   }, [props.sessionId]);
+
+  useEffect(() => {
+    const saved = getSessionDraft(props.workspaceId, props.sessionId);
+    if (!saved?.text) return;
+    const current = getComposerDraft(useComposerStateStore.getState(), props.sessionId);
+    if (!current) replaceComposerDraft(props.sessionId, saved.text);
+    clearSessionDraft(props.workspaceId, props.sessionId);
+  }, [props.sessionId, props.workspaceId, replaceComposerDraft]);
 
   useEffect(() => () => {
     clearComposerRevertTarget(props.sessionId);
