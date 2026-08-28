@@ -86,7 +86,19 @@ export function resolveOpenWorkConnectStatus(
     };
   }
 
-  if (maintenance.status === "failed" || maintenance.status === "skipped") {
+  // A skipped maintenance pass is expected for a new account, a workspace
+  // without managed connections, or a local-only workspace. It is not a
+  // failed verification and must not surface as a red account warning.
+  if (maintenance.status === "skipped") {
+    return {
+      state: "ready",
+      label: "Ready",
+      description: maintenance.issue?.message
+        ?? "Signed in to RenWork Cloud. No connected service tools need verification for this workspace.",
+    };
+  }
+
+  if (maintenance.status === "failed") {
     return {
       state: "needs_attention",
       label: "Needs attention",
