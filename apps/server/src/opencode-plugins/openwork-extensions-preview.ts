@@ -41,9 +41,9 @@ const callArgsSchema = z.object({
 });
 
 const openworkAffordanceRequestSchema = z.object({
-  id: z.string().trim().min(1).describe("Semantic affordance id from openwork_context."),
+  id: z.string().trim().min(1).describe("Semantic affordance id from renwork_context."),
   args: z.record(z.string(), z.unknown()).optional().describe("JSON arguments for the affordance."),
-  expectedRevision: z.number().int().nonnegative().optional().describe("Context revision from openwork_context. Use for commands to prevent stale writes."),
+  expectedRevision: z.number().int().nonnegative().optional().describe("Context revision from renwork_context. Use for commands to prevent stale writes."),
   actor: z.string().trim().min(1).optional().describe("Optional agent or client id used to attribute serialized commands."),
 });
 
@@ -137,16 +137,16 @@ const sessionMessagesEnvelopeSchema = z.object({
 
 const OPENWORK_AGENT_SURFACE_INSTRUCTION =
   `## RenWork app context
-Use openwork_context when the request depends on the current RenWork screen, open tabs, split view, focused pane, sidebar, side panel, settings panel, or available app actions.
-Each affordance declares its effects and executor. Use openwork_query only for side-effect-free affordances whose executor is RenWork. Use openwork_execute for RenWork commands without activating the desktop window. If executor names another tool, call that exact tool instead.
+Use renwork_context when the request depends on the current RenWork screen, open tabs, split view, focused pane, sidebar, side panel, settings panel, or available app actions.
+Each affordance declares its effects and executor. Use renwork_query only for side-effect-free affordances whose executor is RenWork. Use renwork_execute for RenWork commands without activating the desktop window. If executor names another tool, call that exact tool instead.
 Reading another session does not require opening it. Prefer session.search then session.read for transcript questions; use session.create for new chats and a UI command only when the user asks to navigate.
-To open settings or navigate the app, use openwork_execute with ids from openwork_context such as settings.panel.open — never browser_* tools for the RenWork app itself.`;
+To open settings or navigate the app, use renwork_execute with ids from renwork_context such as settings.panel.open — never browser_* tools for the RenWork app itself.`;
 
 const OPENWORK_BROWSER_INSTRUCTION =
   `Do NOT use browser_navigate, browser_click, or browser_snapshot to interact with the RenWork app itself. Those are for browsing external websites.
 
 ## Built-in Browser (external websites)
-For web browsing tasks, ALWAYS start with openwork_execute id browser.open_url. It creates/selects a built-in RenWork browser tab and returns browser_url plus target_id. Use that exact browser_url and target_id for every later browser_snapshot, browser_click, browser_fill, browser_eval, and browser_screenshot call.
+For web browsing tasks, ALWAYS start with renwork_execute id browser.open_url. It creates/selects a built-in RenWork browser tab and returns browser_url plus target_id. Use that exact browser_url and target_id for every later browser_snapshot, browser_click, browser_fill, browser_eval, and browser_screenshot call.
 Do not call browser_navigate without a target_id returned by browser.open_url. Do not use browser_* tools on the RenWork app target (avoid targets with title "RenWork" or URLs containing ":5173/#/").`;
 
 // ── UI control bridge discovery ──
@@ -458,7 +458,7 @@ async function queryOpenworkAffordance(rawArgs: unknown): Promise<unknown> {
   if (request.id.startsWith("connect.")) {
     return unavailableAffordance(
       request.id,
-      "This affordance declares a dedicated Connect executor. Call the tool named in openwork_context.",
+      "This affordance declares a dedicated Connect executor. Call the tool named in renwork_context.",
     );
   }
   const result = await uiBridgeRequest("/query", {
@@ -505,7 +505,7 @@ async function executeOpenworkAffordance(
   if (request.id.startsWith("connect.")) {
     return unavailableAffordance(
       request.id,
-      "This affordance declares a dedicated Connect executor. Call the tool named in openwork_context.",
+      "This affordance declares a dedicated Connect executor. Call the tool named in renwork_context.",
     );
   }
   const result = await uiBridgeRequest("/command", {
@@ -918,6 +918,33 @@ export const OpenWorkExtensionsPreview = async (factoryInput?: unknown) => {
   const factoryContext = normalizeOpenCodeContext(factoryInput);
   const engineMcpStatusClient = readEngineMcpStatusClient(factoryInput);
   const engineMcpStatusDirectory = factoryContext.directory ?? factoryContext.worktree;
+  const renworkContextTool = {
+    description: "Read one semantic snapshot of RenWork: current screen, retained conversation tabs, split view and focused pane, sidebar and side panel state, settings panel, provider contributions, remote skill guidance, and available affordances with explicit effects and executors.",
+    args: {},
+    async execute() {
+      return JSON.stringify(
+        await readOpenworkAgentContext(engineMcpStatusClient, engineMcpStatusDirectory),
+        null,
+        2,
+      );
+    },
+  };
+  const renworkQueryTool = {
+    description: "Run a side-effect-free RenWork affordance whose executor is RenWork. Use the exact id and arguments from renwork_context. This reads backend or app state without navigation or window focus.",
+    args: openworkAffordanceRequestSchema.shape,
+    async execute(rawArgs: unknown) {
+      return JSON.stringify(await queryOpenworkAffordance(rawArgs), null, 2);
+    },
+  };
+  const renworkExecuteTool = {
+    description: "Execute a RenWork command whose executor is RenWork without activating the desktop window. Use the exact id and arguments from renwork_context, and pass expectedRevision for UI commands to prevent stale writes. If the descriptor names another executor tool, call that tool instead.",
+    args: openworkAffordanceRequestSchema.shape,
+    async execute(rawArgs: unknown, context: OpenCodeContext) {
+      const mergedContext = { ...factoryContext, ...normalizeOpenCodeContext(context) };
+      return JSON.stringify(await executeOpenworkAffordance(rawArgs, mergedContext), null, 2);
+    },
+  };
+
   return {
   "tool.execute.after": async (_input: unknown, output: unknown) => {
     // OpenCode 1.17.x keeps the text projection of an MCP result but drops
@@ -957,31 +984,22 @@ export const OpenWorkExtensionsPreview = async (factoryInput?: unknown) => {
     output.system.push(...composeAgentInstructions(sections));
   },
   tool: {
+    renwork_context: renworkContextTool,
+    renwork_query: renworkQueryTool,
+    renwork_execute: renworkExecuteTool,
+    // Deprecated compatibility aliases. Existing sessions and saved prompts may
+    // still replay these IDs during the staged migration.
     openwork_context: {
-      description: "Read one semantic snapshot of RenWork: current screen, retained conversation tabs, split view and focused pane, sidebar and side panel state, settings panel, provider contributions, remote skill guidance, and available affordances with explicit effects and executors.",
-      args: {},
-      async execute() {
-        return JSON.stringify(
-          await readOpenworkAgentContext(engineMcpStatusClient, engineMcpStatusDirectory),
-          null,
-          2,
-        );
-      },
+      ...renworkContextTool,
+      description: "Deprecated compatibility alias for renwork_context. Use renwork_context for new calls.",
     },
     openwork_query: {
-      description: "Run a side-effect-free OpenWork affordance whose executor is OpenWork. Use the exact id and arguments from openwork_context. This reads backend or app state without navigation or window focus.",
-      args: openworkAffordanceRequestSchema.shape,
-      async execute(rawArgs: unknown) {
-        return JSON.stringify(await queryOpenworkAffordance(rawArgs), null, 2);
-      },
+      ...renworkQueryTool,
+      description: "Deprecated compatibility alias for renwork_query. Use renwork_query for new calls.",
     },
     openwork_execute: {
-      description: "Execute an OpenWork command whose executor is OpenWork without activating the desktop window. Use the exact id and arguments from openwork_context, and pass expectedRevision for UI commands to prevent stale writes. If the descriptor names another executor tool, call that tool instead.",
-      args: openworkAffordanceRequestSchema.shape,
-      async execute(rawArgs: unknown, context: OpenCodeContext) {
-        const mergedContext = { ...factoryContext, ...normalizeOpenCodeContext(context) };
-        return JSON.stringify(await executeOpenworkAffordance(rawArgs, mergedContext), null, 2);
-      },
+      ...renworkExecuteTool,
+      description: "Deprecated compatibility alias for renwork_execute. Use renwork_execute for new calls.",
     },
   },
   };

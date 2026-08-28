@@ -27,21 +27,24 @@ function localRenWorkTool(toolName: string): DynamicToolUIPart {
 
 describe("capability call sentences", () => {
   test("brands local RenWork tool activity without exposing legacy tool ids", () => {
-    expect(getCapabilityCallSentence(localRenWorkTool("openwork_context"))).toMatchObject({
+    expect(getCapabilityCallSentence(localRenWorkTool("renwork_context"))).toMatchObject({
       service: "RenWork",
       present: "读取 RenWork 上下文",
       past: "读取 RenWork 上下文",
     });
-    expect(getCapabilityCallSentence(localRenWorkTool("openwork_execute"))).toMatchObject({
+    expect(getCapabilityCallSentence(localRenWorkTool("renwork_execute"))).toMatchObject({
       service: "RenWork",
       present: "执行 RenWork 操作",
       past: "执行 RenWork 操作",
     });
-    expect(getCapabilityCallSentence(localRenWorkTool("openwork_query"))).toMatchObject({
+    expect(getCapabilityCallSentence(localRenWorkTool("renwork_query"))).toMatchObject({
       service: "RenWork",
       present: "查询 RenWork 数据",
       past: "查询 RenWork 数据",
     });
+    expect(getCapabilityCallSentence(localRenWorkTool("openwork_context")).past).toBe("读取 RenWork 上下文");
+    expect(getCapabilityCallSentence(localRenWorkTool("openwork_execute")).past).toBe("执行 RenWork 操作");
+    expect(getCapabilityCallSentence(localRenWorkTool("openwork_query")).past).toBe("查询 RenWork 数据");
   });
 
   test("names an org MCP capability instead of falling back to 'a capability'", () => {

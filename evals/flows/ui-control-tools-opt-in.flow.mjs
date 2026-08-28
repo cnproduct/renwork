@@ -38,27 +38,27 @@ function witness(ctx, condition, assertion, actual) {
 
 export default {
   id: "ui-control-tools-opt-in",
-  title: "Built-in OpenWork agent surface is semantic-only",
+  title: "Built-in RenWork agent surface uses formal semantic tools",
   kind: "internal",
   requiresApp: false,
   steps: [
     {
-      name: "Only semantic OpenWork tools are registered",
+      name: "Formal RenWork tools are primary and legacy aliases remain compatible",
       run: async (ctx) => {
         let result = null;
-        await ctx.prove("The preview plugin exposes openwork_context/query/execute only", {
-          voiceover: "The bundled OpenWork plugin no longer registers legacy session, extension, browser, or UI-control tool aliases. Agents use the three semantic tools and affordance ids from openwork_context.",
+        await ctx.prove("The preview plugin exposes formal RenWork tools with staged compatibility aliases", {
+          voiceover: "Agents use renwork_context, renwork_query, and renwork_execute as the formal semantic tools. The three prior names remain temporary aliases so existing sessions continue to work during migration.",
           action: async () => {
             result = await probeSemanticTools();
             ctx.output("semantic tool surface", pretty(result));
           },
           assert: async () => {
             witness(ctx, Array.isArray(result?.tools), "The probe printed a tools array", result ? pretty(result.tools) : "null");
-            witness(ctx, result.tools.join(",") === "openwork_context,openwork_execute,openwork_query", "Only the three semantic tools are registered", result.tools.join(", "));
+            witness(ctx, result.tools.join(",") === "openwork_context,openwork_execute,openwork_query,renwork_context,renwork_execute,renwork_query", "Formal tools and only their three compatibility aliases are registered", result.tools.join(", "));
             witness(ctx, !result.tools.some((tool) => tool.startsWith("openwork_ui_")), "Legacy openwork_ui_* tools are gone", result.tools.join(", "));
             witness(ctx, !result.tools.some((tool) => tool.startsWith("openwork_session_")), "Legacy openwork_session_* tools are gone", result.tools.join(", "));
             witness(ctx, !result.system.includes("openwork_ui_"), "The system prompt lacks openwork_ui_ steering", result.system);
-            witness(ctx, result.system.includes("openwork_context"), "The system prompt steers toward openwork_context", result.system);
+            witness(ctx, result.system.includes("renwork_context"), "The system prompt steers toward renwork_context", result.system);
             witness(ctx, result.system.includes("browser.open_url"), "The system prompt steers browser work through browser.open_url", result.system);
           },
         });

@@ -224,7 +224,7 @@ export default defineFlow({
             await sendPrompt(
               ctx,
               primarySessionId,
-              "Call openwork_context. Reply with exactly: CONTEXT-SUMMARY TABS=3 SPLIT=yes FOCUSED=secondary SIDEBAR=open SETTINGS=none",
+              "Call renwork_context. Reply with exactly: CONTEXT-SUMMARY TABS=3 SPLIT=yes FOCUSED=secondary SIDEBAR=open SETTINGS=none",
               "CONTEXT-SUMMARY",
             );
           },
@@ -268,7 +268,7 @@ export default defineFlow({
             await sendPrompt(
               ctx,
               primary,
-              "Call openwork_context, find the session resource titled Context Previous, then call openwork_execute with id workbench.session.focus, that sessionId, expectedRevision, and actor fraimz. Reply with exactly FOCUS-RESULT=secondary-reused.",
+              "Call renwork_context, find the session resource titled Context Previous, then call renwork_execute with id workbench.session.focus, that sessionId, expectedRevision, and actor fraimz. Reply with exactly FOCUS-RESULT=secondary-reused.",
               "FOCUS-RESULT=secondary-reused",
             );
           },
@@ -306,7 +306,7 @@ export default defineFlow({
             await sendPrompt(
               ctx,
               primary,
-              `Call openwork_context, find Context Previous, then call openwork_query with id session.read for that sessionId. Do not call a UI command. Reply with exactly PREVIOUS-SAID=${PREVIOUS_MARKER}.`,
+              `Call renwork_context, find Context Previous, then call renwork_query with id session.read for that sessionId. Do not call a UI command. Reply with exactly PREVIOUS-SAID=${PREVIOUS_MARKER}.`,
               `PREVIOUS-SAID=${PREVIOUS_MARKER}`,
             );
           },
@@ -402,7 +402,7 @@ export default defineFlow({
             await sendPrompt(
               ctx,
               primary,
-              "Choose one remote skill already listed in available_skills. Load it directly with its exact capability using openwork-cloud_execute_capability; do not search first and do not perform the skill workflow. Then call openwork_context. Reply with exactly these three lines: DIRECT_SKILL_TOOL=openwork-cloud_execute_capability; UNKNOWN_CAPABILITY_TOOL=openwork-cloud_search_capabilities; LOCAL_EXTENSION_COMMAND=extension.call",
+              "Choose one remote skill already listed in available_skills. Load it directly with its exact capability using openwork-cloud_execute_capability; do not search first and do not perform the skill workflow. Then call renwork_context. Reply with exactly these three lines: DIRECT_SKILL_TOOL=openwork-cloud_execute_capability; UNKNOWN_CAPABILITY_TOOL=openwork-cloud_search_capabilities; LOCAL_EXTENSION_COMMAND=extension.call",
               "DIRECT_SKILL_TOOL=openwork-cloud_execute_capability",
             );
           },
@@ -433,7 +433,7 @@ export default defineFlow({
             await sendPrompt(
               ctx,
               primary,
-              "Call openwork_context and inspect availableAffordances plus execution. Reply with exactly five lines using real ids: READ=<id> data=read; UI=<id> ui=<effect>; DURABLE=<id> data=write; CONFIRMATION=<id> confirmation=destructive; CONCURRENCY=queries:parallel commands:serialized",
+              "Call renwork_context and inspect availableAffordances plus execution. Reply with exactly five lines using real ids: READ=<id> data=read; UI=<id> ui=<effect>; DURABLE=<id> data=write; CONFIRMATION=<id> confirmation=destructive; CONCURRENCY=queries:parallel commands:serialized",
               "CONCURRENCY=queries:parallel commands:serialized",
             );
           },

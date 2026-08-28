@@ -124,7 +124,7 @@ export function renderOpenWorkAutomationInstruction(index: OpenWorkAutomationInd
   if (index.automations.length === 0) {
     return [
       "This member owns no Automations. If they ask what Automations they have, say there are none.",
-      "If they describe recurring work, propose one with openwork_execute id automation.propose.",
+      "If they describe recurring work, propose one with renwork_execute id automation.propose.",
     ].join("\n");
   }
   const lines = [

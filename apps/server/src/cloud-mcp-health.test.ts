@@ -308,7 +308,7 @@ describe("cloud MCP health foundation", () => {
       toolIds: [...OPENWORK_CLOUD_EXPECTED_TOOLS],
       projectConfig: {
         tools: {
-          openwork_query: false,
+          renwork_query: false,
         },
       },
       globalConfig: {},

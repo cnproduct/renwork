@@ -606,7 +606,7 @@ describe("openwork-cloud MCP strict reconcile", () => {
 
     const body = await responseRecord(await reconcile(openwork.base));
     expect(firstFailure(body).code).toBe("extensions_plugin_missing");
-    expect(requireArray(requireRecord(body.pluginCanaries, "pluginCanaries").missing, "missing")).toContain("openwork_query");
+    expect(requireArray(requireRecord(body.pluginCanaries, "pluginCanaries").missing, "missing")).toContain("renwork_query");
   });
 
   test("old engines without tool.ids return Update OpenWork guidance", async () => {

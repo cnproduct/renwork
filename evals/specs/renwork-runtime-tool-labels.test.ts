@@ -17,9 +17,9 @@ function completedTool(toolName: string): DynamicToolUIPart {
 
 test("local runtime activity is presented as RenWork", async ({ evidence }) => {
   const labels = [
-    getCapabilityCallSentence(completedTool("openwork_context")).past,
-    getCapabilityCallSentence(completedTool("openwork_execute")).past,
-    getCapabilityCallSentence(completedTool("openwork_query")).past,
+    getCapabilityCallSentence(completedTool("renwork_context")).past,
+    getCapabilityCallSentence(completedTool("renwork_execute")).past,
+    getCapabilityCallSentence(completedTool("renwork_query")).past,
   ];
 
   expect(labels).toEqual([
@@ -31,7 +31,7 @@ test("local runtime activity is presented as RenWork", async ({ evidence }) => {
 
   evidence.fact(
     "RenWork runtime records do not expose the legacy OpenWork tool brand",
-    "The context, execute, and query tool records render the three approved RenWork labels while the compatible internal tool IDs remain unchanged.",
+    "The formal renwork_context, renwork_execute, and renwork_query tools render the three approved RenWork labels while deprecated OpenWork aliases remain compatible during migration.",
     true,
   );
 });

@@ -121,7 +121,7 @@ describe("OpenWork capabilities knowledge plugin", () => {
 
     const knowledge = output.system.join("\n");
     expect(knowledge).toContain("## Automations");
-    expect(knowledge).toContain("openwork_execute");
+    expect(knowledge).toContain("renwork_execute");
     expect(knowledge).toContain("automation.propose");
     // Scheduling OpenWork work through the OS is the exact failure this guidance prevents.
     expect(knowledge).toContain("Never write a cron entry, launchd/systemd unit, Task Scheduler job");
