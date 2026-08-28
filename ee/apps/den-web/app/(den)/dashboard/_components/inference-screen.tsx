@@ -161,6 +161,10 @@ function UsageLimitsCard({ buckets }: { buckets: InferenceUsageBucket[] }) {
  * unmapped models still render with sane defaults.
  */
 const MODEL_DETAILS: Record<string, { bestFor: string; monogram: string } | undefined> = {
+  "renwork-auto": { bestFor: "Automatic task routing", monogram: "RW" },
+  "renwork-standard": { bestFor: "Efficient everyday work", monogram: "RW" },
+  "renwork-professional": { bestFor: "Complex business workflows", monogram: "RW" },
+  "renwork-ultimate": { bestFor: "Highest-quality reasoning", monogram: "RW" },
   "moonshotai/kimi-k3": { bestFor: "Research & synthesis", monogram: "MS" },
   "z-ai/glm-5.2": { bestFor: "Multi-step tasks", monogram: "ZA" },
   "moonshotai/kimi-k2.7-code": { bestFor: "Spreadsheets & scripts", monogram: "MS" },
