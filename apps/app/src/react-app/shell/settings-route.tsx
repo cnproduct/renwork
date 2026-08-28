@@ -42,6 +42,7 @@ import type {
 import { getWorkspaceTaskLoadErrorDisplay } from "@/app/utils";
 import { currentLocale, t, setLocale, type Language } from "@/i18n";
 import { useModelPicker } from "@/react-app/domains/session/modals/use-model-picker";
+import { saveSessionDraft } from "@/react-app/domains/session/sync/draft-store";
 import {
   type RouteWorkspace,
   type RouteSession,
@@ -91,6 +92,7 @@ import {
 import { createOpaqueDiagnosticsScopeKey } from "@/react-app/domains/settings/pages/agent-context-diagnostics-section";
 import { CloudProvidersView } from "@/react-app/domains/settings/pages/cloud-providers-view";
 import { MemoryView } from "@/react-app/domains/settings/pages/memory-view";
+import { ComputerHistoryView } from "@/react-app/domains/settings/pages/computer-history-view";
 import { useFeatureFlagsPreferences } from "@/react-app/domains/settings/state/feature-flags-preferences";
 import { DebugView } from "@/react-app/domains/settings/pages/debug-view";
 import { EnvironmentView } from "@/react-app/domains/settings/pages/environment-view";
@@ -285,6 +287,7 @@ export function parseSettingsPath(pathname: string): {
     case "permissions":
     case "advanced":
     case "appearance":
+    case "computer-history":
     case "environment":
     case "updates":
     case "recovery":
@@ -1055,6 +1058,21 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
       const session = unwrap(
         await opencodeClient.session.create({ directory: selectedWorkspaceRoot || undefined }),
       );
+      navigate(workspaceSessionRoute(selectedWorkspaceId, session.id));
+    } catch (error) {
+      toast.error(describeRouteError(error));
+    }
+  }, [navigate, opencodeClient, selectedWorkspaceId, selectedWorkspaceRoot]);
+  const openComputerHistoryPrompt = useCallback(async (prompt: string) => {
+    if (!opencodeClient || !selectedWorkspaceId) {
+      toast.error(t("computer_history.ask_session_unavailable"));
+      return;
+    }
+    try {
+      const session = unwrap(
+        await opencodeClient.session.create({ directory: selectedWorkspaceRoot || undefined }),
+      );
+      saveSessionDraft(selectedWorkspaceId, session.id, { text: prompt, mode: "prompt" });
       navigate(workspaceSessionRoute(selectedWorkspaceId, session.id));
     } catch (error) {
       toast.error(describeRouteError(error));
@@ -2405,6 +2423,8 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
         );
       case "memory":
         return <MemoryView onOpenAccount={openCloudAccountSettings} />;
+      case "computer-history":
+        return <ComputerHistoryView onOpenPrompt={openComputerHistoryPrompt} />;
       case "cloud-providers":
         return (
           <CloudProvidersView

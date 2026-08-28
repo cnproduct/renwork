@@ -74,6 +74,7 @@ import {
 } from "./brand-icon-windows.mjs";
 import { resetMacDockIcon } from "./brand-icon-darwin.mjs";
 import { createDesktopVaultKeyProvider } from "./secure-vault-key.mjs";
+import { createComputerHistory } from "./computer-history.mjs";
 import {
   clearOpenworkSentrySession,
   initOpenworkSentry,
@@ -1058,6 +1059,15 @@ const workspaceStore = createWorkspaceStore({
   forceRequireSignin: FORCE_DESKTOP_REQUIRE_SIGNIN,
 });
 
+const computerHistory = createComputerHistory({
+  filePath: path.join(app.getPath("userData"), "renwork-computer-history.v1.json"),
+  env: process.env,
+  platform: process.platform,
+  getPermissions: checkComputerUsePermissions,
+  getHelperCommand: getComputerUseMcpCommand,
+});
+app.on("before-quit", () => computerHistory.stop());
+
 const connectLinkReplayGuard = createConnectLinkReplayGuard({
   filePath: path.join(app.getPath("userData"), "connect-link-seen.json"),
 });
@@ -1831,6 +1841,24 @@ const desktopCommandHandlers = {
       // Legacy: open the setup app (same as above).
       await openComputerUseSetupApp();
       return checkComputerUsePermissions();
+  },
+  "computerHistoryGetState": async (event, ...args) => {
+      return computerHistory.getState();
+  },
+  "computerHistoryUpdateSettings": async (event, ...args) => {
+      return computerHistory.updateSettings(args[0] ?? {});
+  },
+  "computerHistoryListApps": async (event, ...args) => {
+      return computerHistory.listApps();
+  },
+  "computerHistoryCaptureNow": async (event, ...args) => {
+      return computerHistory.captureNow();
+  },
+  "computerHistoryDeleteEntry": async (event, ...args) => {
+      return computerHistory.deleteEntry(String(args[0] ?? ""));
+  },
+  "computerHistoryClear": async (event, ...args) => {
+      return computerHistory.clear(args[0] ?? {});
   },
   "getOpenworkUiMcpEnvironment": async (event, ...args) => {
       return {
@@ -2660,6 +2688,7 @@ or use: pnpm dev:worktree`);
   });
 
   app.whenReady().then(async () => {
+    computerHistory.start();
     installMediaPermissionHandlers(session, () => mainWindow);
     await runPendingNukeCleanup({
       env: process.env,
