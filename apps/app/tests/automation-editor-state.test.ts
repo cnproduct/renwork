@@ -8,10 +8,11 @@ const read = (relative: string) =>
 describe("Automation editor state", () => {
   test("background detail refetches do not replace unsaved edits", () => {
     const page = read("src/react-app/domains/automations/automations-page.tsx")
-    expect(page).toContain("initialKey={detail.revision.id}")
-
-    const editor = read("src/react-app/domains/automations/automation-editor.tsx")
-    expect(editor).toContain("appliedInitialKey.current === props.initialKey")
-    expect(editor).toContain("appliedInitialKey.current = props.initialKey")
+    expect(page).toContain('const [formName, setFormName] = useState("")')
+    expect(page).toContain("refetchInterval: 10_000")
+    expect(page).toContain("const openEditModal = (task: LocalAutomationTask) => {")
+    expect(page).toContain("setFormName(task.name)")
+    expect(page).toContain("onChange={(e) => setFormName(e.target.value)}")
+    expect(page).not.toContain("useEffect")
   })
 })

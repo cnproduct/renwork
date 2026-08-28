@@ -214,7 +214,7 @@ describe("cloud MCP advanced diagnostics", () => {
     });
 
     const parsed = JSON.parse(bundle) as Record<string, unknown>;
-    expect(parsed.kind).toBe("openwork-cloud-mcp-diagnostic");
+    expect(parsed.kind).toBe("renwork-cloud-mcp-diagnostic");
     expect(parsed.capturedAt).toBe(CHECKED_AT);
     expect((parsed.context as Record<string, unknown>).workspaceId).toBe("ws_1");
     expect(bundle).not.toContain("owt_super_secret_token_value");

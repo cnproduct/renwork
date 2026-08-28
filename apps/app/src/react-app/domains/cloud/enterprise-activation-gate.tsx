@@ -54,7 +54,7 @@ function EnterpriseActivationPage() {
         data-testid="enterprise-activation-foreground"
       >
         <section
-          className="w-full max-w-[720px] rounded-3xl border border-border bg-background px-8 pb-12 pt-10 sm:px-16 sm:pb-16 sm:pt-14"
+          className="w-full max-w-[760px] rounded-3xl border border-border bg-background/95 backdrop-blur-md px-8 pb-12 pt-10 sm:px-14 sm:pb-14 sm:pt-12 shadow-2xl"
           data-testid="enterprise-activation-card"
         >
           <div className="flex items-center gap-2.5">
