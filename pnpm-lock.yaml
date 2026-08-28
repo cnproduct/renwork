@@ -598,6 +598,9 @@ importers:
       '@openwork/install-config':
         specifier: workspace:*
         version: link:../../../packages/install-config
+      '@openwork/rencredit-metering':
+        specifier: workspace:*
+        version: link:../../../packages/rencredit-metering
       '@openwork/types':
         specifier: workspace:*
         version: link:../../../packages/types
@@ -774,6 +777,9 @@ importers:
       '@openwork-ee/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      '@openwork/rencredit-metering':
+        specifier: workspace:*
+        version: link:../../../packages/rencredit-metering
       '@openwork/types':
         specifier: workspace:*
         version: link:../../../packages/types

@@ -20,6 +20,7 @@ const catalog: RenWorkPublicModelCatalog = {
     effectiveDisplayMultiplierBps: 14_000,
     promotionLabel: "限时 5 折",
     promotionEndsAt: "2026-09-01T00:00:00.000Z",
+    billingMode: "token_metered",
   }],
 };
 
@@ -46,5 +47,13 @@ describe("RenWork member model catalog", () => {
     expect(renWorkTierLabel("standard")).toBe("标准");
     expect(renWorkTierLabel("professional")).toBe("专业");
     expect(renWorkTierLabel("ultimate")).toBe("极致");
+  });
+
+  test("marks a super-admin free policy as free in the member picker", () => {
+    const freeCatalog: RenWorkPublicModelCatalog = {
+      ...catalog,
+      models: [{ ...catalog.models[0]!, billingMode: "free" }],
+    };
+    expect(catalogModelOptions(freeCatalog)[0]?.option.isFree).toBe(true);
   });
 });

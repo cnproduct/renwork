@@ -24,6 +24,7 @@ describe("RenWork model catalog", () => {
       effectiveDisplayMultiplierBps: 5_000,
       promotionLabel: "限时 5 折",
       promotionEndsAt: "2026-09-01T00:00:00.000Z",
+      billingMode: "token_metered",
     });
     expect(JSON.stringify(publicCatalog)).not.toContain("openrouter");
     expect(JSON.stringify(publicCatalog)).not.toContain("credentialRef");
@@ -58,5 +59,13 @@ describe("RenWork model catalog", () => {
     const catalog = createTestCatalog();
     catalog.providers[0]!.credentialRef = "sk-raw-key-must-never-be-stored-here";
     expect(() => validateAdminModelCatalog(catalog)).toThrow("secret:// or env://");
+  });
+
+  test("projects the active route billing policy without exposing its source", () => {
+    const catalog = createTestCatalog();
+    catalog.billingPolicy.official = "free";
+    const publicCatalog = toPublicModelCatalog(catalog, new Date("2026-08-28T12:00:00.000Z"));
+    expect(publicCatalog.models[0]?.billingMode).toBe("free");
+    expect(JSON.stringify(publicCatalog)).not.toContain('"source"');
   });
 });

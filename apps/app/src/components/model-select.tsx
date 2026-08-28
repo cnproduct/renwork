@@ -508,14 +508,18 @@ export function ModelSelect({
                                 {item.billing.promotionLabel}
                               </span>
                             ) : null}
-                            {item.billing.effectiveDisplayMultiplierBps !== item.billing.displayMultiplierBps ? (
+                            {item.billing.billingMode === "free" ? (
+                              <span className="font-medium text-emerald-11">免费</span>
+                            ) : item.billing.effectiveDisplayMultiplierBps !== item.billing.displayMultiplierBps ? (
                               <span className="text-muted-foreground line-through">
                                 {formatMultiplier(item.billing.displayMultiplierBps)}
                               </span>
                             ) : null}
-                            <span className="font-medium text-foreground">
-                              {formatMultiplier(item.billing.effectiveDisplayMultiplierBps)}
-                            </span>
+                            {item.billing.billingMode === "token_metered" ? (
+                              <span className="font-medium text-foreground">
+                                {formatMultiplier(item.billing.effectiveDisplayMultiplierBps)}
+                              </span>
+                            ) : null}
                           </span>
                         ) : null}
                       </CommandItem>
@@ -575,7 +579,7 @@ export function ModelSelect({
           {/* Link to full model picker */}
           {renWorkCatalog ? (
             <div className="border-t border-border px-3 py-2 text-center text-[11px] text-muted-foreground">
-              按实际输入、输出、推理与缓存 Token 结算 RenCredit
+              计费以模型标签为准；收费模型按实际输入、输出、推理与缓存 Token 结算 RenCredit
             </div>
           ) : <div className="border-t border-border px-2 py-1.5">
             <div className="flex items-center gap-1">

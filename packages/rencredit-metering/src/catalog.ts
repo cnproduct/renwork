@@ -1,6 +1,8 @@
 import {
   BASIS_POINTS,
+  RENWORK_BILLING_MODES,
   RENWORK_MODEL_TIERS,
+  RENWORK_ROUTE_SOURCES,
   type RenWorkActorRole,
   type RenWorkAdminModel,
   type RenWorkAdminModelCatalog,
@@ -35,6 +37,11 @@ export function effectiveDisplayMultiplierBps(model: RenWorkAdminModel, now = ne
 export function validateAdminModelCatalog(catalog: RenWorkAdminModelCatalog): void {
   requireNonEmpty(catalog.version, "catalog.version");
   if (catalog.currency !== "REN_CREDIT") throw new Error("catalog.currency must be REN_CREDIT.");
+  for (const source of RENWORK_ROUTE_SOURCES) {
+    if (!RENWORK_BILLING_MODES.some((mode) => mode === catalog.billingPolicy[source])) {
+      throw new Error(`catalog.billingPolicy.${source} must be token_metered or free.`);
+    }
+  }
   if (!Number.isFinite(Date.parse(catalog.updatedAt))) throw new Error("catalog.updatedAt must be an ISO date.");
 
   const providerIds = new Set<string>();
@@ -101,6 +108,13 @@ export function toPublicModelCatalog(catalog: RenWorkAdminModelCatalog, now = ne
     })
     .map((model) => {
       const promotionActive = promotionIsActive(model.promotion, now);
+      const activeRoute = model.routes
+        .filter((route) => route.enabled)
+        .filter((route) => {
+          const provider = providers.get(route.providerId);
+          return provider?.enabled && provider.health !== "offline";
+        })
+        .sort((left, right) => left.priority - right.priority)[0];
       return {
         sku: model.sku,
         providerID: "renwork" as const,
@@ -115,6 +129,7 @@ export function toPublicModelCatalog(catalog: RenWorkAdminModelCatalog, now = ne
         effectiveDisplayMultiplierBps: effectiveDisplayMultiplierBps(model, now),
         promotionLabel: promotionActive ? model.promotion?.label ?? null : null,
         promotionEndsAt: promotionActive ? model.promotion?.endsAt ?? null : null,
+        billingMode: activeRoute ? catalog.billingPolicy[activeRoute.source] : "token_metered",
       };
     });
 
@@ -160,6 +175,7 @@ function parsePublicModel(value: unknown): RenWorkPublicModel | null {
     || !Number.isSafeInteger(value.effectiveDisplayMultiplierBps)
     || !(value.promotionLabel === null || typeof value.promotionLabel === "string")
     || !(value.promotionEndsAt === null || typeof value.promotionEndsAt === "string")
+    || !(value.billingMode === "token_metered" || value.billingMode === "free")
   ) return null;
   return {
     sku: value.sku,
@@ -175,6 +191,7 @@ function parsePublicModel(value: unknown): RenWorkPublicModel | null {
     effectiveDisplayMultiplierBps: value.effectiveDisplayMultiplierBps,
     promotionLabel: value.promotionLabel,
     promotionEndsAt: value.promotionEndsAt,
+    billingMode: value.billingMode,
   };
 }
 

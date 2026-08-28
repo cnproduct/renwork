@@ -56,6 +56,7 @@
     "@openwork/enterprise-mcp-client": "workspace:*",
     "@openwork/headless-threads": "workspace:*",
     "@openwork/install-config": "workspace:*",
+    "@openwork/rencredit-metering": "workspace:*",
     "@openwork/types": "workspace:*",
     "@sentry/hono": "10.64.0",
     "@sentry/node": "10.64.0",

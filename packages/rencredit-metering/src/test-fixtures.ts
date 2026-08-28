@@ -5,6 +5,11 @@ export function createTestCatalog(): RenWorkAdminModelCatalog {
     version: "test-2026-08-v1",
     status: "active",
     currency: "REN_CREDIT",
+    billingPolicy: {
+      official: "token_metered",
+      byok: "token_metered",
+      local: "token_metered",
+    },
     updatedAt: "2026-08-28T00:00:00.000Z",
     providers: [
       {

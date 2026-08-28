@@ -118,6 +118,30 @@ describe("RenCredit token reservation lifecycle", () => {
         },
       });
       expect(quote.reservedMicroCredits).toBeGreaterThan(0);
+      expect(quote.billingMode).toBe("token_metered");
     }
+  });
+
+  test("honors a super-admin free-source policy while still recording token usage", () => {
+    const catalog = createTestCatalog();
+    catalog.billingPolicy.local = "free";
+    catalog.models[0]!.routes[0]!.source = "local";
+    const service = createRenCreditBillingService({
+      catalog,
+      wallets: { tenant_a: 100 },
+      now: () => new Date("2026-08-28T12:00:00.000Z"),
+    });
+    const quote = service.quote({
+      modelSku: "renwork-standard",
+      estimatedUsage: {
+        inputTokens: 10,
+        outputTokens: 10,
+        reasoningTokens: 10,
+        cacheReadTokens: 10,
+        cacheWriteTokens: 10,
+      },
+    });
+    expect(quote.billingMode).toBe("free");
+    expect(quote.reservedMicroCredits).toBe(0);
   });
 });

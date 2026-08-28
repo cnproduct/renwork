@@ -17,6 +17,14 @@ export const RENWORK_PROVIDER_PROTOCOLS = [
 ] as const;
 export type RenWorkProviderProtocol = (typeof RENWORK_PROVIDER_PROTOCOLS)[number];
 
+export const RENWORK_ROUTE_SOURCES = ["official", "byok", "local"] as const;
+export type RenWorkRouteSource = (typeof RENWORK_ROUTE_SOURCES)[number];
+
+export const RENWORK_BILLING_MODES = ["token_metered", "free"] as const;
+export type RenWorkBillingMode = (typeof RENWORK_BILLING_MODES)[number];
+
+export type RenWorkSourceBillingPolicy = Record<RenWorkRouteSource, RenWorkBillingMode>;
+
 export type RenWorkActorRole = "super_admin" | "tenant_admin" | "member";
 export type RenWorkCatalogStatus = "draft" | "active" | "retired";
 export type RenWorkModelStatus = "draft" | "published" | "paused" | "retired";
@@ -54,7 +62,7 @@ export interface RenWorkAdminModelRoute {
   upstreamModelId: string;
   priority: number;
   enabled: boolean;
-  source: "official" | "byok" | "local";
+  source: RenWorkRouteSource;
 }
 
 export interface RenWorkModelPromotion {
@@ -86,6 +94,7 @@ export interface RenWorkAdminModelCatalog {
   version: string;
   status: RenWorkCatalogStatus;
   currency: "REN_CREDIT";
+  billingPolicy: RenWorkSourceBillingPolicy;
   updatedAt: string;
   providers: RenWorkAdminProvider[];
   models: RenWorkAdminModel[];
@@ -105,6 +114,7 @@ export interface RenWorkPublicModel {
   effectiveDisplayMultiplierBps: number;
   promotionLabel: string | null;
   promotionEndsAt: string | null;
+  billingMode: RenWorkBillingMode;
 }
 
 export interface RenWorkPublicModelCatalog {
@@ -119,6 +129,7 @@ export interface RenWorkTokenQuote {
   modelSku: string;
   estimatedUsage: RenWorkTokenUsage;
   reservedMicroCredits: number;
+  billingMode: RenWorkBillingMode;
   expiresAt: string;
 }
 

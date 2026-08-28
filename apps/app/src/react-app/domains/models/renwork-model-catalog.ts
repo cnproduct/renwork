@@ -28,7 +28,7 @@ export function catalogModelOptions(catalog: RenWorkPublicModelCatalog): RenWork
       behaviorLabel: "Default",
       behaviorDescription: "",
       behaviorValue: null,
-      isFree: false,
+      isFree: model.billingMode === "free",
     },
   }));
 }

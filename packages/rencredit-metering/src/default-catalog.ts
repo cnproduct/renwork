@@ -67,6 +67,11 @@ export function createDefaultRenWorkModelCatalog(now = new Date()): RenWorkAdmin
     version: "renwork-model-catalog-v1",
     status: "active",
     currency: "REN_CREDIT",
+    billingPolicy: {
+      official: "token_metered",
+      byok: "token_metered",
+      local: "token_metered",
+    },
     updatedAt: now.toISOString(),
     providers: [{
       id: "openrouter-primary",

@@ -132,6 +132,95 @@ function isSuperAdminRequest(authorization: string | undefined): "ok" | "missing
   return left.length === right.length && crypto.timingSafeEqual(left, right) ? "ok" : "forbidden";
 }
 
+function resolveProviderCredential(credentialRef: string | null): string | null {
+  if (!credentialRef) return null;
+  if (!credentialRef.startsWith("env://")) return null;
+  const envName = credentialRef.slice("env://".length);
+  return process.env[envName]?.trim() || null;
+}
+
+function providerModelsUrl(baseUrl: string): string {
+  return `${baseUrl.replace(/\/+$/, "")}/models`;
+}
+
+async function testProvider(providerId: string) {
+  const catalog = modelCatalogService.getAdminCatalog("super_admin");
+  const provider = catalog.providers.find((candidate) => candidate.id === providerId);
+  if (!provider) return { found: false as const };
+  const startedAt = Date.now();
+
+  if (!provider.baseUrl) {
+    const runtimeOnly = provider.kind === "runtime" || provider.kind === "local";
+    return {
+      found: true as const,
+      result: {
+        ok: false,
+        providerId,
+        health: runtimeOnly ? "degraded" as const : "offline" as const,
+        statusCode: null,
+        latencyMs: Date.now() - startedAt,
+        message: runtimeOnly
+          ? "This runtime provider must be tested on the machine where it runs."
+          : "Provider Base URL is not configured.",
+      },
+    };
+  }
+
+  const credential = resolveProviderCredential(provider.credentialRef);
+  if (provider.credentialRef && !credential) {
+    return {
+      found: true as const,
+      result: {
+        ok: false,
+        providerId,
+        health: "degraded" as const,
+        statusCode: null,
+        latencyMs: Date.now() - startedAt,
+        message: provider.credentialRef.startsWith("secret://")
+          ? "The configured secret reference is not available to this runtime."
+          : "The configured environment secret is missing.",
+      },
+    };
+  }
+
+  try {
+    const headers = new Headers({ Accept: "application/json" });
+    if (credential) {
+      if (provider.protocol === "gemini") headers.set("x-goog-api-key", credential);
+      else headers.set("Authorization", `Bearer ${credential}`);
+    }
+    const response = await fetch(providerModelsUrl(provider.baseUrl), {
+      method: "GET",
+      headers,
+      signal: AbortSignal.timeout(8_000),
+    });
+    const ok = response.ok;
+    return {
+      found: true as const,
+      result: {
+        ok,
+        providerId,
+        health: ok ? "healthy" as const : response.status < 500 ? "degraded" as const : "offline" as const,
+        statusCode: response.status,
+        latencyMs: Date.now() - startedAt,
+        message: ok ? "Provider connection succeeded." : `Provider returned HTTP ${response.status}.`,
+      },
+    };
+  } catch (error) {
+    return {
+      found: true as const,
+      result: {
+        ok: false,
+        providerId,
+        health: "offline" as const,
+        statusCode: null,
+        latencyMs: Date.now() - startedAt,
+        message: error instanceof Error ? error.message : "Provider connection failed.",
+      },
+    };
+  }
+}
+
 // -------------------------------------------------------------
 // Endpoints Implementation (Spec Section 9 & 10)
 // -------------------------------------------------------------
@@ -194,6 +283,18 @@ app.put("/v1/admin/models/catalog", async (c) => {
     const status = message === "MODEL_CATALOG_VERSION_CONFLICT" ? 409 : 400;
     return c.json({ ok: false, error: message }, status);
   }
+});
+
+app.post("/v1/admin/models/providers/:providerId/test", async (c) => {
+  const authorization = isSuperAdminRequest(c.req.header("Authorization"));
+  if (authorization === "missing_config") {
+    return c.json({ ok: false, error: "SUPER_ADMIN_AUTH_NOT_CONFIGURED" }, 503);
+  }
+  if (authorization !== "ok") return c.json({ ok: false, error: "FORBIDDEN" }, 403);
+
+  const tested = await testProvider(c.req.param("providerId"));
+  if (!tested.found) return c.json({ ok: false, error: "PROVIDER_NOT_FOUND" }, 404);
+  return c.json(tested.result);
 });
 
 // 1. GET /v1/export-growth/catalog - 增值能力目录与价格表

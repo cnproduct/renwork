@@ -6,6 +6,7 @@ let app: Hono;
 beforeAll(async () => {
   process.env.NODE_ENV = "test";
   process.env.RENWORK_SUPER_ADMIN_TOKEN = "renwork-super-admin-test-token";
+  delete process.env.OPENROUTER_API_KEY;
   process.env.DATA_PATH = `/private/tmp/renwork-cloud-api-test-${process.pid}.json`;
   ({ app } = await import("./server.js"));
 });
@@ -34,5 +35,23 @@ describe("RenWork model catalog API", () => {
     expect(allowed.status).toBe(200);
     const payload = await allowed.json();
     expect(payload.providers[0]?.credentialRef).toBe("env://OPENROUTER_API_KEY");
+  });
+
+  test("keeps provider health tests behind the super-admin boundary", async () => {
+    const denied = await app.request("/v1/admin/models/providers/openrouter-primary/test", {
+      method: "POST",
+      headers: { Authorization: "Bearer member-token" },
+    });
+    expect(denied.status).toBe(403);
+
+    const allowed = await app.request("/v1/admin/models/providers/openrouter-primary/test", {
+      method: "POST",
+      headers: { Authorization: "Bearer renwork-super-admin-test-token" },
+    });
+    expect(allowed.status).toBe(200);
+    const payload = await allowed.json();
+    expect(payload.providerId).toBe("openrouter-primary");
+    expect(payload.health).toBe("degraded");
+    expect(payload.message).toContain("environment secret is missing");
   });
 });
