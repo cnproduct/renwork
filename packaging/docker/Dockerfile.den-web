@@ -19,6 +19,8 @@ COPY packages/ui /app/packages/ui
 COPY ee/packages/utils /app/ee/packages/utils
 COPY ee/apps/den-web /app/ee/apps/den-web
 
+RUN pnpm --dir /app/packages/types run build
+
 WORKDIR /app/ee/apps/den-web
 
 # Source-map upload is build-only; runtime Sentry still requires its own backend and DSN configuration.
