@@ -526,7 +526,7 @@ export function readDesktopDistributionInfo(): DesktopDistributionInfo {
     flavor: "public",
     appName: "RenWork",
     appIdentifier: "com.differentai.openwork",
-    protocolScheme: "openwork",
+    protocolScheme: "renwork",
     requireSignin: false,
     requireActivation: false,
   };

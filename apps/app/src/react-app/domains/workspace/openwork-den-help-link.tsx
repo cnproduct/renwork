@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const SUPPORT_EMAIL = "team@openworklabs.com";
+const SUPPORT_EMAIL = "support@rrenn.com";
 const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=RenWork%20Den%20remote%20worker%20upgrade`;
 
 /**

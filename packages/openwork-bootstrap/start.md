@@ -30,7 +30,7 @@ pipe remote scripts directly into a shell. The script downloads the
 into `$HOME/.local/bin` - no npm or npx required.
 
 ```bash
-curl -fsSLo /tmp/openwork-install.sh https://openworklabs.com/install.sh
+curl -fsSLo /tmp/openwork-install.sh https://www.rrenn.com/install.sh
 less /tmp/openwork-install.sh
 sh /tmp/openwork-install.sh
 ```
@@ -47,7 +47,7 @@ Install the desktop app for this OS from the manifest:
 
 ```bash
 openwork-bootstrap install app \
-  --manifest https://openworklabs.com/install-manifest.json \
+  --manifest https://www.rrenn.com/install-manifest.json \
   --json
 ```
 
@@ -73,7 +73,7 @@ as) - they fire automatically the moment a human claims ownership.
 
 ```bash
 openwork-bootstrap cloud bootstrap-workspace \
-  --base-url https://api.openworklabs.com \
+  --base-url https://www.rrenn.com/api/den \
   --workspace-name "<workspace-name>" \
   --skill-name "First RenWork Skill" \
   --claim-roles owner \
@@ -126,21 +126,21 @@ If the user says yes:
    the agent they are currently using. The server URL is:
 
    ```text
-   https://api.openworklabs.com/mcp/agent
+   https://www.rrenn.com/api/den/mcp/agent
    ```
 
 3. For Codex, run:
 
    ```bash
-   codex mcp add openwork --url https://api.openworklabs.com/mcp/agent
-   codex mcp login openwork
+   codex mcp add renwork --url https://www.rrenn.com/api/den/mcp/agent
+   codex mcp login renwork
    ```
 
    If an `openwork` entry already exists, do not add a duplicate. Authenticate
    the existing entry instead. To switch organizations or recover stale auth,
-   run `codex mcp logout openwork` before `codex mcp login openwork`.
+   run `codex mcp logout renwork` before `codex mcp login renwork`.
 4. For another agent, use its current instructions from
-   `https://openworklabs.com/docs/cloud/run-in-the-cloud/cloud-mcp`; do not guess
+   `https://www.rrenn.com/docs/cloud/run-in-the-cloud/cloud-mcp`; do not guess
    unsupported client commands.
 5. Tell the user to restart or reopen the current agent after setup so the new
    MCP tools are loaded. Do not claim the connection works until the restarted

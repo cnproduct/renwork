@@ -87,8 +87,8 @@ function printHelp() {
     "Options:",
     "  --web-base-url   Browser-facing origin written into --prepare-desktop's",
     "                   config (used for the app's Sign In button and claim",
-    "                   links). Defaults to https://app.openworklabs.com when",
-    "                   --base-url is the hosted API (api.openworklabs.com);",
+    "                   links). Defaults to https://www.rrenn.com when",
+    "                   --base-url is the hosted RenWork API;",
     "                   set explicitly for self-hosted/custom deployments.",
     "  --json           Print machine-readable JSON",
     "  --version        Print version",
@@ -147,14 +147,14 @@ function defaultDeviceKeyPath() {
 // it opens in the user's browser for sign-in (e.g. for "Sign in" and claim
 // links) - it is a different host than the API origin used for CLI/API calls
 // (`--base-url`, `apiBaseUrl`). Reusing the API host here breaks sign-in: the
-// browser opens `https://api.openworklabs.com/?mode=sign-in...` and shows raw
+// browser opens the API mount with `?mode=sign-in...` and shows raw
 // API JSON instead of the sign-in page. Derive the correct web host instead
 // of assuming it equals the API host.
 function deriveWebBaseUrl(apiBaseUrl) {
   try {
     const url = new URL(apiBaseUrl)
-    if (url.hostname === "api.openworklabs.com") {
-      return "https://app.openworklabs.com"
+    if (url.origin === "https://www.rrenn.com" && url.pathname.replace(/\/+$/, "") === "/api/den") {
+      return "https://www.rrenn.com"
     }
     // Local/self-hosted dev: den-web commonly proxies the API at a different
     // port on the same host (see ee/apps/den-web's /api/den proxy). Callers
@@ -657,7 +657,7 @@ async function createDesktopHandoff(baseUrl, auth) {
   const handoff = await request(baseUrl, "/v1/auth/desktop-handoff", {
     method: "POST",
     headers: auth,
-    body: JSON.stringify({ desktopScheme: "openwork" }),
+    body: JSON.stringify({ desktopScheme: "renwork" }),
   })
   if (handoff.status !== 200 || !handoff.body?.grant) {
     throw new Error(`desktop_handoff_failed: ${handoff.status} ${JSON.stringify(handoff.body)}`)
@@ -868,7 +868,7 @@ async function runCloudOnboard(args) {
 
 async function runCloudBootstrapWorkspace(args) {
   const json = hasFlag(args.flags, "json")
-  const baseUrl = getFlag(args.flags, "base-url", "https://api.openworklabs.com")?.replace(/\/$/, "")
+  const baseUrl = getFlag(args.flags, "base-url", "https://www.rrenn.com/api/den")?.replace(/\/$/, "")
   const workspaceName = getFlag(args.flags, "workspace-name")
   const skillName = getFlag(args.flags, "skill-name", "First RenWork Skill")
   const ownerEmail = getFlag(args.flags, "owner-email")

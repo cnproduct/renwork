@@ -63,7 +63,7 @@ if (import.meta.hot) {
 
 const MARKDOWN_PRIMITIVE_ARTIFACT_CONTENT = `# Artifact Markdown Proof
 
-The artifact preview keeps **outside-chat Markdown** readable with inline \`surface renderer\`, a fenced code block, and [RenWork](https://openworklabs.com).
+The artifact preview keeps **outside-chat Markdown** readable with inline \`surface renderer\`, a fenced code block, and [RenWork](https://www.rrenn.com).
 
 \`\`\`ts
 const surface = "shared markdown primitive";

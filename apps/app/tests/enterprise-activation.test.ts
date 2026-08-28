@@ -79,7 +79,7 @@ describe("enterprise desktop activation", () => {
       "openwork://den-auth?grant=one-time-grant&denBaseUrl=https%3A%2F%2Fapp.openworklabs.com",
     )).toEqual({
       grant: "one-time-grant",
-      denBaseUrl: "https://app.openworklabs.com",
+      denBaseUrl: "https://www.rrenn.com",
     });
   });
 

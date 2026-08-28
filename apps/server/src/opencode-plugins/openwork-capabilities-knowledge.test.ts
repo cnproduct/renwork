@@ -10,18 +10,16 @@ describe("RenWork capabilities knowledge plugin", () => {
     await plugin["experimental.chat.system.transform"]({}, output);
 
     const knowledge = output.system.join("\n");
-    expect(knowledge).toContain("https://api.openworklabs.com/mcp/agent");
-    expect(knowledge).toContain("app.openworklabs.com/api/den");
-    expect(knowledge).toContain("internal same-origin desktop proxy");
+    expect(knowledge).toContain("https://www.rrenn.com/api/den/mcp/agent");
     expect(knowledge).toContain("OpenCode is verified");
     expect(knowledge).toContain("Codex is setup-only");
     expect(knowledge).toContain("cursor://anysphere.cursor-mcp/oauth/callback");
     expect(knowledge).toContain("Settings > MCP servers");
-    expect(knowledge).toContain("https://app.openworklabs.com/api/auth");
+    expect(knowledge).toContain("https://www.rrenn.com/api/auth");
     expect(knowledge).toContain("RFC9728 discovery");
     expect(knowledge).toContain("PKCE S256");
-    expect(knowledge).toContain("opencode mcp auth openwork");
-    expect(knowledge).toContain("codex mcp login openwork");
+    expect(knowledge).toContain("opencode mcp auth renwork");
+    expect(knowledge).toContain("codex mcp login renwork");
     expect(knowledge).toContain("search_capabilities");
     expect(knowledge).toContain("execute_capability");
     expect(knowledge).toContain("JWTs signed and validated with EdDSA");
@@ -39,7 +37,7 @@ describe("RenWork capabilities knowledge plugin", () => {
     expect(knowledge).toContain("Settings > Debug");
     expect(knowledge).toContain("custom or local MCP server");
     expect(knowledge).not.toContain("Access tokens are opaque");
-    expect(knowledge).not.toContain("https://api.openworklabs.com/mcp`");
+    expect(knowledge).not.toContain("openworklabs.com");
     expect(knowledge).not.toContain("openwork-ui-mcp");
     expect(knowledge).not.toContain("openwork_extensions_export");
   });
@@ -98,14 +96,12 @@ describe("RenWork capabilities knowledge plugin", () => {
       path: "cloud/run-in-the-cloud/cloud-mcp.mdx",
     });
 
-    expect(read).toContain("https://api.openworklabs.com/mcp/agent");
-    expect(read).toContain("app.openworklabs.com/api/den");
-    expect(read).toContain("internal same-origin desktop proxy");
+    expect(read).toContain("https://www.rrenn.com/api/den/mcp/agent");
     expect(read).toContain("OpenCode | Verified");
     expect(read).toContain("Codex | Setup only");
     expect(read).toContain("Cursor | Setup only");
-    expect(read).toContain("opencode mcp logout openwork");
-    expect(read).toContain("codex mcp logout openwork");
+    expect(read).toContain("opencode mcp logout renwork");
+    expect(read).toContain("codex mcp logout renwork");
     expect(read).toContain("X-Request-Id");
     expect(read).toContain("reference_id");
     expect(read).toContain("JWTs signed and validated with EdDSA");

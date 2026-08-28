@@ -76,6 +76,8 @@ test("extracts only dedicated desktop connect links", () => {
   assert.equal(extractConnectLinkToken("openwork://connect?token=a.b.c"), "a.b.c");
   assert.equal(extractConnectLinkToken("openwork-dev://connect?token=a.b.c"), "a.b.c");
   assert.equal(extractConnectLinkToken("openwork:///connect?token=a.b.c"), "a.b.c");
+  assert.equal(extractConnectLinkToken("renwork://connect?token=a.b.c"), "a.b.c");
+  assert.equal(extractConnectLinkToken("renwork-dev://connect?token=a.b.c"), "a.b.c");
   assert.equal(extractConnectLinkToken("openwork://den-auth?grant=x"), null);
   assert.equal(extractConnectLinkToken("https://connect?token=a.b.c"), null);
 });

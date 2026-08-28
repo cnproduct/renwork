@@ -115,8 +115,12 @@ const DEFAULT_DESKTOP_BOOTSTRAP_PATH = resolveDesktopBootstrapPath({ homeDir: os
 // LOCALAPPDATA and XDG_CONFIG_HOME. Keep reading that file when the canonical one
 // is missing so existing installs keep their deployment config.
 const LEGACY_DESKTOP_BOOTSTRAP_PATH = resolveLegacyDesktopBootstrapPath({ homeDir: os.homedir() });
-const HOSTED_DESKTOP_WEB_URL = "https://app.openworklabs.com";
-const HOSTED_DESKTOP_API_URL = "https://api.openworklabs.com";
+const HOSTED_DESKTOP_WEB_URL = "https://www.rrenn.com";
+const HOSTED_DESKTOP_API_URL = "https://www.rrenn.com/api/den";
+const LEGACY_HOSTED_DESKTOP_ORIGINS = new Set([
+  "https://app.openworklabs.com",
+  "https://api.openworklabs.com",
+]);
 
 function bootstrapUrlOrigin(value) {
   if (typeof value !== "string" || !value.trim()) return "";
@@ -127,9 +131,27 @@ function bootstrapUrlOrigin(value) {
   }
 }
 
+function migrateLegacyHostedBootstrapUrl(value, replacement, { preservePath = false } = {}) {
+  if (typeof value !== "string" || !value.trim()) return "";
+  const trimmed = value.trim();
+  try {
+    const url = new URL(trimmed);
+    if (!LEGACY_HOSTED_DESKTOP_ORIGINS.has(url.origin)) return trimmed;
+    if (!preservePath) return replacement;
+    const target = new URL(replacement);
+    target.pathname = url.pathname;
+    target.search = url.search;
+    target.hash = url.hash;
+    return target.toString().replace(/\/+$/, "");
+  } catch {
+    return trimmed;
+  }
+}
+
 function isHostedDesktopBootstrapConfig(config) {
   const baseUrlOrigin = bootstrapUrlOrigin(config?.baseUrl);
-  return baseUrlOrigin === HOSTED_DESKTOP_WEB_URL || baseUrlOrigin === HOSTED_DESKTOP_API_URL;
+  return baseUrlOrigin === bootstrapUrlOrigin(HOSTED_DESKTOP_WEB_URL)
+    || baseUrlOrigin === bootstrapUrlOrigin(HOSTED_DESKTOP_API_URL);
 }
 
 export function createWorkspaceStore({
@@ -202,7 +224,7 @@ export function createWorkspaceStore({
   }
 
   function normalizeDesktopBootstrapConfig(input) {
-    const baseUrl = typeof input?.baseUrl === "string" ? input.baseUrl.trim() : "";
+    const baseUrl = migrateLegacyHostedBootstrapUrl(input?.baseUrl, HOSTED_DESKTOP_WEB_URL);
     if (!baseUrl) {
       throw new Error("baseUrl is required");
     }
@@ -217,7 +239,7 @@ export function createWorkspaceStore({
     const handoff = handoffInput && typeof handoffInput === "object"
       ? {
           grant: typeof handoffInput.grant === "string" ? handoffInput.grant.trim() : "",
-          denBaseUrl: typeof handoffInput.denBaseUrl === "string" ? handoffInput.denBaseUrl.trim() : "",
+          denBaseUrl: migrateLegacyHostedBootstrapUrl(handoffInput.denBaseUrl, HOSTED_DESKTOP_WEB_URL),
           orgId: typeof handoffInput.orgId === "string" ? handoffInput.orgId.trim() : "",
           orgName: typeof handoffInput.orgName === "string" ? handoffInput.orgName.trim() : "",
           orgSlug: typeof handoffInput.orgSlug === "string" ? handoffInput.orgSlug.trim() : "",
@@ -251,12 +273,12 @@ export function createWorkspaceStore({
       const id = typeof link.id === "string" ? link.id.trim() : "";
       const role = typeof link.role === "string" ? link.role.trim() : "";
       const token = typeof link.token === "string" ? link.token.trim() : "";
-      const url = typeof link.url === "string" ? link.url.trim() : "";
+      const url = migrateLegacyHostedBootstrapUrl(link.url, HOSTED_DESKTOP_WEB_URL, { preservePath: true });
       const expiresAt = typeof link.expiresAt === "string" ? link.expiresAt.trim() : "";
       return id && role && url && expiresAt ? [{ id, role, ...(token ? { token } : {}), url, expiresAt }] : [];
     });
     const writtenAt = typeof input?.writtenAt === "string" ? input.writtenAt.trim() : "";
-    const apiBaseUrl = typeof input?.apiBaseUrl === "string" ? input.apiBaseUrl.trim() : "";
+    const apiBaseUrl = migrateLegacyHostedBootstrapUrl(input?.apiBaseUrl, HOSTED_DESKTOP_API_URL);
     const brandAppName = typeof input?.brandAppName === "string" ? input.brandAppName.trim().slice(0, 64) : "";
     const brandLogoUrl = typeof input?.brandLogoUrl === "string" ? input.brandLogoUrl.trim() : "";
     const brandIconUrl = typeof input?.brandIconUrl === "string" ? input.brandIconUrl.trim() : "";
@@ -266,9 +288,10 @@ export function createWorkspaceStore({
           activatedAt: typeof enterpriseActivationInput.activatedAt === "string"
             ? enterpriseActivationInput.activatedAt.trim()
             : "",
-          denBaseUrl: typeof enterpriseActivationInput.denBaseUrl === "string"
-            ? enterpriseActivationInput.denBaseUrl.trim()
-            : "",
+          denBaseUrl: migrateLegacyHostedBootstrapUrl(
+            enterpriseActivationInput.denBaseUrl,
+            HOSTED_DESKTOP_WEB_URL,
+          ),
         }
       : null;
     const normalizedEnterpriseActivation = enterpriseActivation?.activatedAt && enterpriseActivation.denBaseUrl
@@ -388,7 +411,7 @@ export function createWorkspaceStore({
   async function migrateLegacyDesktopBootstrapConfig(configPath, legacyCandidate) {
     try {
       await mkdir(path.dirname(configPath), { recursive: true });
-      await writeFile(configPath, legacyCandidate.raw, "utf8");
+      await writeFile(configPath, `${JSON.stringify(legacyCandidate.normalized, null, 2)}\n`, "utf8");
       console.info("[desktop-bootstrap] migrated legacy config", {
         from: legacyCandidate.path,
         to: configPath,
@@ -409,10 +432,18 @@ export function createWorkspaceStore({
         await migrateLegacyDesktopBootstrapConfig(configPath, legacy);
         return { ...legacy.normalized, fromFile: true };
       }
+      if (LEGACY_HOSTED_DESKTOP_ORIGINS.has(bootstrapUrlOrigin(primary.parsed?.baseUrl))) {
+        await migrateLegacyDesktopBootstrapConfig(configPath, primary);
+      }
       return { ...primary.normalized, fromFile: true };
     }
 
-    if (primary.ok) return { ...primary.normalized, fromFile: true };
+    if (primary.ok) {
+      if (LEGACY_HOSTED_DESKTOP_ORIGINS.has(bootstrapUrlOrigin(primary.parsed?.baseUrl))) {
+        await migrateLegacyDesktopBootstrapConfig(configPath, primary);
+      }
+      return { ...primary.normalized, fromFile: true };
+    }
 
     if (legacy?.ok) {
       await migrateLegacyDesktopBootstrapConfig(configPath, legacy);

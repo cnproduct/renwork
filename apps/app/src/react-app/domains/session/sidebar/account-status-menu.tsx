@@ -54,7 +54,7 @@ import {
   useOpenWorkModelsPromoEligibility,
 } from "../../cloud/openwork-models-promo";
 
-const DOCS_URL = "https://openworklabs.com/docs";
+const DOCS_URL = "https://www.rrenn.com/docs";
 const BOOT_STARTED_AT = Date.now();
 const INITIALIZING_MS = 15_000;
 

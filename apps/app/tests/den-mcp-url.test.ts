@@ -13,7 +13,7 @@ describe("resolveDenBaseUrls", () => {
       baseUrl: "https://app.openworklabs.com",
       apiBaseUrl: "https://app.openworklabs.com",
     });
-    expect(resolved.apiBaseUrl).toBe("https://app.openworklabs.com/api/den");
+    expect(resolved.apiBaseUrl).toBe("https://www.rrenn.com/api/den");
   });
 
   test("keeps an explicit API origin independent from the web base URL", () => {
@@ -21,7 +21,7 @@ describe("resolveDenBaseUrls", () => {
       baseUrl: "https://app.openworklabs.com",
       apiBaseUrl: "https://api.example.com",
     });
-    expect(resolved.baseUrl).toBe("https://app.openworklabs.com");
+    expect(resolved.baseUrl).toBe("https://www.rrenn.com");
     expect(resolved.apiBaseUrl).toBe("https://api.example.com/api/den");
   });
 
@@ -69,7 +69,7 @@ describe("isLegacyWebAppMcpUrl", () => {
 describe("resolveCloudMcpResourceUrl", () => {
   test("heals a minted legacy web-app resource through the /api/den proxy", () => {
     expect(resolveCloudMcpResourceUrl("https://app.openworklabs.com/mcp")).toBe(
-      "https://app.openworklabs.com/api/den/mcp",
+      "https://www.rrenn.com/api/den/mcp",
     );
     expect(resolveCloudMcpResourceUrl("https://app.openwork.software/mcp/")).toBe(
       "https://app.openwork.software/api/den/mcp",
@@ -78,10 +78,13 @@ describe("resolveCloudMcpResourceUrl", () => {
 
   test("keeps healthy resources verbatim", () => {
     expect(resolveCloudMcpResourceUrl("https://app.openworklabs.com/api/den/mcp")).toBe(
-      "https://app.openworklabs.com/api/den/mcp",
+      "https://www.rrenn.com/api/den/mcp",
     );
     expect(resolveCloudMcpResourceUrl("http://127.0.0.1:8787/mcp")).toBe(
       "http://127.0.0.1:8787/mcp",
+    );
+    expect(resolveCloudMcpResourceUrl("https://api.openworklabs.com/mcp/agent")).toBe(
+      "https://www.rrenn.com/api/den/mcp/agent",
     );
   });
 

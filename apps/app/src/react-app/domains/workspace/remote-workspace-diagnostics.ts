@@ -104,7 +104,7 @@ function rejectedTokenMessage(target: RemoteWorkspaceConnectionTarget) {
 }
 
 function remoteSupportMessage(message: string) {
-  return `${message} Upgrade the RenWork host and try again. If this continues, contact team@openworklabs.com.`;
+  return `${message} Upgrade the RenWork host and try again. If this continues, contact support@rrenn.com.`;
 }
 
 export function redactRemoteDiagnosticText(value: string): string {

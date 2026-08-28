@@ -6,6 +6,11 @@ import { test } from "@openwork/testkit";
 import * as ts from "typescript";
 
 import { resolveOpenWorkConnectStatus } from "../../apps/app/src/react-app/domains/connections/openwork-connect-status";
+import {
+  buildDenAuthUrl,
+  DEFAULT_DEN_BASE_URL,
+  normalizeDenBaseUrl,
+} from "../../apps/app/src/app/lib/den";
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const SOURCE_ROOTS = [
@@ -128,6 +133,50 @@ test("RenWork Connect avoids skipped-state false alarms and public copy is RenWo
   evidence.fact(
     "Public product copy is RenWork branded",
     "Runtime string and JSX surfaces, email/install defaults, and published documentation contain no legacy standalone product name outside approved internal protocol and migration identifiers.",
+    true,
+  );
+});
+
+test("RenWork desktop never falls back to OpenWork hosted domains", async ({ evidence }) => {
+  expect(DEFAULT_DEN_BASE_URL).toBe("https://www.rrenn.com");
+  expect(normalizeDenBaseUrl("https://app.openworklabs.com/api/den"))
+    .toBe("https://www.rrenn.com/api/den");
+  expect(normalizeDenBaseUrl("https://api.openworklabs.com/mcp/agent"))
+    .toBe("https://www.rrenn.com/api/den/mcp/agent");
+
+  const authUrl = new URL(buildDenAuthUrl(DEFAULT_DEN_BASE_URL, "sign-in"));
+  expect(authUrl.origin).toBe("https://www.rrenn.com");
+  expect(authUrl.searchParams.get("desktopScheme")).toBe("renwork");
+
+  const activeRuntimeFiles = [
+    "apps/desktop/electron/main.mjs",
+    "apps/app/src/app/constants.ts",
+    "apps/app/src/app/lib/feedback.ts",
+    "apps/server/src/agent-context-cloud-probe.ts",
+    "apps/server/src/opencode-models-url.ts",
+    "apps/server/src/opencode-plugins/openwork-capabilities-knowledge.ts",
+    "packages/openwork-bootstrap/bin/openwork.mjs",
+  ];
+  for (const relativePath of activeRuntimeFiles) {
+    const source = await readFile(join(REPOSITORY_ROOT, relativePath), "utf8");
+    expect(source, relativePath).not.toContain("openworklabs.com");
+  }
+
+  const workspaceStore = await readFile(
+    join(REPOSITORY_ROOT, "apps/desktop/electron/workspace-store.mjs"),
+    "utf8",
+  );
+  expect(workspaceStore).toContain("LEGACY_HOSTED_DESKTOP_ORIGINS");
+  expect(workspaceStore).toContain("https://www.rrenn.com/api/den");
+
+  evidence.fact(
+    "Desktop hosted fallback is RenWork-owned",
+    "Authentication, Cloud MCP, diagnostics, feedback, model catalog, and bootstrap defaults no longer target openworklabs.com.",
+    true,
+  );
+  evidence.fact(
+    "Legacy installs migrate safely",
+    "Legacy hosted URLs normalize to rrenn.com while explicit customer self-hosted origins remain outside the migration rule.",
     true,
   );
 });

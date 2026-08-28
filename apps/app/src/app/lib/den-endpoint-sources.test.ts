@@ -49,7 +49,7 @@ describe("Den endpoint sources", () => {
       bootstrapValue: null,
       buildDefault: "https://app.openworklabs.com/",
     })).toEqual({
-      effective: "https://app.openworklabs.com",
+      effective: "https://www.rrenn.com",
       source: "default",
     });
   });
