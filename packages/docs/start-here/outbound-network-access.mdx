@@ -3,14 +3,14 @@ title: "Outbound network access"
 description: "Customer IT allowlist guidance for RenWork desktop, Den, deployment artifacts, and opt-in providers."
 ---
 
-RenWork works best when customer IT approves outbound access by component. The canonical machine-readable source is [`docs/enterprise/outbound-access.json`](https://github.com/different-ai/openwork/blob/dev/docs/enterprise/outbound-access.json). CI guards that file with `node scripts/check-outbound-access.mjs`; this page is the published human-readable summary.
+RenWork works best when customer IT approves outbound access by component. The canonical machine-readable source is [`docs/enterprise/outbound-access.json`](https://github.com/cnproduct/renwork/blob/dev/docs/enterprise/outbound-access.json). CI guards that file with `node scripts/check-outbound-access.mjs`; this page is the published human-readable summary.
 
 ## Minimum hosted desktop allowlist
 
 For a practical RenWork Cloud desktop install, allow TCP 443 to these hosts:
 
 ```text
-app.openworklabs.com
+account.rrenn.com
 api.openworklabs.com
 github.com
 release-assets.githubusercontent.com
@@ -29,7 +29,8 @@ Common misses:
 
 | Host | Requirement | Why it is reached | What breaks when blocked |
 | --- | --- | --- | --- |
-| `app.openworklabs.com` | Required for RenWork Cloud | Hosted Cloud web origin. The desktop uses one base URL and derives Den API/MCP calls through `/api/den/...`. | Cloud sign-in, org settings, marketplace, and remote workspace flows cannot load. |
+| `account.rrenn.com` | Required for RenWork Cloud | Hosted account, passwordless sign-in, organization selection, and desktop handoff origin. | Users cannot register, sign in, select an organization, or connect the desktop. |
+| `app.openworklabs.com` | Legacy hosted Cloud origin | Retained for older configurations while current RenWork desktops use `account.rrenn.com`. | Legacy hosted Cloud configurations cannot load. |
 | `api.openworklabs.com` | Required for hosted install and RenWork Connect | Hosted public API and RenWork Connect MCP endpoint used by install and external-client flows. | Hosted install checks and public RenWork Connect fail. |
 | Your self-hosted Den web origin | Required for self-hosted desktop | Replaces `app.openworklabs.com` for signed-in desktop traffic. In the single-origin shape, API and MCP use `/api/den/...` on the same origin. | The desktop cannot sign in or reach Den. |
 | Your separate Den API origin, if configured | Required only for that topology | Used by one-time install-link exchange and external MCP clients when `DEN_API_PUBLIC_URL` points at a separate origin. | Install-link handoff or external MCP clients cannot complete. |
@@ -41,7 +42,7 @@ Common misses:
 | `cdn.simpleicons.org` | Optional | Provider icons when no local icon exists. | Some icons are missing. |
 | `www.google.com` | Optional | Favicon image service and embedded browser new-tab page. | Favicons or the browser panel new tab may not load. |
 | `us.i.posthog.com` | Optional | Product analytics when analytics are enabled. | Analytics are dropped silently. |
-| `openworklabs.com`, `openwork.dev`, `discord.gg`, `ollama.com`, `opencode.ai`, `linear.app`, `mail.google.com` | Optional or link-only | Docs, feedback, community, provider help, local model links, sample links, and generated Gmail links. | Links do not open; core app behavior is unaffected. |
+| `rrenn.com`, `openworklabs.com`, `openwork.dev`, `discord.gg`, `ollama.com`, `opencode.ai`, `linear.app`, `mail.google.com` | Optional or link-only | RenWork website, legacy docs, feedback, community, provider help, local model links, sample links, and generated Gmail links. | Links do not open; core app behavior is unaffected. |
 
 `code.claude.com` and `schemas.agentskills.io` appear in source or schema metadata. They are findable in the manifest, but RenWork does not fetch them for normal runtime behavior.
 
@@ -75,6 +76,7 @@ These hosts are only needed when the corresponding feature, provider, connection
 | Feature group | Hostnames | What breaks when blocked |
 | --- | --- | --- |
 | OpenAI direct features | `api.openai.com` | Direct OpenAI Realtime voice and image-generation features fail for users who configured OpenAI. |
+| Custom model providers | `api.siliconflow.cn`, `openrouter.ai`, or the customer-configured provider URL | Only model discovery and inference for the enabled custom provider fail. |
 | Google Workspace | `accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`, `gmail.googleapis.com`, `chat.googleapis.com`, `mail.google.com` | OAuth, profile, Calendar, Drive, Gmail, Chat, and generated Gmail links fail as applicable. |
 | Built-in MCP presets | `mcp.notion.com`, `mcp.linear.app`, `mcp.sentry.dev`, `mcp.stripe.com`, `mcp.context7.com`, `mcp.slack.com` | That specific MCP preset cannot connect. |
 | Example or custom MCP URLs | `api.githubcopilot.com` or the customer-configured MCP URL | Only the connection that points at that URL fails. |

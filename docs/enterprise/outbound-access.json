@@ -1,6 +1,15 @@
 {
   "hosts": [
     {
+      "host": "account.rrenn.com",
+      "kind": "fetched",
+      "components": ["desktop", "renderer", "bootstrap"],
+      "purpose": "RenWork hosted account, passwordless sign-in, organization selection, and desktop handoff origin.",
+      "requirement": "required-for-cloud",
+      "blockedEffect": "Users cannot register, sign in, select an organization, or connect the desktop to RenWork Cloud.",
+      "override": "desktop base URL (self-hosted Den replaces this host)"
+    },
+    {
       "host": "accounts.google.com",
       "kind": "fetched",
       "components": ["server"],
@@ -44,6 +53,15 @@
       "requirement": "required-for-cloud",
       "blockedEffect": "Hosted install checks, OpenWork Connect, or legacy hosted API configurations cannot reach OpenWork Cloud.",
       "override": "installer apiUrl / self-hosted Den API origin"
+    },
+    {
+      "host": "api.siliconflow.cn",
+      "kind": "fetched",
+      "components": ["renderer", "server"],
+      "purpose": "Preset endpoint for a user-configured SiliconFlow-compatible model provider.",
+      "requirement": "opt-in",
+      "blockedEffect": "Only SiliconFlow model discovery and inference fail when that provider is enabled.",
+      "override": "custom provider Base URL"
     },
     {
       "host": "app.openworklabs.com",
@@ -244,6 +262,15 @@
       "override": null
     },
     {
+      "host": "openrouter.ai",
+      "kind": "fetched",
+      "components": ["renderer", "server"],
+      "purpose": "Preset endpoint for a user-configured OpenRouter model provider.",
+      "requirement": "opt-in",
+      "blockedEffect": "Only OpenRouter model discovery and inference fail when that provider is enabled.",
+      "override": "custom provider Base URL"
+    },
+    {
       "host": "openwork.dev",
       "kind": "link-only",
       "components": ["renderer"],
@@ -280,6 +307,15 @@
       "override": "npm registry configuration used by npx"
     },
     {
+      "host": "rrenn.com",
+      "kind": "link-only",
+      "components": ["desktop", "bootstrap"],
+      "purpose": "RenWork website link and legacy desktop bootstrap origin recognized during account-origin migration.",
+      "requirement": "optional",
+      "blockedEffect": "The website link does not open; legacy bootstrap migration still rewrites the stored origin locally.",
+      "override": null
+    },
+    {
       "host": "schemas.agentskills.io",
       "kind": "schema-string",
       "components": ["server"],
@@ -313,6 +349,15 @@
       "purpose": "Google profile, Calendar, and Drive API calls for Google Workspace connections.",
       "requirement": "opt-in",
       "blockedEffect": "Google profile, Calendar, and Drive actions fail for connected Google Workspace accounts.",
+      "override": null
+    },
+    {
+      "host": "www.rrenn.com",
+      "kind": "schema-string",
+      "components": ["bootstrap"],
+      "purpose": "Legacy RenWork marketing origin recognized only to migrate old desktop bootstrap settings to the account service.",
+      "requirement": "optional",
+      "blockedEffect": "No runtime request is made to this host during migration.",
       "override": null
     }
   ]
