@@ -1826,7 +1826,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
       : [],
   );
   const openworkCloudMcpUrl = connectionsSnapshot.mcpServers.find(
-    (server) => server.name === "openwork-cloud",
+    (server) => server.name === "renwork-cloud" || server.name === "openwork-cloud",
   )?.config.url ?? null;
 
   // Build enablement context from all available runtime state.

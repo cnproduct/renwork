@@ -402,7 +402,7 @@ export default {
             const performed = report.safety.cloudCatalogToolsListPerformed;
             ctx.assert(cloudCheck.details.requestPerformed === performed, `Cloud check contradicted safety metadata: ${JSON.stringify(cloudCheck)}`);
             if (performed && cloudCheck.code === "cloud_catalog_exact_match") {
-              const runtimeCloud = report.mcps.find((mcp) => mcp.source === "config.remote" && mcp.name === "openwork-cloud");
+              const runtimeCloud = report.mcps.find((mcp) => mcp.source === "config.remote" && mcp.name === "renwork-cloud");
               ctx.assert(runtimeCloud?.syncStatus === "connected", `Cloud catalog ran without connected runtime registration evidence: ${JSON.stringify(runtimeCloud)}`);
               ctx.assert(
                 JSON.stringify([...report.observedCloudToolIds].sort()) === JSON.stringify(["execute_capability", "search_capabilities"]),

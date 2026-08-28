@@ -113,9 +113,9 @@ describe("composeOpenWorkExtensionDiscoveryInstruction", () => {
     expect(composeOpenWorkExtensionDiscoveryInstruction({ ...state(null), googleWorkspace: { legacyConfigured: true } })).toBe(UNCHANGED_EXTENSION_DISCOVERY_INSTRUCTION);
   });
 
-  test("steers ready Connect users to verified openwork-cloud capabilities first", () => {
+  test("steers ready Connect users to verified renwork-cloud capabilities first", () => {
     expect(OPENWORK_CLOUD_CONNECTION_INSTRUCTION).toContain("verified ready for this exact workspace/model");
-    expect(OPENWORK_CLOUD_CONNECTION_INSTRUCTION).toContain("use openwork-cloud_search_capabilities");
+    expect(OPENWORK_CLOUD_CONNECTION_INSTRUCTION).toContain("use renwork-cloud_search_capabilities");
     expect(OPENWORK_CLOUD_CONNECTION_INSTRUCTION).toContain("available_skills");
     expect(OPENWORK_CLOUD_CONNECTION_INSTRUCTION).not.toContain("Skill creation:");
     expect(OPENWORK_CLOUD_CONNECTION_INSTRUCTION).not.toContain("Gmail");
@@ -134,7 +134,7 @@ describe("composeOpenWorkExtensionDiscoveryInstruction", () => {
     });
     expect(OPENWORK_CLOUD_SKILL_AUTHORING_INSTRUCTION).toContain("Skill creation: Cloud");
     expect(OPENWORK_CLOUD_SKILL_AUTHORING_INSTRUCTION).toContain("retrieve and follow the listed create-skill remote skill");
-    expect(OPENWORK_CLOUD_SKILL_AUTHORING_INSTRUCTION).toContain("openwork-cloud_execute_capability");
+    expect(OPENWORK_CLOUD_SKILL_AUTHORING_INSTRUCTION).toContain("renwork-cloud_execute_capability");
     expect(OPENWORK_CLOUD_SKILL_AUTHORING_INSTRUCTION).toContain("exact <capability>");
     expect(OPENWORK_CLOUD_SKILL_AUTHORING_INSTRUCTION).toContain("RenWork Cloud as a private plugin");
     expect(OPENWORK_CLOUD_SKILL_AUTHORING_INSTRUCTION).toContain("use share-plugin when the user wants a specific person or team to use a skill");

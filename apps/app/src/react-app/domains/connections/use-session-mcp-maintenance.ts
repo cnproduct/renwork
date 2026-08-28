@@ -18,7 +18,7 @@ import type { Client, McpServerEntry, McpStatusMap } from "../../../app/types";
 import { attemptSilentMcpReauth } from "./mcp-silent-reauth";
 import { recordCloudMcpMaintenanceOutcome } from "./cloud-mcp-maintenance-outcome";
 import {
-  CLOUD_MCP_SERVER_NAME,
+  isManagedCloudMcpServerName,
   readCloudMcpUserState,
 } from "./cloud-mcp-user-state";
 import {
@@ -201,7 +201,7 @@ export async function syncCloudControlMcpInBackground(input: {
     workspaceId,
   };
   const listed = await input.client.listMcp(workspaceId);
-  const configured = listed.items.find((entry) => entry.name === CLOUD_MCP_SERVER_NAME);
+  const configured = listed.items.find((entry) => isManagedCloudMcpServerName(entry.name));
   if (configured?.config.enabled === false) {
     return { outcome: "skipped", status: "skipped", reason: "disabled", health: null };
   }

@@ -157,7 +157,7 @@ export const MCP_QUICK_CONNECT: McpDirectoryInfo[] = [
   },
   {
     get name() { return t("mcp.quick_connect_openwork_cloud_title"); },
-    serverName: "openwork-cloud",
+    serverName: "renwork-cloud",
     get description() { return t("mcp.quick_connect_openwork_cloud_desc"); },
     get url() {
       // The desktop app connects to the minimal, harness-facing surface

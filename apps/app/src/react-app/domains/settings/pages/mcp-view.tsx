@@ -634,7 +634,7 @@ export function McpView(props: McpViewProps) {
       );
     });
 
-  // Auto-configured built-ins like openwork-cloud remain active but hidden from
+  // Auto-configured built-ins like renwork-cloud remain active but hidden from
   // Your apps until Show hidden reveals the row for disable/remove.
   const visibleMcpServers = inventoryState === "all" && (filter === "all" || filter === "mcp")
     ? showHidden

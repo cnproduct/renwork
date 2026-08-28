@@ -624,7 +624,7 @@ export class AutomationService {
       onAdmitted: async (receipt) => automationRepository.setCloudExecution({
         runId: claimed.run.id,
         leaseOwner,
-        engineKind: "openwork-cloud-agent-v1",
+        engineKind: "renwork-cloud-agent-v1",
         receipt,
         now: Date.now(),
       }),

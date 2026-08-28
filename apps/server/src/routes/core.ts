@@ -284,7 +284,7 @@ export function registerCoreRoutes(options: RegisterCoreRoutesOptions): void {
   });
 
   addRoute(routes, "GET", "/experimental/connect/skills", "client", async (_ctx) => {
-    // Connect skills are server/account-scoped (openwork-cloud on the host), not per-workspace.
+    // Connect skills are server/account-scoped (renwork-cloud on the host), not per-workspace.
     const skills = await readOpenWorkConnectSkillCatalog(config);
     return jsonResponse({
       ok: true,
@@ -295,7 +295,7 @@ export function registerCoreRoutes(options: RegisterCoreRoutesOptions): void {
   });
 
   addRoute(routes, "GET", "/experimental/connect/automations", "client", async (_ctx) => {
-    // Owner-scoped through the same openwork-cloud connection as skills.
+    // Owner-scoped through the same renwork-cloud connection as skills.
     const index = await readOpenWorkAutomationCatalog(config);
     return jsonResponse({
       ok: true,

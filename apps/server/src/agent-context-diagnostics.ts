@@ -56,8 +56,13 @@ import {
 import type { McpItem, ServerConfig, WorkspaceInfo } from "./types.js";
 import { exists } from "./utils.js";
 import { opencodeConfigPath } from "./workspace-files.js";
+import {
+  LEGACY_OPENWORK_CLOUD_MCP_NAME,
+  RENWORK_CLOUD_MCP_NAME,
+  readRenworkCloudMcpEntry,
+} from "./renwork-cloud-identity.js";
 
-const OPENWORK_CLOUD_MCP_NAME = "openwork-cloud";
+const OPENWORK_CLOUD_MCP_NAME = RENWORK_CLOUD_MCP_NAME;
 const CLOUD_MCP_TERMINAL_PATH = "/mcp/agent";
 const REQUIRED_CLOUD_TOOL_IDS = ["search_capabilities", "execute_capability"] as const;
 const REQUIRED_CLOUD_AGENT_TOOL_IDS = REQUIRED_CLOUD_TOOL_IDS.map(
@@ -452,7 +457,7 @@ function cloudEndpointEvidenceUrl(
   config: Record<string, unknown>,
 ): URL | null {
   if (
-    name !== OPENWORK_CLOUD_MCP_NAME
+    name !== RENWORK_CLOUD_MCP_NAME && name !== LEGACY_OPENWORK_CLOUD_MCP_NAME
     || (source !== "config.remote" && source !== "engine.config")
     || typeof config.url !== "string"
   ) return null;
@@ -1362,7 +1367,7 @@ export async function runAgentContextDiagnostics(input: {
       googleWorkspace: { legacyConfigured: false },
     };
   }
-  const selectedCloudMcpPresent = Object.hasOwn(runtimeMcpMap(runtime), OPENWORK_CLOUD_MCP_NAME);
+  const selectedCloudMcpPresent = readRenworkCloudMcpEntry(runtimeMcpMap(runtime)) !== null;
   const branch = expectedConnectBranch(connectSnapshot);
   const crossWorkspaceSteeringDrift = connectSnapshot.cloudMcpPresent && !selectedCloudMcpPresent;
 
@@ -1376,7 +1381,7 @@ export async function runAgentContextDiagnostics(input: {
   const engineConfigItems = effectiveEngine?.mcps.map((item) => ({
     ...item,
     source: "engine.config" as const,
-    disabledByTools: item.name === OPENWORK_CLOUD_MCP_NAME
+    disabledByTools: item.name === RENWORK_CLOUD_MCP_NAME || item.name === LEGACY_OPENWORK_CLOUD_MCP_NAME
       ? assessEffectiveToolPolicy(effectiveEngine).status === "denied" || undefined
       : undefined,
   }));
@@ -1384,7 +1389,7 @@ export async function runAgentContextDiagnostics(input: {
   const combinedInventoryItems = [...inventory.items, ...(engineConfigItems ?? [])];
   const inventoryItems = combinedInventoryItems.slice(0, 200);
   const runtimeCloudItem = combinedInventoryItems.find((item) =>
-    item.source === "config.remote" && item.name === OPENWORK_CLOUD_MCP_NAME,
+    item.source === "config.remote" && (item.name === RENWORK_CLOUD_MCP_NAME || item.name === LEGACY_OPENWORK_CLOUD_MCP_NAME),
   );
   if (
     runtimeCloudItem
@@ -1405,7 +1410,7 @@ export async function runAgentContextDiagnostics(input: {
     return inspection;
   };
   const mcps = inventoryItems.map((item) => mcpEvidence(item, registrationForItem(item).status, managedMcpNames));
-  const runtimeCloudConfig = runtimeMcpMap(runtime)[OPENWORK_CLOUD_MCP_NAME] ?? null;
+  const runtimeCloudConfig = readRenworkCloudMcpEntry(runtimeMcpMap(runtime))?.config ?? null;
   const runtimeCloudRegistration = runtimeCloudItem && runtimeCloudConfig ? registrationForItem(runtimeCloudItem) : null;
   const staticallyDeniedCloudAgentToolIds = new Set(inventory.toolPolicy.deniedToolIds);
   const effectiveToolPolicy = assessEffectiveToolPolicy(effectiveEngine);
@@ -1693,7 +1698,7 @@ export async function runAgentContextDiagnostics(input: {
           ? "opencode-engine"
           : "member",
       action: cloudToolPolicyStatus === "denied"
-        ? "Allow the denied openwork-cloud capability tool IDs in top-level or RenWork agent permission policy, then rerun diagnostics."
+        ? "Allow the denied renwork-cloud capability tool IDs in top-level or RenWork agent permission policy, then rerun diagnostics."
         : cloudToolPolicyStatus === "unavailable"
           ? "Check the selected workspace engine health and rerun diagnostics."
           : "No policy change is required; confirm catalog and registration evidence because this policy check alone does not prove live tool presence.",

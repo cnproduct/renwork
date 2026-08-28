@@ -505,7 +505,7 @@ export default {
                 const response = await fetch('http://127.0.0.1:' + port + '/workspace/' + workspaceId + '/mcp', { headers });
                 if (!response.ok) return { ok: false, status: response.status };
                 const payload = await response.json();
-                const entry = (payload?.items ?? []).find((item) => item.name === 'openwork-cloud');
+                const entry = (payload?.items ?? []).find((item) => item.name === 'renwork-cloud');
                 return { ok: Boolean(entry?.config?.url?.includes('/mcp/agent') && payload?.engineSync?.status === 'ok') };
               })()`, { awaitPromise: true });
               if (runtime?.ok) break;

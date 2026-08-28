@@ -259,52 +259,52 @@ describe("cloud MCP health foundation", () => {
 
   test("diagnoses project and global OpenCode tool denies for exact Cloud IDs", () => {
     const denies = diagnoseMcpToolDeniesFromConfigs({
-      name: "openwork-cloud",
+      name: "renwork-cloud",
       toolIds: [...OPENWORK_CLOUD_EXPECTED_TOOLS],
       projectConfig: {
         tools: {
-          "openwork-cloud_search_capabilities": false,
+          "renwork-cloud_search_capabilities": false,
         },
       },
       globalConfig: {
         permission: [
-          { permission: "tool", pattern: "openwork-cloud_execute_capability", action: "deny" },
+          { permission: "tool", pattern: "renwork-cloud_execute_capability", action: "deny" },
         ],
       },
     });
 
     expect(denies.map((deny) => deny.source).sort()).toEqual(["config.global", "config.project"]);
     expect(denies.map((deny) => deny.matched).sort()).toEqual([
-      "openwork-cloud_execute_capability",
-      "openwork-cloud_search_capabilities",
+      "renwork-cloud_execute_capability",
+      "renwork-cloud_search_capabilities",
     ]);
   });
 
   test("project tool allows override global denies for matching Cloud tool IDs", () => {
     const denies = diagnoseMcpToolDeniesFromConfigs({
-      name: "openwork-cloud",
+      name: "renwork-cloud",
       toolIds: [...OPENWORK_CLOUD_EXPECTED_TOOLS],
       projectConfig: {
         tools: {
-          "openwork-cloud_search_capabilities": true,
+          "renwork-cloud_search_capabilities": true,
         },
       },
       globalConfig: {
-        tools: { deny: ["openwork-cloud_*"] },
+        tools: { deny: ["renwork-cloud_*"] },
       },
     });
 
     expect(denies).toHaveLength(1);
     expect(denies[0]).toMatchObject({
       source: "config.global",
-      pattern: "openwork-cloud_*",
-      matched: "openwork-cloud_execute_capability",
+      pattern: "renwork-cloud_*",
+      matched: "renwork-cloud_execute_capability",
     });
   });
 
   test("plugin canary denies are not reported as Cloud tool denies", () => {
     const denies = diagnoseMcpToolDeniesFromConfigs({
-      name: "openwork-cloud",
+      name: "renwork-cloud",
       toolIds: [...OPENWORK_CLOUD_EXPECTED_TOOLS],
       projectConfig: {
         tools: {

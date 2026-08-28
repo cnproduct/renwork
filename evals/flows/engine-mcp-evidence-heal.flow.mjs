@@ -165,7 +165,7 @@ function engineSyncFailed(mcpBody) {
   const failures = own(sync, "failures");
   return own(sync, "status") === "failed"
     && Array.isArray(failures)
-    && failures.some((failure) => own(failure, "name") === "openwork-cloud");
+    && failures.some((failure) => own(failure, "name") === "renwork-cloud");
 }
 
 function initialReconcileFailed(reconcile) {
@@ -179,7 +179,7 @@ function initialReconcileFailed(reconcile) {
 function openworkCloudConnectedStatus(diagnostics) {
   const statuses = own(diagnostics, "openworkCloudSyncStatuses");
   if (!Array.isArray(statuses)) return null;
-  return statuses.find((status) => own(status, "name") === "openwork-cloud" && own(status, "source") === "config.remote" && own(status, "syncStatus") === "connected") ?? null;
+  return statuses.find((status) => own(status, "name") === "renwork-cloud" && own(status, "source") === "config.remote" && own(status, "syncStatus") === "connected") ?? null;
 }
 
 export default {
@@ -213,7 +213,7 @@ export default {
               firstFailure: own(seedReconcile, "firstFailure"),
               delivery: own(seedReconcile, "delivery"),
             });
-            witness(ctx, engineSyncFailed(seedMcp), "The immediate MCP inventory recorded engineSync failed for openwork-cloud", own(seedMcp, "engineSync"));
+            witness(ctx, engineSyncFailed(seedMcp), "The immediate MCP inventory recorded engineSync failed for renwork-cloud", own(seedMcp, "engineSync"));
           },
         });
       },
@@ -261,7 +261,7 @@ export default {
               witness(ctx, own(details, "failedCount") === 0, "engine-mcp-sync details.failedCount is 0", details);
             }
             witness(ctx, own(details, "engineReachableNow") === true, "engine-mcp-sync details.engineReachableNow is true", details);
-            witness(ctx, Boolean(connectedStatus), "openworkCloudSyncStatuses includes config.remote openwork-cloud with syncStatus connected", own(diagnostics, "openworkCloudSyncStatuses"));
+            witness(ctx, Boolean(connectedStatus), "openworkCloudSyncStatuses includes config.remote renwork-cloud with syncStatus connected", own(diagnostics, "openworkCloudSyncStatuses"));
             witness(ctx, own(diagnostics, "firstFailedCheck") == null, "firstFailedCheck is null or absent", own(diagnostics, "firstFailedCheck"));
             witness(ctx, own(evidence(), "contradictionReproduced") === false, "The historical healthy-system contradiction is not reproduced", own(evidence(), "contradictionReproduced"));
           },

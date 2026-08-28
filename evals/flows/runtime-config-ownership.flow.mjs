@@ -367,6 +367,7 @@ function assertSweptPersonalConfig(ctx, content) {
   for (const removed of ["openwork-cloud", '"default_agent"', "openwork-extensions-preview"]) {
     ctx.assert(!content.includes(removed), `Swept personal config still contains ${removed}.`);
   }
+  ctx.assert(content.includes("renwork-cloud"), "Swept personal config did not migrate the legacy Cloud MCP entry to renwork-cloud.");
   ctx.assert(content.includes("my-notion"), "Swept personal config lost the user-owned my-notion MCP entry.");
   ctx.assert(content.includes("./plugins/my-plugin.js"), "Swept personal config lost the user-owned plugin entry.");
 }

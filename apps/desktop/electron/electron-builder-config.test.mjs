@@ -62,13 +62,13 @@ describe("Electron distribution configs", () => {
     const config = await readConfig("electron-builder.cloud.yml");
     assert.equal(config.extends, "./electron-builder.base.yml");
     assert.equal(config.appId, "com.differentai.openwork");
-    assert.equal(config.productName, "OpenWork Cloud");
+    assert.equal(config.productName, "RenWork Cloud");
     assert.equal(config.extraMetadata.openworkDistribution, "cloud");
     assert.equal(config.protocols[0].schemes[0], "openwork");
     assert.equal(config.publish[0].channel, "cloud");
     assert.equal(
       config.artifactName,
-      "openwork-cloud-${os}-${arch}-${version}.${ext}",
+      "renwork-cloud-${os}-${arch}-${version}.${ext}",
     );
   });
 });

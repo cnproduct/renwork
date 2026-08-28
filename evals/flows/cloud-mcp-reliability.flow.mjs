@@ -14,8 +14,8 @@ const CONNECTION_BASE_NAME = "Cloud Reliability Check";
 const CONNECTION_NAME = `${CONNECTION_BASE_NAME} ${RUN_TAG}`;
 const FIXTURE_TOOL_NAME = "record_reliability_check";
 const RESULT_MARKER = `cloud-reliability-result-${RUN_TAG}`;
-const WORKSPACE_PATH = join(tmpdir(), `openwork-cloud-mcp-reliability-${RUN_TAG}`);
-const CLOUD_MCP_NAME = "openwork-cloud";
+const WORKSPACE_PATH = join(tmpdir(), `renwork-cloud-mcp-reliability-${RUN_TAG}`);
+const CLOUD_MCP_NAME = "renwork-cloud";
 const AUTOMATIC_RECONCILE_TRIGGERS = [
   "desktop-settings-background",
   "desktop-background",
@@ -28,8 +28,8 @@ const SETTINGS_SYNC_MARKER_WINDOW_MS = 4_000;
 const SETTINGS_SYNC_STABLE_HEALTH_GAP_MS = 1_800;
 const MODEL_SEED_ACTION_ID = "eval.model_not_available.seed";
 const EXPECTED_TOOL_IDS = [
-  "openwork-cloud_search_capabilities",
-  "openwork-cloud_execute_capability",
+  "renwork-cloud_search_capabilities",
+  "renwork-cloud_execute_capability",
 ];
 const EXPECTED_AGENT_TOOLS = ["execute_capability", "search_capabilities"];
 const PLUGIN_CANARY = "openwork_docs_search";
@@ -641,7 +641,7 @@ async function initialStrictReconcile(ctx) {
     trigger: "fraimz-initial-strict-reconcile",
     ...(state.model ? { provider: state.model.provider, model: state.model.model } : {}),
   };
-  const health = await serverFetchJson(ctx, `/workspace/${encodeURIComponent(state.workspaceId)}/mcp/openwork-cloud/reconcile`, {
+  const health = await serverFetchJson(ctx, `/workspace/${encodeURIComponent(state.workspaceId)}/mcp/renwork-cloud/reconcile`, {
     method: "POST",
     body: payload,
   });
@@ -674,7 +674,7 @@ async function deleteCloudRuntimeConfig(ctx) {
     health.firstFailure?.stage === "desired_config" &&
     health.firstFailure?.code === "cloud_mcp_missing"
   ), "desired_config cloud_mcp_missing after deleting runtime config");
-  witness(ctx, true, "Deleting only this workspace's openwork-cloud runtime config makes direct health unusable with desired_config/cloud_mcp_missing.", {
+  witness(ctx, true, "Deleting only this workspace's renwork-cloud runtime config makes direct health unusable with desired_config/cloud_mcp_missing.", {
     workspaceId: state.degradedHealth.workspace.id,
     firstFailure: state.degradedHealth.firstFailure,
   });
@@ -687,7 +687,7 @@ async function getHealth(ctx) {
     query.set("model", state.model.model);
   }
   const suffix = query.size ? `?${query.toString()}` : "";
-  return serverFetchJson(ctx, `/workspace/${encodeURIComponent(state.workspaceId)}/mcp/openwork-cloud/health${suffix}`);
+  return serverFetchJson(ctx, `/workspace/${encodeURIComponent(state.workspaceId)}/mcp/renwork-cloud/health${suffix}`);
 }
 
 async function waitForHealth(ctx, predicate, label, timeoutMs = 90_000) {
@@ -996,7 +996,7 @@ function desktopProbeHarnessSource() {
         const trigger = typeof body?.trigger === "string" ? body.trigger : "";
         const shouldBlock = guard.active === true &&
           method === "POST" &&
-          url.includes("/mcp/openwork-cloud/reconcile") &&
+          url.includes("/mcp/renwork-cloud/reconcile") &&
           workspaceMatches &&
           triggers.includes(trigger);
         if (shouldBlock) {
@@ -1444,8 +1444,8 @@ export default {
           },
           assert: async () => {
             const summary = await networkSummary(ctx);
-            const healthGets = summary.requests.filter((request) => request.method === "GET" && request.url.includes(`/workspace/${state.workspaceId}/mcp/openwork-cloud/health`));
-            const reconcilePosts = summary.requests.filter((request) => request.method === "POST" && request.url.includes("/mcp/openwork-cloud/reconcile"));
+            const healthGets = summary.requests.filter((request) => request.method === "GET" && request.url.includes(`/workspace/${state.workspaceId}/mcp/renwork-cloud/health`));
+            const reconcilePosts = summary.requests.filter((request) => request.method === "POST" && request.url.includes("/mcp/renwork-cloud/reconcile"));
             const tokenMints = classifyTokenMintPosts(summary);
             const userTokenMints = tokenMints.operations.filter((operation) => operation.automaticBackground !== true);
             const backgroundTokenMints = tokenMints.operations.filter((operation) => operation.automaticBackground === true);
@@ -1489,7 +1489,7 @@ export default {
           },
           assert: async () => {
             const summary = await networkSummary(ctx);
-            const posts = summary.requests.filter((request) => request.method === "POST" && request.url.includes(`/workspace/${state.workspaceId}/mcp/openwork-cloud/reconcile`));
+            const posts = summary.requests.filter((request) => request.method === "POST" && request.url.includes(`/workspace/${state.workspaceId}/mcp/renwork-cloud/reconcile`));
             witness(ctx, posts.length === 1 && posts[0].body?.workspaceId === state.workspaceId && posts[0].body?.name === CLOUD_MCP_NAME && posts[0].body?.hasAuthorization === true, "Repair posted one sanitized reconcile request to the exact workspace route and body.", posts.map((post) => post.body));
             const tokenMints = classifyTokenMintPosts(summary);
             witness(ctx, true, "Renderer/desktop Den MCP token mint counts are diagnostic only; remint proof uses server safe fingerprint metadata.", {
@@ -1537,7 +1537,7 @@ export default {
               workspaceId: health.workspace.id,
               firstFailure: health.firstFailure,
             });
-            witness(ctx, health.engine.status === "connected", "OpenCode mcp.status reports openwork-cloud connected for the workspace.", { engine: health.engine });
+            witness(ctx, health.engine.status === "connected", "OpenCode mcp.status reports renwork-cloud connected for the workspace.", { engine: health.engine });
             const directNames = [...(health.tools.direct?.present ?? [])].sort();
             witness(ctx, directNames.length === 2 && directNames.join(",") === EXPECTED_AGENT_TOOLS.join(","), "Direct Cloud endpoint tools/list exposes exactly the two unprefixed agent tools.", {
               direct: health.tools.direct,
@@ -1564,7 +1564,7 @@ export default {
             witness(ctx, health.pluginCanaries.present.includes(PLUGIN_CANARY) && health.pluginCanaries.missing.length === 0, "Plugin canary tools are present and not missing.", health.pluginCanaries);
             const listed = await serverFetchJson(ctx, `/workspace/${encodeURIComponent(state.workspaceId)}/mcp`);
             const cloud = listed.items.find((item) => item.name === CLOUD_MCP_NAME);
-            witness(ctx, Boolean(cloud) && listed.engineSync?.status === "ok", "Workspace MCP status includes openwork-cloud and engine sync is ok.", {
+            witness(ctx, Boolean(cloud) && listed.engineSync?.status === "ok", "Workspace MCP status includes renwork-cloud and engine sync is ok.", {
               names: listed.items.map((item) => item.name),
               engineSync: listed.engineSync,
             });
@@ -1673,9 +1673,9 @@ export default {
             await ctx.waitForText(RESULT_MARKER, { timeoutMs: 60_000 });
             const transcript = await ctx.control("session.read_transcript", { count: 30 });
             const transcriptText = (transcript.messages ?? []).map((message) => message.text).join("\n---\n");
-            const searchIndex = transcriptText.indexOf("[tool:openwork-cloud_search_capabilities]");
-            const executeIndex = transcriptText.indexOf("[tool:openwork-cloud_execute_capability]");
-            witness(ctx, searchIndex >= 0 && executeIndex > searchIndex, "Transcript tool order is openwork-cloud_search_capabilities before openwork-cloud_execute_capability.", { searchIndex, executeIndex });
+            const searchIndex = transcriptText.indexOf("[tool:renwork-cloud_search_capabilities]");
+            const executeIndex = transcriptText.indexOf("[tool:renwork-cloud_execute_capability]");
+            witness(ctx, searchIndex >= 0 && executeIndex > searchIndex, "Transcript tool order is renwork-cloud_search_capabilities before renwork-cloud_execute_capability.", { searchIndex, executeIndex });
             witness(ctx, !transcriptText.includes(PLUGIN_CANARY), "Transcript did not substitute OpenWork documentation search for the connected-service action.", { containsDocsSearch: transcriptText.includes(PLUGIN_CANARY) });
             const freshExecutions = state.fixtureExecutions.filter((entry) => !state.chatStartedAt || entry.at >= state.chatStartedAt);
             witness(ctx, freshExecutions.length >= 1, "The external Cloud Reliability Check fixture observed a real tools/call execution from the task.", freshExecutions.map((entry) => ({ at: entry.at, toolName: entry.toolName })));

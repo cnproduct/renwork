@@ -73,7 +73,7 @@ afterEach(async () => {
 });
 
 describe("legacy OpenCode config sweep", () => {
-  test("removes only OpenWork-managed legacy keys and preserves user content", async () => {
+  test("migrates the legacy Cloud MCP name while removing only retired managed keys", async () => {
     const root = await createRoot();
     const config = configFor(root);
     const original = `{
@@ -107,6 +107,7 @@ describe("legacy OpenCode config sweep", () => {
     expect(after).toContain("// user MCP comment");
     expect(mcp["my-notion"]).toEqual({ type: "remote", url: "https://notion.example/mcp" });
     expect(mcp["openwork-cloud"]).toBeUndefined();
+    expect(mcp["renwork-cloud"]).toEqual({ type: "remote", url: "https://cloud.example/mcp" });
     expect(agent["user-agent"]).toEqual({ mode: "subagent" });
     expect(agent.openwork).toBeUndefined();
     expect(parsed.default_agent).toBeUndefined();
@@ -122,6 +123,24 @@ describe("legacy OpenCode config sweep", () => {
 
     const storedState = await readLegacyConfigSweepState(config);
     expect(storedState?.files.length).toBe(1);
+  });
+
+  test("keeps an existing canonical Cloud MCP entry when both names are present", async () => {
+    const root = await createRoot();
+    const config = configFor(root);
+    const path = await writeLegacyFile(root, "opencode.jsonc", `{
+  "mcp": {
+    "renwork-cloud": { "type": "remote", "url": "https://canonical.example/mcp" },
+    "openwork-cloud": { "type": "remote", "url": "https://legacy.example/mcp" }
+  }
+}\n`);
+
+    await sweepLegacyOpenCodeConfig(config, { homeDir: root, now: NOW });
+    const parsed = parseRecord(await readFile(path, "utf8"));
+    const mcp = isRecord(parsed.mcp) ? parsed.mcp : {};
+
+    expect(mcp["renwork-cloud"]).toEqual({ type: "remote", url: "https://canonical.example/mcp" });
+    expect(mcp["openwork-cloud"]).toBeUndefined();
   });
 
   test("skips after a successful first run", async () => {

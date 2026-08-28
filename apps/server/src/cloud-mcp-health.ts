@@ -9,12 +9,19 @@ import { readRuntimeOpencodeConfig, runtimeMcpMap, writeRuntimeOpencodeConfig } 
 import { externalFetch } from "./server-fetch.js";
 import type { ServerConfig, WorkspaceInfo } from "./types.js";
 import { validateMcpConfig } from "./validators.js";
+import {
+  LEGACY_OPENWORK_CLOUD_MCP_NAME,
+  RENWORK_CLOUD_EXPECTED_TOOLS,
+  RENWORK_CLOUD_MCP_NAME,
+  readRenworkCloudMcpEntry,
+  writeRenworkCloudMcpEntry,
+} from "./renwork-cloud-identity.js";
 
-export const OPENWORK_CLOUD_MCP_NAME = "openwork-cloud";
-export const OPENWORK_CLOUD_EXPECTED_TOOLS = [
-  "openwork-cloud_search_capabilities",
-  "openwork-cloud_execute_capability",
-] satisfies string[];
+export { LEGACY_OPENWORK_CLOUD_MCP_NAME, RENWORK_CLOUD_EXPECTED_TOOLS, RENWORK_CLOUD_MCP_NAME };
+/** @deprecated One-release source compatibility. New code must use RENWORK_CLOUD_MCP_NAME. */
+export const OPENWORK_CLOUD_MCP_NAME = RENWORK_CLOUD_MCP_NAME;
+/** @deprecated One-release source compatibility. New code must use RENWORK_CLOUD_EXPECTED_TOOLS. */
+export const OPENWORK_CLOUD_EXPECTED_TOOLS = RENWORK_CLOUD_EXPECTED_TOOLS;
 const OPENWORK_CLOUD_DIRECT_TOOL_NAMES = [
   "search_capabilities",
   "execute_capability",
@@ -322,6 +329,8 @@ type CloudMcpDeliveryEntry = {
 
 type CloudMcpDesiredState = {
   present: boolean;
+  sourceName: typeof RENWORK_CLOUD_MCP_NAME | typeof LEGACY_OPENWORK_CLOUD_MCP_NAME;
+  legacyRead: boolean;
   revision: string | null;
   config: Record<string, unknown> | null;
   redactedConfig: RedactedCloudMcpConfig | null;
@@ -354,7 +363,7 @@ export type CloudMcpEngineServerStatus = {
 /**
  * The engine's own view of every MCP server it tracks, read over the OpenCode
  * SDK. Support triage needs the siblings: "everything failed" points at the
- * engine host's network path, "only openwork-cloud failed" points at the Cloud
+ * engine host's network path, "only renwork-cloud failed" points at the Cloud
  * endpoint or token, and an absent entry means the dynamic registration was
  * lost (e.g. after an engine state rebuild) and must be re-applied.
  */
@@ -701,7 +710,7 @@ function strictCloudMcpDesiredConfigProblem(config: Record<string, unknown>, met
       stage: "desired_config",
       retryable: false,
       recommendedAction: "Reconnect RenWork Cloud",
-      message: "openwork-cloud must be configured as a remote MCP endpoint.",
+      message: "renwork-cloud must be configured as a remote MCP endpoint.",
       details: { type: typeof config.type === "string" ? config.type : null },
     };
   }
@@ -712,7 +721,7 @@ function strictCloudMcpDesiredConfigProblem(config: Record<string, unknown>, met
       stage: "desired_config",
       retryable: false,
       recommendedAction: "Enable Agent access in Settings → Connect",
-      message: "openwork-cloud desired config is disabled.",
+      message: "renwork-cloud desired config is disabled.",
       aliases: ["cloud_disabled"],
       details: { enabled: config.enabled ?? null },
     };
@@ -726,7 +735,7 @@ function strictCloudMcpDesiredConfigProblem(config: Record<string, unknown>, met
       stage: "desired_config",
       retryable: false,
       recommendedAction: "Reconnect RenWork Cloud",
-      message: "openwork-cloud URL must be a valid http(s) endpoint at /mcp/agent.",
+      message: "renwork-cloud URL must be a valid http(s) endpoint at /mcp/agent.",
       details: { url: typeof config.url === "string" ? sanitizeDiagnosticString(config.url) : null },
     };
   }
@@ -738,7 +747,7 @@ function strictCloudMcpDesiredConfigProblem(config: Record<string, unknown>, met
       stage: "desired_config",
       retryable: false,
       recommendedAction: "Reconnect RenWork Cloud",
-      message: "openwork-cloud desired config is missing an Authorization header.",
+      message: "renwork-cloud desired config is missing an Authorization header.",
       aliases: ["openwork_cloud_auth_required"],
     };
   }
@@ -749,7 +758,7 @@ function strictCloudMcpDesiredConfigProblem(config: Record<string, unknown>, met
       stage: "desired_config",
       retryable: false,
       recommendedAction: "Reconnect RenWork Cloud",
-      message: "openwork-cloud desired config must use the minted bearer token, not OAuth.",
+      message: "renwork-cloud desired config must use the minted bearer token, not OAuth.",
       aliases: ["openwork_cloud_auth_invalid"],
       details: { oauth: config.oauth === undefined ? "missing" : "configured" },
     };
@@ -763,7 +772,7 @@ function strictCloudMcpDesiredConfigProblem(config: Record<string, unknown>, met
       stage: "desired_config",
       retryable: false,
       recommendedAction: "Choose the matching organization, then Repair and test",
-      message: "openwork-cloud token organization does not match the active organization.",
+      message: "renwork-cloud token organization does not match the active organization.",
       details: { tokenOrganizationId, activeOrganizationId },
     };
   }
@@ -776,7 +785,7 @@ function strictCloudMcpDesiredConfigProblem(config: Record<string, unknown>, met
       stage: "desired_config",
       retryable: false,
       recommendedAction: "Reconnect RenWork Cloud",
-      message: "openwork-cloud desired config is not a valid remote MCP config.",
+      message: "renwork-cloud desired config is not a valid remote MCP config.",
       details: { error: error instanceof Error ? error.message : String(error) },
     };
   }
@@ -845,12 +854,20 @@ async function readDesiredState(input: {
   connectCatalogEnabled?: boolean;
 }): Promise<CloudMcpDesiredState> {
   const runtimeConfig = await readRuntimeOpencodeConfig(input.config, input.workspace.id);
-  const entry = runtimeMcpMap(runtimeConfig)[OPENWORK_CLOUD_MCP_NAME];
+  const entry = readRenworkCloudMcpEntry(runtimeMcpMap(runtimeConfig));
   if (!entry) {
     const metadata = defaultDesiredMetadata(null, input.connectCatalogEnabled ?? false);
-    return { present: false, revision: null, config: null, redactedConfig: null, metadata };
+    return {
+      present: false,
+      sourceName: RENWORK_CLOUD_MCP_NAME,
+      legacyRead: false,
+      revision: null,
+      config: null,
+      redactedConfig: null,
+      metadata,
+    };
   }
-  const config = canonicalizeCloudMcpConfig(entry);
+  const config = canonicalizeCloudMcpConfig(entry.config);
   const storedMetadata = cloudMcpDeliveryState.latestMetadata(input.workspace, input.directory);
   const metadata = storedMetadata ?? defaultDesiredMetadata(config, input.connectCatalogEnabled ?? true);
   const validationProblem = strictCloudMcpDesiredConfigProblem(config, metadata) ?? undefined;
@@ -858,6 +875,8 @@ async function readDesiredState(input: {
   const revisionMetadata = cloudMcpDeliveryState.metadata(input.workspace, input.directory, revision) ?? metadata;
   return {
     present: true,
+    sourceName: entry.name,
+    legacyRead: entry.legacy,
     revision,
     config,
     redactedConfig: redactedConfig(config),
@@ -978,7 +997,7 @@ function opencodeRequestFailure(stage: CloudMcpFailureStage, path: string, respo
     stage,
     retryable: response.status >= 500,
     recommendedAction: response.status >= 500 ? "Retry after OpenCode is healthy" : "Update RenWork",
-    message: "OpenCode request failed while checking openwork-cloud MCP readiness.",
+    message: "OpenCode request failed while checking renwork-cloud MCP readiness.",
     aliases: stage === "provider_projection" ? ["provider_projection_unavailable"] : undefined,
     details: { path, status: response.status, error },
   });
@@ -1516,8 +1535,8 @@ function statusFailure(status: McpStatus | undefined): CloudMcpFailure {
       code: "cloud_mcp_missing",
       stage: "engine_delivery",
       retryable: true,
-      recommendedAction: "Run reconcile to register openwork-cloud with OpenCode",
-      message: "OpenCode does not report an openwork-cloud MCP status.",
+      recommendedAction: "Run reconcile to register renwork-cloud with OpenCode",
+      message: "OpenCode does not report a renwork-cloud MCP status.",
       aliases: ["cloud_status_missing"],
     });
   }
@@ -1526,8 +1545,8 @@ function statusFailure(status: McpStatus | undefined): CloudMcpFailure {
       code: "cloud_mcp_disabled",
       stage: "engine_delivery",
       retryable: false,
-      recommendedAction: "Enable the openwork-cloud MCP entry",
-      message: "openwork-cloud MCP is disabled.",
+      recommendedAction: "Enable the renwork-cloud MCP entry",
+      message: "renwork-cloud MCP is disabled.",
       aliases: ["cloud_disabled"],
     });
   }
@@ -1537,7 +1556,7 @@ function statusFailure(status: McpStatus | undefined): CloudMcpFailure {
       stage: "transport_auth",
       retryable: false,
       recommendedAction: "Reconnect RenWork Cloud",
-      message: "openwork-cloud MCP needs authentication.",
+      message: "renwork-cloud MCP needs authentication.",
       aliases: ["openwork_cloud_auth_required"],
     });
   }
@@ -1547,7 +1566,7 @@ function statusFailure(status: McpStatus | undefined): CloudMcpFailure {
       stage: "engine_delivery",
       retryable: false,
       recommendedAction: "Reconnect RenWork Cloud or update RenWork",
-      message: "openwork-cloud MCP needs OAuth client registration.",
+      message: "renwork-cloud MCP needs OAuth client registration.",
       aliases: ["openwork_cloud_client_registration_required"],
       details: { error: status.error },
     });
@@ -1560,7 +1579,7 @@ function statusFailure(status: McpStatus | undefined): CloudMcpFailure {
     stage: "engine_delivery",
     retryable: true,
     recommendedAction: "Retry reconcile",
-    message: "openwork-cloud MCP is not connected.",
+    message: "renwork-cloud MCP is not connected.",
     aliases: ["cloud_connection_failed"],
   });
 }
@@ -1581,19 +1600,19 @@ function inferFailedStatus(error: string): CloudMcpFailure {
     lower.includes("self signed") ||
     lower.includes("self-signed");
   if (!certTransport && lower.includes("expired")) {
-    return failure({ code: "invalid_mcp_token", stage: "transport_auth", retryable: false, recommendedAction: "Reconnect RenWork Cloud", message: "openwork-cloud token is expired.", aliases: ["openwork_cloud_token_expired"], details: { error } });
+    return failure({ code: "invalid_mcp_token", stage: "transport_auth", retryable: false, recommendedAction: "Reconnect RenWork Cloud", message: "renwork-cloud token is expired.", aliases: ["openwork_cloud_token_expired"], details: { error } });
   }
   if (!certTransport && (lower.includes("invalid_token") || lower.includes("unauthorized") || lower.includes("401") || lower.includes("auth"))) {
-    return failure({ code: "invalid_mcp_token", stage: "transport_auth", retryable: false, recommendedAction: "Reconnect RenWork Cloud", message: "openwork-cloud authentication failed.", aliases: ["openwork_cloud_auth_invalid"], details: { error } });
+    return failure({ code: "invalid_mcp_token", stage: "transport_auth", retryable: false, recommendedAction: "Reconnect RenWork Cloud", message: "renwork-cloud authentication failed.", aliases: ["openwork_cloud_auth_invalid"], details: { error } });
   }
   if (!certTransport && (lower.includes("invalid_grant") || lower.includes("session") || lower.includes("revoked"))) {
-    return failure({ code: "mcp_session_revoked", stage: "transport_auth", retryable: false, recommendedAction: "Reconnect RenWork Cloud", message: "openwork-cloud session was revoked.", details: { error } });
+    return failure({ code: "mcp_session_revoked", stage: "transport_auth", retryable: false, recommendedAction: "Reconnect RenWork Cloud", message: "renwork-cloud session was revoked.", details: { error } });
   }
   if (lower.includes("membership") || lower.includes("member")) {
     return failure({ code: "mcp_membership_revoked", stage: "transport_auth", retryable: false, recommendedAction: "Ask an organization admin to grant access", message: "RenWork Cloud membership is required.", aliases: ["openwork_cloud_membership_required"], details: { error } });
   }
   if (lower.includes("insufficient_scope") || lower.includes("scope")) {
-    return failure({ code: "insufficient_mcp_scope", stage: "transport_auth", retryable: false, recommendedAction: "Reconnect RenWork Cloud with the required scopes", message: "openwork-cloud token is missing required scopes.", aliases: ["openwork_cloud_scope_missing"], details: { error } });
+    return failure({ code: "insufficient_mcp_scope", stage: "transport_auth", retryable: false, recommendedAction: "Reconnect RenWork Cloud with the required scopes", message: "renwork-cloud token is missing required scopes.", aliases: ["openwork_cloud_scope_missing"], details: { error } });
   }
   if (lower.includes("forbidden") || lower.includes("403") || lower.includes("policy")) {
     return failure({ code: "wrong_mcp_resource", stage: "transport_auth", retryable: false, recommendedAction: "Check organization policy and resource access", message: "RenWork Cloud denied access to this resource.", aliases: ["openwork_cloud_resource_forbidden"], details: { error } });
@@ -1602,14 +1621,14 @@ function inferFailedStatus(error: string): CloudMcpFailure {
     return failure({ code: "wrong_mcp_resource", stage: "transport_auth", retryable: false, recommendedAction: "Reconnect RenWork Cloud or choose an accessible organization", message: "RenWork Cloud resource was not found.", aliases: ["openwork_cloud_resource_not_found"], details: { error } });
   }
   if (lower.includes("client registration")) {
-    return failure({ code: "opencode_mcp_sync_failed", stage: "engine_delivery", retryable: false, recommendedAction: "Reconnect RenWork Cloud or update RenWork", message: "openwork-cloud needs client registration.", aliases: ["openwork_cloud_client_registration_required"], details: { error } });
+    return failure({ code: "opencode_mcp_sync_failed", stage: "engine_delivery", retryable: false, recommendedAction: "Reconnect RenWork Cloud or update RenWork", message: "renwork-cloud needs client registration.", aliases: ["openwork_cloud_client_registration_required"], details: { error } });
   }
   return failure({
     code: "opencode_mcp_sync_failed",
     stage: "engine_delivery",
     retryable: true,
     recommendedAction: "Retry reconcile or reconnect RenWork Cloud",
-    message: "openwork-cloud MCP connection failed.",
+    message: "renwork-cloud MCP connection failed.",
     aliases: ["cloud_connection_failed"],
     details: { error },
   });
@@ -1638,10 +1657,23 @@ function engineInspectionFromStatuses(statuses: Record<string, McpStatus>): Clou
     .slice(0, 50);
   return {
     checked: true,
-    cloudPresent: Boolean(statuses[OPENWORK_CLOUD_MCP_NAME]),
+    cloudPresent: Boolean(statuses[RENWORK_CLOUD_MCP_NAME] ?? statuses[LEGACY_OPENWORK_CLOUD_MCP_NAME]),
     serverCount: Object.keys(statuses).length,
     servers,
   };
+}
+
+function cloudStatusFromStatuses(
+  statuses: Record<string, McpStatus>,
+  preferred: typeof RENWORK_CLOUD_MCP_NAME | typeof LEGACY_OPENWORK_CLOUD_MCP_NAME = RENWORK_CLOUD_MCP_NAME,
+): { name: typeof RENWORK_CLOUD_MCP_NAME | typeof LEGACY_OPENWORK_CLOUD_MCP_NAME; status: McpStatus } | null {
+  const preferredStatus = statuses[preferred];
+  if (preferredStatus) return { name: preferred, status: preferredStatus };
+  const fallbackName = preferred === RENWORK_CLOUD_MCP_NAME
+    ? LEGACY_OPENWORK_CLOUD_MCP_NAME
+    : RENWORK_CLOUD_MCP_NAME;
+  const fallbackStatus = statuses[fallbackName];
+  return fallbackStatus ? { name: fallbackName, status: fallbackStatus } : null;
 }
 
 function readVersionFromHealthPayload(payload: unknown): string | null {
@@ -1677,6 +1709,7 @@ async function inspectOpenworkCloud(input: {
   workspace: WorkspaceInfo;
   directory: string | null;
   desiredConfig: Record<string, unknown>;
+  sourceName: typeof RENWORK_CLOUD_MCP_NAME | typeof LEGACY_OPENWORK_CLOUD_MCP_NAME;
   providerModel?: CloudMcpProviderModelContext;
   probe: boolean;
   refreshRegistrationFromLiveStatus?: CloudMcpLiveStatusObserver;
@@ -1706,12 +1739,13 @@ async function inspectOpenworkCloud(input: {
   }
 
   const engineInspection = engineInspectionFromStatuses(statusResult.data ?? {});
-  const cloudStatus = statusResult.data?.[OPENWORK_CLOUD_MCP_NAME];
+  const cloudEntry = cloudStatusFromStatuses(statusResult.data ?? {}, input.sourceName);
+  const cloudStatus = cloudEntry?.status;
   if (cloudStatus) {
     input.refreshRegistrationFromLiveStatus?.(
       input.config,
       input.workspace,
-      OPENWORK_CLOUD_MCP_NAME,
+      input.sourceName,
       input.desiredConfig,
       cloudStatus.status,
       "error" in cloudStatus && typeof cloudStatus.error === "string" ? cloudStatus.error : null,
@@ -1894,8 +1928,8 @@ function firstFailureFromDenies(denies: McpToolDeny[]): CloudMcpFailure | null {
     code: "cloud_tools_denied",
     stage: "prerequisites",
     retryable: false,
-    recommendedAction: "Remove project/global OpenCode tool denies for openwork-cloud tools",
-    message: "OpenCode configuration denies one or more openwork-cloud tools.",
+    recommendedAction: "Remove project/global OpenCode tool denies for renwork-cloud tools",
+    message: "OpenCode configuration denies one or more renwork-cloud tools.",
     details: { denies },
   });
 }
@@ -1971,7 +2005,7 @@ export async function readOpenworkCloudMcpHealth(input: {
   const desired = await readDesiredState({ config: input.config, workspace: input.workspace, directory: input.directory });
   let delivery = cloudMcpDeliveryState.snapshot(input.workspace, input.directory, desired.revision);
   const toolDenies = desired.present
-    ? await diagnoseMcpToolDenies(input.workspace.path, OPENWORK_CLOUD_MCP_NAME, expectedTools())
+    ? await diagnoseMcpToolDenies(input.workspace.path, desired.sourceName, expectedTools())
     : [];
   const failures: CloudMcpFailure[] = [];
 
@@ -1981,7 +2015,7 @@ export async function readOpenworkCloudMcpHealth(input: {
       stage: "desired_config",
       retryable: false,
       recommendedAction: "Connect RenWork Cloud",
-      message: "No openwork-cloud MCP desired config is persisted for this workspace.",
+      message: "No renwork-cloud MCP desired config is persisted for this workspace.",
       aliases: ["cloud_desired_missing"],
     }));
   }
@@ -2028,6 +2062,7 @@ export async function readOpenworkCloudMcpHealth(input: {
       workspace: input.workspace,
       directory: input.directory,
       desiredConfig: desired.config,
+      sourceName: desired.sourceName,
       providerModel: input.providerModel,
       probe: input.probe === true,
       refreshRegistrationFromLiveStatus: input.refreshRegistrationFromLiveStatus,
@@ -2062,7 +2097,7 @@ export async function readOpenworkCloudMcpHealth(input: {
     },
     desired: {
       present: desired.present,
-      name: OPENWORK_CLOUD_MCP_NAME,
+      name: RENWORK_CLOUD_MCP_NAME,
       revision: desired.revision,
       config: desired.redactedConfig,
       token: desired.metadata.token,
@@ -2112,10 +2147,7 @@ export async function readOpenworkCloudMcpHealth(input: {
 async function persistDesiredConfig(config: ServerConfig, workspaceId: string, desiredConfig: Record<string, unknown>): Promise<void> {
   await writeRuntimeOpencodeConfig(config, workspaceId, (current) => ({
     ...current,
-    mcp: {
-      ...runtimeMcpMap(current),
-      [OPENWORK_CLOUD_MCP_NAME]: desiredConfig,
-    },
+    mcp: writeRenworkCloudMcpEntry(runtimeMcpMap(current), desiredConfig),
   }));
   // Connect is server/account-scoped: keep a host-level copy for catalog + skill injection.
   // Dynamic import avoids a connect-state <-> cloud-mcp-health cycle.
@@ -2129,7 +2161,7 @@ function registrationFailure(failures: CloudMcpRuntimeRegistrationFailure[]): Cl
     stage: "engine_delivery",
     retryable: failures.some((item) => item.status === undefined || item.status >= 500),
     recommendedAction: "Retry reconcile after OpenCode is reachable",
-    message: "Failed to dynamically register openwork-cloud with OpenCode.",
+    message: "Failed to dynamically register renwork-cloud with OpenCode.",
     aliases: ["cloud_registration_failed"],
     details: { failures },
   });
@@ -2156,12 +2188,13 @@ async function pollConnected(input: {
       lastFailure = statusResult.failure;
       continue;
     }
-    const cloudStatus = statusResult.data?.[OPENWORK_CLOUD_MCP_NAME];
+    const cloudEntry = cloudStatusFromStatuses(statusResult.data ?? {});
+    const cloudStatus = cloudEntry?.status;
     if (cloudStatus) {
       input.refreshRegistrationFromLiveStatus?.(
         input.config,
         input.workspace,
-        OPENWORK_CLOUD_MCP_NAME,
+        RENWORK_CLOUD_MCP_NAME,
         input.desiredConfig,
         cloudStatus.status,
       );
@@ -2243,14 +2276,19 @@ export async function reconcileOpenworkCloudMcp(input: {
   }
 
   cloudMcpDeliveryState.markRegistering(input.workspace, input.directory, desiredRevision);
-  const registration = await input.registerRuntimeMcp(input.config, input.workspace, [OPENWORK_CLOUD_MCP_NAME], { throwOnFailure: false });
+  const opencode = input.createWorkspaceOpencodeClient(input.config, input.workspace);
+  await opencode.mcp.disconnect({
+    name: LEGACY_OPENWORK_CLOUD_MCP_NAME,
+    ...locationParams(input.directory),
+  }).catch(() => undefined);
+
+  const registration = await input.registerRuntimeMcp(input.config, input.workspace, [RENWORK_CLOUD_MCP_NAME], { throwOnFailure: false });
   if (registration.failures.length > 0) {
     const registrationError = registrationFailure(registration.failures);
     cloudMcpDeliveryState.markFailed(input.workspace, input.directory, desiredRevision, registrationError);
     return healthWithFailure(await readHealth(), registrationError);
   }
 
-  const opencode = input.createWorkspaceOpencodeClient(input.config, input.workspace);
   const connectedFailure = await pollConnected({
     opencode,
     config: input.config,
@@ -2307,14 +2345,14 @@ export async function reconcilePersistedOpenworkCloudMcp(input: {
   trigger?: string;
 }): Promise<CloudMcpHealth> {
   const runtimeConfig = await readRuntimeOpencodeConfig(input.config, input.workspace.id);
-  const desiredConfig = runtimeMcpMap(runtimeConfig)[OPENWORK_CLOUD_MCP_NAME];
-  if (!desiredConfig) {
+  const desiredEntry = readRenworkCloudMcpEntry(runtimeMcpMap(runtimeConfig));
+  if (!desiredEntry) {
     return readOpenworkCloudMcpHealth(input);
   }
   return reconcileOpenworkCloudMcp({
     ...input,
     body: {
-      config: desiredConfig,
+      config: desiredEntry.config,
       ...(input.trigger ? { trigger: input.trigger } : {}),
     },
   });
@@ -2377,8 +2415,8 @@ export async function refreshOpenworkCloudMcpEngine(input: {
   });
 
   const runtimeConfig = await readRuntimeOpencodeConfig(input.config, input.workspace.id);
-  const desiredConfig = runtimeMcpMap(runtimeConfig)[OPENWORK_CLOUD_MCP_NAME];
-  if (!desiredConfig) {
+  const desiredEntry = readRenworkCloudMcpEntry(runtimeMcpMap(runtimeConfig));
+  if (!desiredEntry) {
     return finish(false, await readOpenworkCloudMcpHealth({ ...input, probe: true }), "desired_missing");
   }
 
@@ -2386,7 +2424,7 @@ export async function refreshOpenworkCloudMcpEngine(input: {
   try {
     const opencode = input.createWorkspaceOpencodeClient(input.config, input.workspace);
     const result = await withEngineProbeTimeout(() => opencode.mcp.disconnect({
-      name: OPENWORK_CLOUD_MCP_NAME,
+      name: desiredEntry.name,
       ...locationParams(input.directory),
     }));
     steps.push({
@@ -2429,3 +2467,11 @@ export async function refreshOpenworkCloudMcpEngine(input: {
   });
   return finish(true, health);
 }
+
+// Canonical RenWork API. The OpenWork-named exports above remain for one
+// release so older server modules and saved automation bundles still load.
+export const readRenworkCloudMcpHealth = readOpenworkCloudMcpHealth;
+export const reconcileRenworkCloudMcp = reconcileOpenworkCloudMcp;
+export const reconcilePersistedRenworkCloudMcp = reconcilePersistedOpenworkCloudMcp;
+export const refreshRenworkCloudMcpEngine = refreshOpenworkCloudMcpEngine;
+export const markRenworkCloudMcpStale = markOpenworkCloudMcpStale;

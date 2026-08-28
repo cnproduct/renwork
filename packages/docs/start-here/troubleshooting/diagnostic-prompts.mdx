@@ -19,7 +19,7 @@ If the symptom is DNS, TCP 443, TLS chain, proxy, or Den outbound reachability, 
 
 **What is usually wrong**
 
-Your agent's `openwork-cloud` MCP entry is a snapshot: it stores a server URL and token from the moment it was connected. If it was created against a local development server or an old deployment — including via a leftover `desktop-bootstrap.json` file that overrides server URLs beneath the Settings UI — the agent keeps querying that old world forever, while the dashboard shows the current one.
+Your agent's `renwork-cloud` MCP entry is a snapshot: it stores a server URL and token from the moment it was connected. If it was created against a local development server or an old deployment — including via a leftover `desktop-bootstrap.json` file that overrides server URLs beneath the Settings UI — the agent keeps querying that old world forever, while the dashboard shows the current one.
 
 **Paste this to your agent**
 
@@ -30,7 +30,7 @@ My expected cloud web URL: https://app.openworklabs.com (replace with your self-
 
 ## Phase 1 — Evidence: what am I actually connected to?
 
-1. Print the `openwork-cloud` MCP entry's `url` (redact headers) from every config you can find:
+1. Print the `renwork-cloud` MCP entry's `url` (redact headers) from every config you can find:
    - `~/.config/opencode/opencode.json`
    - any `.opencode/opencode.json` or `opencode.jsonc` in the current project
    - your own runtime config if you have an export tool
@@ -55,7 +55,7 @@ My expected cloud web URL: https://app.openworklabs.com (replace with your self-
 ## Phase 4 — Diagnose
 
 State which world you are in:
-- openwork-cloud url is localhost/127.0.0.1, OR search returned only gmail-drafts, OR execute returned unknown_capability → you are bound to a STALE server, not the expected cloud.
+- renwork-cloud url is localhost/127.0.0.1, OR search returned only gmail-drafts, OR execute returned unknown_capability → you are bound to a STALE server, not the expected cloud.
 - a desktop-bootstrap.json contains localhost URLs → that file is the root cause (it is the desktop app's Cloud URL source of truth).
 
 ## Phase 5 — Fix (confirm with me before each destructive step)
@@ -78,7 +78,7 @@ State which world you are in:
 
 **Expected passing state**
 
-- The `openwork-cloud` entry's `url` points at your real server and ends in `/mcp/agent` (either a direct API host or the web app's `/api/den` proxy).
+- The `renwork-cloud` entry's `url` points at your real server and ends in `/mcp/agent` (either a direct API host or the web app's `/api/den` proxy).
 - `search_capabilities` reflects your server's current catalog.
 - `execute_capability` on a known capability returns data or an actionable connection message — never `unknown_capability`.
 
@@ -88,13 +88,13 @@ If the agent completes all phases and verification still fails, [open an issue](
 
 **Symptoms**
 
-- Settings shows an `openwork-cloud` MCP entry, but the agent calls `openwork_docs_search` for requests involving connected services.
+- Settings shows a `renwork-cloud` MCP entry, but the agent calls `openwork_docs_search` for requests involving connected services.
 - The agent claims that `search_capabilities` and `execute_capability` are only "conceptual capabilities" rather than callable tools.
-- A connected service such as ServiceNow appears ready in RenWork Cloud, but the task does not expose `openwork-cloud_search_capabilities` or `openwork-cloud_execute_capability`.
+- A connected service such as ServiceNow appears ready in RenWork Cloud, but the task does not expose `renwork-cloud_search_capabilities` or `renwork-cloud_execute_capability`.
 
 **What this diagnostic checks**
 
-The prompt below runs RenWork's bundled OpenCode executable against its generated runtime config and checks whether a fresh OpenCode process can connect to `openwork-cloud`. It does not attach to the OpenCode server already running inside RenWork, so it combines that result with the live status shown in RenWork and a forced tool call from a new task.
+The prompt below runs RenWork's bundled OpenCode executable against its generated runtime config and checks whether a fresh OpenCode process can connect to `renwork-cloud`. It does not attach to the OpenCode server already running inside RenWork, so it combines that result with the live status shown in RenWork and a forced tool call from a new task.
 
 **Paste this to your agent**
 
@@ -103,7 +103,7 @@ Diagnose whether RenWork Cloud MCP tools are available in this workspace. Gather
 
 ## Phase 1 — Test the task's actual tools
 
-1. Attempt to call `openwork-cloud_search_capabilities` with `{"query":"ServiceNow incident","type":"mcp","limit":10}`. Do not use documentation or explain alternatives. Record whether the runtime accepts the tool call and its exact non-secret result or rejection.
+1. Attempt to call `renwork-cloud_search_capabilities` with `{"query":"ServiceNow incident","type":"mcp","limit":10}`. Do not use documentation or explain alternatives. Record whether the runtime accepts the tool call and its exact non-secret result or rejection.
 2. Attempt to call `openwork_extension_list_actions`. Record whether the runtime accepts the call. Do not infer tool availability from an answer to "list your tools"; models can omit or invent tools.
 
 ## Phase 2 — Find RenWork's exact OpenCode runtime
@@ -125,7 +125,7 @@ Diagnose whether RenWork Cloud MCP tools are available in this workspace. Gather
    - operating system
    - exact OpenCode executable path and version
    - runtime config path, existence, and last-modified time
-   - whether `openwork-cloud` is listed
+   - whether `renwork-cloud` is listed
    - its exact status and non-secret error
    - whether the failing workspace is the primary managed workspace or may be a secondary workspace configured dynamically
 
@@ -133,7 +133,7 @@ Important: `opencode mcp list` starts a fresh process. Do not claim that it atta
 
 ## Phase 4 — Classify the result
 
-- Fresh probe omits `openwork-cloud`: the generated config is missing, the wrong runtime config was selected, or this is a secondary workspace whose MCPs are registered dynamically.
+- Fresh probe omits `renwork-cloud`: the generated config is missing, the wrong runtime config was selected, or this is a secondary workspace whose MCPs are registered dynamically.
 - Fresh probe reports `failed` or `needs_auth`: preserve the exact non-secret error; investigate token, endpoint, TLS, or authentication.
 - Fresh probe reports `connected`, but Phase 1 rejects the Cloud tool: the stored endpoint and token work, but the live desktop engine or task has stale/missing tool registration.
 - Both Phase 1 calls are rejected: investigate whether the running engine loaded the injected config and plugins, plus project/global tool-deny policy.

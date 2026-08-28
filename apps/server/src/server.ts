@@ -4921,7 +4921,7 @@ function logPersistedCloudMcpReconcileResult(input: {
     `Cloud MCP ${input.trigger} reconciliation left connected service tools unavailable for workspace ${input.workspace.id}.`,
     {
       "workspace.id": input.workspace.id,
-      "mcp.name": "openwork-cloud",
+      "mcp.name": "renwork-cloud",
       "mcp.trigger": input.trigger,
       "mcp.failure.code": failure?.code ?? "unknown",
       "mcp.failure.stage": failure?.stage ?? "unknown",
@@ -4960,7 +4960,7 @@ function logPersistedCloudMcpReconcileError(input: {
     `Cloud MCP ${input.trigger} reconciliation crashed for workspace ${input.workspace.id}.`,
     {
       "workspace.id": input.workspace.id,
-      "mcp.name": "openwork-cloud",
+      "mcp.name": "renwork-cloud",
       "mcp.trigger": input.trigger,
       "mcp.failure.code": "cloud_mcp_reconcile_exception",
       "mcp.failure.message": input.error instanceof Error ? input.error.message : String(input.error),

@@ -228,10 +228,10 @@ async function connectHealth(input: {
     const value: unknown = await response.json()
     return isRecord(value) ? value : null
   }
-  let value = await request("GET", `/workspace/${encodedWorkspace}/mcp/openwork-cloud/health?${query}`)
+  let value = await request("GET", `/workspace/${encodedWorkspace}/mcp/renwork-cloud/health?${query}`)
   let health = value
   if (health?.usable !== true || health.usableByCurrentModel !== true) {
-    value = await request("POST", `/workspace/${encodedWorkspace}/mcp/openwork-cloud/engine-refresh`, {
+    value = await request("POST", `/workspace/${encodedWorkspace}/mcp/renwork-cloud/engine-refresh`, {
       provider: input.action.model.providerId,
       model: input.action.model.modelId,
       trigger: "automation_run",

@@ -52,6 +52,12 @@ const normalizeMemberId = (value: string) => normalizeDenTypeId("member", value)
 const ms = (value: Date | null): number | null => value?.getTime() ?? null
 const date = (value: number | null): Date | null => value === null ? null : new Date(value)
 
+function normalizeCloudEngineKind(value: string): string {
+  if (value === "openwork-cloud-agent-v1") return "renwork-cloud-agent-v1"
+  if (value === "openwork-cloud-codemode-v1") return "renwork-cloud-codemode-v1"
+  return value
+}
+
 function mapAutomation(row: AutomationRow): Automation {
   return {
     id: row.id,
@@ -117,7 +123,7 @@ function mapRun(row: RunRow): AutomationRun {
       executionLocation: row.execution_target,
       automationId: row.automation_id,
       automationRunId: row.id,
-      engineKind: row.engine_kind,
+      engineKind: normalizeCloudEngineKind(row.engine_kind),
       ...(nativeThreadId ? { nativeThreadId } : {}),
       ...(workspaceId ? { workspaceId } : {}),
     } : null,
@@ -557,8 +563,8 @@ export class DenAutomationRepository implements AutomationRepository {
       const revision = revisions[0]
       if (!revision) return null
       const engineKind = revision.action?.kind === "saved_script"
-        ? "openwork-cloud-codemode-v1"
-        : "openwork-cloud-agent-v1"
+        ? "renwork-cloud-codemode-v1"
+        : "renwork-cloud-agent-v1"
       await tx.update(AutomationRunTable).set({
         status: "running",
         lease_owner: input.leaseOwner,

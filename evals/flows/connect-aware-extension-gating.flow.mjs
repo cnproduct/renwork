@@ -117,7 +117,7 @@ export default {
           assert: async () => {
             const state = await server(ctx, "/experimental/connect/state");
             ctx.assert(state.payload?.connectEnabled === true, "connect state reports connectEnabled=true");
-            ctx.assert(typeof state.payload?.cloudMcpPresent === "boolean", "snapshot reports whether the openwork-cloud MCP is present");
+            ctx.assert(typeof state.payload?.cloudMcpPresent === "boolean", "snapshot reports whether the renwork-cloud MCP is present");
             ctx.output("connect-state-on", JSON.stringify(state.payload, null, 2));
           },
         });

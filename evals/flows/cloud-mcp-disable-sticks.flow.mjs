@@ -1,6 +1,6 @@
 /**
  * Regression proof: disabling the auto-configured OpenWork Cloud Control MCP
- * ("openwork-cloud") sticks.
+ * ("renwork-cloud") sticks.
  *
  * Previously the background reconciler (syncCloudControlMcp) rewrote the
  * entry with `enabled: true` on every sync tick — settings mount, sign-in,
@@ -15,7 +15,7 @@
  * drives the real app:
  *   1. Sign in to OpenWork Cloud via desktop handoff.
  *   2. Reveal hidden extensions and wait for the reconciler to auto-configure
- *      openwork-cloud.
+ *      renwork-cloud.
  *   3. Disable it via the Settings toggle.
  *   4. Remount settings (the exact trigger that used to resurrect it) and
  *      reveal hidden again, then assert it is still Paused and the intent
@@ -27,7 +27,7 @@
  * - OPENWORK_EVAL_DEN_TOKEN    Bearer session token for a seeded user
  */
 
-const CLOUD_TITLE = "OpenWork Cloud Control";
+const CLOUD_TITLE = "RenWork Cloud Control";
 const USER_STATE_KEY = "openwork.den.mcp.cloudControlUserState";
 const CLICK_ANY = "button, [role=button], a, div, article, li, label";
 
@@ -86,7 +86,7 @@ const scrollCloudRowExpr = `(() => {
 
 export default {
   id: "cloud-mcp-disable-sticks",
-  title: "Disabling the OpenWork Cloud Control MCP sticks across sync",
+  title: "Disabling the RenWork Cloud Control MCP sticks across sync",
   spec: "evals/cloud-mcp-agent-flows.md",
   requiredEnv: ["OPENWORK_EVAL_DEN_API_URL", "OPENWORK_EVAL_DEN_TOKEN"],
   steps: [
@@ -147,7 +147,7 @@ export default {
         await revealHidden(ctx);
         await ctx.waitFor(cloudRowExpr(CONFIGURED_STATUSES), {
           timeoutMs: 90_000,
-          label: "openwork-cloud configured row",
+          label: "renwork-cloud configured row",
         });
         // Idempotent re-runs: a previous run may have left the entry Paused.
         // Restore the enabled baseline before proving the disable behavior.
@@ -163,17 +163,17 @@ export default {
             label: "entry no longer Paused",
           });
         }
-        await ctx.prove("Signing in auto-configures the openwork-cloud MCP", {
+        await ctx.prove("Signing in auto-configures the renwork-cloud MCP", {
           assert: async () => {
             await ctx.waitFor(cloudRowExpr(CONFIGURED_STATUSES.filter((status) => status !== "Paused")), {
               timeoutMs: 90_000,
-              label: "openwork-cloud configured row (enabled)",
+              label: "renwork-cloud configured row (enabled)",
             });
             await ctx.eval(scrollCloudRowExpr);
           },
           screenshot: {
             name: "cloud-mcp-configured",
-            claim: "OpenWork Cloud Control appears as a configured MCP after cloud sign-in.",
+            claim: "RenWork Cloud Control appears as a configured MCP after cloud sign-in.",
             requireText: [CLOUD_TITLE],
             rejectText: ["Something went wrong"],
             hashIncludes: "/settings/extensions/mcp",
@@ -188,13 +188,13 @@ export default {
           action: async () => {
             await ctx.waitFor(expandAndClickDetailExpr(CONFIGURED_STATUSES, "Disable"), {
               timeoutMs: 30_000,
-              label: "expand openwork-cloud row and click Disable",
+              label: "expand renwork-cloud row and click Disable",
             });
           },
           assert: async () => {
             await ctx.waitFor(cloudRowExpr(["Paused"]), {
               timeoutMs: 30_000,
-              label: "openwork-cloud row shows Paused",
+              label: "renwork-cloud row shows Paused",
             });
             const intent = await ctx.eval(`localStorage.getItem(${JSON.stringify(USER_STATE_KEY)})`);
             ctx.assert(intent === "disabled", `Expected persisted intent "disabled", got ${JSON.stringify(intent)}`);
@@ -230,7 +230,7 @@ export default {
           assert: async () => {
             await ctx.waitFor(cloudRowExpr(["Paused"]), {
               timeoutMs: 30_000,
-              label: "openwork-cloud row still Paused after remount",
+              label: "renwork-cloud row still Paused after remount",
             });
             const intent = await ctx.eval(`localStorage.getItem(${JSON.stringify(USER_STATE_KEY)})`);
             ctx.assert(intent === "disabled", `Persisted intent lost after sync tick: ${JSON.stringify(intent)}`);
@@ -264,7 +264,7 @@ export default {
           action: async () => {
             await ctx.waitFor(expandAndClickDetailExpr(["Paused"], "Enable"), {
               timeoutMs: 30_000,
-              label: "expand paused openwork-cloud row and click Enable",
+              label: "expand paused renwork-cloud row and click Enable",
             });
           },
           assert: async () => {
@@ -274,7 +274,7 @@ export default {
             );
             await ctx.waitFor(cloudRowExpr(CONFIGURED_STATUSES.filter((status) => status !== "Paused")), {
               timeoutMs: 60_000,
-              label: "openwork-cloud row no longer Paused",
+              label: "renwork-cloud row no longer Paused",
             });
             // Bring the row into the viewport so the frame is visually
             // distinct from the previous capture (defeats the dedup guard).

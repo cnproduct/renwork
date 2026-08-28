@@ -402,20 +402,20 @@ export default defineFlow({
             await sendPrompt(
               ctx,
               primary,
-              "Choose one remote skill already listed in available_skills. Load it directly with its exact capability using openwork-cloud_execute_capability; do not search first and do not perform the skill workflow. Then call renwork_context. Reply with exactly these three lines: DIRECT_SKILL_TOOL=openwork-cloud_execute_capability; UNKNOWN_CAPABILITY_TOOL=openwork-cloud_search_capabilities; LOCAL_EXTENSION_COMMAND=extension.call",
-              "DIRECT_SKILL_TOOL=openwork-cloud_execute_capability",
+              "Choose one remote skill already listed in available_skills. Load it directly with its exact capability using renwork-cloud_execute_capability; do not search first and do not perform the skill workflow. Then call renwork_context. Reply with exactly these three lines: DIRECT_SKILL_TOOL=renwork-cloud_execute_capability; UNKNOWN_CAPABILITY_TOOL=renwork-cloud_search_capabilities; LOCAL_EXTENSION_COMMAND=extension.call",
+              "DIRECT_SKILL_TOOL=renwork-cloud_execute_capability",
             );
           },
           assert: async () => {
-            await ctx.expectText("DIRECT_SKILL_TOOL=openwork-cloud_execute_capability");
-            await ctx.expectText("UNKNOWN_CAPABILITY_TOOL=openwork-cloud_search_capabilities");
+            await ctx.expectText("DIRECT_SKILL_TOOL=renwork-cloud_execute_capability");
+            await ctx.expectText("UNKNOWN_CAPABILITY_TOOL=renwork-cloud_search_capabilities");
             await ctx.expectText("LOCAL_EXTENSION_COMMAND=extension.call");
           },
           screenshot: {
             name: "frame-5-provider-and-skill-routing",
             requireText: [
-              "DIRECT_SKILL_TOOL=openwork-cloud_execute_capability",
-              "UNKNOWN_CAPABILITY_TOOL=openwork-cloud_search_capabilities",
+              "DIRECT_SKILL_TOOL=renwork-cloud_execute_capability",
+              "UNKNOWN_CAPABILITY_TOOL=renwork-cloud_search_capabilities",
               "LOCAL_EXTENSION_COMMAND=extension.call",
             ],
           },

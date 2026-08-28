@@ -46,6 +46,7 @@ import type { OpenworkServerStore } from "./openwork-server-store";
 import { attemptSilentMcpReauth } from "./mcp-silent-reauth";
 import {
   CLOUD_MCP_SERVER_NAME,
+  isManagedCloudMcpServerName,
   readCloudMcpUserState,
 } from "./cloud-mcp-user-state";
 import {
@@ -685,7 +686,7 @@ export function createConnectionsStore(options: {
       mutateState((current) => ({ ...current, mcpStatus: null, mcpConnectingName: entry.name }));
 
       if (entry.managedBy === "openwork-connect") {
-        if (slug !== CLOUD_MCP_SERVER_NAME) {
+        if (!isManagedCloudMcpServerName(slug)) {
           throw new Error("RenWork Connect MCP metadata is invalid.");
         }
         if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
@@ -964,7 +965,7 @@ export function createConnectionsStore(options: {
   /**
    * Background reconciliation for the Den cloud MCP: when the desktop is
    * signed in to RenWork Cloud with an active org, keep the
-   * `openwork-cloud` MCP entry configured with a fresh first-party token.
+   * `renwork-cloud` MCP entry configured with a fresh first-party token.
    * Quiet by design — a failed mint never opens the OAuth modal.
    *
    * `force` bypasses the freshness marker: used by the user-facing Refresh
@@ -988,7 +989,7 @@ export function createConnectionsStore(options: {
 
     // Respect explicit user intent for this exact workspace/org/server/deployment.
     if (readCloudMcpUserState(scope) !== null) return "skipped";
-    const configuredEntry = snapshot.mcpServers.find((server) => server.name === CLOUD_MCP_SERVER_NAME);
+    const configuredEntry = snapshot.mcpServers.find((server) => isManagedCloudMcpServerName(server.name));
     if (configuredEntry?.config.enabled === false) return "skipped";
 
     const result = await runOpenworkCloudMcpReconciler({
@@ -1174,7 +1175,7 @@ export function createConnectionsStore(options: {
         await removeMcpFromConfig(projectDir, name);
       }
 
-      if (name === CLOUD_MCP_SERVER_NAME) {
+      if (isManagedCloudMcpServerName(name)) {
         const context = await resolveCloudMcpOperationContext(null);
         if (context) recordCloudMcpDisabledIntent(context, "removed");
       }
@@ -1245,7 +1246,7 @@ export function createConnectionsStore(options: {
       }
 
       await openworkClient.setMcpEnabled(openworkWorkspaceId, name, enabled);
-      if (name === CLOUD_MCP_SERVER_NAME) {
+      if (isManagedCloudMcpServerName(name)) {
         const context = await resolveCloudMcpOperationContext(null);
         if (enabled) {
           if (context) clearCloudMcpDisabledIntent(context);

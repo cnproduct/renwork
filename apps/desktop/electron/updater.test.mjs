@@ -229,7 +229,7 @@ describe("recovery metadata and candidates", () => {
   it("accepts each artifact flavor only for its matching distribution", () => {
     const artifacts = {
       public: "openwork-mac-arm64-1.2.3.dmg",
-      cloud: "openwork-cloud-mac-arm64-1.2.3.dmg",
+      cloud: "renwork-cloud-mac-arm64-1.2.3.dmg",
       enterprise: "openwork-enterprise-mac-arm64-1.2.3.dmg",
     };
     for (const [distribution, fileName] of Object.entries(artifacts)) {
@@ -251,7 +251,7 @@ files:
   - url: openwork-mac-arm64-1.2.3.dmg
     sha512: mac-checksum
     size: 100
-  - url: openwork-cloud-win-x64-1.2.3.exe
+  - url: renwork-cloud-win-x64-1.2.3.exe
     sha512: win-checksum
   - url: openwork-enterprise-linux-x86_64-1.2.3.AppImage
     sha512: linux-checksum

@@ -6,11 +6,15 @@ import {
 } from "../src/components/tools/error-attribution"
 import { normalizeErrorText } from "../src/lib/error-text"
 
-function reconnectStatus(connectionId = "emc_knowledge", connectionName = "Knowledge Hub") {
+function reconnectStatus(
+  connectionId = "emc_knowledge",
+  connectionName = "Knowledge Hub",
+  source: "renwork-cloud" | "openwork-cloud" = "renwork-cloud",
+) {
   return {
     version: 1,
     kind: "connection_action",
-    source: "openwork-cloud",
+    source,
     connectionId,
     connectionName,
     authType: "oauth",
@@ -124,7 +128,7 @@ describe("chat tool error attribution", () => {
       connectionStatus: reconnectStatus(),
     })
 
-    expect(reconnectActionFromChatToolResult("openwork-cloud_execute_capability", errorText)).toEqual({
+    expect(reconnectActionFromChatToolResult("renwork-cloud_execute_capability", errorText)).toEqual({
       connectionId: "emc_knowledge",
       connectionName: "Knowledge Hub",
       label: "Reconnect",
@@ -139,9 +143,21 @@ describe("chat tool error attribution", () => {
       }],
     })
 
-    expect(reconnectActionFromChatToolResult("openwork-cloud_search_capabilities", output)).toEqual({
+    expect(reconnectActionFromChatToolResult("renwork-cloud_search_capabilities", output)).toEqual({
       connectionId: "emc_knowledge",
       connectionName: "Knowledge Hub",
+      label: "Reconnect",
+    })
+  })
+
+  test("restores one-release legacy tool and action source aliases", () => {
+    const errorText = JSON.stringify({
+      connectionStatus: reconnectStatus("emc_legacy", "Legacy connection", "openwork-cloud"),
+    })
+
+    expect(reconnectActionFromChatToolResult("openwork-cloud_execute_capability", errorText)).toEqual({
+      connectionId: "emc_legacy",
+      connectionName: "Legacy connection",
       label: "Reconnect",
     })
   })

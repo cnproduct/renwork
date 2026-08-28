@@ -21,6 +21,7 @@ type Release = {
 // exactly as the landing page does.
 function isNonPublicDesktopAsset(name: string) {
   return name.startsWith("openwork-installer-")
+    || name.startsWith("renwork-cloud-")
     || name.startsWith("openwork-cloud-")
     || name.startsWith("openwork-enterprise-");
 }

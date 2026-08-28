@@ -14,5 +14,5 @@ publish:
     releaseType: release
     channel: cloud
 linux:
-  executableName: openwork-cloud
-artifactName: openwork-cloud-${os}-${arch}-${version}.${ext}
+  executableName: renwork-cloud
+artifactName: renwork-cloud-${os}-${arch}-${version}.${ext}

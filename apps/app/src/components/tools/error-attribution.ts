@@ -17,7 +17,11 @@ export type ChatToolReconnectProgress =
   | { phase: "authorization_opened"; authorizeUrl: string }
 export type ChatToolReconnectResult = "connected"
 
-const OPENWORK_CLOUD_CAPABILITY_TOOLS = new Set([
+const RENWORK_CLOUD_CAPABILITY_TOOLS = new Set([
+  "renwork-cloud_search_capabilities",
+  "renwork-cloud_execute_capability",
+  // One-release read compatibility for restored sessions whose persisted tool
+  // calls still carry the retired MCP server prefix.
   "openwork-cloud_search_capabilities",
   "openwork-cloud_execute_capability",
 ])
@@ -77,11 +81,12 @@ export function reconnectActionFromChatToolResult(
   toolName: string,
   result: unknown,
 ): ChatToolReconnectAction | null {
-  // Tool output is otherwise untrusted. Only the two canonical OpenWork Cloud
-  // capability tools may turn a structured Den response into a UI action.
+  // Tool output is otherwise untrusted. Only the RenWork Cloud capability
+  // tools (plus their one-release legacy aliases) may turn a structured Den
+  // response into a UI action.
   // Discovery is included because it performs a live connection probe before
   // the agent can safely proceed to execution.
-  if (!OPENWORK_CLOUD_CAPABILITY_TOOLS.has(toolName)) return null
+  if (!RENWORK_CLOUD_CAPABILITY_TOOLS.has(toolName)) return null
 
   const parsed = parseResultRecord(result)
   if (!parsed) return null

@@ -232,7 +232,7 @@ function createChatTranscriptEvalMessages(sessionId: string) {
         },
         {
           type: "dynamic-tool",
-          toolName: "openwork-cloud_execute_capability",
+          toolName: "renwork-cloud_execute_capability",
           toolCallId: "eval-transcript-capability",
           state: "output-available",
           input: { name: "getCapabilitiesGoogleWorkspaceCalendarEvents", body: {} },
@@ -1584,7 +1584,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       name: entry.name,
       config: entry.config as McpServerEntry["config"],
       source: entry.source,
-      origin: entry.name === "openwork-cloud" ? "openwork-connect" : "local",
+      origin: entry.name === "renwork-cloud" || entry.name === "openwork-cloud" ? "openwork-connect" : "local",
     } satisfies McpServerEntry));
 
     void connectPromise.then((connect) => {

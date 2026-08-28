@@ -18,18 +18,21 @@ import {
 } from "./runtime-opencode-config-store.js";
 import type { ServerConfig, WorkspaceInfo } from "./types.js";
 import { ensureDir } from "./utils.js";
+import {
+  LEGACY_OPENWORK_CLOUD_MCP_NAME,
+  RENWORK_CLOUD_MCP_NAME,
+} from "./renwork-cloud-identity.js";
 
 const CONNECT_STATE_FILE = "connect-state.json";
 const CONNECT_STATE_MAX_BYTES = 16 * 1024;
 const CONNECT_SNAPSHOT_MAX_RUNTIME_ROWS = 100;
-const OPENWORK_CLOUD_MCP_NAME = "openwork-cloud";
 type WorkspaceOpencodeClient = ReturnType<typeof createOpencodeClient>;
 
 type PersistedConnectState = {
   connectEnabled: boolean;
   updatedAt: number;
   /**
-   * Server-scoped OpenWork Connect (`openwork-cloud`) MCP desired config.
+   * Server-scoped RenWork Connect (`renwork-cloud`) MCP desired config.
    * Connect is identity/org scoped, not per-workspace — workspace runtime
    * copies remain for engine registration, but catalog/skill injection reads
    * this host-level entry.
@@ -178,12 +181,12 @@ export async function writeConnectState(config: ServerConfig, state: { connectEn
   });
 }
 
-/** Read the host-level openwork-cloud MCP config used for Connect catalog/skills. */
+/** Read the host-level renwork-cloud MCP config used for Connect catalog/skills. */
 export async function readConnectCloudMcp(config: ServerConfig): Promise<Record<string, unknown> | null> {
   return (await readConnectState(config)).cloudMcp;
 }
 
-/** Persist the host-level openwork-cloud MCP config (server-scoped Connect). */
+/** Persist the host-level renwork-cloud MCP config (server-scoped Connect). */
 export async function writeConnectCloudMcp(
   config: ServerConfig,
   cloudMcp: Record<string, unknown> | null,
@@ -365,7 +368,8 @@ async function inspectConnectRuntime(
     if (inspection.status === "unreadable" || inspection.status === "invalid-row") {
       return { cloudMcpPresent: false, complete: false };
     }
-    if (Object.hasOwn(runtimeMcpMap(inspection.config), OPENWORK_CLOUD_MCP_NAME)) {
+    const mcp = runtimeMcpMap(inspection.config);
+    if (Object.hasOwn(mcp, RENWORK_CLOUD_MCP_NAME) || Object.hasOwn(mcp, LEGACY_OPENWORK_CLOUD_MCP_NAME)) {
       return { cloudMcpPresent: true, complete: true };
     }
     if (inspection.status === "database-missing" || inspection.status === "table-missing") {
