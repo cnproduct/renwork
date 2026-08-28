@@ -62,6 +62,7 @@ export type CloudMcpBackgroundSyncResult =
 export type SessionCloudMcpMaintenanceState = {
   status: "idle" | "checking" | "ready" | "skipped" | "retrying" | "failed";
   issue: CloudMcpMaintenanceIssue | null;
+  skipReason?: Extract<CloudMcpBackgroundSyncResult, { outcome: "skipped" }>["reason"] | null;
   attempt: number;
   maxAttempts: number;
 };
@@ -69,6 +70,7 @@ export type SessionCloudMcpMaintenanceState = {
 const IDLE_CLOUD_MCP_MAINTENANCE_STATE: SessionCloudMcpMaintenanceState = {
   status: "idle",
   issue: null,
+  skipReason: null,
   attempt: 0,
   maxAttempts: 1 + CLOUD_MCP_MAINTENANCE_RETRY_DELAYS_MS.length,
 };
@@ -83,7 +85,7 @@ function genericCloudMcpMaintenanceIssue(input?: {
     stage: "engine_delivery",
     retryable: input?.retryable ?? true,
     recommendedAction: "Retry, then open Settings → Connect if the problem continues.",
-    message: input?.message ?? "OpenWork could not verify connected service tools for this workspace.",
+    message: input?.message ?? "RenWork could not verify connected service tools for this workspace.",
   };
 }
 
@@ -258,7 +260,7 @@ export async function syncCloudControlMcpInBackground(input: {
       return failedCloudMcpBackgroundSync({
         health: result.health,
         code: "cloud_mcp_token_mint_failed",
-        message: "OpenWork could not refresh Cloud authentication for connected service tools.",
+        message: "RenWork could not refresh Cloud authentication for connected service tools.",
       });
     }
   }
@@ -399,6 +401,7 @@ export function useSessionMcpMaintenance(input: {
               ? "retrying"
               : "failed",
         issue,
+        skipReason: attemptInput.result.outcome === "skipped" ? attemptInput.result.reason : null,
         attempt: attemptInput.attempt,
         maxAttempts: attemptInput.maxAttempts,
       });

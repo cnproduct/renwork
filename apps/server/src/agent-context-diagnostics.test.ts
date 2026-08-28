@@ -1653,7 +1653,7 @@ describe("agent context diagnostics analyzer", () => {
     expect(checkById(report, "cloud-tool-catalog")).toMatchObject({
       status: "failed",
       code: "credential_missing",
-      message: "The managed OpenWork Cloud entry does not contain one unambiguous authentication value.",
+      message: "The managed RenWork Cloud entry does not contain one unambiguous authentication value.",
     });
     expect(fetchCalls).toEqual([]);
   });

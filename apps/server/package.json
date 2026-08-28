@@ -1,7 +1,7 @@
 {
   "name": "openwork-server",
   "version": "0.18.50",
-  "description": "Filesystem-backed API for OpenWork remote clients",
+  "description": "Filesystem-backed API for RenWork remote clients",
   "type": "module",
   "bin": {
     "openwork-server": "bin/openwork-server.mjs"

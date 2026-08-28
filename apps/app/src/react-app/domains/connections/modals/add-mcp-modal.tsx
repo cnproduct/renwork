@@ -81,7 +81,7 @@ export function AddMcpModal(props: AddMcpModalProps) {
       return;
     }
     if (conflictsWithOpenworkConnect({ name: trimmedName })) {
-      dispatch({ error: t("mcp.name_reserved_openwork_connect") });
+      dispatch({ error: t("mcp.name_reserved_renwork_connect") });
       return;
     }
 

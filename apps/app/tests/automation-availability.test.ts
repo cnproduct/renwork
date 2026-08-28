@@ -44,7 +44,7 @@ describe("Automations availability", () => {
   test("the in-chat proposal tool only blocks on sign-in", () => {
     const proposal = read("src/components/tools/openwork-automation-proposal.tsx")
     expect(proposal).not.toContain("automationsEnabled")
-    expect(proposal).toContain("Sign in to OpenWork Cloud")
+    expect(proposal).toContain("Sign in to RenWork Cloud")
     expect(proposal).toContain("resolveProposalModel")
     expect(proposal).toContain("data-automation-model-resolution")
   })

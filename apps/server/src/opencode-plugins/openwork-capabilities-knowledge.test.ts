@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { automationRuntimeKnowledge, OpenWorkCapabilitiesKnowledge } from "./openwork-capabilities-knowledge.js";
 
-describe("OpenWork capabilities knowledge plugin", () => {
-  test("injects current OpenWork Connect guidance", async () => {
+describe("RenWork capabilities knowledge plugin", () => {
+  test("injects current RenWork Connect guidance", async () => {
     const plugin = await OpenWorkCapabilitiesKnowledge();
     const output = { system: [] };
 
@@ -75,7 +75,7 @@ describe("OpenWork capabilities knowledge plugin", () => {
       path: "start-here/connect-your-stack/connect-services.mdx",
     });
 
-    expect(read).toContain("Settings` > `OpenWork Connect");
+    expect(read).toContain("Settings` > `RenWork Connect");
     expect(read).toContain("Needs your sign-in");
     expect(read).toContain("Ready to use");
     expect(read).toContain("advanced path for a custom or local server");

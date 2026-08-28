@@ -13,7 +13,7 @@ import { denSettingsChangedEvent } from "../../../app/lib/den-session-events";
 import { useSyncExternalStore } from "react";
 
 export const OPENWORK_MODELS_PROVIDER_ID = "openwork";
-export const OPENWORK_MODELS_PROVIDER_NAME = "OpenWork Models";
+export const OPENWORK_MODELS_PROVIDER_NAME = "RenWork Models";
 export const OPENWORK_MODELS_PROMO_HIDDEN_KEY = "openwork.openworkModelsPromo.hidden";
 export const OPENWORK_MODELS_PROMO_LAST_SHOWN_KEY = "openwork.openworkModelsPromo.lastShownAt";
 export const OPENWORK_MODELS_STARTUP_PROMO_SHOWN_KEY = "openwork.openworkModelsPromo.startupShown";
@@ -64,7 +64,7 @@ export const OPENWORK_MODEL_PREVIEWS: OpenWorkModelPreview[] = Object.entries(
   .map(([id, model]) => ({
     id,
     title: model.displayName.replace(/^OpenWork:\s*/, ""),
-    subtitle: "OpenWork hosted",
+    subtitle: "RenWork hosted",
   }));
 
 export function hasOpenWorkModelsProvider(providerIds: readonly string[]) {

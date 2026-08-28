@@ -212,7 +212,7 @@ function requireOpenWorkServer(): { url: string; token: string } {
   const url = serverUrl();
   const token = serverToken();
   if (!url || !token) {
-    throw new Error("OpenWork extension tools are only available when OpenCode is launched by OpenWork.");
+    throw new Error("RenWork extension tools are only available when OpenCode is launched by RenWork.");
   }
   return { url, token };
 }
@@ -284,7 +284,7 @@ async function fetchOpenWorkConnectState(input: unknown, fetcher: OpenWorkFetch)
     headers: { Authorization: `Bearer ${token}` },
   });
   const payload = await parseResponse(response);
-  if (!response.ok) throw new Error(errorMessage(payload, "OpenWork connect state request failed"));
+  if (!response.ok) throw new Error(errorMessage(payload, "RenWork connect state request failed"));
   const parsed = connectStateResponseSchema.parse(payload);
   return {
     connectEnabled: parsed.connectEnabled,

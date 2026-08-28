@@ -260,7 +260,7 @@ function ExecutionDetails(props: { execution: OpencodeExecutionSnapshot }) {
       <div className="mb-2 flex items-center justify-between gap-3">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-11">OpenCode execution</div>
-          <div className="text-[11px] text-dls-secondary">Command, working directory, and OpenWork-injected environment.</div>
+          <div className="text-[11px] text-dls-secondary">Command, working directory, and RenWork-injected environment.</div>
         </div>
         <div className="shrink-0 rounded-full border border-blue-7/30 bg-blue-7/10 px-2 py-1 text-[10px] font-medium text-blue-11">
           redacted
@@ -629,7 +629,7 @@ export function DebugView(props: DebugViewProps) {
           <div className={sectionHeaderClass}>
             <div className={sectionTitleClass}>Agent access</div>
             <div className={sectionDescClass}>
-              Test and repair OpenWork Cloud MCP access for this workspace.
+              Test and repair RenWork Cloud MCP access for this workspace.
             </div>
           </div>
           <AgentAccessCard

@@ -12,6 +12,7 @@ function maintenance(
 ): SessionCloudMcpMaintenanceState {
   return {
     status,
+    skipReason: status === "skipped" ? "disabled" : null,
     issue: status === "failed"
       ? {
           code: "cloud_mcp_unavailable",
@@ -26,14 +27,14 @@ function maintenance(
   };
 }
 
-describe("OpenWork Connect status", () => {
+describe("RenWork Connect status", () => {
   test("distinguishes missing, disabled, and unreadable Connect state", () => {
     expect(resolveOpenWorkConnectStateSummary("missing", false)).toEqual({
       status: "not_configured",
       statusLabel: "Not configured",
       tone: "neutral",
       stageLabel: "Connect setup is not finished",
-      recommendedAction: "Sign in to OpenWork Cloud to finish setup.",
+      recommendedAction: "Sign in to RenWork Cloud to finish setup.",
     });
     expect(resolveOpenWorkConnectStateSummary("available", false)).toEqual({
       status: "disabled",
@@ -48,7 +49,7 @@ describe("OpenWork Connect status", () => {
         statusLabel: "Needs attention",
         tone: "error",
         stageLabel: "Connect settings are unavailable",
-        recommendedAction: "Restart OpenWork. If this continues, run diagnostics.",
+        recommendedAction: "Restart RenWork. If this continues, run diagnostics.",
       });
     }
   });
@@ -66,7 +67,7 @@ describe("OpenWork Connect status", () => {
     expect(resolveOpenWorkConnectStatus(true, undefined)).toEqual({
       state: "ready",
       label: "Ready",
-      description: "Signed in to OpenWork Cloud. Connected service tools will be checked when a workspace is active.",
+      description: "Signed in to RenWork Cloud. Connected service tools will be checked when a workspace is active.",
     });
     expect(resolveOpenWorkConnectStatus(true, maintenance("idle"))).toMatchObject({
       state: "ready",
@@ -92,9 +93,10 @@ describe("OpenWork Connect status", () => {
       label: "Needs attention",
       description: "Connected service tools could not be verified.",
     });
-    expect(resolveOpenWorkConnectStatus(true, maintenance("skipped"))).toMatchObject({
-      state: "needs_attention",
-      label: "Needs attention",
+    expect(resolveOpenWorkConnectStatus(true, maintenance("skipped"))).toEqual({
+      state: "ready",
+      label: "Ready",
+      description: "RenWork Cloud is connected. Connected service tools are not enabled for this workspace.",
     });
   });
 });

@@ -1,10 +1,10 @@
 extends: ./electron-builder.base.yml
 appId: com.differentai.openwork
-productName: OpenWork Enterprise
+productName: RenWork Enterprise
 extraMetadata:
   openworkDistribution: enterprise
 protocols:
-  - name: OpenWork Enterprise
+  - name: RenWork Enterprise
     schemes:
       - openwork
 publish:

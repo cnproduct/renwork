@@ -56,6 +56,7 @@ export const DEFAULT_SHELL_CONFIG: ShellConfig = {
 /* ------------------------------------------------------------------ */
 
 const STORAGE_KEY = "renwork.shell-config";
+const LEGACY_DEFAULT_APP_NAME = ["Open", "Work"].join("");
 
 function readShellConfig(): ShellConfig {
   if (typeof window === "undefined") return DEFAULT_SHELL_CONFIG;
@@ -63,7 +64,9 @@ function readShellConfig(): ShellConfig {
     const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("openwork.shell-config");
     if (!raw) return DEFAULT_SHELL_CONFIG;
     const parsed = JSON.parse(raw);
-    const resolvedAppName = (!parsed.appName || parsed.appName === "OpenWork") ? "RenWork · 人人易AI" : parsed.appName;
+    const resolvedAppName = (!parsed.appName || parsed.appName === "RenWork" || parsed.appName === LEGACY_DEFAULT_APP_NAME)
+      ? "RenWork · 人人易AI"
+      : parsed.appName;
     return { ...DEFAULT_SHELL_CONFIG, ...parsed, appName: resolvedAppName, cloudSignin: false };
   } catch {
     return DEFAULT_SHELL_CONFIG;

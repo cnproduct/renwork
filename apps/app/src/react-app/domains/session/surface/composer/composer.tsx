@@ -874,7 +874,7 @@ export function ReactSessionComposer(props: ComposerProps) {
     setToolMenuOpen(false);
   };
 
-  // Configure lands on the matching OpenWork Extensions section: skills and
+  // Configure lands on the matching RenWork Extensions section: skills and
   // plugin tabs keep their scoped views, everything else opens the inventory.
   const openToolMenuSettings = () => {
     const section: ToolMenuSettingsSection =

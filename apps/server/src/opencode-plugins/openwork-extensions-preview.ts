@@ -335,7 +335,7 @@ async function discoverUiBridge(): Promise<UiBridge | null> {
 
 async function uiBridgeRequest(path: string, options: { method?: string; body?: unknown } = {}): Promise<unknown> {
   const bridge = await discoverUiBridge();
-  if (!bridge) return { ok: false, error: "OpenWork UI bridge not available. The desktop app may not be running." };
+  if (!bridge) return { ok: false, error: "RenWork UI bridge not available. The desktop app may not be running." };
   try {
     const response = await fetch(`${bridge.baseUrl}${path}`, {
       method: options.method || "GET",
@@ -361,7 +361,7 @@ async function serverGet(path: string): Promise<unknown> {
     headers: { Authorization: `Bearer ${token}` },
   });
   const payload = await parseResponse(response);
-  if (!response.ok) throw new Error(errorMessage(payload, "OpenWork server request failed"));
+  if (!response.ok) throw new Error(errorMessage(payload, "RenWork server request failed"));
   return payload;
 }
 
@@ -467,7 +467,7 @@ async function queryOpenworkAffordance(rawArgs: unknown): Promise<unknown> {
   });
   return isRecord(result) && typeof result.ok === "boolean"
     ? result
-    : unavailableAffordance(request.id, "OpenWork UI query returned an invalid response.");
+    : unavailableAffordance(request.id, "RenWork UI query returned an invalid response.");
 }
 
 async function executeOpenworkAffordance(
@@ -514,7 +514,7 @@ async function executeOpenworkAffordance(
   });
   return isRecord(result) && typeof result.ok === "boolean"
     ? result
-    : unavailableAffordance(request.id, "OpenWork UI command returned an invalid response.");
+    : unavailableAffordance(request.id, "RenWork UI command returned an invalid response.");
 }
 
 function collapseWhitespace(value: string): string {
@@ -671,7 +671,7 @@ async function searchOpenWorkSessions(rawArgs: unknown): Promise<object> {
   const queryLower = args.query.trim().toLowerCase();
   const workspaces = filterWorkspaces(await listOpenWorkWorkspaces(), args.workspaceId);
   if (!workspaces.length) {
-    return { ok: false, error: args.workspaceId ? `No workspace matched ${args.workspaceId}` : "No OpenWork workspaces are available" };
+    return { ok: false, error: args.workspaceId ? `No workspace matched ${args.workspaceId}` : "No RenWork workspaces are available" };
   }
 
   const sessions: Array<{ workspace: OpenWorkWorkspace; session: SessionInfo }> = [];
@@ -726,7 +726,7 @@ async function readOpenWorkSession(rawArgs: unknown): Promise<object> {
   const count = args.count ?? 30;
   const workspaces = filterWorkspaces(await listOpenWorkWorkspaces(), args.workspaceId);
   if (!workspaces.length) {
-    return { ok: false, error: args.workspaceId ? `No workspace matched ${args.workspaceId}` : "No OpenWork workspaces are available" };
+    return { ok: false, error: args.workspaceId ? `No workspace matched ${args.workspaceId}` : "No RenWork workspaces are available" };
   }
 
   for (const workspace of workspaces) {
@@ -757,7 +757,7 @@ async function readOpenWorkSession(rawArgs: unknown): Promise<object> {
     }
   }
 
-  return { ok: false, error: `Session ${args.sessionId} was not found in matching OpenWork workspaces` };
+  return { ok: false, error: `Session ${args.sessionId} was not found in matching RenWork workspaces` };
 }
 
 function serverUrl(): string {
@@ -772,7 +772,7 @@ function requireOpenWorkServer(): { url: string; token: string } {
   const url = serverUrl();
   const token = serverToken();
   if (!url || !token) {
-    throw new Error("OpenWork extension tools are only available when OpenCode is launched by OpenWork.");
+    throw new Error("RenWork extension tools are only available when OpenCode is launched by RenWork.");
   }
   return { url, token };
 }
@@ -808,7 +808,7 @@ function normalizeDirPath(path: string): string {
 
 async function resolveContextWorkspace(workspaceId: string | undefined, context: OpenCodeContext): Promise<OpenWorkWorkspace> {
   const workspaces = await listOpenWorkWorkspaces();
-  if (!workspaces.length) throw new Error("No OpenWork workspaces are available");
+  if (!workspaces.length) throw new Error("No RenWork workspaces are available");
   if (workspaceId) {
     const match = filterWorkspaces(workspaces, workspaceId).at(0);
     if (!match) throw new Error(`No workspace matched ${workspaceId}`);
@@ -830,7 +830,7 @@ async function resolveContextWorkspace(workspaceId: string | undefined, context:
   }
   const only = workspaces.at(0);
   if (workspaces.length === 1 && only) return only;
-  throw new Error(`Multiple OpenWork workspaces match; pass workspaceId. Available: ${workspaces.map((workspace) => workspaceLabel(workspace)).join(", ")}`);
+  throw new Error(`Multiple RenWork workspaces match; pass workspaceId. Available: ${workspaces.map((workspace) => workspaceLabel(workspace)).join(", ")}`);
 }
 
 async function createOpenWorkSessions(rawArgs: unknown, context: OpenCodeContext): Promise<object> {
@@ -898,7 +898,7 @@ async function postJson(path: string, body: ExtensionActionPayload | Record<stri
   });
   const payload = await parseResponse(response);
   if (!response.ok) {
-    throw new Error(errorMessage(payload, "OpenWork extension call failed"));
+    throw new Error(errorMessage(payload, "RenWork extension call failed"));
   }
   return payload;
 }
@@ -950,7 +950,7 @@ export const OpenWorkExtensionsPreview = async (factoryInput?: unknown) => {
       // OpenCode 1.17.x keeps the text projection of an MCP result but drops
       // structuredContent and result _meta before persisting the completed tool
       // part. Preserve those standard fields in the existing metadata channel
-      // so OpenWork can host the UI without replaying the tool call.
+      // so RenWork can host the UI without replaying the tool call.
       preserveMcpResult(output);
     },
     "experimental.chat.system.transform": async (input: unknown, output: { system: string[] }) => {

@@ -9,17 +9,17 @@ export type DownloadLinkEmailProps = {
 
 export function DownloadLinkEmail({ organizationName, downloadUrl }: DownloadLinkEmailProps) {
   const intro = organizationName
-    ? `Here's your link to download the OpenWork desktop app for ${organizationName}.`
-    : "Here's your link to download the OpenWork desktop app."
+    ? `Here's your link to download the RenWork desktop app for ${organizationName}.`
+    : "Here's your link to download the RenWork desktop app."
 
   return (
     <Html>
       <Head />
-      <Preview>Your OpenWork download link</Preview>
+      <Preview>Your RenWork download link</Preview>
       <Body style={styles.body}>
         <Container style={styles.container}>
-          <Text style={styles.eyebrow}>OpenWork desktop</Text>
-          <Heading style={styles.heading}>Download OpenWork</Heading>
+          <Text style={styles.eyebrow}>RenWork desktop</Text>
+          <Heading style={styles.heading}>Download RenWork</Heading>
           <Text style={styles.text}>{intro}</Text>
 
           <Section style={styles.capabilitiesBox}>
@@ -30,7 +30,7 @@ export function DownloadLinkEmail({ organizationName, downloadUrl }: DownloadLin
             ))}
           </Section>
 
-          <Button href={downloadUrl} style={styles.button}>Download OpenWork</Button>
+          <Button href={downloadUrl} style={styles.button}>Download RenWork</Button>
           <Text style={styles.footer}>Signing in inside the app syncs your team&apos;s shared skills.</Text>
         </Container>
       </Body>

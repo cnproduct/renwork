@@ -206,9 +206,9 @@ interface ModelSelectProps {
   disabled?: boolean;
   /** When set, "All models" opens the full picker scoped to this session. */
   sessionId?: string;
-  /** Den/import includes OpenWork Models — never show Subscribe while true. */
+  /** Den/import includes RenWork Models — never show Subscribe while true. */
   openWorkModelsEntitled?: boolean;
-  /** The server is waiting to reload this workspace with OpenWork Models. */
+  /** The server is waiting to reload this workspace with RenWork Models. */
   openWorkModelsSyncing?: boolean;
   /** Member-scoped models available before a workspace OpenCode client exists. */
   fallbackOptions?: readonly ModelOption[];
@@ -314,7 +314,7 @@ export function ModelSelect({
   }, []);
 
   // Providers the user connected with their own key — OpenCode Zen and
-  // OpenWork Models are managed for them, so they never count as "your keys".
+  // RenWork Models are managed for them, so they never count as "your keys".
   const keyProviders = React.useMemo(() => {
     const seen = new Map<string, string>();
     for (const option of modelOptions) {

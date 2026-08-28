@@ -43,7 +43,7 @@ export async function readOpenWorkConnectMcpServerIndex(
 }
 
 /**
- * Reconciles only OpenWork-owned Connect proxy entries. User-authored MCP
+ * Reconciles only RenWork-owned Connect proxy entries. User-authored MCP
  * configurations are never touched. A missing/unreadable index is a no-op so
  * an older Cloud deployment cannot erase a previously working catalog.
  */

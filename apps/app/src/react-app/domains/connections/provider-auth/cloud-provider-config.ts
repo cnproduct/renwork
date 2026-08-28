@@ -30,7 +30,7 @@ const escapeRegExp = (value: string) =>
 const removeCloudProviderComment = (raw: string, providerId: string) =>
   raw.replace(
     new RegExp(
-      `(^[ \t]*)// OpenWork Cloud import:.*\\n\\1(?="${escapeRegExp(providerId)}":)`,
+      `(^[ \t]*)// RenWork Cloud import:.*\\n\\1(?="${escapeRegExp(providerId)}":)`,
       "m",
     ),
     "$1",

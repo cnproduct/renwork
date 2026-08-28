@@ -536,13 +536,13 @@ async function createOpenAiRealtimeVoiceSession(env: EnvService, input: unknown)
       if (error instanceof ApiError && error.status === 503) {
         const fallbackKey = await resolveOpenAiRealtimeApiKey(env);
         if (fallbackKey) {
-          console.warn("[voice] OpenWork Models broker returned 503 — falling back to direct OpenAI Realtime.");
+          console.warn("[voice] RenWork Models broker returned 503 — falling back to direct OpenAI Realtime.");
           return createDirectOpenAiVoiceSession(fallbackKey, input);
         }
         throw new ApiError(
           503,
           "openwork_models_voice_unavailable",
-          "OpenWork Models voice is active but the server is not fully configured. Ask your admin to add an OpenAI key, or save your own OPENAI_API_KEY in Environment settings.",
+          "RenWork Models voice is active but the server is not fully configured. Ask your admin to add an OpenAI key, or save your own OPENAI_API_KEY in Environment settings.",
         );
       }
       throw error;
@@ -554,7 +554,7 @@ async function createOpenAiRealtimeVoiceSession(env: EnvService, input: unknown)
     throw new ApiError(
       400,
       "openai_api_key_missing",
-      "OpenAI API key missing. Save OPENAI_API_KEY in OpenWork Environment Variables or configure the Voice Mode extension.",
+      "OpenAI API key missing. Save OPENAI_API_KEY in RenWork Environment Variables or configure the Voice Mode extension.",
     );
   }
 
@@ -580,7 +580,7 @@ async function createManagedVoiceSession(config: { baseUrl: string; apiKey: stri
   if (!response.ok) {
     const errorPayload = isRecord(payload) && isRecord(payload.error) ? payload.error : null;
     const message = typeof errorPayload?.message === "string" ? errorPayload.message : response.statusText;
-    throw new ApiError(response.status, "openwork_models_voice_failed", message || "OpenWork Models could not create a voice session");
+    throw new ApiError(response.status, "openwork_models_voice_failed", message || "RenWork Models could not create a voice session");
   }
   if (
     !isRecord(payload) ||
@@ -590,7 +590,7 @@ async function createManagedVoiceSession(config: { baseUrl: string; apiKey: stri
     !Array.isArray(payload.tools) ||
     payload.tools.some((tool) => typeof tool !== "string")
   ) {
-    throw new ApiError(502, "openwork_models_voice_invalid_response", "OpenWork Models did not return a usable Realtime session payload");
+    throw new ApiError(502, "openwork_models_voice_invalid_response", "RenWork Models did not return a usable Realtime session payload");
   }
   return {
     ok: true,
@@ -843,7 +843,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
   try {
     await reconcileLocalManagedMcpRuntimeEntries(config);
   } catch (error) {
-    logger.log("warn", "Failed to reconcile OpenWork-managed MCP connections during startup.", {
+    logger.log("warn", "Failed to reconcile RenWork-managed MCP connections during startup.", {
       error: error instanceof Error ? error.message : "unknown",
     });
   }
@@ -1067,7 +1067,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
     try {
       await reconcileLocalManagedMcpRuntimeEntries(config);
     } catch (error) {
-      logger.log("warn", "Failed to update OpenWork-managed MCP loopback routes after binding the server port.", {
+      logger.log("warn", "Failed to update RenWork-managed MCP loopback routes after binding the server port.", {
         error: error instanceof Error ? error.message : "unknown",
       });
     }
@@ -1939,7 +1939,7 @@ function createRoutes(
       throw new ApiError(
         400,
         "agent_diagnostics_workspace_unsupported",
-        "Agent diagnostics must run on the OpenWork server that owns a local workspace",
+        "Agent diagnostics must run on the RenWork server that owns a local workspace",
       );
     }
     // Reserve before consuming untrusted bytes and hold the reservation through
@@ -2940,7 +2940,7 @@ function createRoutes(
     await requireApproval(ctx, {
       workspaceId: workspace.id,
       action: "mcp.add",
-      summary: `Add OpenWork-managed MCP ${name}`,
+      summary: `Add RenWork-managed MCP ${name}`,
       paths: [openworkConfigPath(workspace.path)],
     });
     await createLocalManagedMcpConnection(config, {
@@ -2969,7 +2969,7 @@ function createRoutes(
         throw new ApiError(
           502,
           "managed_mcp_connection_failed",
-          "OpenWork could not start sign-in with this MCP server. Check the server URL, OAuth settings, and network connection, then try again.",
+          "RenWork could not start sign-in with this MCP server. Check the server URL, OAuth settings, and network connection, then try again.",
         );
       }
     })();
@@ -2980,7 +2980,7 @@ function createRoutes(
       actor: ctx.actor ?? { type: "remote" },
       action: "mcp.add",
       target: openworkConfigPath(workspace.path),
-      summary: `Added OpenWork-managed MCP ${name}`,
+      summary: `Added RenWork-managed MCP ${name}`,
       timestamp: Date.now(),
     });
     emitReloadEvent(ctx.reloadEvents, workspace, "mcp", { type: "mcp", name, action: "added" });
@@ -3013,7 +3013,7 @@ function createRoutes(
       await syncRuntimeMcpToOpencodeEngine(config, workspace, [connection.name], undefined, engineMcpServerState).catch(() => undefined);
     }
     return new Response(
-      `<!doctype html><meta charset="utf-8"><title>Connected</title><main style="font:16px system-ui;padding:40px;max-width:560px"><h1>Connected</h1><p>${connection.name} is ready in OpenWork. You can close this window.</p><script>setTimeout(()=>window.close(),1200)</script></main>`,
+      `<!doctype html><meta charset="utf-8"><title>Connected</title><main style="font:16px system-ui;padding:40px;max-width:560px"><h1>Connected</h1><p>${connection.name} is ready in RenWork. You can close this window.</p><script>setTimeout(()=>window.close(),1200)</script></main>`,
       { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
     );
   });
@@ -3029,7 +3029,7 @@ function createRoutes(
   addRoute(routes, "DELETE", "/mcp/managed/:workspaceId/:name", "none", managedGatewayHandler);
 
   // Portable export of installed skills and MCP servers (including
-  // OpenWork-managed runtime MCPs that only live in the runtime DB), so
+  // RenWork-managed runtime MCPs that only live in the runtime DB), so
   // agents can package them into marketplace plugins. Read-only; MCP
   // secrets (headers/environment) are always redacted.
   addRoute(routes, "POST", "/workspace/:id/extensions/export", "client", async (ctx) => {
@@ -3201,7 +3201,7 @@ function createRoutes(
         actor: ctx.actor ?? { type: "remote" },
         action: "mcp.auth.remove",
         target: openworkConfigPath(workspace.path),
-        summary: `Logged out OpenWork-managed MCP ${name}`,
+        summary: `Logged out RenWork-managed MCP ${name}`,
         timestamp: Date.now(),
       });
       return jsonResponse({ ok: true });
@@ -4423,7 +4423,7 @@ type EngineMcpServerState = {
 const ENGINE_MCP_REGISTRATION_MAX_AGE_MS = 15 * 60_000;
 // Registration status is point-in-time evidence from a dynamic POST /mcp,
 // not a durable statement about a later engine process. Scope it to one
-// OpenWork server generation and expire it even when the endpoint is stable.
+// RenWork server generation and expire it even when the endpoint is stable.
 const engineMcpServerStateByConfig = new WeakMap<ServerConfig, EngineMcpServerState>();
 const trustedOpencodeProcessByConfig = new WeakMap<ServerConfig, TrustedOpencodeProcessIdentity>();
 let nextEngineMcpServerGeneration = 0;
@@ -4451,7 +4451,7 @@ function clearEngineMcpServerEvidence(state: EngineMcpServerState): void {
 
 /**
  * Bind diagnostics evidence to one OpenCode process generation owned by this
- * OpenWork server. The opaque identity is hashed immediately and never
+ * RenWork server. The opaque identity is hashed immediately and never
  * reported. External engines without a trusted per-boot identity still hot
  * sync normally, but their cached registration result cannot authorize a
  * credentialed diagnostics probe.

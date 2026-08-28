@@ -1008,9 +1008,9 @@ export function differentialCloudVerdict(
 
 /**
  * Performs one credential-safe direct verification of the exact
- * runtime-managed OpenWork Cloud entry supplied by the caller, running the
+ * runtime-managed RenWork Cloud entry supplied by the caller, running the
  * complete bounded MCP handshake (initialize, initialized notification,
- * tools/list, best-effort session termination) on the OpenWork runtime's own
+ * tools/list, best-effort session termination) on the RenWork runtime's own
  * fetch stack. This function never discovers another MCP, follows redirects,
  * calls a tool, mutates configuration, or returns endpoint, credential,
  * header, response-body, or caught-error values.
