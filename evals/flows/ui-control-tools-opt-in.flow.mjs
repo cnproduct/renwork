@@ -43,18 +43,18 @@ export default {
   requiresApp: false,
   steps: [
     {
-      name: "Formal RenWork tools are primary and legacy aliases remain compatible",
+      name: "Only formal RenWork tools are visible while legacy references migrate",
       run: async (ctx) => {
         let result = null;
-        await ctx.prove("The preview plugin exposes formal RenWork tools with staged compatibility aliases", {
-          voiceover: "Agents use renwork_context, renwork_query, and renwork_execute as the formal semantic tools. The three prior names remain temporary aliases so existing sessions continue to work during migration.",
+        await ctx.prove("The preview plugin exposes only formal RenWork tools", {
+          voiceover: "Agents see only renwork_context, renwork_query, and renwork_execute. Historical tool references are migrated before execution so existing sessions and saved work continue without exposing the prior names.",
           action: async () => {
             result = await probeSemanticTools();
             ctx.output("semantic tool surface", pretty(result));
           },
           assert: async () => {
             witness(ctx, Array.isArray(result?.tools), "The probe printed a tools array", result ? pretty(result.tools) : "null");
-            witness(ctx, result.tools.join(",") === "openwork_context,openwork_execute,openwork_query,renwork_context,renwork_execute,renwork_query", "Formal tools and only their three compatibility aliases are registered", result.tools.join(", "));
+            witness(ctx, result.tools.join(",") === "renwork_context,renwork_execute,renwork_query", "Only the three formal RenWork tools are registered", result.tools.join(", "));
             witness(ctx, !result.tools.some((tool) => tool.startsWith("openwork_ui_")), "Legacy openwork_ui_* tools are gone", result.tools.join(", "));
             witness(ctx, !result.tools.some((tool) => tool.startsWith("openwork_session_")), "Legacy openwork_session_* tools are gone", result.tools.join(", "));
             witness(ctx, !result.system.includes("openwork_ui_"), "The system prompt lacks openwork_ui_ steering", result.system);

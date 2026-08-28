@@ -1,4 +1,17 @@
 const EMPTY_USAGE = { inputTokens: null, outputTokens: null, costMicros: null }
+const LEGACY_RENWORK_TOOL_NAMES = {
+  openwork_context: "renwork_context",
+  openwork_query: "renwork_query",
+  openwork_execute: "renwork_execute",
+}
+
+export function migrateLegacyRenWorkToolNames(value) {
+  let migrated = String(value ?? "")
+  for (const [legacyName, formalName] of Object.entries(LEGACY_RENWORK_TOOL_NAMES)) {
+    migrated = migrated.replaceAll(legacyName, formalName)
+  }
+  return migrated
+}
 
 function serializedError(value) {
   if (value instanceof Error) return value.message
@@ -109,7 +122,7 @@ export async function executeDesktopAutomation(assignment, options) {
     method: "POST",
     body: {
       title: `Automation: ${assignment.automationName}`.slice(0, 120),
-      prompt: assignment.instructions,
+      prompt: migrateLegacyRenWorkToolNames(assignment.instructions),
       providerId: assignment.model.providerId,
       modelId: assignment.model.modelId,
       ...(assignment.model.variant ? { variant: assignment.model.variant } : {}),

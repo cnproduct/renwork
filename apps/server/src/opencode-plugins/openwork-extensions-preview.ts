@@ -22,6 +22,7 @@ import {
   type ConnectSkillDescriptor,
   type EngineMcpDescriptor,
 } from "./openwork-provider-adapters.js";
+import { migrateLegacyRenWorkToolReferences } from "../renwork-tool-name-migration.js";
 
 type ExtensionActionPayload = {
   extensionId: string;
@@ -946,61 +947,51 @@ export const OpenWorkExtensionsPreview = async (factoryInput?: unknown) => {
   };
 
   return {
-  "tool.execute.after": async (_input: unknown, output: unknown) => {
-    // OpenCode 1.17.x keeps the text projection of an MCP result but drops
-    // structuredContent and result _meta before persisting the completed tool
-    // part. Preserve those standard fields in the existing metadata channel
-    // so OpenWork can host the UI without replaying the tool call.
-    preserveMcpResult(output);
-  },
-  "experimental.chat.system.transform": async (input: unknown, output: { system: string[] }) => {
-    const mergedInput = mergeTransformInputWithFactoryContext(input, factoryContext);
-    const [extensionInstruction, skillInstruction, automationInstruction] = await Promise.all([
-      resolveOpenWorkExtensionDiscoveryInstruction(mergedInput, fetch, {
-        client: engineMcpStatusClient,
-        directory: engineMcpStatusDirectory,
-      }),
-      resolveOpenWorkConnectSkillInstruction(mergedInput, fetch),
-      resolveOpenWorkAutomationInstruction(mergedInput, fetch),
-    ]);
-    const skillAuthoring = composeSkillAuthoringInstruction(extensionInstruction);
-    if (process.env.OPENWORK_DEV_MODE === "1") {
-      console.log("[openwork:skill-authoring] system prompt selected", {
-        mode: skillAuthoring.mode,
-        prompt: skillAuthoring.prompt,
-        directory: normalizeOpenCodeContext(mergedInput).directory ?? factoryContext.directory ?? null,
-      });
-    }
-    // One section id per concern — combine drops empties/duplicates so routing,
-    // remote skills, session, and browser guidance never overlap by accident.
-    const sections = combineInstructionSections(
-      createInstructionSection("routing", extensionInstruction),
-      createInstructionSection("agent-surface", OPENWORK_AGENT_SURFACE_INSTRUCTION),
-      createInstructionSection("skill-authoring", skillAuthoring.prompt),
-      createInstructionSection("connect-skills", skillInstruction),
-      createInstructionSection("automations", automationInstruction),
-      createInstructionSection("browser", OPENWORK_BROWSER_INSTRUCTION),
-    );
-    output.system.push(...composeAgentInstructions(sections));
-  },
-  tool: {
-    renwork_context: renworkContextTool,
-    renwork_query: renworkQueryTool,
-    renwork_execute: renworkExecuteTool,
-    // Deprecated compatibility aliases. Existing sessions and saved prompts may
-    // still replay these IDs during the staged migration.
-    openwork_context: {
-      ...renworkContextTool,
-      description: "Deprecated compatibility alias for renwork_context. Use renwork_context for new calls.",
+    "experimental.chat.messages.transform": async (_input: unknown, output: { messages: unknown[] }) => {
+      const migrated = output.messages.map(migrateLegacyRenWorkToolReferences);
+      output.messages.splice(0, output.messages.length, ...migrated);
     },
-    openwork_query: {
-      ...renworkQueryTool,
-      description: "Deprecated compatibility alias for renwork_query. Use renwork_query for new calls.",
+    "tool.execute.after": async (_input: unknown, output: unknown) => {
+      // OpenCode 1.17.x keeps the text projection of an MCP result but drops
+      // structuredContent and result _meta before persisting the completed tool
+      // part. Preserve those standard fields in the existing metadata channel
+      // so OpenWork can host the UI without replaying the tool call.
+      preserveMcpResult(output);
     },
-    openwork_execute: {
-      ...renworkExecuteTool,
-      description: "Deprecated compatibility alias for renwork_execute. Use renwork_execute for new calls.",
+    "experimental.chat.system.transform": async (input: unknown, output: { system: string[] }) => {
+      const mergedInput = mergeTransformInputWithFactoryContext(input, factoryContext);
+      const [extensionInstruction, skillInstruction, automationInstruction] = await Promise.all([
+        resolveOpenWorkExtensionDiscoveryInstruction(mergedInput, fetch, {
+          client: engineMcpStatusClient,
+          directory: engineMcpStatusDirectory,
+        }),
+        resolveOpenWorkConnectSkillInstruction(mergedInput, fetch),
+        resolveOpenWorkAutomationInstruction(mergedInput, fetch),
+      ]);
+      const skillAuthoring = composeSkillAuthoringInstruction(extensionInstruction);
+      if (process.env.OPENWORK_DEV_MODE === "1") {
+        console.log("[openwork:skill-authoring] system prompt selected", {
+          mode: skillAuthoring.mode,
+          prompt: skillAuthoring.prompt,
+          directory: normalizeOpenCodeContext(mergedInput).directory ?? factoryContext.directory ?? null,
+        });
+      }
+      // One section id per concern — combine drops empties/duplicates so routing,
+      // remote skills, session, and browser guidance never overlap by accident.
+      const sections = combineInstructionSections(
+        createInstructionSection("routing", extensionInstruction),
+        createInstructionSection("agent-surface", OPENWORK_AGENT_SURFACE_INSTRUCTION),
+        createInstructionSection("skill-authoring", skillAuthoring.prompt),
+        createInstructionSection("connect-skills", skillInstruction),
+        createInstructionSection("automations", automationInstruction),
+        createInstructionSection("browser", OPENWORK_BROWSER_INSTRUCTION),
+      );
+      output.system.push(...composeAgentInstructions(sections));
     },
-  },
+    tool: {
+      renwork_context: renworkContextTool,
+      renwork_query: renworkQueryTool,
+      renwork_execute: renworkExecuteTool,
+    },
   };
 };

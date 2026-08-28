@@ -5,9 +5,19 @@ import {
   classifyAutomationExecutionError,
   createDesktopAutomationRunner,
   executeDesktopAutomation,
+  migrateLegacyRenWorkToolNames,
   normalizeRunnerBaseUrl,
   runnerTokenAudience,
 } from "./automation-runner.mjs"
+
+test("legacy RenWork tool names migrate without changing saved source data", () => {
+  const stored = "Call openwork_context, then openwork_query and openwork_execute."
+  assert.equal(
+    migrateLegacyRenWorkToolNames(stored),
+    "Call renwork_context, then renwork_query and renwork_execute.",
+  )
+  assert.equal(stored, "Call openwork_context, then openwork_query and openwork_execute.")
+})
 
 function runnerTokenFor(audience) {
   const payload = Buffer.from(JSON.stringify({ v: 2, a: audience })).toString("base64url")
@@ -183,7 +193,7 @@ test("desktop Automation execution creates a normal visible local OpenWork threa
     runId: "run-1",
     automationId: "automation-1",
     automationName: "Daily brief",
-    instructions: "Prepare the brief",
+    instructions: "Prepare the brief, then call openwork_execute.",
     model: { providerId: "opencode", modelId: "big-pickle" },
     timeoutMs: 30_000,
     leaseExpiresAt: Date.now() + 60_000,
@@ -201,7 +211,7 @@ test("desktop Automation execution creates a normal visible local OpenWork threa
   const create = requests.find((request) => request.path === "/workspace/workspace-1/sessions")
   assert.deepEqual(create?.body, {
     title: "Automation: Daily brief",
-    prompt: "Prepare the brief",
+    prompt: "Prepare the brief, then call renwork_execute.",
     providerId: "opencode",
     modelId: "big-pickle",
   })

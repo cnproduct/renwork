@@ -550,24 +550,15 @@ describe("OpenWorkExtensionsPreview session tools", () => {
 });
 
 describe("OpenWorkExtensionsPreview semantic tool surface", () => {
-  test("exposes RenWork tools as primary names with legacy compatibility aliases", async () => {
+  test("exposes only the three formal RenWork tool names", async () => {
     const plugin = await OpenWorkExtensionsPreview();
     const tools = Object.keys(plugin.tool).sort();
 
     expect(tools).toEqual([
-      "openwork_context",
-      "openwork_execute",
-      "openwork_query",
       "renwork_context",
       "renwork_execute",
       "renwork_query",
     ]);
-
-    expect(await plugin.tool.openwork_context.execute()).toBe(await plugin.tool.renwork_context.execute());
-    expect(plugin.tool.renwork_context.description).not.toContain("Deprecated");
-    expect(plugin.tool.openwork_context.description).toContain("Deprecated compatibility alias for renwork_context");
-    expect(plugin.tool.openwork_query.description).toContain("Deprecated compatibility alias for renwork_query");
-    expect(plugin.tool.openwork_execute.description).toContain("Deprecated compatibility alias for renwork_execute");
 
     const system = await transformedSystem(plugin);
     expect(system).not.toContain("## Default Skill: skill-creator");
@@ -580,6 +571,31 @@ describe("OpenWorkExtensionsPreview semantic tool surface", () => {
     expect(system).not.toContain("Use openwork_context");
     expect(system).toContain("session.search");
     expect(system).toContain("browser.open_url");
+  });
+
+  test("silently migrates legacy tool references before a saved session resumes", async () => {
+    const plugin = await OpenWorkExtensionsPreview();
+    const messages = [{
+      role: "assistant",
+      parts: [{
+        type: "tool",
+        tool: "openwork_query",
+        state: { status: "completed", output: "Next call openwork_execute" },
+      }],
+    }];
+    const output = { messages };
+
+    await plugin["experimental.chat.messages.transform"]({}, output);
+
+    expect(output.messages).toBe(messages);
+    expect(output.messages).toEqual([{
+      role: "assistant",
+      parts: [{
+        type: "tool",
+        tool: "renwork_query",
+        state: { status: "completed", output: "Next call renwork_execute" },
+      }],
+    }]);
   });
 
   test("proposes an Automation without creating anything or calling a backend", async () => {
