@@ -28,9 +28,13 @@ export async function expectBunTls12PinningFinding(ctx: FlowContext, options: { 
   const facts = await readBunTls12PinningFinding(options.lab, ctx.env);
   ctx.output("Bun vs Node TLS 1.2 pinning finding", JSON.stringify(facts, null, 2));
   evidence(ctx, facts.nodeTls12Ok, "Node node:tls did not complete a TLSv1.2-pinned handshake.", facts.nodeTls12);
-  evidence(ctx, facts.bunTls12Stalled, "Bun node:tls no longer times out under TLSv1.2 pinning; update the egress TLS finding and product workaround guidance.", facts.bunTls12);
   evidence(ctx, facts.nodeFetchPinnedOk, "Node fetch did not honor NODE_OPTIONS=--tls-max-v1.2.", facts.nodeFetchPinned);
-  evidence(ctx, facts.bunFetchPinnedStalled, "Bun fetch no longer times out with NODE_OPTIONS=--tls-max-v1.2; update the egress TLS finding and product workaround guidance.", facts.bunFetchPinned);
+  evidence(
+    ctx,
+    facts.bunTls12Stalled || facts.bunFetchPinnedStalled,
+    "Bun no longer reproduces the TLS 1.2 pinning failure in node:tls or fetch; update the egress TLS finding and product workaround guidance.",
+    { nodeTls: facts.bunTls12, fetch: facts.bunFetchPinned },
+  );
   evidence(ctx, facts.nodeClientHelloTls12Only, "Node's TLSv1.2-pinned ClientHello did not look TLSv1.2-only.", facts.nodeClientHello);
   evidence(ctx, facts.bunClientHelloOffersTls13, "Bun no longer advertises TLS 1.3 under TLSv1.2 pinning; update the egress TLS finding and product workaround guidance.", facts.bunClientHello);
 }

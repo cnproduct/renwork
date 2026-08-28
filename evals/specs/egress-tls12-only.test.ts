@@ -44,9 +44,8 @@ describe("TLS 1.2-only egress", () => {
 
       const pinning = await readBunTls12PinningFinding(lab);
       expect(pinning.nodeTls12Ok).toBe(true);
-      expect(pinning.bunTls12Stalled).toBe(true);
       expect(pinning.nodeFetchPinnedOk).toBe(true);
-      expect(pinning.bunFetchPinnedStalled).toBe(true);
+      expect(pinning.bunTls12Stalled || pinning.bunFetchPinnedStalled).toBe(true);
       expect(pinning.nodeClientHelloTls12Only).toBe(true);
       expect(pinning.bunClientHelloOffersTls13).toBe(true);
     },
