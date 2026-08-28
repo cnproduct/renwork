@@ -57,8 +57,7 @@
     "minimatch": "^10.2.5",
     "undici": "6.28.0",
     "yaml": "^2.9.0",
-    "zod": "^4.3.6",
-    "@openwork/export-growth-domain": "workspace:*"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@openwork/headless-threads": "workspace:*",

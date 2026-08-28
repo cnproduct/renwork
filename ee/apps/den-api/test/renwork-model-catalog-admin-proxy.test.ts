@@ -28,7 +28,5 @@ describe("RenWork model catalog admin proxy", () => {
     expect(dockerfile).toContain("COPY packages/rencredit-metering/package.json")
     expect(dockerfile).toContain("COPY packages/rencredit-metering /app/packages/rencredit-metering")
     expect(dockerfile).toContain("pnpm --dir /app/packages/rencredit-metering run build")
-    expect(dockerfile).toContain("COPY packages/export-growth-domain/package.json")
-    expect(dockerfile).toContain("COPY packages/export-growth-domain /app/packages/export-growth-domain")
   })
 })

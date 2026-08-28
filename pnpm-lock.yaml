@@ -333,9 +333,6 @@ importers:
       '@openwork/enterprise-mcp-client':
         specifier: workspace:*
         version: link:../../packages/enterprise-mcp-client
-      '@openwork/export-growth-domain':
-        specifier: workspace:*
-        version: link:../../packages/export-growth-domain
       '@openwork/paths':
         specifier: workspace:*
         version: link:../../packages/paths
@@ -406,9 +403,6 @@ importers:
       '@openwork/enterprise-mcp-client':
         specifier: workspace:*
         version: link:../../packages/enterprise-mcp-client
-      '@openwork/export-growth-domain':
-        specifier: workspace:*
-        version: link:../../packages/export-growth-domain
       better-sqlite3:
         specifier: ^13.0.2
         version: 13.0.2
