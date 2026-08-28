@@ -15,6 +15,9 @@ import type { AuthContextVariables } from "../../session.js"
 import { enforceRateLimit } from "../../utils/rate-limit.js"
 import { CLOUD_INSTANCE_BACKEND } from "../../workers/cloud-constants.js"
 
+const DEFAULT_DESKTOP_SCHEME = "renwork"
+const ALLOWED_DESKTOP_SCHEMES = new Set(["renwork", "openwork", "openwork-dev"])
+
 const createGrantSchema = z.object({
   next: z.string().trim().max(128).optional().describe("Optional continuation hint for handoff clients."),
   desktopScheme: z.string().trim().max(32).optional().describe("Optional desktop URL scheme to use when building the RenWork deep link."),
@@ -70,7 +73,16 @@ const invalidReturnUrlSchema = z.object({
   message: z.string(),
 }).meta({ ref: "DesktopHandoffInvalidReturnUrlError" })
 
-const createGrantBadRequestSchema = z.union([invalidRequestSchema, invalidReturnUrlSchema]).meta({ ref: "DesktopHandoffCreateBadRequest" })
+const unsupportedDesktopSchemeSchema = z.object({
+  error: z.literal("unsupported_desktop_scheme"),
+  message: z.string(),
+}).meta({ ref: "DesktopHandoffUnsupportedSchemeError" })
+
+const createGrantBadRequestSchema = z.union([
+  invalidRequestSchema,
+  invalidReturnUrlSchema,
+  unsupportedDesktopSchemeSchema,
+]).meta({ ref: "DesktopHandoffCreateBadRequest" })
 
 const HANDOFF_STATUS_RATE_LIMIT_WINDOW_MS = 60 * 1000
 const HANDOFF_STATUS_RATE_LIMIT_MAX = 240
@@ -419,6 +431,13 @@ export function registerDesktopAuthRoutes<T extends { Variables: AuthContextVari
     }
 
     const input = c.req.valid("json")
+    const desktopScheme = input.desktopScheme || DEFAULT_DESKTOP_SCHEME
+    if (!ALLOWED_DESKTOP_SCHEMES.has(desktopScheme)) {
+      return c.json({
+        error: "unsupported_desktop_scheme",
+        message: "The requested desktop callback scheme is not supported.",
+      }, 400)
+    }
     let approvedReturnUrl: string | null = null
     if (input.returnUrl !== undefined) {
       approvedReturnUrl = await resolveApprovedWebHandoffReturnUrl({
@@ -449,7 +468,7 @@ export function registerDesktopAuthRoutes<T extends { Variables: AuthContextVari
       grant,
       expiresAt: expiresAt.toISOString(),
       openworkUrl: buildOpenworkDeepLink({
-        scheme: input.desktopScheme || "openwork",
+        scheme: desktopScheme,
         grant,
         denBaseUrl,
       }),

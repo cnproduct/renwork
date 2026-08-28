@@ -12,7 +12,16 @@ type SettingsTab = "profile" | "organizations";
 
 export function OrganizationScreen() {
   const router = useRouter();
-  const { user, sessionHydrated, signOut, runtimeConfig, runtimeConfigLoaded } = useDenFlow();
+  const {
+    user,
+    sessionHydrated,
+    signOut,
+    runtimeConfig,
+    runtimeConfigLoaded,
+    desktopAuthRequested,
+    desktopAuthScheme,
+    completeDesktopAuthHandoff,
+  } = useDenFlow();
   const [orgs, setOrgs] = useState<DenOrgSummary[]>([]);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +137,16 @@ export function OrganizationScreen() {
       if (pendingIntent === "models") {
         window.sessionStorage.removeItem(PENDING_AUTH_INTENT_STORAGE_KEY);
         router.push(getInferenceRoute(nextSlug));
+        return;
+      }
+
+      if (desktopAuthRequested) {
+        await completeDesktopAuthHandoff();
+        const params = new URLSearchParams({
+          desktopAuth: "1",
+          desktopScheme: desktopAuthScheme,
+        });
+        router.push(`/?${params.toString()}`);
         return;
       }
 

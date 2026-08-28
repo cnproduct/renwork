@@ -169,14 +169,14 @@ describe("gateway runtime mode", () => {
 
   test("keeps Den web on the configured origin and Den API calls on the gateway origin", () => {
     const storage = installWindow({ origin: "https://gw.example", gateway: true });
-    storage.setItem("openwork.den.baseUrl", "https://app.openworklabs.com");
+    storage.setItem("openwork.den.baseUrl", "https://account.rrenn.com");
     storage.setItem("openwork.den.authToken", "den-session-token");
 
     expect(resolveDenBaseUrls("https://gw.example")).toEqual({
-      baseUrl: "https://app.openworklabs.com",
+      baseUrl: "https://account.rrenn.com",
       apiBaseUrl: "https://gw.example/api/den",
     });
-    expect(readDenSettings().baseUrl).toBe("https://app.openworklabs.com");
+    expect(readDenSettings().baseUrl).toBe("https://account.rrenn.com");
     expect(readDenSettings().apiBaseUrl).toBe("https://gw.example/api/den");
     expect(readDenSettings().authToken).toBe("den-session-token");
   });
@@ -186,7 +186,7 @@ describe("gateway runtime mode", () => {
 
     const authUrl = new URL(buildDenAuthUrl(readDenSettings().baseUrl, "sign-up"));
 
-    expect(authUrl.origin).toBe("https://app.openworklabs.com");
+    expect(authUrl.origin).toBe("https://account.rrenn.com");
     expect(authUrl.searchParams.get("mode")).toBe("sign-up");
     expect(authUrl.searchParams.get("webAuth")).toBe("1");
     expect(authUrl.searchParams.get("webAuthReturn")).toBe("https://gw.example");
@@ -214,7 +214,7 @@ describe("gateway runtime mode", () => {
     await client.getSession();
 
     expect(requestedUrls).toEqual([
-      "https://app.openworklabs.com/api/auth/sign-in/email",
+      "https://account.rrenn.com/api/auth/sign-in/email",
       "https://gw.example/api/den/v1/me",
     ]);
   });
@@ -232,7 +232,7 @@ describe("gateway runtime mode", () => {
     const second = readDenBootstrapConfig();
 
     expect(second).toBe(first);
-    expect(first.baseUrl).toBe("https://app.openworklabs.com");
+    expect(first.baseUrl).toBe("https://account.rrenn.com");
     expect(first.apiBaseUrl).toBe("https://web.openworklabs.com/api/den");
   });
 
@@ -458,20 +458,20 @@ describe("non-gateway connection modes", () => {
 
     try {
       const settings = readDenSettings();
-      expect(settings.baseUrl).toBe("https://app.openworklabs.com");
+      expect(settings.baseUrl).toBe("https://account.rrenn.com");
       expect(settings.apiBaseUrl).toBe("http://127.0.0.1:5178/api/den");
 
       // Every Den client derives its API base the same way, so requests go
       // through the same-origin proxy even when created from the web base.
       const client = createDenClient({ baseUrl: settings.baseUrl, token: "den-token" });
       expect(client.baseUrls.apiBaseUrl).toBe("http://127.0.0.1:5178/api/den");
-      expect(client.baseUrls.baseUrl).toBe("https://app.openworklabs.com");
+      expect(client.baseUrls.baseUrl).toBe("https://account.rrenn.com");
 
       // Sign-in still opens the real Den web app, not the proxy origin.
       // Loopback cannot use webAuth return URLs against hosted Den, so the
       // URL uses desktopAuth (copy link / paste grant) instead.
       const authUrl = new URL(buildDenAuthUrl(settings.baseUrl, "sign-in"));
-      expect(authUrl.origin).toBe("https://app.openworklabs.com");
+      expect(authUrl.origin).toBe("https://account.rrenn.com");
       expect(authUrl.searchParams.get("desktopAuth")).toBe("1");
       expect(authUrl.searchParams.get("webAuth")).toBeNull();
     } finally {
@@ -484,9 +484,9 @@ describe("non-gateway connection modes", () => {
 
     const authUrl = new URL(buildDenAuthUrl(readDenSettings().baseUrl, "sign-in"));
 
-    expect(authUrl.origin).toBe("https://app.openworklabs.com");
+    expect(authUrl.origin).toBe("https://account.rrenn.com");
     expect(authUrl.searchParams.get("desktopAuth")).toBe("1");
-    expect(authUrl.searchParams.get("desktopScheme")).toBe("openwork");
+    expect(authUrl.searchParams.get("desktopScheme")).toBe("renwork");
     expect(authUrl.searchParams.get("webAuth")).toBeNull();
     expect(authUrl.searchParams.get("webAuthReturn")).toBeNull();
   });
@@ -500,7 +500,7 @@ describe("non-gateway connection modes", () => {
     try {
       await initializeDenBootstrapConfig();
       expect(storage.getItem("openwork.den.baseUrl")).toBeNull();
-      expect(readDenSettings().baseUrl).toBe("https://app.openworklabs.com");
+      expect(readDenSettings().baseUrl).toBe("https://account.rrenn.com");
     } finally {
       restoreEnv("VITE_OPENWORK_FORCE_ENV_SETTINGS", previous);
     }

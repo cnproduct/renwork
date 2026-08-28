@@ -74,35 +74,10 @@ import {
 } from "../_lib/den-org";
 
 type LaunchWorkerResult = "success" | "limit" | "error";
-type AuthNavigationResult = "dashboard" | "join-org" | null;
+type AuthNavigationResult = "dashboard" | "join-org" | "organization" | null;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-function isSignupPasswordFeedback(payload: unknown) {
-  return isRecord(payload)
-    && (payload.error === "password_too_short" || payload.error === "password_too_weak" || payload.error === "password_compromised");
-}
-
-function readStringArray(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
-    : [];
-}
-
-function getSignupPasswordFeedback(payload: unknown, fallback: string) {
-  if (!isRecord(payload)) {
-    return [fallback];
-  }
-
-  const feedback = isRecord(payload.feedback) ? payload.feedback : null;
-  const messages = [
-    typeof feedback?.warning === "string" ? feedback.warning.trim() : "",
-    ...readStringArray(feedback?.suggestions).map((suggestion) => suggestion.trim()),
-  ].filter((message) => message.length > 0);
-
-  return messages.length > 0 ? messages : [fallback];
 }
 
 type DenFlowContextValue = {
@@ -128,6 +103,7 @@ type DenFlowContextValue = {
   webAuthRequested: boolean;
   desktopRedirectUrl: string | null;
   desktopRedirectBusy: boolean;
+  completeDesktopAuthHandoff: () => Promise<boolean>;
   showAuthFeedback: boolean;
   submitAuth: (event: FormEvent<HTMLFormElement>) => Promise<AuthNavigationResult>;
   submitVerificationCode: (event: FormEvent<HTMLFormElement>) => Promise<AuthNavigationResult>;
@@ -253,12 +229,13 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
   });
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const [desktopAuthRequested, setDesktopAuthRequested] = useState(false);
-  const [desktopAuthScheme, setDesktopAuthScheme] = useState("openwork");
+  const [desktopAuthScheme, setDesktopAuthScheme] = useState("renwork");
   const [webAuthRequested, setWebAuthRequested] = useState(false);
   const [webAuthReturnUrl, setWebAuthReturnUrl] = useState<string | null>(null);
   const [desktopRedirectBusy, setDesktopRedirectBusy] = useState(false);
   const [desktopRedirectUrl, setDesktopRedirectUrl] = useState<string | null>(null);
   const [desktopRedirectAttempted, setDesktopRedirectAttempted] = useState(false);
+  const [desktopHandoffDeferred, setDesktopHandoffDeferred] = useState(false);
   const [webRedirectBusy, setWebRedirectBusy] = useState(false);
   const [webRedirectAttempted, setWebRedirectAttempted] = useState(false);
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
@@ -457,35 +434,20 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     return true;
   }
 
-  async function finalizeEmailPasswordSignIn(
+  async function finalizeEmailOtpSignIn(
     nextMode: AuthMode,
     trimmedEmail: string,
     payloadOverride?: unknown,
   ): Promise<AuthNavigationResult> {
     let payload = payloadOverride;
 
-    if (payload === undefined || (!getToken(payload) && nextMode === "sign-up" && Boolean(password))) {
-      const signInBody = {
-        email: trimmedEmail,
-        password,
-      };
+    if (nextMode === "sign-up" || getPendingWorkspaceClaimToken() || getPendingOrgInvitationId()) {
+      setDesktopHandoffDeferred(true);
+    }
 
-      const signInResult = await requestJson("/api/auth/sign-in/email", {
-        method: "POST",
-        body: JSON.stringify(signInBody)
-      });
-
-      if (!signInResult.response.ok) {
-        setAuthError(getErrorMessage(signInResult.payload, `Authentication failed with ${signInResult.response.status}.`));
-        trackPosthogEvent("den_auth_failed", {
-          mode: nextMode,
-          method: "email",
-          status: signInResult.response.status
-        });
-        return null;
-      }
-
-      payload = signInResult.payload;
+    if (payload === undefined) {
+      setAuthError("Email verification succeeded, but the session response was missing.");
+      return null;
     }
 
     const token = getToken(payload);
@@ -525,6 +487,14 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    if (authenticatedUser && (getPendingWorkspaceClaimToken() || getPendingOrgInvitationId())) {
+      return "join-org";
+    }
+
+    if (authenticatedUser && nextMode === "sign-up") {
+      return await beginSignupOnboarding(authenticatedUser, "email");
+    }
+
     if (desktopAuthRequested) {
       setAuthInfo("Signed in. Returning to RenWork...");
       return null;
@@ -535,23 +505,10 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       return null;
     }
 
-    if (authenticatedUser && (getPendingWorkspaceClaimToken() || getPendingOrgInvitationId())) {
-      return "join-org";
-    }
-
-    if (authenticatedUser && nextMode === "sign-up") {
-      return await beginSignupOnboarding(authenticatedUser, "email");
-    }
-
     return "dashboard" as const;
   }
 
   async function resendVerificationCode() {
-    if (isSingleOrgMode) {
-      setAuthError("Email verification codes are not used for this single-organization deployment.");
-      return;
-    }
-
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setAuthError("Enter your email before requesting a verification code.");
@@ -565,7 +522,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body: JSON.stringify({
           email: trimmedEmail,
-          type: "email-verification"
+          type: "sign-in"
         })
       });
 
@@ -589,12 +546,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
   async function submitVerificationCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isSingleOrgMode) {
-      setVerificationRequired(false);
-      setAuthError("Email verification codes are not used for this single-organization deployment.");
-      return null;
-    }
-
     const trimmedEmail = email.trim();
     const otp = verificationCode.trim();
     if (!trimmedEmail || !otp) {
@@ -605,11 +556,12 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     setAuthBusy(true);
     setAuthError(null);
     try {
-      const { response, payload } = await requestJson("/api/auth/email-otp/verify-email", {
+      const { response, payload } = await requestJson("/api/auth/sign-in/email-otp", {
         method: "POST",
         body: JSON.stringify({
           email: trimmedEmail,
           otp,
+          name: authName.trim() || DEFAULT_AUTH_NAME,
         })
       });
 
@@ -633,7 +585,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
         email_domain: getEmailDomain(trimmedEmail),
       });
 
-      return await finalizeEmailPasswordSignIn(authMode, trimmedEmail, payload);
+      return await finalizeEmailOtpSignIn(authMode, trimmedEmail, payload);
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Verification failed.");
       return null;
@@ -1032,16 +984,23 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     return activeOrgSlug ? getOrgDashboardRoute(activeOrgSlug) : null;
   }
 
-  async function completeDesktopAuthHandoff() {
+  async function completeDesktopAuthHandoff(): Promise<boolean> {
     if (!desktopAuthRequested || desktopRedirectBusy) {
-      return;
+      return false;
     }
 
     setDesktopRedirectBusy(true);
-    setDesktopRedirectAttempted(true);
     setAuthError(null);
 
     try {
+      const orgDirectory = await loadOrgDirectory();
+      if (runtimeConfig.orgMode === "multi_org" && orgDirectory.orgs.length === 0) {
+        setDesktopHandoffDeferred(true);
+        setAuthInfo("Create or join an organization before returning to RenWork.");
+        return false;
+      }
+
+      setDesktopRedirectAttempted(true);
       const headers = new Headers();
       if (authToken) {
         headers.set("Authorization", `Bearer ${authToken}`);
@@ -1055,20 +1014,23 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         setAuthError(getErrorMessage(payload, `Desktop handoff failed with ${response.status}.`));
-        return;
+        return false;
       }
 
       const openworkUrl = getDesktopHandoffOpenworkUrl(payload) ?? "";
       if (!openworkUrl) {
         setAuthError("Desktop handoff succeeded, but no RenWork redirect URL was returned.");
-        return;
+        return false;
       }
 
       rememberDesktopHandoffGrant(getDesktopHandoffGrant(payload, openworkUrl));
       setDesktopRedirectUrl(openworkUrl);
+      setDesktopHandoffDeferred(false);
       window.location.assign(openworkUrl);
+      return true;
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Failed to open RenWork.");
+      return false;
     } finally {
       setDesktopRedirectBusy(false);
     }
@@ -1137,7 +1099,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     setLaunchError(null);
     setLaunchStatus("Create a workspace to get started.");
     persistOnboardingIntent(null);
-    return "dashboard" as const;
+    return "organization" as const;
   }
 
   async function resolveUserLandingRoute() {
@@ -1190,40 +1152,17 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       if (trimmedEmail && await redirectToRequiredSso(trimmedEmail)) {
         return null;
       }
-      const pendingInvitationId = getPendingOrgInvitationId();
-      const endpoint = submitMode === "sign-up" && pendingInvitationId
-        ? `/api/auth/sign-up/email?invite=${encodeURIComponent(pendingInvitationId)}`
-        : submitMode === "sign-up"
-          ? "/api/auth/sign-up/email"
-          : "/api/auth/sign-in/email";
-      const body =
-        submitMode === "sign-up"
-          ? {
-              name: authName.trim() || DEFAULT_AUTH_NAME,
-              email: trimmedEmail,
-              password,
-            }
-          : {
-              email: trimmedEmail,
-              password
-            };
-
-      const { response, payload } = await requestJson(endpoint, {
+      const { response, payload } = await requestJson("/api/auth/email-otp/send-verification-otp", {
         method: "POST",
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          email: trimmedEmail,
+          type: "sign-in",
+        })
       });
 
       if (!response.ok) {
-        if (response.status === 403 && !isSingleOrgMode) {
-          openVerificationStep(trimmedEmail, `Enter the 6-digit code we sent to ${trimmedEmail} to finish verifying your email.`);
-        }
         const message = getErrorMessage(payload, `Authentication failed with ${response.status}.`);
-        if (submitMode === "sign-up" && isSignupPasswordFeedback(payload)) {
-          setSignupPasswordFeedback(getSignupPasswordFeedback(payload, message));
-          setAuthError(null);
-        } else {
-          setAuthError(message);
-        }
+        setAuthError(message);
         trackPosthogEvent("den_auth_failed", {
           mode: submitMode,
           method: "email",
@@ -1232,19 +1171,15 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
         return null;
       }
 
-      const token = getToken(payload);
-
-      if (submitMode === "sign-up" && !token) {
-        setUser(null);
-        openVerificationStep(trimmedEmail, `We emailed a 6-digit verification code to ${trimmedEmail}. Enter it below to finish creating your account.`);
-        appendEvent("info", "Verification code sent", trimmedEmail);
-        trackPosthogEvent("den_signup_verification_sent", {
-          method: "email",
-          email_domain: getEmailDomain(trimmedEmail),
-        });
-        return null;
-      }
-      return await finalizeEmailPasswordSignIn(submitMode, trimmedEmail);
+      setUser(null);
+      openVerificationStep(trimmedEmail, `We emailed a 6-digit verification code to ${trimmedEmail}. Enter it to continue.`);
+      appendEvent("info", "Verification code sent", trimmedEmail);
+      trackPosthogEvent("den_signup_verification_sent", {
+        mode: submitMode,
+        method: "email_otp",
+        email_domain: getEmailDomain(trimmedEmail),
+      });
+      return null;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown network error";
       setAuthError(message);
@@ -2134,12 +2069,12 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
   }, [activeWorker?.workerId, selectedWorker?.workerId, runtimeSnapshot?.upgrade.status]);
 
   useEffect(() => {
-    if (!desktopAuthRequested || !user || desktopRedirectUrl || desktopRedirectBusy || desktopRedirectAttempted) {
+    if (!desktopAuthRequested || desktopHandoffDeferred || !user || desktopRedirectUrl || desktopRedirectBusy || desktopRedirectAttempted) {
       return;
     }
 
     void completeDesktopAuthHandoff();
-  }, [desktopAuthRequested, user?.id, authToken, desktopRedirectUrl, desktopRedirectBusy, desktopRedirectAttempted, desktopAuthScheme]);
+  }, [desktopAuthRequested, desktopHandoffDeferred, user?.id, authToken, desktopRedirectUrl, desktopRedirectBusy, desktopRedirectAttempted, desktopAuthScheme]);
 
   useEffect(() => {
     if (!webAuthRequested || !user || webRedirectBusy || webRedirectAttempted) {
@@ -2222,6 +2157,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     webAuthRequested,
     desktopRedirectUrl,
     desktopRedirectBusy,
+    completeDesktopAuthHandoff,
     showAuthFeedback,
     submitAuth,
     submitVerificationCode,

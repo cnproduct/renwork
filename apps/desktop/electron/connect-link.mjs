@@ -144,9 +144,8 @@ function normalizeClaims(payload) {
 }
 
 /**
- * Extracts the signed token from a connect deep link. Accepts the openwork
- * and openwork-dev schemes and both authority forms (openwork://connect and
- * openwork:///connect).
+ * Extracts the signed token from a connect deep link. RenWork schemes are the
+ * public default; OpenWork schemes remain accepted for older clients.
  *
  * @param {string} rawUrl
  * @returns {string | null}
@@ -159,7 +158,7 @@ export function extractConnectLinkToken(rawUrl) {
   } catch {
     return null;
   }
-  if (parsed.protocol !== "openwork:" && parsed.protocol !== "openwork-dev:") return null;
+  if (!["renwork:", "renwork-dev:", "openwork:", "openwork-dev:"].includes(parsed.protocol)) return null;
   const route = (parsed.hostname || parsed.pathname.replace(/^\/+|\/+$/g, "")).toLowerCase();
   if (route !== CONNECT_LINK_ROUTE) return null;
   if (parsed.searchParams.has("code") || parsed.searchParams.has("apiBaseUrl")) return null;
@@ -179,7 +178,7 @@ export function extractConnectExchange(rawUrl) {
   } catch {
     return null;
   }
-  if (parsed.protocol !== "openwork:" && parsed.protocol !== "openwork-dev:") return null;
+  if (!["renwork:", "renwork-dev:", "openwork:", "openwork-dev:"].includes(parsed.protocol)) return null;
   const route = (parsed.hostname || parsed.pathname.replace(/^\/+|\/+$/g, "")).toLowerCase();
   if (route !== CONNECT_LINK_ROUTE || parsed.searchParams.has("token")) return null;
   const code = parsed.searchParams.get("code")?.trim() ?? "";

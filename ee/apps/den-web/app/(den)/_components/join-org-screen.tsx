@@ -214,7 +214,7 @@ function InviteAuthPanel({
         resolveEmailFirstOnPrefill
         signUpContent={{
           title: "Create your account.",
-          copy: `Choose a name and a password. Your email stays locked to ${preview.invitation.email}.`,
+          copy: `Choose your name, then verify the six-digit code sent to ${preview.invitation.email}.`,
           submitLabel: `Join ${preview.organization.name}`,
         }}
         signInContent={{

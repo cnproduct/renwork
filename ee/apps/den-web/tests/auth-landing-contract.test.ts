@@ -47,7 +47,7 @@ describe("Den auth landing contract", () => {
   test("starts the email-first panel with the approved heading", () => {
     const source = readFileSync(authPanelPath, "utf8");
 
-    expect(source).toContain('title: "Start using OpenWork"');
+    expect(source).toContain('title: "Start using RenWork"');
     expect(source).toContain("Enter your email and we'll send you to the right sign-in step.");
     expect(source).not.toContain("Continue to OpenWork.");
   });

@@ -88,7 +88,7 @@ describe("join organization invite clean layout contract", () => {
     expect(wideShellUsages.length).toBeGreaterThanOrEqual(8);
     expect(cardSource).toContain("rounded-[1.75rem] border border-slate-200/80 bg-white p-6 sm:p-8 md:p-10");
     expect(cardSource).toContain("/openwork-mark.svg");
-    expect(cardSource).toContain("OpenWork Cloud");
+    expect(cardSource).toContain("RenWork Cloud");
     expect(cardSource).toContain("OrganizationBrandIdentity");
     expect(source).toContain("text-[30px] font-semibold leading-[38px] tracking-[-0.03em]");
     expect(source).toContain('data-testid="join-org-invitation-details"');
@@ -111,7 +111,7 @@ describe("join organization invite clean layout contract", () => {
     expect(source).toMatch(/<AuthPanel[\s\S]*?\bemailFirstFlow\b/);
     expect(source).toMatch(/<AuthPanel[\s\S]*?\bresolveEmailFirstOnPrefill\b/);
     expect(source).toContain('title: "Create your account."');
-    expect(source).toContain("Choose a name and a password. Your email stays locked to");
+    expect(source).toContain("Choose your name, then verify the six-digit code sent to");
     expect(source).toContain('title: "Sign in to continue."');
     expect(source).not.toContain("title: `Join ${preview.organization.name}.`");
     expect(source).toContain("Not now");
@@ -137,12 +137,12 @@ describe("join organization invite clean layout contract", () => {
     expect(authPanelSource).toMatch(/emailFirstStep === "new_account"[\s\S]*?!hideSocialAuth/);
   });
 
-  test("shows password strength feedback only on signup password fields", () => {
+  test("uses email OTP without exposing password fields", () => {
     const authPanelSource = readAuthPanelSource();
 
-    expect(authPanelSource).toMatch(/emailFirstStep === "new_account"[\s\S]*?signupPasswordFeedback/);
-    expect(authPanelSource).toContain('visibleAuthMode === "sign-up" && signupPasswordFeedback');
-    expect(authPanelSource).not.toMatch(/emailFirstStep === "password"[\s\S]{0,500}signupPasswordFeedback/);
+    expect(authPanelSource).toContain("Verification code");
+    expect(authPanelSource).toContain("Send code");
+    expect(authPanelSource).not.toContain('type="password"');
   });
 
   test("preserves invitation preview, account switching, status, and accept behavior", () => {
@@ -227,7 +227,7 @@ describe("join organization invite clean layout contract", () => {
     });
 
     expect(legacyPreview?.organization.branding).toEqual({
-      appName: "OpenWork",
+      appName: "RenWork",
       logoUrl: null,
       iconUrl: null,
     });
@@ -239,12 +239,12 @@ describe("join organization invite clean layout contract", () => {
     const identitySource = readFileSync(brandIdentityPath, "utf8");
 
     expect(successSource).toContain("downloadCtaLabel");
-    expect(successSource).toContain("Already have OpenWork? Open it.");
+    expect(successSource).toContain("Already have RenWork? Open it.");
     expect(successSource).toContain("buildInstallDownloadHref");
     expect(successSource).toContain("startInstallerDownload");
     expect(successSource).not.toContain("window.location.assign(await createOrganizationInstallLink");
     expect(successSource).not.toContain("Get the desktop app");
-    expect(successSource).toContain("Return to OpenWork");
+    expect(successSource).toContain("Return to RenWork");
     expect(successSource).toContain("desktopAuthRequested");
     expect(successSource).toContain('data-testid="join-org-connected"');
     expect(successSource).toContain("Continue in the browser");
@@ -257,15 +257,15 @@ describe("join organization invite clean layout contract", () => {
     expect(successSource).toContain("<span>You&apos;re in, welcome to</span>");
     expect(successSource).toContain('className="whitespace-nowrap">&apos;s {brand.appName}</span>');
     expect(installSource).toContain("DownloadPlatformGrid");
-    expect(installSource).toContain("<span>Download OpenWork Enterprise</span>");
-    expect(installSource).toContain("Download OpenWork");
+    expect(installSource).toContain("<span>Download RenWork Enterprise</span>");
+    expect(installSource).toContain("Download RenWork");
     expect(installSource).not.toContain('data-testid="install-cloud-download-primary"');
     expect(installSource).not.toContain("Other platforms");
     expect(installSource).toContain('config.distribution === "cloud"');
     expect(installSource).not.toContain("never asks for an enterprise activation code");
     expect(installSource).toContain("<span>for</span>");
     expect(installSource).toContain("AppImage (ARM64)");
-    expect(installSource).toContain('desktopScheme: "openwork"');
+    expect(installSource).toContain('desktopScheme: "renwork"');
     expect(identitySource).toContain("failedLogoUrl");
     expect(identitySource).toContain("failedIconUrl");
   });

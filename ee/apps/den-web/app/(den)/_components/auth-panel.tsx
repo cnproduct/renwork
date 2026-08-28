@@ -89,20 +89,6 @@ function SocialButton({
   );
 }
 
-function PasswordFeedbackList({ messages }: { messages: string[] }) {
-  if (messages.length === 0) {
-    return null;
-  }
-
-  return (
-    <ul className="m-0 grid list-disc gap-1 pl-5 text-sm font-medium text-rose-600" aria-live="polite">
-      {messages.map((message, index) => (
-        <li key={`${index}:${message}`}>{message}</li>
-      ))}
-    </ul>
-  );
-}
-
 function DesktopHandoffCopyLink({
   openworkUrl,
   label,
@@ -262,7 +248,6 @@ export function AuthPanel({
     setEmail,
     authName,
     setAuthName,
-    password,
     setPassword,
     verificationCode,
     setVerificationCode,
@@ -270,7 +255,6 @@ export function AuthPanel({
     authBusy,
     authInfo,
     authError,
-    signupPasswordFeedback,
     user,
     desktopAuthRequested,
     desktopRedirectUrl,
@@ -382,14 +366,14 @@ export function AuthPanel({
         }
       : emailFirstStep === "password"
       ? {
-          title: "Enter your password.",
-          copy: emailFirstEmail ? `Sign in as ${emailFirstEmail}.` : "Sign in with your password.",
-          submitLabel: "Sign in",
+          title: "Verify your email.",
+          copy: emailFirstEmail ? `We'll send a six-digit code to ${emailFirstEmail}.` : "We'll send a six-digit code to your email.",
+          submitLabel: "Send code",
         }
       : {
           title: "Create your account.",
-          copy: "Set up your RenWork Cloud account.",
-          submitLabel: "Sign up",
+          copy: "Use a six-digit email code to set up RenWork.",
+          submitLabel: "Send code",
         };
 
   const desktopGrant = getDesktopGrant(desktopRedirectUrl);
@@ -568,6 +552,10 @@ export function AuthPanel({
     const oauthRoute = typeof window === "undefined" ? null : getMcpOAuthSelectOrganizationRoute(window.location.search);
     if (next && oauthRoute) {
       router.replace(oauthRoute);
+      return;
+    }
+    if (next === "organization") {
+      router.replace("/organization");
       return;
     }
     if (next === "dashboard" || next === "join-org") {
@@ -753,7 +741,7 @@ export function AuthPanel({
           </SocialButton>
         ) : null}
 
-        {!waitingForPrefilledLoginOption && emailFirstStep === "password" ? (
+        {!waitingForPrefilledLoginOption && (emailFirstStep === "password" || emailFirstStep === "new_account") ? (
           <form
             className="grid gap-4"
             onSubmit={async (event) => {
@@ -761,47 +749,7 @@ export function AuthPanel({
               await handleAuthNavigation(next);
             }}
           >
-            <label className="grid gap-2">
-              <span className="den-label">Password</span>
-              <input
-                className="den-input"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-                required
-              />
-            </label>
-            <div className="-mt-2 flex justify-end">
-              <button
-                type="button"
-                className="text-sm font-medium text-[var(--dls-text-primary)] transition hover:opacity-70"
-                onClick={() => {
-                  setAuthMode("sign-in");
-                  setPasswordResetRequested(true);
-                  setPasswordResetInfo("");
-                  setPasswordResetError(null);
-                }}
-              >
-                Forgot password?
-              </button>
-            </div>
-            <button type="submit" className="den-button-primary w-full" disabled={formBusy}>
-              {formBusy ? "Working..." : "Sign in"}
-              {!formBusy ? <ArrowRight className="h-4 w-4" /> : null}
-            </button>
-          </form>
-        ) : null}
-
-        {!waitingForPrefilledLoginOption && emailFirstStep === "new_account" ? (
-          <form
-            className="grid gap-4"
-            onSubmit={async (event) => {
-              const next = await submitAuth(event);
-              await handleAuthNavigation(next);
-            }}
-          >
-            {!hideEmailField ? (
+            {emailFirstStep === "new_account" && !hideEmailField ? (
               <label className="grid gap-2">
                 <span className="den-label">Email</span>
                 <input
@@ -816,18 +764,20 @@ export function AuthPanel({
                 />
               </label>
             ) : null}
-            <label className="grid gap-2">
-              <span className="den-label">Name</span>
-              <input
-                className="den-input"
-                type="text"
-                value={authName}
-                onChange={(event) => setAuthName(event.target.value)}
-                autoComplete="name"
-                required
-              />
-            </label>
-            {!hideSocialAuth ? (
+            {emailFirstStep === "new_account" ? (
+              <label className="grid gap-2">
+                <span className="den-label">Name</span>
+                <input
+                  className="den-input"
+                  type="text"
+                  value={authName}
+                  onChange={(event) => setAuthName(event.target.value)}
+                  autoComplete="name"
+                  required
+                />
+              </label>
+            ) : null}
+            {emailFirstStep === "new_account" && !hideSocialAuth ? (
               <>
                 <div className="den-divider" aria-hidden="true">
                   <span>or</span>
@@ -841,21 +791,8 @@ export function AuthPanel({
                 </SocialButton>
               </>
             ) : null}
-            <label className="grid gap-2">
-              <span className="den-label">Password</span>
-              <input
-                className="den-input"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="new-password"
-                aria-invalid={signupPasswordFeedback.length > 0}
-                required
-              />
-              <PasswordFeedbackList messages={signupPasswordFeedback} />
-            </label>
             <button type="submit" className="den-button-primary w-full" disabled={formBusy}>
-              {formBusy ? "Working..." : "Sign up"}
+              {formBusy ? "Sending..." : "Send code"}
               {!formBusy ? <ArrowRight className="h-4 w-4" /> : null}
             </button>
           </form>
@@ -1007,19 +944,17 @@ export function AuthPanel({
           </label>
         ) : null}
 
-        {showEmailPasswordAuth && !verificationRequired && !isPasswordResetRequest ? (
+        {showEmailPasswordAuth && !verificationRequired && !isPasswordResetRequest && visibleAuthMode === "sign-up" ? (
           <label className="grid gap-2">
-            <span className="den-label">Password</span>
+            <span className="den-label">Name</span>
             <input
               className="den-input"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete={visibleAuthMode === "sign-up" ? "new-password" : "current-password"}
-              aria-invalid={visibleAuthMode === "sign-up" && signupPasswordFeedback.length > 0}
+              type="text"
+              value={authName}
+              onChange={(event) => setAuthName(event.target.value)}
+              autoComplete="name"
               required
             />
-            {visibleAuthMode === "sign-up" ? <PasswordFeedbackList messages={signupPasswordFeedback} /> : null}
           </label>
         ) : verificationRequired ? (
           <label className="grid gap-2">
@@ -1037,27 +972,6 @@ export function AuthPanel({
               required
             />
           </label>
-        ) : null}
-
-        {showEmailPasswordAuth && !verificationRequired && !isPasswordResetRequest && !hideEmailField ? (
-          // Always rendered (invisible in sign-up) so switching modes never
-          // changes the card height.
-          <div className={`-mt-2 flex justify-end ${visibleAuthMode === "sign-in" ? "" : "invisible"}`}>
-            <button
-              type="button"
-              tabIndex={visibleAuthMode === "sign-in" ? 0 : -1}
-              aria-hidden={visibleAuthMode !== "sign-in"}
-              className="text-sm font-medium text-[var(--dls-text-primary)] transition hover:opacity-70"
-              onClick={() => {
-                setAuthMode("sign-in");
-                setPasswordResetRequested(true);
-                setPasswordResetInfo("");
-                setPasswordResetError(null);
-              }}
-            >
-              Forgot password?
-            </button>
-          </div>
         ) : null}
 
         {showEmailPasswordAuth ? (

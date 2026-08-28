@@ -53,7 +53,7 @@ export const AutomationRevisionTable = mysqlTable(
     automation_id: denTypeIdColumn("automation", "automation_id").notNull(),
     version: int("version").notNull(),
     instructions: encryptedMediumTextColumn("instructions").notNull(),
-    schedule_kind: mysqlEnum("schedule_kind", ["once", "daily", "weekly"]).notNull(),
+    schedule_kind: mysqlEnum("schedule_kind", ["once", "daily", "weekly", "monthly", "interval"]).notNull(),
     schedule_config: json("schedule_config").$type<AutomationSchedule>().notNull(),
     timezone: varchar("timezone", { length: 120 }).notNull(),
     provider_id: varchar("provider_id", { length: 160 }).notNull(),

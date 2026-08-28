@@ -17,7 +17,7 @@ describe("Den org sidebar information architecture", () => {
   test("members get Work labels and never see Marketplace or Workflow Runs as member destinations", () => {
     expect(shell).toContain('label: "My Library"');
     expect(shell).toContain('label: "My Automations"');
-    expect(shell).toContain('label: "OpenWork Web"');
+    expect(shell).toContain('label: "RenWork Web"');
     expect(shell).toContain('label: "Work"');
     expect(shell).not.toContain('label: "Your Connections"');
     expect(shell).not.toContain('label: "Extensions"');

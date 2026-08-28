@@ -16,7 +16,7 @@ import { DenButton } from "../../_components/ui/button";
 import { createOrganizationInstallLink } from "../../_lib/install-link-data";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 
-const OPEN_APP_URL = "openwork://open";
+const OPEN_APP_URL = "renwork://open";
 
 /**
  * Members have exactly one job on the dashboard: install the app. The

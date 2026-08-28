@@ -115,8 +115,12 @@ const DEFAULT_DESKTOP_BOOTSTRAP_PATH = resolveDesktopBootstrapPath({ homeDir: os
 // LOCALAPPDATA and XDG_CONFIG_HOME. Keep reading that file when the canonical one
 // is missing so existing installs keep their deployment config.
 const LEGACY_DESKTOP_BOOTSTRAP_PATH = resolveLegacyDesktopBootstrapPath({ homeDir: os.homedir() });
-const HOSTED_DESKTOP_WEB_URL = "https://app.openworklabs.com";
+const HOSTED_DESKTOP_WEB_URL = "https://account.rrenn.com";
 const HOSTED_DESKTOP_API_URL = "https://api.openworklabs.com";
+const LEGACY_RENWORK_MARKETING_ORIGINS = new Set([
+  "https://rrenn.com",
+  "https://www.rrenn.com",
+]);
 
 function bootstrapUrlOrigin(value) {
   if (typeof value !== "string" || !value.trim()) return "";
@@ -202,10 +206,14 @@ export function createWorkspaceStore({
   }
 
   function normalizeDesktopBootstrapConfig(input) {
-    const baseUrl = typeof input?.baseUrl === "string" ? input.baseUrl.trim() : "";
-    if (!baseUrl) {
+    const configuredBaseUrl = typeof input?.baseUrl === "string" ? input.baseUrl.trim() : "";
+    if (!configuredBaseUrl) {
       throw new Error("baseUrl is required");
     }
+    const configuredOrigin = bootstrapUrlOrigin(configuredBaseUrl);
+    const baseUrl = LEGACY_RENWORK_MARKETING_ORIGINS.has(configuredOrigin)
+      ? defaultDenBaseUrl
+      : configuredBaseUrl;
 
     // The handoff grant is a one-time, short-lived (~5 min) desktop sign-in
     // token written to this machine-local config by the bootstrap CLI. The app

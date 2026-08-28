@@ -350,6 +350,26 @@ test("desktop bootstrap migrates a newer legacy writtenAt to canonical", async (
   });
 });
 
+test("desktop bootstrap migrates the old RenWork marketing URL to the account control plane", async () => {
+  await withIsolatedBootstrapStore(async ({ createStore, canonicalPath }) => {
+    await writeBootstrapConfig(canonicalPath, {
+      baseUrl: "https://www.rrenn.com",
+      requireSignin: false,
+    });
+
+    const store = createStore({
+      defaultDenBaseUrl: "https://account.rrenn.com",
+      defaultRequireSignin: true,
+      forceRequireSignin: true,
+    });
+    const config = await store.getDesktopBootstrapConfig();
+
+    assert.equal(config.baseUrl, "https://account.rrenn.com");
+    assert.equal(config.requireSignin, true);
+    assert.equal(config.fromFile, true);
+  });
+});
+
 test("explicit desktop bootstrap path never inherits legacy activation state", async () => {
   await withIsolatedBootstrapStore(async ({ store, legacyPath, root }) => {
     const explicitPath = path.join(root, "isolated", "desktop-bootstrap.json");
@@ -389,7 +409,7 @@ test("explicit desktop bootstrap path still reads its configured bootstrap", asy
 test("desktop bootstrap prefers an older legacy organization config over a newer canonical hosted default", async () => {
   await withIsolatedBootstrapStore(async ({ store, canonicalPath, legacyPath }) => {
     await writeBootstrapConfig(canonicalPath, {
-      baseUrl: "https://app.openworklabs.com/api/den/",
+      baseUrl: "https://account.rrenn.com/api/den/",
       apiBaseUrl: "https://api.unrelated.example",
       requireSignin: false,
       writtenAt: "2026-07-10T13:00:00.000Z",

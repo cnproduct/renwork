@@ -896,6 +896,10 @@ export const auth = betterAuth({
         window: 300,
         max: 10,
       },
+      "/sign-in/email-otp": {
+        window: 300,
+        max: 10,
+      },
       "/request-password-reset": {
         window: 3600,
         max: 5,
@@ -929,6 +933,7 @@ export const auth = betterAuth({
     jwt(getDenJwtOptions({ issuer: getDenAuthIssuer(env.betterAuthUrl) })),
     emailOTP({
       overrideDefaultEmailVerification: true,
+      disableSignUp: env.orgMode === "single_org" && !env.singleOrg.allowPublicSignup,
       otpLength: 6,
       expiresIn: 600,
       allowedAttempts: 5,

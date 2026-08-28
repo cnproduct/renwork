@@ -8,7 +8,7 @@ import { OnboardingShell } from "./onboarding-shell";
 import { OrganizationBrandIdentity, type OrganizationBrand } from "./organization-brand-identity";
 
 const CONNECT_CODE_PATTERN = /^[A-Za-z0-9_-]{24,128}$/;
-const RETURN_TO_OPENWORK_URL = "openwork://open";
+const RETURN_TO_OPENWORK_URL = "renwork://open";
 
 type ActivationDetails = {
   status: "pending" | "connected";
@@ -70,7 +70,7 @@ function parseActivationDetails(value: unknown): ActivationDetails | null {
 }
 
 function connectUrlFor(code: string, apiBaseUrl: string) {
-  const url = new URL("openwork://connect");
+  const url = new URL("renwork://connect");
   url.searchParams.set("code", code);
   url.searchParams.set("apiBaseUrl", apiBaseUrl);
   return url.toString();
