@@ -31,7 +31,7 @@ test("local runtime activity is presented as RenWork", async ({ evidence }) => {
 
   evidence.fact(
     "RenWork runtime records do not expose the legacy OpenWork tool brand",
-    "The formal renwork_context, renwork_execute, and renwork_query tools render the three approved RenWork labels while deprecated OpenWork aliases remain compatible during migration.",
+    "The formal renwork_context, renwork_execute, and renwork_query tools render the three approved RenWork labels after the compatibility aliases are retired.",
     true,
   );
 });

@@ -22,7 +22,6 @@ import {
   type ConnectSkillDescriptor,
   type EngineMcpDescriptor,
 } from "./openwork-provider-adapters.js";
-import { migrateLegacyRenWorkToolReferences } from "../renwork-tool-name-migration.js";
 
 type ExtensionActionPayload = {
   extensionId: string;
@@ -947,10 +946,6 @@ export const OpenWorkExtensionsPreview = async (factoryInput?: unknown) => {
   };
 
   return {
-    "experimental.chat.messages.transform": async (_input: unknown, output: { messages: unknown[] }) => {
-      const migrated = output.messages.map(migrateLegacyRenWorkToolReferences);
-      output.messages.splice(0, output.messages.length, ...migrated);
-    },
     "tool.execute.after": async (_input: unknown, output: unknown) => {
       // OpenCode 1.17.x keeps the text projection of an MCP result but drops
       // structuredContent and result _meta before persisting the completed tool

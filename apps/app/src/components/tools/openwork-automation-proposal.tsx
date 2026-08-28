@@ -47,7 +47,7 @@ export function parseAutomationProposal(output: unknown): AutomationProposal | n
 }
 
 export function isAutomationProposalToolPart(part: DynamicToolUIPart): boolean {
-  return (part.toolName === "renwork_execute" || part.toolName === "openwork_execute")
+  return part.toolName === "renwork_execute"
     && part.state === "output-available"
     && parseAutomationProposal(part.output) !== null
 }

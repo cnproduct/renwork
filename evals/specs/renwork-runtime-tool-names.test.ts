@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect } from "vitest";
 import { test } from "@openwork/testkit";
 import {
@@ -9,7 +10,7 @@ import {
 import { OpenWorkExtensionsPreview } from "../../apps/server/src/opencode-plugins/openwork-extensions-preview";
 import { renderOpenWorkAutomationInstruction } from "../../apps/server/src/connect-automation-catalog";
 
-test("RenWork semantic tools hide legacy names behind migration", async ({ evidence }) => {
+test("RenWork semantic tool migration is complete", async ({ evidence }) => {
   const plugin = await OpenWorkExtensionsPreview();
   const toolNames = Object.keys(plugin.tool).sort();
 
@@ -20,16 +21,6 @@ test("RenWork semantic tools hide legacy names behind migration", async ({ evide
   ]);
   expect([...RENWORK_SEMANTIC_TOOL_NAMES].sort()).toEqual(toolNames);
 
-  const messages = [{
-    role: "user",
-    parts: [{ type: "text", text: "Call openwork_context then openwork_execute." }],
-  }];
-  await plugin["experimental.chat.messages.transform"](undefined, { messages });
-  expect(messages).toEqual([{
-    role: "user",
-    parts: [{ type: "text", text: "Call renwork_context then renwork_execute." }],
-  }]);
-
   const system: string[] = [];
   await plugin["experimental.chat.system.transform"](undefined, { system });
   const instructions = system.join("\n");
@@ -37,7 +28,6 @@ test("RenWork semantic tools hide legacy names behind migration", async ({ evide
   expect(instructions).toContain("renwork_query");
   expect(instructions).toContain("renwork_execute");
   expect(instructions).toContain("renwork_execute id browser.open_url");
-  expect(instructions).not.toContain("Use openwork_context");
 
   const automationInstructions = renderOpenWorkAutomationInstruction({
     fetchedAt: Date.now(),
@@ -57,9 +47,26 @@ test("RenWork semantic tools hide legacy names behind migration", async ({ evide
   expect(voiceInstructions).toContain("RenWork Voice Mode");
   expect(voiceInstructions).toContain("renwork_execute with browser.open_url");
 
+  const retiredToolNames = ["context", "query", "execute"].map((suffix) => ["openwork", suffix].join("_"));
+  const runtimeFiles = [
+    "../../apps/server/src/opencode-plugins/openwork-extensions-preview.ts",
+    "../../apps/server/src/local-automations-scheduler.ts",
+    "../../apps/desktop/electron/automation-runner.mjs",
+    "../../apps/app/src/lib/capability-call.ts",
+    "../../apps/app/src/components/tools/openwork-automation-proposal.tsx",
+    "../../apps/app/src/react-app/domains/session/voice/voice-panel.tsx",
+    "../../packages/types/src/renwork-semantic-tools.ts",
+  ];
+  for (const path of runtimeFiles) {
+    const source = await readFile(new URL(path, import.meta.url), "utf8");
+    for (const retiredToolName of retiredToolNames) {
+      expect(source).not.toContain(retiredToolName);
+    }
+  }
+
   evidence.fact(
-    "RenWork is the primary semantic tool namespace",
-    "System prompts, plugins, Voice, browser control, and Automations all use renwork_context, renwork_query, and renwork_execute. Historical messages and saved instructions are migrated in memory from the three prior names without exposing them in the new tool catalog.",
+    "RenWork is the only semantic tool namespace",
+    "System prompts, plugins, Voice, browser control, Automations, and tests use renwork_context, renwork_query, and renwork_execute. The retired semantic aliases are no longer registered or migrated at runtime.",
     true,
   );
 });

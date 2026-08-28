@@ -7,7 +7,6 @@ import {
   writeLocalAutomationsData,
   computeNextRunTime,
 } from "./local-automations.js";
-import { migrateLegacyRenWorkToolNames } from "./renwork-tool-name-migration.js";
 
 interface SchedulerOptions {
   config: ServerConfig;
@@ -106,7 +105,7 @@ async function executeTask(
 
     // 2. Send the instruction prompt
     const promptPayload: Record<string, unknown> = {
-      prompt: migrateLegacyRenWorkToolNames(task.instructions),
+      prompt: task.instructions,
     };
     if (task.model?.providerId && task.model?.modelId) {
       promptPayload.providerId = task.model.providerId;

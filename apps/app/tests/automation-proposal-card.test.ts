@@ -38,7 +38,7 @@ describe("Automation proposal card", () => {
     expect(fromObject?.model).toBeUndefined();
   });
 
-  test("recognizes the formal tool name and its migration alias", () => {
+  test("recognizes only the formal RenWork tool name", () => {
     const toolPart = (toolName: string): DynamicToolUIPart => ({
       type: "dynamic-tool",
       toolName,
@@ -49,7 +49,6 @@ describe("Automation proposal card", () => {
     } as DynamicToolUIPart);
 
     expect(isAutomationProposalToolPart(toolPart("renwork_execute"))).toBe(true);
-    expect(isAutomationProposalToolPart(toolPart("openwork_execute"))).toBe(true);
   });
 
   test("ignores results that are not Automation proposals", () => {

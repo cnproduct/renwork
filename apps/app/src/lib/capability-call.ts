@@ -148,7 +148,7 @@ export function getCapabilityCallSentence(
   const query = options?.includeQuery === false ? null : extractQuery(part.input)
   const quoted = query ? ` “${query}”` : ""
 
-  if (toolName === "renwork_context" || toolName === "openwork_context") {
+  if (toolName === "renwork_context") {
     return {
       service: "RenWork",
       present: "读取 RenWork 上下文",
@@ -156,7 +156,7 @@ export function getCapabilityCallSentence(
     }
   }
 
-  if (toolName === "renwork_execute" || toolName === "openwork_execute") {
+  if (toolName === "renwork_execute") {
     return {
       service: "RenWork",
       present: "执行 RenWork 操作",
@@ -164,7 +164,7 @@ export function getCapabilityCallSentence(
     }
   }
 
-  if (toolName === "renwork_query" || toolName === "openwork_query") {
+  if (toolName === "renwork_query") {
     return {
       service: "RenWork",
       present: "查询 RenWork 数据",

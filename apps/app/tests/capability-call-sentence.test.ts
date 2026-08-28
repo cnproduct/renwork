@@ -42,9 +42,6 @@ describe("capability call sentences", () => {
       present: "查询 RenWork 数据",
       past: "查询 RenWork 数据",
     });
-    expect(getCapabilityCallSentence(localRenWorkTool("openwork_context")).past).toBe("读取 RenWork 上下文");
-    expect(getCapabilityCallSentence(localRenWorkTool("openwork_execute")).past).toBe("执行 RenWork 操作");
-    expect(getCapabilityCallSentence(localRenWorkTool("openwork_query")).past).toBe("查询 RenWork 数据");
   });
 
   test("names an org MCP capability instead of falling back to 'a capability'", () => {

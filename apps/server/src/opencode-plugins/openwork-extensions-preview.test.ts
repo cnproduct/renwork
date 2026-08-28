@@ -568,34 +568,8 @@ describe("OpenWorkExtensionsPreview semantic tool surface", () => {
     expect(system).not.toContain("openwork_extension_");
     expect(system).not.toContain("openwork_browser_");
     expect(system).toContain("Use renwork_context");
-    expect(system).not.toContain("Use openwork_context");
     expect(system).toContain("session.search");
     expect(system).toContain("browser.open_url");
-  });
-
-  test("silently migrates legacy tool references before a saved session resumes", async () => {
-    const plugin = await OpenWorkExtensionsPreview();
-    const messages = [{
-      role: "assistant",
-      parts: [{
-        type: "tool",
-        tool: "openwork_query",
-        state: { status: "completed", output: "Next call openwork_execute" },
-      }],
-    }];
-    const output = { messages };
-
-    await plugin["experimental.chat.messages.transform"]({}, output);
-
-    expect(output.messages).toBe(messages);
-    expect(output.messages).toEqual([{
-      role: "assistant",
-      parts: [{
-        type: "tool",
-        tool: "renwork_query",
-        state: { status: "completed", output: "Next call renwork_execute" },
-      }],
-    }]);
   });
 
   test("proposes an Automation without creating anything or calling a backend", async () => {
