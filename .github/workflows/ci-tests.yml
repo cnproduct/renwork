@@ -137,6 +137,12 @@ jobs:
       - name: Run eval spec lane
         run: pnpm --dir evals run spec
 
+      # App tests resolve the production/default export condition for shared
+      # workspace types. A clean checkout has no packages/types/dist yet, so
+      # build it explicitly instead of depending on developer-local artifacts.
+      - name: Build shared types for app tests
+        run: pnpm --filter @openwork/types build
+
       - name: Run app unit tests
         run: pnpm --filter @openwork/app test
 
