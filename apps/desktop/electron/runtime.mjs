@@ -1026,7 +1026,6 @@ async function repairIncompleteChains(options) {
   let timeoutId;
   const timeout = new Promise((resolve) => {
     timeoutId = setTimeout(() => resolve({ pems: [], timedOut: true }), totalTimeoutMs);
-    timeoutId.unref?.();
   });
   try {
     return await Promise.race([run(), timeout]);
