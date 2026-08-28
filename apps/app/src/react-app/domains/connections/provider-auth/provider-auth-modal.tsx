@@ -50,6 +50,7 @@ type ProviderOAuthSession = ProviderOAuthStartResult & {
 };
 
 const PROVIDER_LABELS: Record<string, string> = {
+  renwork: "RenWork",
   openwork: "RenWork",
   opencode: "OpenCode Zen",
   openai: "OpenAI",
@@ -58,7 +59,8 @@ const PROVIDER_LABELS: Record<string, string> = {
   openrouter: "OpenRouter",
 };
 
-const OPENWORK_MODELS_PROVIDER_ID = "openwork";
+const RENWORK_MODELS_PROVIDER_ID = "renwork";
+const LEGACY_MANAGED_PROVIDER_IDS = ["openwork"];
 
 export type ProviderAuthModalProps = {
   open: boolean;
@@ -197,16 +199,20 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       .sort(compareProviders);
 
     if (props.showOpenWorkModelsSubscribe) {
-      const connectedToOpenWork = connected.has(OPENWORK_MODELS_PROVIDER_ID);
+      const connectedToRenWork = [RENWORK_MODELS_PROVIDER_ID, ...LEGACY_MANAGED_PROVIDER_IDS]
+        .some((providerId) => connected.has(providerId));
       return [
         {
-          id: OPENWORK_MODELS_PROVIDER_ID,
+          id: RENWORK_MODELS_PROVIDER_ID,
           name: "RenWork",
           methods: [{ type: "cloud", label: "Subscribe" }],
-          connected: connectedToOpenWork,
+          connected: connectedToRenWork,
           env: [],
         },
-        ...nextEntries.filter((entry) => entry.id.trim().toLowerCase() !== OPENWORK_MODELS_PROVIDER_ID),
+        ...nextEntries.filter((entry) =>
+          ![RENWORK_MODELS_PROVIDER_ID, ...LEGACY_MANAGED_PROVIDER_IDS]
+            .includes(entry.id.trim().toLowerCase()),
+        ),
       ];
     }
 
@@ -537,7 +543,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     setLocalError(null);
     setSelectedProviderId(entry.id);
 
-    if (props.showOpenWorkModelsSubscribe && entry.id.trim().toLowerCase() === OPENWORK_MODELS_PROVIDER_ID) {
+    if (props.showOpenWorkModelsSubscribe && entry.id.trim().toLowerCase() === RENWORK_MODELS_PROVIDER_ID) {
       setView("openwork-subscribe");
       return;
     }

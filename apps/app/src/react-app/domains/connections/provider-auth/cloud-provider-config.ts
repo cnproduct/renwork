@@ -68,7 +68,7 @@ export const resolveCloudProviderCredentials = (
 
 export const getCloudManagedProviderId = (
   provider: Pick<DenOrgLlmProvider, "id" | "providerId" | "source">,
-) => (provider.source === "openwork" ? "openwork" : provider.id.trim());
+) => (provider.source === "openwork" ? provider.providerId.trim() : provider.id.trim());
 
 /**
  * A provider key in `opencode.jsonc` that is owned by the cloud-import system:
@@ -78,7 +78,7 @@ export const getCloudManagedProviderId = (
  * rather than a clobber of a user's manual provider (#2346).
  */
 export const isCloudManagedProviderKey = (providerId: string) =>
-  /^lpr_/i.test(providerId) || providerId.trim() === "openwork";
+  /^lpr_/i.test(providerId) || ["renwork", "openwork"].includes(providerId.trim());
 
 
 export const getProviderModelIds = (
@@ -148,7 +148,7 @@ export const buildCloudProviderConfig = (
     env: getCloudProviderEnv(provider.providerConfig),
   };
 
-  // OpenWork Models are catalog-backed via OPENCODE_MODELS_URL. Den provisions
+  // RenWork Models are catalog-backed via the RenWork model catalog. Den provisions
   // the provider + key with zero model rows — writing `models: {}` can prevent
   // the engine from keeping catalog models, so omit an empty map for openwork.
   if (Object.keys(models).length > 0 || provider.source !== "openwork") {

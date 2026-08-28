@@ -79,7 +79,7 @@ export function SessionEmptyHero(props: SessionEmptyHeroProps) {
     return () => window.removeEventListener(openWorkModelsPromoChangedEvent, handlePromoChanged);
   }, []);
 
-  // Quiet inline lead to OpenWork Models: replaces the old startup dialog
+  // Quiet inline lead to RenWork Models: replaces the old startup dialog
   // interrupt. Shown only while the session runs on the free starter model
   // (the built-in `opencode` provider) and the hosted offering applies.
   const onFreeStarterModel = props.composer?.selectedModel.providerID === DEFAULT_MODEL.providerID;

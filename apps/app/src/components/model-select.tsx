@@ -319,7 +319,7 @@ export function ModelSelect({
     const seen = new Map<string, string>();
     for (const option of modelOptions) {
       const id = option.providerID.trim().toLowerCase();
-      if (!id || id === "opencode" || id === OPENWORK_MODELS_PROVIDER_ID) continue;
+      if (!id || id === "opencode" || isCloudManagedProviderKey(id)) continue;
       if (seen.has(id)) continue;
       seen.set(id, option.description ?? getProviderDisplayName(option.providerID));
     }

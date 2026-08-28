@@ -30,10 +30,10 @@ function openWorkManagedModels(provider: DenOrgLlmProvider): AutomationModelOpti
   return Object.entries(INFERENCE_MODEL_ALIASES)
     .filter(([, model]) => model.enabled)
     .map(([modelId, model]) => ({
-      providerId: "openwork",
+      providerId: provider.providerId,
       modelId,
       providerName: provider.name,
-      modelName: model.displayName.replace(/^OpenWork:\s*/, ""),
+      modelName: model.displayName.replace(/^RenWork:\s*/, ""),
       accessKind: "openwork_managed" as const,
     }))
 }

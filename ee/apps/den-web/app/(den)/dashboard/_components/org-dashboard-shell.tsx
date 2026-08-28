@@ -279,7 +279,7 @@ function getDashboardPageTitle(pathname: string, orgSlug: string | null) {
     return "Diagnostics";
   }
   if (pathname.startsWith(getInferenceRoute(orgSlug))) {
-    return "OpenWork Models";
+    return "RenWork Models";
   }
   if (pathname.startsWith(getWebRoute(orgSlug))) {
     return "OpenWork Web";
@@ -443,7 +443,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         }]
       : []),
   ];
-  // OpenWork Models are a hosted OpenWork Cloud offering; self-hosted
+  // RenWork Models are a hosted RenWork Cloud offering; self-hosted
   // (single-org) deployments only manage their own LLM providers. Default
   // hidden until the runtime config confirms a hosted (multi-org) deployment.
   const showOpenWorkModels = runtimeConfigLoaded && runtimeConfig.orgMode === "multi_org";
@@ -457,7 +457,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         badge: "Providers",
         children: [
           ...(showOpenWorkModels
-            ? [{ href: getInferenceRoute(activeOrg.slug), label: "OpenWork Models" }]
+            ? [{ href: getInferenceRoute(activeOrg.slug), label: "RenWork Models" }]
             : []),
           { href: getCustomLlmProvidersRoute(activeOrg.slug), label: "Bring your Own Keys" },
         ],

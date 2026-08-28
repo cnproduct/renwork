@@ -201,7 +201,7 @@ test("rewrites approved model aliases before forwarding JSON requests", async ()
   const response = await app.fetch(inferenceRequest({
     method: "POST",
     headers: authHeaders("application/json; charset=utf-8"),
-    body: JSON.stringify({ model: "openwork/z-ai/glm-5.2", messages: [] }),
+    body: JSON.stringify({ model: "renwork/z-ai/glm-5.2", messages: [] }),
   }))
 
   assert.equal(response.status, 200)
@@ -214,6 +214,8 @@ test("rewrites approved model aliases before forwarding JSON requests", async ()
   assert.equal(upstream.url, "https://upstream.test/api/v1/chat/completions")
   assert.equal(upstream.headers.get("authorization"), "Bearer provider-key")
   assert.equal(upstream.headers.get("content-type"), "application/json")
+  assert.equal(upstream.headers.get("x-renwork-request-id"), upstream.headers.get("x-openwork-request-id"))
+  assert.equal(upstream.headers.get("x-title"), "RenWork Model Gateway")
   const body = parseJsonObject(requireBodyText(upstream.body))
   assert.equal(body.model, "z-ai/glm-5.2")
   assert.equal(body.user, "member_123")
@@ -228,7 +230,7 @@ test("rewrites approved model aliases before forwarding JSON requests", async ()
   assert.equal(report.openworkRequestId, upstream.headers.get("x-openwork-request-id"))
   assert.equal(report.route, "/api/v1/chat/completions")
   assert.equal(report.method, "POST")
-  assert.equal(report.incomingModel, "openwork/z-ai/glm-5.2")
+  assert.equal(report.incomingModel, "renwork/z-ai/glm-5.2")
   assert.equal(report.resolvedUpstreamModel, "z-ai/glm-5.2")
 })
 
@@ -237,7 +239,7 @@ test("returns model_not_found for unknown JSON model aliases", async () => {
   const response = await app.fetch(inferenceRequest({
     method: "POST",
     headers: authHeaders("application/json"),
-    body: JSON.stringify({ model: "openwork/unknown-model", messages: [] }),
+    body: JSON.stringify({ model: "renwork/unknown-model", messages: [] }),
   }))
 
   assert.equal(response.status, 404)
@@ -246,7 +248,7 @@ test("returns model_not_found for unknown JSON model aliases", async () => {
   assert.equal(calls.getOpenRouterProviderKey, 0)
   assert.equal(upstreamRequests.length, 0)
   const report = requireRequestReport(reports)
-  assert.equal(report.incomingModel, "openwork/unknown-model")
+  assert.equal(report.incomingModel, "renwork/unknown-model")
   assert.equal(report.resolvedUpstreamModel, null)
 })
 
@@ -650,10 +652,27 @@ test("returns the authenticated local model catalog without forwarding", async (
   assert.ok(isRecord(model))
   assert.equal(typeof model.id, "string")
   assert.ok(!model.id.startsWith("openwork/"))
+  assert.equal(model.owned_by, "renwork")
   assert.equal(calls.findActiveInferenceKey, 1)
   assert.equal(calls.ensureUsableBuckets, 0)
   assert.equal(calls.getOpenRouterProviderKey, 0)
   assert.equal(upstreamRequests.length, 0)
+})
+
+test("accepts the legacy OpenWork model prefix without advertising it", async () => {
+  const { app, upstreamRequests } = createTestServer()
+  const response = await app.fetch(inferenceRequest({
+    method: "POST",
+    headers: authHeaders("application/json"),
+    body: JSON.stringify({ model: "openwork/z-ai/glm-5.2", messages: [] }),
+  }))
+
+  assert.equal(response.status, 200)
+  assert.equal(upstreamRequests.length, 1)
+  const upstream = upstreamRequests[0]
+  assert.ok(upstream)
+  const body = parseJsonObject(requireBodyText(upstream.body))
+  assert.equal(body.model, "z-ai/glm-5.2")
 })
 
 test("returns model IDs that can be requested as aliases", async () => {

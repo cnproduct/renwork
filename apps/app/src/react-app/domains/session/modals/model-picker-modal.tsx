@@ -63,7 +63,7 @@ export type ModelPickerModalProps = {
   onClose: (options?: { restorePromptFocus?: boolean }) => void;
   /** Den entitlement present; used to avoid a false Subscribe CTA while models sync. */
   openWorkModelsEntitled?: boolean;
-  /** The server is waiting to reload this workspace with OpenWork Models. */
+  /** The server is waiting to reload this workspace with RenWork Models. */
   openWorkModelsSyncing?: boolean;
   onRefreshOrganizationModels?: () => void | Promise<void>;
   restrictToCloud?: boolean;
@@ -219,7 +219,7 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
     }
   }, [props.query, providerGroups]);
 
-  // Expand current, organization-provided, and OpenWork groups once they appear
+  // Expand current, organization-provided, and RenWork groups once they appear
   // (options often load async).
   const autoExpandedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -236,7 +236,7 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
     for (const group of providerGroups) {
       if (group.isCloud) queueExpand(group.id);
     }
-    const openwork = providerGroups.find((group) => group.id === OPENWORK_MODELS_PROVIDER_ID);
+    const openwork = providerGroups.find((group) => hasOpenWorkModelsProvider([group.id]));
     if (openwork) queueExpand(openwork.id);
     if (toExpand.length === 0) return;
     for (const id of toExpand) autoExpandedRef.current.add(id);

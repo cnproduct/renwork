@@ -46,7 +46,7 @@ export type AiSettingsViewProps = {
   /** Set of local provider IDs that were imported from cloud. */
   cloudProviderIds?: Set<string>;
   showOpenWorkModelsSubscribe?: boolean;
-  /** Subtle fallback row when OpenWork Models is not connected and the banner was dismissed. */
+  /** Subtle fallback row when RenWork Models is not connected and the banner was dismissed. */
   showOpenWorkModelsConnect?: boolean;
   /** Den entitlement is present but local engine has no selectable openwork models yet. */
   showOpenWorkModelsSyncing?: boolean;

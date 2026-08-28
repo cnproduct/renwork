@@ -53,64 +53,73 @@ export const INFERENCE_WINDOW_DURATIONS_MS: Record<
 
 // For upstreamModel values, please get from models.dev/api.json provider = openrouter.models.id
 
-export const INFERENCE_MODEL_ALIASES = {
+/**
+ * Authoritative catalog for models managed by the RenWork provider gateway.
+ *
+ * Keep provider credentials and upstream routing out of this public catalog.
+ * The inference service owns those details and resolves them server-side.
+ */
+export const RENWORK_MODEL_CATALOG = {
   "z-ai/glm-5.2": {
     upstreamModel: "z-ai/glm-5.2",
-    displayName: "OpenWork: GLM-5.2",
+    displayName: "RenWork: GLM-5.2",
     enabled: true,
     usageFactor: 1,
   },
   "moonshotai/kimi-k2.7-code": {
     upstreamModel: "moonshotai/kimi-k2.7-code",
-    displayName: "OpenWork: Kimi K2.7 Code",
+    displayName: "RenWork: Kimi K2.7 Code",
     enabled: true,
     usageFactor: 1,
   },
   "tencent/hy3-preview": {
     upstreamModel: "tencent/hy3-preview",
-    displayName: "OpenWork: Hy3 preview",
+    displayName: "RenWork: Hy3 preview",
     enabled: true,
     usageFactor: 1,
   },
   "moonshotai/kimi-k2.6": {
     upstreamModel: "moonshotai/kimi-k2.6",
-    displayName: "OpenWork: Kimi K2.6",
+    displayName: "RenWork: Kimi K2.6",
     enabled: true,
     usageFactor: 1,
   },
   "deepseek/deepseek-v4-flash": {
     upstreamModel: "deepseek/deepseek-v4-flash",
-    displayName: "OpenWork: DeepSeek V4 Flash",
+    displayName: "RenWork: DeepSeek V4 Flash",
     enabled: true,
     usageFactor: 1,
   },
   "minimax/minimax-m2.7": {
     upstreamModel: "minimax/minimax-m2.7",
-    displayName: "OpenWork: MiniMax M2.7",
+    displayName: "RenWork: MiniMax M2.7",
     enabled: true,
     usageFactor: 1,
   },
   "minimax/minimax-m3": {
     upstreamModel: "minimax/minimax-m3",
-    displayName: "OpenWork: MiniMax-M3",
+    displayName: "RenWork: MiniMax-M3",
     enabled: true,
     usageFactor: 1,
   },
   "z-ai/glm-5.1": {
     upstreamModel: "z-ai/glm-5.1",
-    displayName: "OpenWork: GLM-5.1",
+    displayName: "RenWork: GLM-5.1",
     enabled: true,
     usageFactor: 1,
   },
   "moonshotai/kimi-k3": {
     upstreamModel: "moonshotai/kimi-k3",
-    displayName: "OpenWork: Kimi K3",
+    displayName: "RenWork: Kimi K3",
     enabled: true,
     usageFactor: 1,
   },
 } as const;
 
-export type InferenceModelAlias = keyof typeof INFERENCE_MODEL_ALIASES;
+/** @deprecated Compatibility export for existing clients and saved automations. */
+export const INFERENCE_MODEL_ALIASES = RENWORK_MODEL_CATALOG;
+
+export type InferenceModelAlias = keyof typeof RENWORK_MODEL_CATALOG;
 
 export type InferenceOrganizationMetadata = {
   enabled: true;
