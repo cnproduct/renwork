@@ -260,8 +260,11 @@ function usageFromTranscript(usage: {
   cost: number
 }): AutomationUsage {
   return {
-    inputTokens: usage.inputTokens + usage.cacheReadTokens,
-    outputTokens: usage.outputTokens + usage.reasoningTokens,
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    reasoningTokens: usage.reasoningTokens,
+    cacheReadTokens: usage.cacheReadTokens,
+    cacheWriteTokens: null,
     costMicros: Math.max(0, Math.round(usage.cost * 1_000_000)),
   }
 }

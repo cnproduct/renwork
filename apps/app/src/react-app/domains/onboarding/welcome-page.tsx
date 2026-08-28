@@ -88,7 +88,7 @@ export function WelcomePage({
                   选择模型来源
                 </h1>
                 <p className="mt-2.5 text-[14px] leading-relaxed text-muted-foreground max-w-lg mx-auto">
-                  使用 OpenDesign / RenWork 托管服务、连接本地 Agent，或使用你自己的模型 Key。
+                  使用 RenWork 托管服务、连接本地 Agent，或使用你自己的模型 Key。
                 </p>
               </div>
 
@@ -96,6 +96,7 @@ export function WelcomePage({
               <div className="w-full space-y-3.5">
                 {/* Option 1: Managed */}
                 <div
+                  data-testid="welcome-model-source-managed"
                   onClick={() => setSelectedOption("managed")}
                   className={`group relative flex items-center justify-between p-4.5 rounded-2xl border-2 transition-all cursor-pointer ${
                     selectedOption === "managed"
@@ -116,7 +117,7 @@ export function WelcomePage({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[15px] font-bold text-foreground">
-                          OpenDesign 托管
+                          RenWork 托管
                         </span>
                         <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-900/80 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
                           推荐
@@ -146,6 +147,7 @@ export function WelcomePage({
 
                 {/* Option 2: Local Agent */}
                 <div
+                  data-testid="welcome-model-source-local"
                   onClick={() => setSelectedOption("local")}
                   className={`group relative flex items-center justify-between p-4.5 rounded-2xl border-2 transition-all cursor-pointer ${
                     selectedOption === "local"
@@ -193,6 +195,7 @@ export function WelcomePage({
 
                 {/* Option 3: Bring your own Key */}
                 <div
+                  data-testid="welcome-model-source-byok"
                   onClick={() => setSelectedOption("byok")}
                   className={`group relative flex items-center justify-between p-4.5 rounded-2xl border-2 transition-all cursor-pointer ${
                     selectedOption === "byok"
@@ -247,6 +250,7 @@ export function WelcomePage({
               {/* Continue Button */}
               <div className="w-full mt-6">
                 <Button
+                  data-testid="welcome-model-source-continue"
                   type="button"
                   size="lg"
                   className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-[15px] font-semibold tracking-wide transition-all shadow-md cursor-pointer"
@@ -297,7 +301,7 @@ export function WelcomePage({
 
           {/* Copyright */}
           <span className="text-[12px] text-muted-foreground/80">
-            © 2026 OpenDesign / RenWork · 保留所有权利。
+            © 2026 RenWork · 保留所有权利。
           </span>
         </div>
 

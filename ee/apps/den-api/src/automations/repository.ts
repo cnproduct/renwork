@@ -41,7 +41,14 @@ type RunRow = typeof AutomationRunTable.$inferSelect
 type EventRow = typeof AutomationRunEventTable.$inferSelect
 type DesktopClaim = { automation: Automation; revision: AutomationRevision; run: AutomationRun }
 
-const emptyUsage: AutomationUsage = { inputTokens: null, outputTokens: null, costMicros: null }
+const emptyUsage: AutomationUsage = {
+  inputTokens: null,
+  outputTokens: null,
+  reasoningTokens: null,
+  cacheReadTokens: null,
+  cacheWriteTokens: null,
+  costMicros: null,
+}
 
 const normalizeAutomationId = (value: string) => normalizeDenTypeId("automation", value)
 const normalizeRevisionId = (value: string) => normalizeDenTypeId("automationRevision", value)
@@ -91,6 +98,8 @@ function mapRevision(row: RevisionRow): AutomationRevision {
     schedule: row.schedule_config,
     model: { providerId: row.provider_id, modelId: row.model_id, variant: row.model_variant ?? null },
     action,
+    connectors: [],
+    notifyMiniProgram: false,
     executionTarget: row.execution_target,
     maximumRuntimeMs: row.maximum_runtime_ms,
     digest: row.digest,
@@ -166,6 +175,15 @@ function normalizedDefinition(definition: Parameters<AutomationRepository["creat
   }
 }
 
+function persistedScheduleKind(
+  schedule: AutomationRevision["schedule"],
+): "once" | "daily" | "weekly" {
+  if (schedule.kind === "once" || schedule.kind === "daily" || schedule.kind === "weekly") {
+    return schedule.kind
+  }
+  throw new Error("automation_schedule_not_supported_by_den")
+}
+
 function mapEvent(row: EventRow): AutomationRunEvent {
   return {
     id: row.id,
@@ -218,9 +236,9 @@ export class DenAutomationRepository implements AutomationRepository {
         automation_id: newAutomationId,
         version: 1,
         instructions: definition.instructions,
-        schedule_kind: definition.schedule.kind,
+        schedule_kind: persistedScheduleKind(definition.schedule),
         schedule_config: definition.schedule,
-        timezone: definition.schedule.timezone,
+        timezone: definition.schedule.timezone ?? "UTC",
         provider_id: definition.model.providerId,
         model_id: definition.model.modelId,
         model_variant: definition.model.variant ?? null,
@@ -305,9 +323,9 @@ export class DenAutomationRepository implements AutomationRepository {
         automation_id: automation.id,
         version: current.version + 1,
         instructions,
-        schedule_kind: schedule.kind,
+        schedule_kind: persistedScheduleKind(schedule),
         schedule_config: schedule,
-        timezone: schedule.timezone,
+        timezone: schedule.timezone ?? "UTC",
         provider_id: model.providerId,
         model_id: model.modelId,
         model_variant: model.variant ?? null,
