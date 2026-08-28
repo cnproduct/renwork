@@ -46,6 +46,7 @@ import type { OpenworkServerStore } from "./openwork-server-store";
 import { attemptSilentMcpReauth } from "./mcp-silent-reauth";
 import {
   CLOUD_MCP_SERVER_NAME,
+  isManagedCloudMcpServerName,
   readCloudMcpUserState,
 } from "./cloud-mcp-user-state";
 import {
@@ -316,7 +317,7 @@ export function createConnectionsStore(options: {
     });
 
     if (hasOpenworkTarget && !canTryOpenworkServer) {
-      throw new Error("OpenWork server cannot read MCP config for this workspace.");
+      throw new Error("RenWork server cannot read MCP config for this workspace.");
     }
 
     if (!canTryOpenworkServer || !openworkClient || !openworkWorkspaceId) return null;
@@ -373,7 +374,7 @@ export function createConnectionsStore(options: {
       if (!fallbackOnError) {
         throw error instanceof Error
           ? error
-          : new Error("Computer Use helper app is unavailable. Restart OpenWork or reinstall the app.");
+          : new Error("Computer Use helper app is unavailable. Restart RenWork or reinstall the app.");
       }
       // Fall through to the published package command in the manifest/catalog.
     }
@@ -487,7 +488,7 @@ export function createConnectionsStore(options: {
     if (isRemoteWorkspace) {
       mutateState((current) => ({
         ...current,
-        mcpStatus: "OpenWork server unavailable. MCP config is read-only.",
+        mcpStatus: "RenWork server unavailable. MCP config is read-only.",
         mcpServers: [],
         mcpStatuses: {},
       }));
@@ -537,7 +538,7 @@ export function createConnectionsStore(options: {
         ...globalServers.filter((entry) => !projectNames.has(entry.name)),
         ...projectServers,
       ];
-      // Runtime-DB MCPs (source "config.remote") only exist on the OpenWork
+      // Runtime-DB MCPs (source "config.remote") only exist on the RenWork
       // server. Keep the last-known entries instead of silently dropping them
       // while the server is briefly unreachable (startup race) — otherwise
       // enabled MCPs like openwork-ui render as "off".
@@ -614,7 +615,7 @@ export function createConnectionsStore(options: {
       await resolveWritableOpenworkTarget();
 
     if (isRemoteWorkspace && !canUseOpenworkServer) {
-      const error = "OpenWork server unavailable. MCP config is read-only.";
+      const error = "RenWork server unavailable. MCP config is read-only.";
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
         reason: "openwork-server-unavailable",
@@ -623,7 +624,7 @@ export function createConnectionsStore(options: {
     }
 
     if (hasOpenworkTarget && !canUseOpenworkServer) {
-      const error = "OpenWork server MCP config is read-only.";
+      const error = "RenWork server MCP config is read-only.";
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
         reason: "openwork-server-read-only",
@@ -673,7 +674,7 @@ export function createConnectionsStore(options: {
     const action = snapshot.mcpServers.some((server) => server.name === slug) ? "updated" : "added";
 
     if (conflictsWithOpenworkConnect(entry)) {
-      const error = t("mcp.name_reserved_openwork_connect");
+      const error = t("mcp.name_reserved_renwork_connect");
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
         reason: "openwork-connect-name-reserved",
@@ -685,15 +686,15 @@ export function createConnectionsStore(options: {
       mutateState((current) => ({ ...current, mcpStatus: null, mcpConnectingName: entry.name }));
 
       if (entry.managedBy === "openwork-connect") {
-        if (slug !== CLOUD_MCP_SERVER_NAME) {
-          throw new Error("OpenWork Connect MCP metadata is invalid.");
+        if (!isManagedCloudMcpServerName(slug)) {
+          throw new Error("RenWork Connect MCP metadata is invalid.");
         }
         if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-          throw new Error("OpenWork server is required to repair agent access to connected services.");
+          throw new Error("RenWork server is required to repair agent access to connected services.");
         }
         const context = await resolveCloudMcpOperationContext(entry.url);
         if (!context) {
-          throw new Error("Sign in to OpenWork Cloud and choose an organization first.");
+          throw new Error("Sign in to RenWork Cloud and choose an organization first.");
         }
         clearCloudMcpDisabledIntent(context);
         const result = await runOpenworkCloudMcpReconciler({
@@ -731,13 +732,13 @@ export function createConnectionsStore(options: {
 
       if (entry.managedOAuth) {
         if (isRemoteWorkspace || !isDesktopRuntime()) {
-          throw new Error("OpenWork-managed MCP OAuth is currently available for local desktop workspaces only.");
+          throw new Error("RenWork-managed MCP OAuth is currently available for local desktop workspaces only.");
         }
         if (entryType !== "remote" || !entry.url) {
-          throw new Error("OpenWork-managed OAuth requires a remote MCP URL.");
+          throw new Error("RenWork-managed OAuth requires a remote MCP URL.");
         }
         if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-          throw new Error("The local OpenWork server is required for managed MCP sign-in.");
+          throw new Error("The local RenWork server is required for managed MCP sign-in.");
         }
         const result = await openworkClient.addManagedMcp(openworkWorkspaceId, {
           name: slug,
@@ -795,7 +796,7 @@ export function createConnectionsStore(options: {
 
       if (entryType === "remote") {
         if (!resolvedUrl) {
-          throw new Error("Missing MCP URL. Is the OpenWork desktop app running?");
+          throw new Error("Missing MCP URL. Is the RenWork desktop app running?");
         }
         mcpEntryConfig["url"] = resolvedUrl;
         if (resolvedHeaders) {
@@ -870,11 +871,11 @@ export function createConnectionsStore(options: {
       }
 
       if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-        // The OpenWork server is the source of truth for workspace-scoped MCP
+        // The RenWork server is the source of truth for workspace-scoped MCP
         // config in the React port. Avoid also calling the OpenCode SDK's MCP
         // hot-add endpoint here: when the SDK client is rooted at the aggregate
         // `/opencode` route it can resolve to an internal `local_*` workspace
-        // id that the OpenWork server does not expose, producing a confusing
+        // id that the RenWork server does not expose, producing a confusing
         // `workspace_not_found` after the config write already succeeded.
         setStateField("mcpStatuses", filterConfiguredStatuses(snapshot.mcpStatuses, snapshot.mcpServers));
       } else {
@@ -963,8 +964,8 @@ export function createConnectionsStore(options: {
 
   /**
    * Background reconciliation for the Den cloud MCP: when the desktop is
-   * signed in to OpenWork Cloud with an active org, keep the
-   * `openwork-cloud` MCP entry configured with a fresh first-party token.
+   * signed in to RenWork Cloud with an active org, keep the
+   * `renwork-cloud` MCP entry configured with a fresh first-party token.
    * Quiet by design — a failed mint never opens the OAuth modal.
    *
    * `force` bypasses the freshness marker: used by the user-facing Refresh
@@ -988,7 +989,7 @@ export function createConnectionsStore(options: {
 
     // Respect explicit user intent for this exact workspace/org/server/deployment.
     if (readCloudMcpUserState(scope) !== null) return "skipped";
-    const configuredEntry = snapshot.mcpServers.find((server) => server.name === CLOUD_MCP_SERVER_NAME);
+    const configuredEntry = snapshot.mcpServers.find((server) => isManagedCloudMcpServerName(server.name));
     if (configuredEntry?.config.enabled === false) return "skipped";
 
     const result = await runOpenworkCloudMcpReconciler({
@@ -1039,7 +1040,7 @@ export function createConnectionsStore(options: {
       try {
         const { openworkClient, openworkWorkspaceId, canUseOpenworkServer } = await resolveWritableOpenworkTarget();
         if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-          throw new Error("The local OpenWork server is required for managed MCP sign-in.");
+          throw new Error("The local RenWork server is required for managed MCP sign-in.");
         }
         mutateState((current) => ({ ...current, mcpStatus: null, mcpConnectingName: entry.name }));
         const result = await openworkClient.connectManagedMcp(openworkWorkspaceId, entry.name);
@@ -1089,12 +1090,12 @@ export function createConnectionsStore(options: {
       await resolveWritableOpenworkTarget();
 
     if (isRemoteWorkspace && !canUseOpenworkServer) {
-      setStateField("mcpStatus", "OpenWork server unavailable. MCP auth is read-only.");
+      setStateField("mcpStatus", "RenWork server unavailable. MCP auth is read-only.");
       return;
     }
 
     if (hasOpenworkTarget && !canUseOpenworkServer) {
-      setStateField("mcpStatus", "OpenWork server MCP auth is read-only.");
+      setStateField("mcpStatus", "RenWork server MCP auth is read-only.");
       return;
     }
 
@@ -1163,7 +1164,7 @@ export function createConnectionsStore(options: {
         await openworkClient.removeMcp(openworkWorkspaceId, name);
       } else {
         if (hasOpenworkTarget) {
-          setStateField("mcpStatus", "OpenWork server MCP config is read-only.");
+          setStateField("mcpStatus", "RenWork server MCP config is read-only.");
           return;
         }
         const projectDir = options.projectDir().trim();
@@ -1174,7 +1175,7 @@ export function createConnectionsStore(options: {
         await removeMcpFromConfig(projectDir, name);
       }
 
-      if (name === CLOUD_MCP_SERVER_NAME) {
+      if (isManagedCloudMcpServerName(name)) {
         const context = await resolveCloudMcpOperationContext(null);
         if (context) recordCloudMcpDisabledIntent(context, "removed");
       }
@@ -1245,7 +1246,7 @@ export function createConnectionsStore(options: {
       }
 
       await openworkClient.setMcpEnabled(openworkWorkspaceId, name, enabled);
-      if (name === CLOUD_MCP_SERVER_NAME) {
+      if (isManagedCloudMcpServerName(name)) {
         const context = await resolveCloudMcpOperationContext(null);
         if (enabled) {
           if (context) clearCloudMcpDisabledIntent(context);

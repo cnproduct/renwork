@@ -76,13 +76,16 @@ describe("welcome one-field contract", () => {
     expect(source).toContain('clearDenSession({ includeBaseUrls: false });');
   });
 
-  test("the welcome page has one join door and no separate server-URL affordance", () => {
+  test("the post-sign-in welcome page offers the three RenWork model-source choices", () => {
     const pageSource = readFileSync(welcomePagePath, "utf8");
     const routeSource = readFileSync(welcomeRoutePath, "utf8");
 
-    expect(pageSource).toContain('data-testid="welcome-team-signin"');
-    expect(pageSource).toContain('data-testid="welcome-use-without-cloud"');
-    expect(pageSource).toContain('data-testid="welcome-join-org"');
+    expect(pageSource).toContain('data-testid="welcome-model-source-managed"');
+    expect(pageSource).toContain('data-testid="welcome-model-source-local"');
+    expect(pageSource).toContain('data-testid="welcome-model-source-byok"');
+    expect(pageSource).toContain('data-testid="welcome-model-source-continue"');
+    expect(pageSource).toContain("RenWork 托管");
+    expect(pageSource).not.toContain("OpenDesign");
     expect(pageSource).not.toContain("OrganizationServerAffordance");
     expect(pageSource).not.toContain("organizationServerUrl");
     expect(routeSource).not.toContain("OrganizationServerAffordance");

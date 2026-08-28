@@ -21,9 +21,9 @@ describe("resolveDesktopDistribution", () => {
       }),
       {
         flavor: "cloud",
-        appName: "OpenWork Cloud",
-        appIdentifier: "com.differentai.openwork",
-        protocolScheme: "openwork",
+        appName: "RenWork Cloud",
+        appIdentifier: "com.renrenyi.renwork",
+        protocolScheme: "renwork",
         requireSignin: true,
         requireActivation: false,
       },
@@ -39,9 +39,9 @@ describe("resolveDesktopDistribution", () => {
 
     assert.deepEqual(distribution, {
       flavor: "enterprise",
-      appName: "OpenWork Enterprise",
-      appIdentifier: "com.differentai.openwork",
-      protocolScheme: "openwork",
+      appName: "RenWork Enterprise",
+      appIdentifier: "com.renrenyi.renwork",
+      protocolScheme: "renwork",
       requireSignin: true,
       requireActivation: true,
     });

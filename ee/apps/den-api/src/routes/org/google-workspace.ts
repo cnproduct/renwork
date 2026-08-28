@@ -565,7 +565,7 @@ export function registerGoogleWorkspaceRoutes<T extends { Variables: OrgRouteVar
     describeRoute({
       tags: ["Direct uploads"],
       summary: "Upload one multipart workspace file directly to Google Drive",
-      description: "Authenticated host transport for openwork-cloud-uploads. The route immediately forwards the file to Google and does not persist it or expose its bytes to the model.",
+      description: "Authenticated host transport for renwork-cloud-uploads. The route immediately forwards the file to Google and does not persist it or expose its bytes to the model.",
       responses: {
         200: jsonResponse("Google Drive file uploaded.", uploadDriveFileResponseSchema),
         400: jsonResponse("The multipart upload was invalid.", invalidRequestSchema),
@@ -642,7 +642,7 @@ export function registerGoogleWorkspaceRoutes<T extends { Variables: OrgRouteVar
     describeRoute({
       tags: ["Direct uploads"],
       summary: "Create a Gmail draft with direct multipart workspace attachments",
-      description: "Authenticated host transport for openwork-cloud-uploads. The route immediately creates the draft and does not persist attachment bytes or expose them to the model.",
+      description: "Authenticated host transport for renwork-cloud-uploads. The route immediately creates the draft and does not persist attachment bytes or expose them to the model.",
       responses: {
         200: jsonResponse("Gmail draft created.", createDraftResponseSchema),
         400: jsonResponse("The multipart draft request was invalid.", invalidRequestSchema),
@@ -1296,7 +1296,7 @@ export function registerGoogleWorkspaceRoutes<T extends { Variables: OrgRouteVar
     describeRoute({
       tags: ["Capability Sources"],
       summary: "Create a Gmail draft or threaded reply draft without attachments",
-      description: "Creates a plain-text Gmail draft in the calling member own mailbox. For workspace attachments, use the openwork-cloud-uploads gmail_create_draft_with_attachments action so file bytes stay outside model context. Set threadId for replies and forwards. Always share the returned draftUrl.",
+      description: "Creates a plain-text Gmail draft in the calling member own mailbox. For workspace attachments, use the renwork-cloud-uploads gmail_create_draft_with_attachments action so file bytes stay outside model context. Set threadId for replies and forwards. Always share the returned draftUrl.",
       responses: {
         200: jsonResponse("Draft created.", createDraftResponseSchema),
         400: jsonResponse("The draft request was invalid.", z.union([invalidRequestSchema, missingThreadIdSchema])),

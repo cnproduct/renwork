@@ -8,7 +8,7 @@ const screen = readFileSync(
   "utf8",
 );
 
-describe("OpenWork Models page", () => {
+describe("RenWork Models page", () => {
   test("leads with the flat page header instead of the gradient hero", () => {
     expect(screen).toContain("DenPageHeader");
     expect(screen).toContain("Reliable, hand-picked models for knowledge work.");

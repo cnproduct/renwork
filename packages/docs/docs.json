@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "OpenWork Docs",
+  "name": "RenWork Docs",
   "favicon": "/logo/light.svg",
   "logo": {
     "light": "/logo/light.svg",
@@ -54,7 +54,7 @@
             ]
           },
           {
-            "group": "Help improve OpenWork",
+            "group": "Help improve RenWork",
             "pages": [
               "start-here/missing-docs",
               "start-here/missing-languages"
@@ -197,7 +197,7 @@
   "navbar": {
     "primary": {
       "type": "button",
-      "label": "Download OpenWork",
+      "label": "Download RenWork",
       "href": "https://openworklabs.com/download"
     }
   }

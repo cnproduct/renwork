@@ -156,7 +156,7 @@ export function McpAppFrame({ part }: { part: DynamicToolUIPart }) {
             elapsedMs: Math.round(performance.now() - startedAt),
             checkpoints: ["resolve-started"],
           }
-          console.error(`[OpenWork MCP App] ${diagnostic.code}`, diagnostic)
+          console.error(`[RenWork MCP App] ${diagnostic.code}`, diagnostic)
           setError(diagnostic)
         }
       })
@@ -193,7 +193,7 @@ export function McpAppFrame({ part }: { part: DynamicToolUIPart }) {
         checkpoints: [...checkpoints],
         ...(sandboxDocument ? { sandboxDocument } : {}),
       }
-      console.error(`[OpenWork MCP App] ${code}`, diagnostic)
+      console.error(`[RenWork MCP App] ${code}`, diagnostic)
       setError(diagnostic)
     }
     checkpoint("resource-resolved")
@@ -203,14 +203,14 @@ export function McpAppFrame({ part }: { part: DynamicToolUIPart }) {
         "MCP_APP_SANDBOX_ORIGIN_INVALID",
         "sandbox-proxy",
         null,
-        "The sandbox resolved to the same origin as the OpenWork host.",
+        "The sandbox resolved to the same origin as the RenWork host.",
         sandbox.expectedOrigin,
       )
       return
     }
     const bridge = new AppBridge(
       null,
-      { name: "OpenWork", version: "1.0.0" },
+      { name: "RenWork", version: "1.0.0" },
       { serverTools: {} },
       {
         hostContext: {

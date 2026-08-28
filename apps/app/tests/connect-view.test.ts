@@ -24,13 +24,13 @@ function cloudHealth(usable: boolean): OpenworkCloudMcpHealth {
     usableByCurrentModel: usable,
     connectCatalogEnabled: true,
     workspace: { id: "ws_1", type: "local", directory: "/workspace", path: "/workspace" },
-    desired: { present: true, name: "openwork-cloud", revision: "rev", config: null, token: { present: true, metadata: {} } },
+    desired: { present: true, name: "renwork-cloud", revision: "rev", config: null, token: { present: true, metadata: {} } },
     delivery: { state: usable ? "ready" : "pending", desiredRevision: "rev", appliedRevision: usable ? "rev" : null, updatedAt: 1, appliedAt: usable ? 1 : null, lastAttemptAt: 1 },
     engine: { status: usable ? "connected" : "failed" },
     tools: {
-      expected: ["openwork-cloud_search_capabilities", "openwork-cloud_execute_capability"],
-      present: usable ? ["openwork-cloud_search_capabilities", "openwork-cloud_execute_capability", "other_tool"] : ["openwork-cloud_search_capabilities"],
-      missing: usable ? [] : ["openwork-cloud_execute_capability"],
+      expected: ["renwork-cloud_search_capabilities", "renwork-cloud_execute_capability"],
+      present: usable ? ["renwork-cloud_search_capabilities", "renwork-cloud_execute_capability", "other_tool"] : ["renwork-cloud_search_capabilities"],
+      missing: usable ? [] : ["renwork-cloud_execute_capability"],
       providerProjection: { checked: true, present: [], missing: [] },
     },
     pluginCanaries: { expected: [], present: [], missing: [] },
@@ -44,8 +44,8 @@ describe("Agent access card helpers", () => {
   test("returns exact Cloud tools only when health is ready", () => {
     expect(readyCloudMcpToolIds(cloudHealth(false))).toEqual([]);
     expect(readyCloudMcpToolIds(cloudHealth(true))).toEqual([
-      "openwork-cloud_search_capabilities",
-      "openwork-cloud_execute_capability",
+      "renwork-cloud_search_capabilities",
+      "renwork-cloud_execute_capability",
     ]);
   });
 

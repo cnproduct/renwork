@@ -24,6 +24,10 @@ export type McpToolDeny = {
 type McpToolAllow = McpToolDeny;
 
 const OPENWORK_CLOUD_DIAGNOSTIC_TOOL_IDS = [
+  "renwork-cloud_search_capabilities",
+  "renwork-cloud_execute_capability",
+];
+const LEGACY_OPENWORK_CLOUD_DIAGNOSTIC_TOOL_IDS = [
   "openwork-cloud_search_capabilities",
   "openwork-cloud_execute_capability",
 ];
@@ -73,7 +77,9 @@ function getToolIdsForDiagnostics(name: string, toolIds: string[]): string[] {
 }
 
 function diagnosticToolIdsForMcp(name: string): string[] {
-  return name === "openwork-cloud" ? OPENWORK_CLOUD_DIAGNOSTIC_TOOL_IDS : [];
+  if (name === "renwork-cloud") return OPENWORK_CLOUD_DIAGNOSTIC_TOOL_IDS;
+  if (name === "openwork-cloud") return LEGACY_OPENWORK_CLOUD_DIAGNOSTIC_TOOL_IDS;
+  return [];
 }
 
 function permissionCandidates(name: string, toolId: string): string[] {
@@ -584,7 +590,7 @@ export async function listMcpFromRuntimeSnapshot(
 /**
  * Diagnostics-only passive inventory. It returns every configured layer and
  * collision metadata without claiming which entry is effective: OpenCode's
- * static config merge and OpenWork's later dynamic MCP registration can make
+ * static config merge and RenWork's later dynamic MCP registration can make
  * that answer lifecycle-dependent, and observing it would wake a cold engine.
  */
 export async function inspectMcpLayersFromRuntimeSnapshot(

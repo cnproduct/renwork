@@ -9,6 +9,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml /app/
 COPY patches /app/patches
 COPY packages/types/package.json /app/packages/types/package.json
 COPY packages/ui/package.json /app/packages/ui/package.json
+COPY packages/rencredit-metering/package.json /app/packages/rencredit-metering/package.json
 COPY ee/packages/utils/package.json /app/ee/packages/utils/package.json
 COPY ee/apps/den-web/package.json /app/ee/apps/den-web/package.json
 
@@ -16,10 +17,13 @@ RUN pnpm install --frozen-lockfile --trust-lockfile --filter @openwork-ee/den-we
 
 COPY packages/types /app/packages/types
 COPY packages/ui /app/packages/ui
+COPY packages/rencredit-metering /app/packages/rencredit-metering
 COPY ee/packages/utils /app/ee/packages/utils
 COPY ee/apps/den-web /app/ee/apps/den-web
 
 WORKDIR /app/ee/apps/den-web
+
+RUN pnpm --dir /app/packages/rencredit-metering run build
 
 # Source-map upload is build-only; runtime Sentry still requires its own backend and DSN configuration.
 ARG DEN_WEB_UPLOAD_SENTRY_SOURCEMAPS=0

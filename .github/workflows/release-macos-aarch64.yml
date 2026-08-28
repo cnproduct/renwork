@@ -132,7 +132,7 @@ jobs:
               "## What's new" \
               "$TAG" \
               "- Public artifacts use the openwork-* naming convention." \
-              "- Cloud artifacts use openwork-cloud-* and require sign-in without enterprise activation." \
+              "- Cloud artifacts use renwork-cloud-* and require sign-in without enterprise activation." \
               "- Enterprise artifacts use openwork-enterprise-* while retaining the standard OpenWork app identity." \
               "- Public, Cloud, and enterprise Electron builds use separate updater manifests on this release."
           fi
@@ -322,7 +322,7 @@ jobs:
             os_type: macos
             artifact: electron-cloud-macos-arm64
             builder_config: electron-builder.cloud.yml
-            asset_prefix: openwork-cloud
+            asset_prefix: renwork-cloud
             manifest_pattern: cloud*.yml
             electron_args: "--mac --arm64"
             target_triple: aarch64-apple-darwin
@@ -330,7 +330,7 @@ jobs:
             os_type: macos
             artifact: electron-cloud-macos-x64
             builder_config: electron-builder.cloud.yml
-            asset_prefix: openwork-cloud
+            asset_prefix: renwork-cloud
             manifest_pattern: cloud*.yml
             electron_args: "--mac --x64"
             target_triple: x86_64-apple-darwin
@@ -338,7 +338,7 @@ jobs:
             os_type: linux
             artifact: electron-cloud-linux-x64
             builder_config: electron-builder.cloud.yml
-            asset_prefix: openwork-cloud
+            asset_prefix: renwork-cloud
             manifest_pattern: cloud*.yml
             electron_args: "--linux --x64"
             target_triple: x86_64-unknown-linux-gnu
@@ -346,7 +346,7 @@ jobs:
             os_type: linux
             artifact: electron-cloud-linux-arm64
             builder_config: electron-builder.cloud.yml
-            asset_prefix: openwork-cloud
+            asset_prefix: renwork-cloud
             manifest_pattern: cloud*.yml
             electron_args: "--linux --arm64"
             target_triple: aarch64-unknown-linux-gnu
@@ -354,7 +354,7 @@ jobs:
             os_type: windows
             artifact: electron-cloud-windows-x64
             builder_config: electron-builder.cloud.yml
-            asset_prefix: openwork-cloud
+            asset_prefix: renwork-cloud
             manifest_pattern: cloud*.yml
             electron_args: "--win --x64"
             target_triple: x86_64-pc-windows-msvc
@@ -362,7 +362,7 @@ jobs:
             os_type: windows
             artifact: electron-cloud-windows-arm64
             builder_config: electron-builder.cloud.yml
-            asset_prefix: openwork-cloud
+            asset_prefix: renwork-cloud
             manifest_pattern: cloud*.yml
             electron_args: "--win --arm64"
             target_triple: aarch64-pc-windows-msvc

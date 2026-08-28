@@ -10,7 +10,7 @@ import {
 } from "./agent-context-cloud-probe.js";
 
 const TOKEN = "Bearer ow_diagnostics_token_abcdefghijklmnopqrstuvwxyz";
-const ENDPOINT = "https://app.openworklabs.com/api/den/mcp/agent";
+const ENDPOINT = "https://www.rrenn.com/api/den/mcp/agent";
 const SESSION_ID = "diagnostics-session-id";
 const PROTOCOL_VERSION = "2025-06-18";
 

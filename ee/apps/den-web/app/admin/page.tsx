@@ -6,15 +6,23 @@ export default function AdminPage() {
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 pb-5">
         <div>
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">OpenWork</p>
-          <p className="mt-1 text-sm text-slate-600">Internal Den backoffice</p>
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-orange-600">RenWork</p>
+          <p className="mt-1 text-sm text-slate-600">平台超级管理员后台</p>
         </div>
-        <Link
-          href="/"
-          className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-        >
-          Back to cloud panel
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/model-catalog"
+            className="inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
+          >
+            模型与 RenCredit
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+          >
+            返回云端控制台
+          </Link>
+        </div>
       </div>
 
       <DenAdminPanel />

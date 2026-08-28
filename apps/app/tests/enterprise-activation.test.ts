@@ -79,7 +79,7 @@ describe("enterprise desktop activation", () => {
       "openwork://den-auth?grant=one-time-grant&denBaseUrl=https%3A%2F%2Fapp.openworklabs.com",
     )).toEqual({
       grant: "one-time-grant",
-      denBaseUrl: "https://app.openworklabs.com",
+      denBaseUrl: "https://www.rrenn.com",
     });
   });
 
@@ -121,7 +121,7 @@ describe("enterprise desktop activation", () => {
       "size={20.3}",
       "scale={1.19}",
       "frame={264559.21}",
-      'className="w-full max-w-[720px] rounded-3xl border border-border bg-background',
+      'className="w-full max-w-[760px] rounded-3xl border border-border bg-background/95',
     ]) {
       expect(signInSurfaceSource).toContain(marker);
       expect(activationGateSource).toContain(marker);

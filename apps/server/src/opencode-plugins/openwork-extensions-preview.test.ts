@@ -306,7 +306,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
       },
     });
 
-    const output = await plugin.tool.openwork_context.execute();
+    const output = await plugin.tool.renwork_context.execute();
     const parsed = z.object({
       context: z.object({
         contributions: z.array(z.object({
@@ -347,7 +347,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
         .find((affordance) => affordance.id === "connect.capability.execute")?.executor,
     ).toEqual({
       kind: "tool",
-      tool: "openwork-cloud_execute_capability",
+      tool: "renwork-cloud_execute_capability",
     });
   });
 
@@ -355,7 +355,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
     startFakeOpenWorkServer();
     const plugin = await OpenWorkExtensionsPreview();
 
-    const output = await plugin.tool.openwork_query.execute({
+    const output = await plugin.tool.renwork_query.execute({
       id: "session.read",
       args: { sessionId: "ses_archive", count: 2 },
     });
@@ -378,7 +378,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
     const fake = startFakeOpenWorkServer();
     const plugin = await OpenWorkExtensionsPreview();
 
-    const output = await plugin.tool.openwork_query.execute({
+    const output = await plugin.tool.renwork_query.execute({
       id: "session.search",
       args: {
         query: "raven launch",
@@ -466,7 +466,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
     startFakeOpenWorkServer();
     const plugin = await OpenWorkExtensionsPreview();
 
-    const output = await plugin.tool.openwork_query.execute({
+    const output = await plugin.tool.renwork_query.execute({
       id: "session.read",
       args: { sessionId: "ses_archive", count: 2 },
     });
@@ -491,7 +491,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
     const fake = startFakeOpenWorkServer();
     const plugin = await OpenWorkExtensionsPreview({ directory: "/tmp/archive" });
 
-    const output = await plugin.tool.openwork_execute.execute({
+    const output = await plugin.tool.renwork_execute.execute({
       id: "session.create",
       args: {
         sessions: [
@@ -536,7 +536,7 @@ describe("OpenWorkExtensionsPreview session tools", () => {
       prompt: `Research topic ${index + 1}.`,
     }));
 
-    const output = await plugin.tool.openwork_execute.execute({
+    const output = await plugin.tool.renwork_execute.execute({
       id: "session.create",
       args: { sessions },
     }, { sessionID: "ses_origin" });
@@ -550,11 +550,15 @@ describe("OpenWorkExtensionsPreview session tools", () => {
 });
 
 describe("OpenWorkExtensionsPreview semantic tool surface", () => {
-  test("exposes only the three semantic tools", async () => {
+  test("exposes only the three formal RenWork tool names", async () => {
     const plugin = await OpenWorkExtensionsPreview();
     const tools = Object.keys(plugin.tool).sort();
 
-    expect(tools).toEqual(["openwork_context", "openwork_execute", "openwork_query"]);
+    expect(tools).toEqual([
+      "renwork_context",
+      "renwork_execute",
+      "renwork_query",
+    ]);
 
     const system = await transformedSystem(plugin);
     expect(system).not.toContain("## Default Skill: skill-creator");
@@ -563,7 +567,7 @@ describe("OpenWorkExtensionsPreview semantic tool surface", () => {
     expect(system).not.toContain("openwork_session_");
     expect(system).not.toContain("openwork_extension_");
     expect(system).not.toContain("openwork_browser_");
-    expect(system).toContain("Use openwork_context");
+    expect(system).toContain("Use renwork_context");
     expect(system).toContain("session.search");
     expect(system).toContain("browser.open_url");
   });
@@ -572,7 +576,7 @@ describe("OpenWorkExtensionsPreview semantic tool surface", () => {
     const fake = startFakeOpenWorkServer();
     const plugin = await OpenWorkExtensionsPreview({ directory: "/tmp/archive" });
 
-    const output = await plugin.tool.openwork_execute.execute({
+    const output = await plugin.tool.renwork_execute.execute({
       id: "automation.propose",
       args: {
         name: "Morning Slack check",
@@ -600,7 +604,7 @@ describe("OpenWorkExtensionsPreview semantic tool surface", () => {
   test("rejects a proposal whose schedule is not a supported kind", async () => {
     const plugin = await OpenWorkExtensionsPreview({ directory: "/tmp/archive" });
 
-    await expect(plugin.tool.openwork_execute.execute({
+    await expect(plugin.tool.renwork_execute.execute({
       id: "automation.propose",
       args: {
         name: "Every five minutes",

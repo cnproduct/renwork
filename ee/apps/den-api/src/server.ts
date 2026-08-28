@@ -10,6 +10,7 @@ import { startGithubSyncWorker } from "./workers/github-sync.js"
 import { startTelegramUpdateDispatcher } from "./capability-sources/telegram-dispatcher.js"
 import { externalMcpClientRuntimeName } from "./capability-sources/external-mcp-client-runtime.js"
 import { startAutomationSchedulerLoop } from "./automations/scheduler-loop.js"
+import { startRenCreditReservationSweep } from "./rencredit-ledger.js"
 
 const stopScimMaintenanceLoop = startScimMaintenanceLoop()
 const stopCloudIdleStopLoop = startCloudIdleStopLoop()
@@ -17,6 +18,7 @@ const stopWorkerProvisioningReconcileLoop = startWorkerProvisioningReconcileLoop
 const stopGithubSyncWorker = startGithubSyncWorker()
 const stopTelegramUpdateDispatcher = startTelegramUpdateDispatcher()
 const automationScheduler = startAutomationSchedulerLoop()
+const stopRenCreditReservationSweep = startRenCreditReservationSweep()
 
 appLogger.info("external mcp implementation selected", { component: "server", runtime: externalMcpClientRuntimeName })
 
@@ -81,6 +83,7 @@ async function stopBackgroundLoops() {
     stopGithubSyncWorker(),
     stopTelegramUpdateDispatcher(),
     automationScheduler.stop(),
+    stopRenCreditReservationSweep(),
   ])
 
   for (const result of results) {

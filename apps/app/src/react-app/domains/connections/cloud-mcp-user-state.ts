@@ -2,7 +2,12 @@ import { CLOUD_MCP_SYNC_MARKER_STORAGE_KEY } from "../../../app/lib/den";
 
 /** Durable, scoped records for the auto-managed OpenWork Cloud MCP. */
 
-export const CLOUD_MCP_SERVER_NAME = "openwork-cloud";
+export const CLOUD_MCP_SERVER_NAME = "renwork-cloud";
+export const LEGACY_CLOUD_MCP_SERVER_NAME = "openwork-cloud";
+
+export function isManagedCloudMcpServerName(name: string): boolean {
+  return name === CLOUD_MCP_SERVER_NAME || name === LEGACY_CLOUD_MCP_SERVER_NAME;
+}
 
 const CLOUD_MCP_USER_STATE_KEY = "openwork.den.mcp.cloudControlUserState";
 const CLOUD_MCP_UNHEALTHY_REMINT_ATTEMPT_KEY = "openwork.den.mcp.unhealthyRemintAttempt";

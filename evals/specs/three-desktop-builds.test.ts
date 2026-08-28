@@ -23,7 +23,7 @@ test("the three desktop builds own sign-in policy; no installer bundle rewrites 
 
   // Packaged builds trust only immutable package metadata, never the environment.
   expect(resolveDesktopDistribution({ isPackaged: true, packageFlavor: "cloud", environmentFlavor: "public" }).flavor).toBe("cloud");
-  expect(resolveDesktopDistribution({ isPackaged: true, packageFlavor: undefined, environmentFlavor: "enterprise" }).flavor).toBe("public");
+  expect(resolveDesktopDistribution({ isPackaged: true, packageFlavor: undefined, environmentFlavor: "enterprise" }).flavor).toBe("standalone");
   expect(resolveDesktopDistribution({ isPackaged: false, packageFlavor: undefined, environmentFlavor: "enterprise" }).flavor).toBe("enterprise");
 
   evidence.fact(

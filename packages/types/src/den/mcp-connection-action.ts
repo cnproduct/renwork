@@ -1,13 +1,24 @@
 import { z } from "zod"
 
-export const OPENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION = 1 as const
-export const OPENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND = "connection_action" as const
-export const OPENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE = "openwork-cloud" as const
+export const RENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION = 1 as const
+export const RENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND = "connection_action" as const
+export const RENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE = "renwork-cloud" as const
+export const LEGACY_OPENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE = "openwork-cloud" as const
+
+/** @deprecated One-release source compatibility. */
+export const OPENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION = RENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION
+/** @deprecated One-release source compatibility. */
+export const OPENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND = RENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND
+/** @deprecated One-release source compatibility. New output is always renwork-cloud. */
+export const OPENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE = RENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE
 
 export const openworkCloudMcpConnectionActionSchema = z.object({
   version: z.literal(OPENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION),
   kind: z.literal(OPENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND),
-  source: z.literal(OPENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE),
+  source: z.union([
+    z.literal(RENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE),
+    z.literal(LEGACY_OPENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE),
+  ]),
   connectionId: z.string().min(1),
   connectionName: z.string().min(1),
   authType: z.enum(["oauth", "apikey", "none"]),

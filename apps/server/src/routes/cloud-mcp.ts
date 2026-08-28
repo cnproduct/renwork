@@ -1,14 +1,16 @@
 import type { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 import {
-  OPENWORK_CLOUD_MCP_NAME,
-  readOpenworkCloudMcpHealth,
-  reconcileOpenworkCloudMcp,
-  refreshOpenworkCloudMcpEngine,
+  LEGACY_OPENWORK_CLOUD_MCP_NAME,
+  RENWORK_CLOUD_MCP_NAME,
+  readRenworkCloudMcpHealth,
+  reconcileRenworkCloudMcp,
+  refreshRenworkCloudMcpEngine,
   type CloudMcpServerMetadata,
   type CloudMcpProviderModelContext,
   type CloudMcpRuntimeRegistrar,
   type CloudMcpLiveStatusObserver,
 } from "../cloud-mcp-health.js";
+import { isRenworkCloudMcpName } from "../renwork-cloud-identity.js";
 import { ApiError } from "../errors.js";
 import type { ServerConfig, TokenScope, WorkspaceInfo } from "../types.js";
 import { addRoute, type RequestContext, type Route } from "./registry.js";
@@ -72,8 +74,8 @@ function assertStrictBody(body: Record<string, unknown>, workspace: WorkspaceInf
   if (typeof body.workspaceId === "string" && body.workspaceId.trim() !== workspace.id) {
     throw new ApiError(400, "workspace_id_mismatch", "workspaceId must match the route workspace");
   }
-  if (typeof body.name === "string" && body.name.trim() !== OPENWORK_CLOUD_MCP_NAME) {
-    throw new ApiError(400, "invalid_mcp_name", "Only openwork-cloud can be reconciled by this endpoint");
+  if (typeof body.name === "string" && !isRenworkCloudMcpName(body.name.trim())) {
+    throw new ApiError(400, "invalid_mcp_name", "Only renwork-cloud can be reconciled by this endpoint");
   }
 }
 
@@ -93,10 +95,10 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
     serverMetadata,
   } = options;
 
-  addRoute(routes, "GET", "/workspace/:id/mcp/openwork-cloud/health", "client", async (ctx) => {
+  const healthHandler = async (ctx: RequestContext) => {
     const workspace = await resolveWorkspace(config, ctx.params.id);
     assertExactWorkspace(ctx.params.id, workspace);
-    const health = await readOpenworkCloudMcpHealth({
+    const health = await readRenworkCloudMcpHealth({
       config,
       workspace,
       directory: resolveOpencodeDirectory(workspace),
@@ -107,9 +109,9 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
       refreshRegistrationFromLiveStatus,
     });
     return jsonResponse(health);
-  });
+  };
 
-  addRoute(routes, "POST", "/workspace/:id/mcp/openwork-cloud/engine-refresh", "client", async (ctx) => {
+  const engineRefreshHandler = async (ctx: RequestContext) => {
     ensureWritable(config);
     requireClientScope(ctx, "collaborator");
     const workspace = await resolveWorkspace(config, ctx.params.id);
@@ -132,7 +134,7 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
       body = parsed;
     }
     assertStrictBody(body, workspace);
-    const result = await refreshOpenworkCloudMcpEngine({
+    const result = await refreshRenworkCloudMcpEngine({
       config,
       workspace,
       directory: resolveOpencodeDirectory(workspace),
@@ -144,9 +146,9 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
       trigger: typeof body.trigger === "string" ? body.trigger : undefined,
     });
     return jsonResponse(result);
-  });
+  };
 
-  addRoute(routes, "POST", "/workspace/:id/mcp/openwork-cloud/reconcile", "client", async (ctx) => {
+  const reconcileHandler = async (ctx: RequestContext) => {
     ensureWritable(config);
     requireClientScope(ctx, "collaborator");
     const workspace = await resolveWorkspace(config, ctx.params.id);
@@ -156,7 +158,7 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
       throw new ApiError(400, "invalid_payload", "JSON object body is required");
     }
     assertStrictBody(body, workspace);
-    const health = await reconcileOpenworkCloudMcp({
+    const health = await reconcileRenworkCloudMcp({
       config,
       workspace,
       directory: resolveOpencodeDirectory(workspace),
@@ -168,5 +170,15 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
       refreshRegistrationFromLiveStatus,
     });
     return jsonResponse(health);
-  });
+  };
+
+  addRoute(routes, "GET", `/workspace/:id/mcp/${RENWORK_CLOUD_MCP_NAME}/health`, "client", healthHandler);
+  addRoute(routes, "POST", `/workspace/:id/mcp/${RENWORK_CLOUD_MCP_NAME}/engine-refresh`, "client", engineRefreshHandler);
+  addRoute(routes, "POST", `/workspace/:id/mcp/${RENWORK_CLOUD_MCP_NAME}/reconcile`, "client", reconcileHandler);
+
+  // One-release HTTP compatibility. Legacy callers are accepted, but every
+  // reconcile is canonicalized and persisted under `renwork-cloud` only.
+  addRoute(routes, "GET", `/workspace/:id/mcp/${LEGACY_OPENWORK_CLOUD_MCP_NAME}/health`, "client", healthHandler);
+  addRoute(routes, "POST", `/workspace/:id/mcp/${LEGACY_OPENWORK_CLOUD_MCP_NAME}/engine-refresh`, "client", engineRefreshHandler);
+  addRoute(routes, "POST", `/workspace/:id/mcp/${LEGACY_OPENWORK_CLOUD_MCP_NAME}/reconcile`, "client", reconcileHandler);
 }

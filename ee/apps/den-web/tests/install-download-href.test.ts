@@ -31,7 +31,7 @@ test("organization installer downloads still support a root API origin", () => {
 
 test("Cloud installer filenames match release artifacts without a hardcoded version", () => {
   expect(cloudInstallerFileName("mac-arm64", "0.18.4")).toBe(
-    "openwork-cloud-mac-arm64-0.18.4.dmg",
+    "renwork-cloud-mac-arm64-0.18.4.dmg",
   );
 });
 

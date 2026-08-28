@@ -133,7 +133,7 @@ if (managedOpencode) {
 }
 
 const url = `http://${config.host}:${server.port}`;
-logger.log("info", `OpenWork server listening on ${url}`);
+logger.log("info", `RenWork server listening on ${url}`);
 
 if (config.tokenSource === "generated") {
   logger.log("info", `Client token: ${config.token}`);

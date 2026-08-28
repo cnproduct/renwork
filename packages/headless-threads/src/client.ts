@@ -103,7 +103,7 @@ export function createHeadlessThreadClient(options: HeadlessThreadClientOptions)
       code: detail.success && detail.data.code !== undefined ? detail.data.code : "request_failed",
       message: detail.success && detail.data.message !== undefined
         ? detail.data.message
-        : `OpenWork returned ${response.status} for ${method} ${path}`,
+        : `RenWork returned ${response.status} for ${method} ${path}`,
       method,
       path,
       status: response.status,
@@ -117,7 +117,7 @@ export function createHeadlessThreadClient(options: HeadlessThreadClientOptions)
     if (parsed.success) return parsed.data;
     throw new HeadlessThreadError({
       code: "invalid_response",
-      message: `OpenWork returned an unexpected payload for ${method} ${path}`,
+      message: `RenWork returned an unexpected payload for ${method} ${path}`,
       method,
       path,
       status: response.status,

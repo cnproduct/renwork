@@ -2,9 +2,9 @@ import { and, eq, isNull } from "@openwork-ee/den-db/drizzle"
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
 import { StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import {
-  OPENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND,
-  OPENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE,
-  OPENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION,
+  RENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND,
+  RENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE,
+  RENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION,
 } from "@openwork/types/den/mcp-connection-action"
 import { MemberTable } from "@openwork-ee/den-db/schema"
 import { normalizeDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
@@ -181,9 +181,9 @@ export type ExternalCapabilityMatch = CapabilityMatch & {
 }
 
 export type ExternalConnectionStatus = {
-  version: typeof OPENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION
-  kind: typeof OPENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND
-  source: typeof OPENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE
+  version: typeof RENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION
+  kind: typeof RENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND
+  source: typeof RENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE
   layer: "mcp_connection" | "downstream_provider"
   connectionId: string
   connectionName: string
@@ -440,9 +440,9 @@ export function buildExternalConnectionStatus(input: {
 }): ExternalConnectionStatus {
   const connectionName = input.connection.name
   const actionContract = {
-    version: OPENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION,
-    kind: OPENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND,
-    source: OPENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE,
+    version: RENWORK_CLOUD_MCP_CONNECTION_ACTION_VERSION,
+    kind: RENWORK_CLOUD_MCP_CONNECTION_ACTION_KIND,
+    source: RENWORK_CLOUD_MCP_CONNECTION_ACTION_SOURCE,
   } as const
   // Once the failure is classified as reauthentication, credential ownership
   // is the source of truth for who can repair it. A generic HTTP 400 during a

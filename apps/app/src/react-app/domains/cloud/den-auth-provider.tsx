@@ -277,7 +277,7 @@ export function DenAuthProvider({ children }: DenAuthProviderProps) {
       setError(
         nextError instanceof Error
           ? nextError.message
-          : "Failed to restore OpenWork Cloud session.",
+          : "Failed to restore RenWork Cloud session.",
       );
       updateStatus(failureStatus);
     }

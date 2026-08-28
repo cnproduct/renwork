@@ -19,8 +19,9 @@ import {
 } from "./openai-image-generation.js";
 import {
   callOpenWorkCloudUploadAction,
+  LEGACY_OPENWORK_CLOUD_UPLOADS_EXTENSION_ID,
   OPENWORK_CLOUD_UPLOAD_ACTIONS,
-  OPENWORK_CLOUD_UPLOADS_EXTENSION_ID,
+  RENWORK_CLOUD_UPLOADS_EXTENSION_ID,
 } from "./cloud-uploads.js";
 
 const OPENWORK_EXPERIMENTAL_EXTENSION_ACTIONS = [
@@ -40,7 +41,10 @@ function readStringField(value: unknown, key: string): string {
 }
 
 export function listExperimentalExtensionActions(extensionId: string, connectSnapshot?: ConnectSnapshot) {
-  const filter = extensionId.trim();
+  const requested = extensionId.trim();
+  const filter = requested === LEGACY_OPENWORK_CLOUD_UPLOADS_EXTENSION_ID
+    ? RENWORK_CLOUD_UPLOADS_EXTENSION_ID
+    : requested;
   const actions = filter
     ? OPENWORK_EXPERIMENTAL_EXTENSION_ACTIONS.filter((action) => action.extensionId === filter)
     : OPENWORK_EXPERIMENTAL_EXTENSION_ACTIONS;
@@ -52,7 +56,10 @@ export async function callExperimentalExtensionAction(config: ServerConfig, env:
   if (!isRecord(input)) {
     throw new ApiError(400, "invalid_payload", "Expected extension action call payload");
   }
-  const extensionId = readStringField(input, "extensionId");
+  const requestedExtensionId = readStringField(input, "extensionId");
+  const extensionId = requestedExtensionId === LEGACY_OPENWORK_CLOUD_UPLOADS_EXTENSION_ID
+    ? RENWORK_CLOUD_UPLOADS_EXTENSION_ID
+    : requestedExtensionId;
   const action = readStringField(input, "action");
   const args = isRecord(input.args) ? input.args : {};
   const context = isRecord(input.context) ? input.context : {};
@@ -61,7 +68,7 @@ export async function callExperimentalExtensionAction(config: ServerConfig, env:
   }
   const registered = OPENWORK_EXPERIMENTAL_EXTENSION_ACTIONS.find((item) => item.extensionId === extensionId && item.action === action);
   if (!registered) {
-    throw new ApiError(404, "extension_action_not_found", "OpenWork extension action not found");
+    throw new ApiError(404, "extension_action_not_found", "RenWork extension action not found");
   }
 
   if (
@@ -87,7 +94,7 @@ export async function callExperimentalExtensionAction(config: ServerConfig, env:
     if (result) return result;
   }
 
-  if (extensionId === OPENWORK_CLOUD_UPLOADS_EXTENSION_ID) {
+  if (extensionId === RENWORK_CLOUD_UPLOADS_EXTENSION_ID) {
     const result = await callOpenWorkCloudUploadAction(config, action, args, context);
     if (result) return result;
   }

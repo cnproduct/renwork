@@ -54,7 +54,7 @@ function EnterpriseActivationPage() {
         data-testid="enterprise-activation-foreground"
       >
         <section
-          className="w-full max-w-[720px] rounded-3xl border border-border bg-background px-8 pb-12 pt-10 sm:px-16 sm:pb-16 sm:pt-14"
+          className="w-full max-w-[760px] rounded-3xl border border-border bg-background/95 backdrop-blur-md px-8 pb-12 pt-10 sm:px-14 sm:pb-14 sm:pt-12 shadow-2xl"
           data-testid="enterprise-activation-card"
         >
           <div className="flex items-center gap-2.5">
@@ -66,11 +66,11 @@ function EnterpriseActivationPage() {
 
           <div className="mt-10 flex flex-col gap-2.5 sm:mt-14">
             <h1 className="text-[30px] font-semibold leading-[38px] tracking-[-0.03em] text-foreground sm:text-[38px] sm:leading-[46px]">
-              Activate OpenWork Enterprise
+              Activate RenWork Enterprise
             </h1>
             <p className="text-[15px] leading-[23px] text-muted-foreground">
-              OpenWork Enterprise access is managed by your organization. Return to your organization&apos;s
-              OpenWork Enterprise download page and select <strong className="font-semibold text-foreground">Activate OpenWork Enterprise</strong>.
+              RenWork Enterprise access is managed by your organization. Return to your organization&apos;s
+              RenWork Enterprise download page and select <strong className="font-semibold text-foreground">Activate RenWork Enterprise</strong>.
               This app will unlock when it receives the one-time activation link.
             </p>
           </div>

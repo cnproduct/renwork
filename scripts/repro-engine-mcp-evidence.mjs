@@ -356,7 +356,7 @@ async function pollHealedHealth(baseUrl, workspaceId) {
   const started = Date.now();
   let last = null;
   while (Date.now() - started < 30_000) {
-    last = await serverJson(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/mcp/openwork-cloud/health`);
+    last = await serverJson(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/mcp/renwork-cloud/health`);
     if (isHealthConnected(last)) return last;
     await sleep(1000);
   }
@@ -439,7 +439,7 @@ async function main() {
 
   const reconcilePayload = {
     workspaceId,
-    name: "openwork-cloud",
+    name: "renwork-cloud",
     config: {
       type: "remote",
       url: `http://127.0.0.1:${proxyPort}/mcp/agent`,
@@ -457,16 +457,16 @@ async function main() {
     trigger: "repro-engine-mcp-evidence",
   };
 
-  log("PHASE 1: seeding delayed openwork-cloud reconcile");
+  log("PHASE 1: seeding delayed renwork-cloud reconcile");
   const armed = await armProxy(proxyPort, delayMs, activeWindowMs);
   const armedUntilMs = Number(own(armed, "armedUntilMs"));
   if (!Number.isFinite(armedUntilMs)) throw new Error(`Proxy arm response did not include armedUntilMs: ${JSON.stringify(armed)}`);
-  const seedReconcile = await serverJson(openwork.baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/mcp/openwork-cloud/reconcile`, {
+  const seedReconcile = await serverJson(openwork.baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/mcp/renwork-cloud/reconcile`, {
     method: "POST",
     body: JSON.stringify(reconcilePayload),
   });
   const seedMcp = await serverJson(openwork.baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/mcp`);
-  const seedHealth = await serverJson(openwork.baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/mcp/openwork-cloud/health`);
+  const seedHealth = await serverJson(openwork.baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/mcp/renwork-cloud/health`);
 
   log("PHASE 2: waiting for delayed Den MCP handshake to heal live engine state");
   await sleep(armedUntilMs + 8000 - Date.now());
@@ -485,7 +485,7 @@ async function main() {
   const checks = Array.isArray(own(diagnosticsReport, "checks")) ? own(diagnosticsReport, "checks") : [];
   const engineMcpSyncCheck = checks.find((check) => own(check, "id") === "engine-mcp-sync") ?? null;
   const mcps = Array.isArray(own(diagnosticsReport, "mcps")) ? own(diagnosticsReport, "mcps") : [];
-  const openworkCloudSyncStatuses = mcps.filter((mcp) => own(mcp, "name") === "openwork-cloud").map((mcp) => ({
+  const openworkCloudSyncStatuses = mcps.filter((mcp) => own(mcp, "name") === "renwork-cloud").map((mcp) => ({
     name: own(mcp, "name"), source: own(mcp, "source"), type: own(mcp, "type"), enabled: own(mcp, "enabled"),
     syncStatus: own(mcp, "syncStatus"), liveEngineStatus: own(mcp, "liveEngineStatus"),
   }));

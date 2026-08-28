@@ -54,6 +54,17 @@ const importedFrom = (provider: DenOrgLlmProvider): CloudImportedProvider => ({
 });
 
 describe("isCloudProviderOutOfSync", () => {
+  test("uses the RenWork provider id for managed model imports", () => {
+    const provider: DenOrgLlmProvider = {
+      ...makeProvider([]),
+      source: "openwork",
+      providerId: "renwork",
+      name: "RenWork Models",
+    };
+
+    expect(getCloudManagedProviderId(provider)).toBe("renwork");
+  });
+
   test("returns false for an in-sync provider", () => {
     const provider = makeProvider([makeModel("model-a"), makeModel("model-b")]);
     expect(isCloudProviderOutOfSync(provider, importedFrom(provider))).toBe(false);

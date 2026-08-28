@@ -12,6 +12,7 @@ const electronRoot = resolve(desktopRoot, "electron");
 const packagedServerRoot = resolve(desktopRoot, "server");
 const packagedRuntimeRoot = resolve(desktopRoot, ".electron-runtime", "node_modules");
 const sentryBuildConfigPath = resolve(desktopRoot, ".electron-runtime", "openwork-sentry.json");
+const sharedTypesRoot = resolve(repoRoot, "packages", "types");
 
 const pnpmCmd = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const nodeCmd = process.execPath;
@@ -49,6 +50,10 @@ run(nodeCmd, [resolve(__dirname, "prepare-sidecar.mjs"), "--force", "--outdir", 
 run(nodeCmd, [resolve(__dirname, "prepare-computer-use-helper.mjs"), "--force", "--outdir", electronHelperDir], desktopRoot);
 run(nodeCmd, [resolve(__dirname, "prepare-runtime-node-modules.mjs"), "--outdir", packagedRuntimeRoot], desktopRoot);
 writeSentryBuildConfig();
+// The server imports RenWork's semantic voice constants at runtime. Build and
+// vendor that tiny ESM module so packaged Electron never tries to execute the
+// TypeScript source from a workspace package under node_modules.
+run(pnpmCmd, ["--filter", "@openwork/types", "build"], repoRoot);
 // Build the server TS → JS so Electron can import it in-process
 run(pnpmCmd, ["--filter", "openwork-server", "build"], repoRoot);
 // OPENWORK_ELECTRON_BUILD tells Vite to emit relative asset paths so
@@ -64,9 +69,21 @@ const constantsSrc = resolve(repoRoot, "constants.json");
 copyFileSync(constantsSrc, resolve(serverDistDir, "constants.json"));
 const serverJsPath = resolve(serverDistDir, "server.js");
 const serverJsSrc = readFileSync(serverJsPath, "utf8");
-const patched = serverJsSrc.replace(
+const constantsPatched = serverJsSrc.replace(
   /from\s+["']\.\.\/\.\.\/\.\.\/constants\.json["']/,
   'from "./constants.json"',
+);
+const semanticToolsImport = /from\s+["']@openwork\/types\/renwork-semantic-tools["']/;
+if (!semanticToolsImport.test(constantsPatched)) {
+  throw new Error("Compiled server no longer contains the expected RenWork semantic tools import.");
+}
+copyFileSync(
+  resolve(sharedTypesRoot, "dist", "renwork-semantic-tools.js"),
+  resolve(serverDistDir, "renwork-semantic-tools.js"),
+);
+const patched = constantsPatched.replace(
+  semanticToolsImport,
+  'from "./renwork-semantic-tools.js"',
 );
 if (patched !== serverJsSrc) {
   writeFileSync(serverJsPath, patched, "utf8");

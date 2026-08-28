@@ -157,7 +157,7 @@ export const MCP_QUICK_CONNECT: McpDirectoryInfo[] = [
   },
   {
     get name() { return t("mcp.quick_connect_openwork_cloud_title"); },
-    serverName: "openwork-cloud",
+    serverName: "renwork-cloud",
     get description() { return t("mcp.quick_connect_openwork_cloud_desc"); },
     get url() {
       // The desktop app connects to the minimal, harness-facing surface
@@ -168,7 +168,7 @@ export const MCP_QUICK_CONNECT: McpDirectoryInfo[] = [
       try {
         return `${getDenMcpUrl()}/agent`;
       } catch {
-        return "https://app.openworklabs.com/api/den/mcp/agent";
+        return "https://www.rrenn.com/api/den/mcp/agent";
       }
     },
     type: "remote",
@@ -177,7 +177,7 @@ export const MCP_QUICK_CONNECT: McpDirectoryInfo[] = [
     kind: "mcp",
     iconSrc: "/openwork-mark.svg",
     // Auto-managed by the signed-in cloud reconciler (syncCloudControlMcp):
-    // configured + enabled while signed in to OpenWork Cloud. Hidden from the
+    // configured + enabled while signed in to RenWork Cloud. Hidden from the
     // default catalog; "Show hidden" reveals it.
     defaultHidden: true,
   },

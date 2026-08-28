@@ -2,9 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import { MCP_QUICK_CONNECT } from "../src/app/constants";
 
-describe("built-in OpenWork MCP visibility", () => {
-  test("hides internal OpenWork MCPs and omits the retired admin connector", () => {
-    expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "openwork-cloud")?.defaultHidden).toBe(true);
+describe("built-in RenWork MCP visibility", () => {
+  test("advertises only the canonical RenWork Cloud MCP while retaining other hidden internals", () => {
+    expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "renwork-cloud")?.defaultHidden).toBe(true);
+    expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "openwork-cloud")).toBeUndefined();
     expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "openwork-admin")).toBeUndefined();
     expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "openwork-ui")?.defaultHidden).toBe(true);
   });

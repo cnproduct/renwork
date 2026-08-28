@@ -6,6 +6,10 @@ import {
   AUTOMATION_MODEL_ATTENTION_CAPABILITY,
   AUTOMATION_MODEL_ATTENTION_CAPABILITY_HEADER,
 } from "@openwork/types/automations";
+import {
+  parsePublicModelCatalog,
+  type RenWorkPublicModelCatalog,
+} from "@openwork/rencredit-metering";
 import type {
   AutomationDetail,
   AutomationDesktopRunnerRegistration,
@@ -70,11 +74,40 @@ export const CLOUD_MCP_SYNC_MARKER_STORAGE_KEY = "openwork.den.mcp.sync";
 const ORG_PROXY_HEADER = "x-openwork-legacy-org-id";
 const DEFAULT_DEN_TIMEOUT_MS = 12_000;
 
-export const DEFAULT_DEN_AUTH_NAME = "OpenWork User";
+export const DEFAULT_DEN_AUTH_NAME = "RenWork User";
+const RENWORK_HOSTED_DEN_BASE_URL = "https://www.rrenn.com";
+const LEGACY_HOSTED_DEN_ORIGINS = new Set([
+  "https://app.openworklabs.com",
+  "https://api.openworklabs.com",
+]);
+
+function migrateLegacyHostedDenUrl(input: string): string {
+  try {
+    const url = new URL(input);
+    if (!LEGACY_HOSTED_DEN_ORIGINS.has(url.origin)) return input;
+    const legacyOrigin = url.origin;
+    const replacement = new URL(RENWORK_HOSTED_DEN_BASE_URL);
+    replacement.pathname = url.pathname;
+    replacement.search = url.search;
+    replacement.hash = url.hash;
+    if (legacyOrigin === "https://api.openworklabs.com") {
+      const path = replacement.pathname.replace(/\/+$/, "");
+      if (!path || path === "/") {
+        replacement.pathname = "/api/den";
+      } else if (path !== "/api/den" && !path.startsWith("/api/den/")) {
+        replacement.pathname = `/api/den${replacement.pathname.startsWith("/") ? "" : "/"}${replacement.pathname}`;
+      }
+    }
+    return replacement.toString();
+  } catch {
+    return input;
+  }
+}
+
 const BUILD_DEN_BASE_URL =
-  (typeof import.meta !== "undefined" && typeof import.meta.env?.VITE_DEN_BASE_URL === "string"
+  migrateLegacyHostedDenUrl((typeof import.meta !== "undefined" && typeof import.meta.env?.VITE_DEN_BASE_URL === "string"
     ? import.meta.env.VITE_DEN_BASE_URL
-    : "").trim() || "https://app.openworklabs.com";
+    : "").trim() || RENWORK_HOSTED_DEN_BASE_URL);
 const BUILD_DEN_REQUIRE_SIGNIN =
   (typeof import.meta !== "undefined" && typeof import.meta.env?.VITE_DEN_REQUIRE_SIGNIN === "string"
     ? /^(1|true|yes|on)$/i.test(import.meta.env.VITE_DEN_REQUIRE_SIGNIN.trim())
@@ -98,7 +131,7 @@ function readForceEnvDenSettings(): boolean {
     : false);
 }
 
-export const HOSTED_DEFAULT_DEN_BASE_URL = "https://app.openworklabs.com";
+export const HOSTED_DEFAULT_DEN_BASE_URL = RENWORK_HOSTED_DEN_BASE_URL;
 export const DEFAULT_DEN_BASE_URL = BUILD_DEN_BASE_URL;
 export const DEN_INFERENCE_PATH = "/dashboard/inference";
 
@@ -606,7 +639,7 @@ export function normalizeDenBaseUrl(input: string | null | undefined): string | 
   const value = (input ?? "").trim();
   if (!value) return null;
   try {
-    const url = new URL(value);
+    const url = new URL(migrateLegacyHostedDenUrl(value));
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       return null;
     }
@@ -637,10 +670,10 @@ export function denOriginComparisonKey(input: string | null | undefined): string
 }
 
 /**
- * True when the effective Den control plane is not the hosted OpenWork Cloud
- * (app.openworklabs.com). Self-hosted deployments point the app at their own
+ * True when the effective Den control plane is not the hosted RenWork Cloud
+ * (www.rrenn.com). Self-hosted deployments point the app at their own
  * control plane via VITE_DEN_BASE_URL or the desktop bootstrap config, so
- * hosted-only surfaces (e.g. OpenWork Models upsells) should stay hidden.
+ * hosted-only surfaces (e.g. RenWork Models upsells) should stay hidden.
  */
 export function isSelfHostedControlPlane(): boolean {
   return (
@@ -765,9 +798,10 @@ export function resolveCloudMcpResourceUrl(resource: string | null | undefined):
   const trimmed = resource?.trim() ?? "";
   if (!trimmed) return null;
   try {
-    const url = new URL(trimmed);
+    const legacyWebMcp = isLegacyWebAppMcpUrl(trimmed);
+    const url = new URL(migrateLegacyHostedDenUrl(trimmed));
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    if (isLegacyWebAppMcpUrl(trimmed)) {
+    if (legacyWebMcp) {
       url.pathname = "/api/den/mcp";
     }
     return url.toString().replace(/\/+$/, "");
@@ -1028,9 +1062,9 @@ export function buildDenAuthUrl(baseUrl: string, mode: "sign-in" | "sign-up"): s
     || (webReturnOrigin !== null && !canUseCloudWebAuthReturn(webReturnOrigin))
   ) {
     // Desktop app, or local/dev web that cannot receive an approved webAuth
-    // redirect: Den shows the copyable openwork:// / grant handoff instead.
+    // redirect: Den shows the copyable renwork:// / grant handoff instead.
     target.searchParams.set("desktopAuth", "1");
-    target.searchParams.set("desktopScheme", "openwork");
+    target.searchParams.set("desktopScheme", "renwork");
   } else if (webReturnOrigin !== null) {
     target.searchParams.set("webAuth", "1");
     target.searchParams.set("webAuthReturn", webReturnOrigin);
@@ -2483,6 +2517,19 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
         organizationId: orgId,
       });
       return normalizeDenDesktopConfig(payload);
+    },
+
+    async getRenWorkModelCatalog(orgId: string): Promise<RenWorkPublicModelCatalog> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/models/catalog", {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      const catalog = parsePublicModelCatalog(payload);
+      if (!catalog) {
+        throw new DenApiError(500, "invalid_model_catalog_payload", "RenWork model catalog response was invalid.");
+      }
+      return catalog;
     },
 
     async getResourceSnapshot(orgId?: string | null): Promise<DenResourceSnapshot> {

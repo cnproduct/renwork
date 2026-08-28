@@ -41,7 +41,14 @@ type RunRow = typeof AutomationRunTable.$inferSelect
 type EventRow = typeof AutomationRunEventTable.$inferSelect
 type DesktopClaim = { automation: Automation; revision: AutomationRevision; run: AutomationRun }
 
-const emptyUsage: AutomationUsage = { inputTokens: null, outputTokens: null, costMicros: null }
+const emptyUsage: AutomationUsage = {
+  inputTokens: null,
+  outputTokens: null,
+  reasoningTokens: null,
+  cacheReadTokens: null,
+  cacheWriteTokens: null,
+  costMicros: null,
+}
 
 const normalizeAutomationId = (value: string) => normalizeDenTypeId("automation", value)
 const normalizeRevisionId = (value: string) => normalizeDenTypeId("automationRevision", value)
@@ -51,6 +58,12 @@ const normalizeMemberId = (value: string) => normalizeDenTypeId("member", value)
 
 const ms = (value: Date | null): number | null => value?.getTime() ?? null
 const date = (value: number | null): Date | null => value === null ? null : new Date(value)
+
+function normalizeCloudEngineKind(value: string): string {
+  if (value === "openwork-cloud-agent-v1") return "renwork-cloud-agent-v1"
+  if (value === "openwork-cloud-codemode-v1") return "renwork-cloud-codemode-v1"
+  return value
+}
 
 function mapAutomation(row: AutomationRow): Automation {
   return {
@@ -85,6 +98,8 @@ function mapRevision(row: RevisionRow): AutomationRevision {
     schedule: row.schedule_config,
     model: { providerId: row.provider_id, modelId: row.model_id, variant: row.model_variant ?? null },
     action,
+    connectors: [],
+    notifyMiniProgram: false,
     executionTarget: row.execution_target,
     maximumRuntimeMs: row.maximum_runtime_ms,
     digest: row.digest,
@@ -117,7 +132,7 @@ function mapRun(row: RunRow): AutomationRun {
       executionLocation: row.execution_target,
       automationId: row.automation_id,
       automationRunId: row.id,
-      engineKind: row.engine_kind,
+      engineKind: normalizeCloudEngineKind(row.engine_kind),
       ...(nativeThreadId ? { nativeThreadId } : {}),
       ...(workspaceId ? { workspaceId } : {}),
     } : null,
@@ -158,6 +173,15 @@ function normalizedDefinition(definition: Parameters<AutomationRepository["creat
     instructions: definition.instructions,
     model: definition.model,
   }
+}
+
+function persistedScheduleKind(
+  schedule: AutomationRevision["schedule"],
+): "once" | "daily" | "weekly" {
+  if (schedule.kind === "once" || schedule.kind === "daily" || schedule.kind === "weekly") {
+    return schedule.kind
+  }
+  throw new Error("automation_schedule_not_supported_by_den")
 }
 
 function mapEvent(row: EventRow): AutomationRunEvent {
@@ -212,9 +236,9 @@ export class DenAutomationRepository implements AutomationRepository {
         automation_id: newAutomationId,
         version: 1,
         instructions: definition.instructions,
-        schedule_kind: definition.schedule.kind,
+        schedule_kind: persistedScheduleKind(definition.schedule),
         schedule_config: definition.schedule,
-        timezone: definition.schedule.timezone,
+        timezone: definition.schedule.timezone ?? "UTC",
         provider_id: definition.model.providerId,
         model_id: definition.model.modelId,
         model_variant: definition.model.variant ?? null,
@@ -299,9 +323,9 @@ export class DenAutomationRepository implements AutomationRepository {
         automation_id: automation.id,
         version: current.version + 1,
         instructions,
-        schedule_kind: schedule.kind,
+        schedule_kind: persistedScheduleKind(schedule),
         schedule_config: schedule,
-        timezone: schedule.timezone,
+        timezone: schedule.timezone ?? "UTC",
         provider_id: model.providerId,
         model_id: model.modelId,
         model_variant: model.variant ?? null,
@@ -557,8 +581,8 @@ export class DenAutomationRepository implements AutomationRepository {
       const revision = revisions[0]
       if (!revision) return null
       const engineKind = revision.action?.kind === "saved_script"
-        ? "openwork-cloud-codemode-v1"
-        : "openwork-cloud-agent-v1"
+        ? "renwork-cloud-codemode-v1"
+        : "renwork-cloud-agent-v1"
       await tx.update(AutomationRunTable).set({
         status: "running",
         lease_owner: input.leaseOwner,

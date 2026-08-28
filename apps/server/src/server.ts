@@ -3,6 +3,12 @@ import { homedir, hostname } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 import { resolveGlobalOpencodeConfigPath } from "@openwork/paths";
+import {
+  RENWORK_VOICE_REALTIME_MODEL,
+  RENWORK_VOICE_REALTIME_TOOLS,
+  RENWORK_VOICE_TRANSCRIPTION_MODEL,
+  renworkVoiceRealtimeInstructions,
+} from "@openwork/types/renwork-semantic-tools";
 import type { ApprovalRequest, Capabilities, ServerConfig, WorkspaceInfo, Actor, ReloadReason, ReloadTrigger, TokenScope } from "./types.js";
 import { agentContextDiagnosticsRequestSchema } from "./agent-context-diagnostics-schema.js";
 import { ApprovalService } from "./approvals.js";
@@ -148,8 +154,6 @@ export {
 const SERVER_VERSION = pkg.version;
 const OPENCODE_VERSION = constants.opencodeVersion.trim().replace(/^v/, "");
 
-const OPENWORK_VOICE_REALTIME_MODEL = "gpt-realtime-2";
-const OPENWORK_VOICE_TRANSCRIPTION_MODEL = "gpt-4o-transcribe";
 let desktopCloudSyncQueue: Promise<void> = Promise.resolve();
 const agentDiagnosticsLastRunByServer = new WeakMap<ServerConfig, Map<string, number>>();
 const agentDiagnosticsInFlightByServer = new WeakMap<ServerConfig, Set<string>>();
@@ -225,35 +229,6 @@ function reserveAgentDiagnosticsRun(
     inFlight.delete(key);
   };
 }
-
-const OPENWORK_VOICE_REALTIME_TOOLS = [
-  {
-    type: "function",
-    name: "openwork_snapshot",
-    description: "Read the current OpenWork UI control snapshot: route, status, narration, and visible action metadata.",
-    parameters: { type: "object", properties: {}, additionalProperties: false },
-  },
-  {
-    type: "function",
-    name: "openwork_list_actions",
-    description: "List semantic OpenWork UI actions. Call this before openwork_execute_action when you do not know the exact action id.",
-    parameters: { type: "object", properties: {}, additionalProperties: false },
-  },
-  {
-    type: "function",
-    name: "openwork_execute_action",
-    description: "Execute a semantic OpenWork UI action by id. Prefer this over screen coordinates or DOM guessing.",
-    parameters: {
-      type: "object",
-      properties: {
-        actionId: { type: "string", description: "The action id from openwork_list_actions, such as composer.set_text or composer.send." },
-        args: { type: "object", description: "Optional JSON arguments for the action.", additionalProperties: true },
-      },
-      required: ["actionId"],
-      additionalProperties: false,
-    },
-  },
-];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -530,39 +505,6 @@ async function resolveOpenWorkModelsVoiceConfig(env: EnvService): Promise<{ base
   return { apiKey, baseUrl: baseUrl.replace(/\/+$/, "") };
 }
 
-function openworkVoiceRealtimeInstructions(sessionContext: string) {
-  const trimmedContext = sessionContext.trim();
-  const contextSection = trimmedContext
-    ? `
-
-# Current Session Context
-
-Use this recent transcript context to answer questions about what was last discussed and to resolve references such as "this" or "that" when continuing the existing session. Do not treat it as a new user request.
-
-${trimmedContext}`
-    : "";
-  return `# Role and Objective
-
-You are OpenWork Voice Mode, a voice-first control layer inside OpenWork.
-Help the user control OpenWork by using the semantic OpenWork UI tools.
-
-# Tool Policy
-
-- Prefer openwork_snapshot, openwork_list_actions, and openwork_execute_action over visual guessing.
-- If the user asks to write or draft something, use composer.set_text.
-- If the user asks to send or run the current prompt, use composer.send.
-- For navigation, settings, session, transcript, and composer work, inspect the action list first if the action id is unknown.
-- Do not claim an action completed until the tool succeeds.
-- Ask for confirmation before destructive actions such as deleting a session.
-
-# Voice Style
-
-- Be concise, calm, and direct.
-- If audio is unclear, ask the user to repeat it instead of guessing.
-- Ignore background speech that is not addressed to OpenWork.
-- Summarize tool results briefly and offer the next useful step.${contextSection}`;
-}
-
 function enqueueDesktopCloudSync<T>(operation: () => Promise<T>): Promise<T> {
   const run = desktopCloudSyncQueue.then(operation);
   desktopCloudSyncQueue = run.then(
@@ -594,13 +536,13 @@ async function createOpenAiRealtimeVoiceSession(env: EnvService, input: unknown)
       if (error instanceof ApiError && error.status === 503) {
         const fallbackKey = await resolveOpenAiRealtimeApiKey(env);
         if (fallbackKey) {
-          console.warn("[voice] OpenWork Models broker returned 503 — falling back to direct OpenAI Realtime.");
+          console.warn("[voice] RenWork Models broker returned 503 — falling back to direct OpenAI Realtime.");
           return createDirectOpenAiVoiceSession(fallbackKey, input);
         }
         throw new ApiError(
           503,
           "openwork_models_voice_unavailable",
-          "OpenWork Models voice is active but the server is not fully configured. Ask your admin to add an OpenAI key, or save your own OPENAI_API_KEY in Environment settings.",
+          "RenWork Models voice is active but the server is not fully configured. Ask your admin to add an OpenAI key, or save your own OPENAI_API_KEY in Environment settings.",
         );
       }
       throw error;
@@ -612,7 +554,7 @@ async function createOpenAiRealtimeVoiceSession(env: EnvService, input: unknown)
     throw new ApiError(
       400,
       "openai_api_key_missing",
-      "OpenAI API key missing. Save OPENAI_API_KEY in OpenWork Environment Variables or configure the Voice Mode extension.",
+      "OpenAI API key missing. Save OPENAI_API_KEY in RenWork Environment Variables or configure the Voice Mode extension.",
     );
   }
 
@@ -638,7 +580,7 @@ async function createManagedVoiceSession(config: { baseUrl: string; apiKey: stri
   if (!response.ok) {
     const errorPayload = isRecord(payload) && isRecord(payload.error) ? payload.error : null;
     const message = typeof errorPayload?.message === "string" ? errorPayload.message : response.statusText;
-    throw new ApiError(response.status, "openwork_models_voice_failed", message || "OpenWork Models could not create a voice session");
+    throw new ApiError(response.status, "openwork_models_voice_failed", message || "RenWork Models could not create a voice session");
   }
   if (
     !isRecord(payload) ||
@@ -648,21 +590,21 @@ async function createManagedVoiceSession(config: { baseUrl: string; apiKey: stri
     !Array.isArray(payload.tools) ||
     payload.tools.some((tool) => typeof tool !== "string")
   ) {
-    throw new ApiError(502, "openwork_models_voice_invalid_response", "OpenWork Models did not return a usable Realtime session payload");
+    throw new ApiError(502, "openwork_models_voice_invalid_response", "RenWork Models did not return a usable Realtime session payload");
   }
   return {
     ok: true,
     clientSecret: payload.clientSecret,
     expiresAt: typeof payload.expiresAt === "number" ? payload.expiresAt : null,
     model: payload.model,
-    transcriptionModel: typeof payload.transcriptionModel === "string" ? payload.transcriptionModel : OPENWORK_VOICE_TRANSCRIPTION_MODEL,
+    transcriptionModel: typeof payload.transcriptionModel === "string" ? payload.transcriptionModel : RENWORK_VOICE_TRANSCRIPTION_MODEL,
     tools: payload.tools,
     ...(typeof payload.source === "string" ? { source: payload.source } : {}),
   };
 }
 
 async function createDirectOpenAiVoiceSession(apiKey: string, input: unknown) {
-  const model = readStringField(input, "model") || OPENWORK_VOICE_REALTIME_MODEL;
+  const model = readStringField(input, "model") || RENWORK_VOICE_REALTIME_MODEL;
   const sessionContext = readStringField(input, "sessionContext").slice(0, 6_000);
   const response = await externalFetch("https://api.openai.com/v1/realtime/client_secrets", {
     method: "POST",
@@ -677,7 +619,7 @@ async function createDirectOpenAiVoiceSession(apiKey: string, input: unknown) {
         output_modalities: ["audio"],
         audio: {
           input: {
-            transcription: { model: OPENWORK_VOICE_TRANSCRIPTION_MODEL, language: "en" },
+            transcription: { model: RENWORK_VOICE_TRANSCRIPTION_MODEL, language: "en" },
             turn_detection: {
               type: "server_vad",
               threshold: 0.58,
@@ -688,9 +630,9 @@ async function createDirectOpenAiVoiceSession(apiKey: string, input: unknown) {
             },
           },
         },
-        instructions: openworkVoiceRealtimeInstructions(sessionContext),
+        instructions: renworkVoiceRealtimeInstructions(sessionContext),
         tool_choice: "auto",
-        tools: OPENWORK_VOICE_REALTIME_TOOLS,
+        tools: RENWORK_VOICE_REALTIME_TOOLS,
       },
     }),
   });
@@ -719,8 +661,8 @@ async function createDirectOpenAiVoiceSession(apiKey: string, input: unknown) {
     clientSecret,
     expiresAt,
     model,
-    transcriptionModel: OPENWORK_VOICE_TRANSCRIPTION_MODEL,
-    tools: OPENWORK_VOICE_REALTIME_TOOLS.map((tool) => tool.name),
+    transcriptionModel: RENWORK_VOICE_TRANSCRIPTION_MODEL,
+    tools: RENWORK_VOICE_REALTIME_TOOLS.map((tool) => tool.name),
   };
 }
 
@@ -901,7 +843,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
   try {
     await reconcileLocalManagedMcpRuntimeEntries(config);
   } catch (error) {
-    logger.log("warn", "Failed to reconcile OpenWork-managed MCP connections during startup.", {
+    logger.log("warn", "Failed to reconcile RenWork-managed MCP connections during startup.", {
       error: error instanceof Error ? error.message : "unknown",
     });
   }
@@ -1125,7 +1067,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
     try {
       await reconcileLocalManagedMcpRuntimeEntries(config);
     } catch (error) {
-      logger.log("warn", "Failed to update OpenWork-managed MCP loopback routes after binding the server port.", {
+      logger.log("warn", "Failed to update RenWork-managed MCP loopback routes after binding the server port.", {
         error: error instanceof Error ? error.message : "unknown",
       });
     }
@@ -1997,7 +1939,7 @@ function createRoutes(
       throw new ApiError(
         400,
         "agent_diagnostics_workspace_unsupported",
-        "Agent diagnostics must run on the OpenWork server that owns a local workspace",
+        "Agent diagnostics must run on the RenWork server that owns a local workspace",
       );
     }
     // Reserve before consuming untrusted bytes and hold the reservation through
@@ -2998,7 +2940,7 @@ function createRoutes(
     await requireApproval(ctx, {
       workspaceId: workspace.id,
       action: "mcp.add",
-      summary: `Add OpenWork-managed MCP ${name}`,
+      summary: `Add RenWork-managed MCP ${name}`,
       paths: [openworkConfigPath(workspace.path)],
     });
     await createLocalManagedMcpConnection(config, {
@@ -3027,7 +2969,7 @@ function createRoutes(
         throw new ApiError(
           502,
           "managed_mcp_connection_failed",
-          "OpenWork could not start sign-in with this MCP server. Check the server URL, OAuth settings, and network connection, then try again.",
+          "RenWork could not start sign-in with this MCP server. Check the server URL, OAuth settings, and network connection, then try again.",
         );
       }
     })();
@@ -3038,7 +2980,7 @@ function createRoutes(
       actor: ctx.actor ?? { type: "remote" },
       action: "mcp.add",
       target: openworkConfigPath(workspace.path),
-      summary: `Added OpenWork-managed MCP ${name}`,
+      summary: `Added RenWork-managed MCP ${name}`,
       timestamp: Date.now(),
     });
     emitReloadEvent(ctx.reloadEvents, workspace, "mcp", { type: "mcp", name, action: "added" });
@@ -3071,7 +3013,7 @@ function createRoutes(
       await syncRuntimeMcpToOpencodeEngine(config, workspace, [connection.name], undefined, engineMcpServerState).catch(() => undefined);
     }
     return new Response(
-      `<!doctype html><meta charset="utf-8"><title>Connected</title><main style="font:16px system-ui;padding:40px;max-width:560px"><h1>Connected</h1><p>${connection.name} is ready in OpenWork. You can close this window.</p><script>setTimeout(()=>window.close(),1200)</script></main>`,
+      `<!doctype html><meta charset="utf-8"><title>Connected</title><main style="font:16px system-ui;padding:40px;max-width:560px"><h1>Connected</h1><p>${connection.name} is ready in RenWork. You can close this window.</p><script>setTimeout(()=>window.close(),1200)</script></main>`,
       { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
     );
   });
@@ -3087,7 +3029,7 @@ function createRoutes(
   addRoute(routes, "DELETE", "/mcp/managed/:workspaceId/:name", "none", managedGatewayHandler);
 
   // Portable export of installed skills and MCP servers (including
-  // OpenWork-managed runtime MCPs that only live in the runtime DB), so
+  // RenWork-managed runtime MCPs that only live in the runtime DB), so
   // agents can package them into marketplace plugins. Read-only; MCP
   // secrets (headers/environment) are always redacted.
   addRoute(routes, "POST", "/workspace/:id/extensions/export", "client", async (ctx) => {
@@ -3259,7 +3201,7 @@ function createRoutes(
         actor: ctx.actor ?? { type: "remote" },
         action: "mcp.auth.remove",
         target: openworkConfigPath(workspace.path),
-        summary: `Logged out OpenWork-managed MCP ${name}`,
+        summary: `Logged out RenWork-managed MCP ${name}`,
         timestamp: Date.now(),
       });
       return jsonResponse({ ok: true });
@@ -4481,7 +4423,7 @@ type EngineMcpServerState = {
 const ENGINE_MCP_REGISTRATION_MAX_AGE_MS = 15 * 60_000;
 // Registration status is point-in-time evidence from a dynamic POST /mcp,
 // not a durable statement about a later engine process. Scope it to one
-// OpenWork server generation and expire it even when the endpoint is stable.
+// RenWork server generation and expire it even when the endpoint is stable.
 const engineMcpServerStateByConfig = new WeakMap<ServerConfig, EngineMcpServerState>();
 const trustedOpencodeProcessByConfig = new WeakMap<ServerConfig, TrustedOpencodeProcessIdentity>();
 let nextEngineMcpServerGeneration = 0;
@@ -4509,7 +4451,7 @@ function clearEngineMcpServerEvidence(state: EngineMcpServerState): void {
 
 /**
  * Bind diagnostics evidence to one OpenCode process generation owned by this
- * OpenWork server. The opaque identity is hashed immediately and never
+ * RenWork server. The opaque identity is hashed immediately and never
  * reported. External engines without a trusted per-boot identity still hot
  * sync normally, but their cached registration result cannot authorize a
  * credentialed diagnostics probe.
@@ -4979,7 +4921,7 @@ function logPersistedCloudMcpReconcileResult(input: {
     `Cloud MCP ${input.trigger} reconciliation left connected service tools unavailable for workspace ${input.workspace.id}.`,
     {
       "workspace.id": input.workspace.id,
-      "mcp.name": "openwork-cloud",
+      "mcp.name": "renwork-cloud",
       "mcp.trigger": input.trigger,
       "mcp.failure.code": failure?.code ?? "unknown",
       "mcp.failure.stage": failure?.stage ?? "unknown",
@@ -5018,7 +4960,7 @@ function logPersistedCloudMcpReconcileError(input: {
     `Cloud MCP ${input.trigger} reconciliation crashed for workspace ${input.workspace.id}.`,
     {
       "workspace.id": input.workspace.id,
-      "mcp.name": "openwork-cloud",
+      "mcp.name": "renwork-cloud",
       "mcp.trigger": input.trigger,
       "mcp.failure.code": "cloud_mcp_reconcile_exception",
       "mcp.failure.message": input.error instanceof Error ? input.error.message : String(input.error),

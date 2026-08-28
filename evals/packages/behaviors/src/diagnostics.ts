@@ -524,18 +524,25 @@ export async function readBunTls12PinningFinding(lab: EgressLabHandle, env: Node
   const bunClientHello = await captureRuntimeClientHello("bun", env);
   const nodeClientHelloTls12Only = nodeClientHello.kind === "parsed" && !nodeClientHello.offersTls13 && nodeClientHello.supportedVersionLabels.includes("TLSv1.2");
   const bunClientHelloOffersTls13 = bunClientHello.kind === "parsed" && bunClientHello.offersTls13 && bunClientHello.supportedVersionLabels.includes("TLSv1.3");
+  const nodeTls12Ok = commandSucceededWith(nodeTls12, '"protocol":"TLSv1.2"');
+  const bunTls12Stalled = commandFailedWith(bunTls12, "ETIMEDOUT");
+  const nodeFetchPinnedOk = commandSucceededWith(nodeFetchPinned, '"status":200');
+  const bunFetchPinnedStalled = commandFailedWith(bunFetchPinned, "Timeout");
+  const bunPinningFailureObserved = bunTls12Stalled || bunFetchPinnedStalled || bunClientHelloOffersTls13;
   return {
-    finding: "Bun 1.3.x does not currently honor Node-style TLS 1.2 pinning in node:tls or fetch for this lab; it still offers TLS 1.3 and stalls.",
+    finding: bunPinningFailureObserved
+      ? "This Bun runtime did not consistently honor Node-style TLS 1.2 pinning; see the captured per-path facts."
+      : "This Bun runtime honored TLS 1.2 pinning in the observed probes; no Bun-specific workaround is indicated by this run.",
     nodeTls12: outputCommandResult(nodeTls12),
     bunTls12: outputCommandResult(bunTls12),
     nodeFetchPinned: outputCommandResult(nodeFetchPinned),
     bunFetchPinned: outputCommandResult(bunFetchPinned),
     nodeClientHello,
     bunClientHello,
-    nodeTls12Ok: commandSucceededWith(nodeTls12, '"protocol":"TLSv1.2"'),
-    bunTls12Stalled: commandFailedWith(bunTls12, "ETIMEDOUT"),
-    nodeFetchPinnedOk: commandSucceededWith(nodeFetchPinned, '"status":200'),
-    bunFetchPinnedStalled: commandFailedWith(bunFetchPinned, "Timeout"),
+    nodeTls12Ok,
+    bunTls12Stalled,
+    nodeFetchPinnedOk,
+    bunFetchPinnedStalled,
     nodeClientHelloTls12Only,
     bunClientHelloOffersTls13,
   };

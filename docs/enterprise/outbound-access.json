@@ -37,6 +37,15 @@
       "override": null
     },
     {
+      "host": "api.siliconflow.cn",
+      "kind": "fetched",
+      "components": ["renderer", "server"],
+      "purpose": "Optional SiliconFlow-compatible model endpoint offered in the RenWork custom-provider configuration.",
+      "requirement": "opt-in",
+      "blockedEffect": "Users who select SiliconFlow as a custom provider cannot run models through that endpoint.",
+      "override": "custom provider base URL"
+    },
+    {
       "host": "api.openworklabs.com",
       "kind": "fetched",
       "components": ["desktop", "installer", "server"],
@@ -190,10 +199,10 @@
       "override": "MCP server URL setting"
     },
     {
-      "host": "models.openworklabs.com",
+      "host": "models.dev",
       "kind": "fetched",
       "components": ["server"],
-      "purpose": "First-party OpenCode model catalog mirror passed to managed OpenCode as OPENCODE_MODELS_URL.",
+      "purpose": "Default upstream model catalog used by the RenWork model directory and managed OpenCode runtime.",
       "requirement": "required-in-practice",
       "blockedEffect": "The model catalog is unavailable or degraded; model selection may be stale or incomplete.",
       "override": "OPENCODE_MODELS_URL"
@@ -244,6 +253,15 @@
       "override": null
     },
     {
+      "host": "openrouter.ai",
+      "kind": "fetched",
+      "components": ["server"],
+      "purpose": "Optional OpenRouter-compatible inference endpoint configured by a RenWork super administrator.",
+      "requirement": "opt-in",
+      "blockedEffect": "Models routed through OpenRouter cannot run; other configured providers remain available.",
+      "override": "custom provider base URL"
+    },
+    {
       "host": "openwork.dev",
       "kind": "link-only",
       "components": ["renderer"],
@@ -280,6 +298,15 @@
       "override": "npm registry configuration used by npx"
     },
     {
+      "host": "rrenn.com",
+      "kind": "fetched",
+      "components": ["desktop"],
+      "purpose": "RenWork Cloud account registration, sign-in, organization selection, and desktop callback flow.",
+      "requirement": "required-for-cloud",
+      "blockedEffect": "Users cannot register, sign in, or connect the desktop client to RenWork Cloud.",
+      "override": "RENWORK_CLOUD_ORIGIN"
+    },
+    {
       "host": "schemas.agentskills.io",
       "kind": "schema-string",
       "components": ["server"],
@@ -314,6 +341,15 @@
       "requirement": "opt-in",
       "blockedEffect": "Google profile, Calendar, and Drive actions fail for connected Google Workspace accounts.",
       "override": null
+    },
+    {
+      "host": "www.rrenn.com",
+      "kind": "fetched",
+      "components": ["desktop"],
+      "purpose": "Canonical www origin accepted for RenWork Cloud account and desktop-auth redirects.",
+      "requirement": "required-for-cloud",
+      "blockedEffect": "Desktop authentication links using the canonical www origin cannot complete.",
+      "override": "RENWORK_CLOUD_ORIGIN"
     }
   ]
 }

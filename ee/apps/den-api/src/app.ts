@@ -40,6 +40,7 @@ import { codemodeScriptsEnabled } from "./capability-sources/codemode-rollout.js
 import { registerMeRoutes } from "./routes/me/index.js"
 import { registerOrgRoutes } from "./routes/org/index.js"
 import { registerTelemetryRoutes } from "./routes/telemetry/index.js"
+import { registerInferenceGatewayRoutes } from "./routes/inference-gateway.js"
 import { registerVersionRoutes } from "./routes/version/index.js"
 import { registerWebhookRoutes } from "./routes/webhooks/index.js"
 import { registerWorkerRoutes } from "./routes/workers/index.js"
@@ -129,7 +130,7 @@ if (env.corsOrigins.length > 0) {
       cors({
         origin: env.corsOrigins,
         credentials: true,
-        allowHeaders: ["Content-Type", "Authorization", "X-Api-Key", "X-Request-Id", "X-OpenWork-Legacy-Org-Id"],
+        allowHeaders: ["Content-Type", "Authorization", "X-Api-Key", "X-Request-Id", "X-OpenWork-Legacy-Org-Id", "Idempotency-Key", "X-RenWork-Run-Id"],
         allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         exposeHeaders: ["Content-Length"],
         maxAge: 600,
@@ -225,6 +226,7 @@ registerAgentMcpRoutes(app)
 registerExternalConnectionProxyRoutes(app)
 registerAdminMcpRoutes(app)
 registerTelemetryRoutes(app)
+registerInferenceGatewayRoutes(app)
 
 configureCloudAgentExecutor({ execute: executeCloudAgent, runtimeAvailable: cloudAgentRuntimeAvailable })
 

@@ -1,4 +1,4 @@
-# OpenWork Bootstrap CLI
+# RenWork Bootstrap CLI
 
 Script-installable `openwork-bootstrap` command for agent-first onboarding.
 
@@ -24,4 +24,4 @@ Current scope:
 - `cloud onboard` drives the headless REST onboarding flow: sign up, sign in,
   create an org, invite a teammate, and create a starter skill.
 
-This is a bootstrap layer for install and Cloud onboarding; runtime hosting uses the desktop app, OpenWork Cloud, or `openwork-server`.
+This is a bootstrap layer for install and Cloud onboarding; runtime hosting uses the desktop app, RenWork Cloud, or `openwork-server`.

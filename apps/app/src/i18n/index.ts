@@ -144,12 +144,23 @@ const pluralRule = (loc: Language, count: number): Intl.LDMLPluralRule => {
  * untranslated key still resolves to the English `_one` / `_other` variant.
  */
 const resolvePluralKey = (loc: Language, key: string, count: number): string => {
-  const candidates: string[] = [];
-  if (count === 0) candidates.push(`${key}_zero`);
-  candidates.push(`${key}_${pluralRule(loc, count)}`, `${key}_other`, key);
+  const candidatesFor = (language: Language) => {
+    const candidates: string[] = [];
+    if (count === 0) candidates.push(`${key}_zero`);
+    candidates.push(`${key}_${pluralRule(language, count)}`, `${key}_other`, key);
+    return candidates;
+  };
 
-  for (const candidate of candidates) {
-    if (lookupEntry(loc, candidate) !== null) return candidate;
+  // Resolve the requested locale without English fallback first. Otherwise a
+  // locale whose plural rule is always `other` (for example Chinese) can pick
+  // the English `_other` entry even when `count` is 1.
+  for (const candidate of candidatesFor(loc)) {
+    if (TRANSLATIONS[loc]?.[candidate]) return candidate;
+  }
+  if (loc !== "en") {
+    for (const candidate of candidatesFor("en")) {
+      if (TRANSLATIONS.en?.[candidate]) return candidate;
+    }
   }
   return key;
 };
