@@ -61,9 +61,6 @@ jobs:
       - name: Build Electron Desktop Package
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          WIN_CSC_LINK: ""
-          CSC_LINK: ""
-          CSC_KEY_PASSWORD: ""
           OPENWORK_DESKTOP_SENTRY_DSN: ""
           OPENWORK_DESKTOP_SENTRY_TRACES_SAMPLE_RATE: "0.01"
         run: |
