@@ -24,6 +24,7 @@ COPY packages/install-config/package.json /app/packages/install-config/package.j
 COPY packages/connect-link/package.json /app/packages/connect-link/package.json
 COPY packages/headless-threads/package.json /app/packages/headless-threads/package.json
 COPY packages/rencredit-metering/package.json /app/packages/rencredit-metering/package.json
+COPY packages/export-growth-domain/package.json /app/packages/export-growth-domain/package.json
 # apps/desktop/package.json is copied below for version metadata, and it depends
 # on @openwork/paths, so the package must exist for workspace resolution.
 COPY packages/paths/package.json /app/packages/paths/package.json
@@ -49,6 +50,7 @@ COPY packages/install-config /app/packages/install-config
 COPY packages/connect-link /app/packages/connect-link
 COPY packages/headless-threads /app/packages/headless-threads
 COPY packages/rencredit-metering /app/packages/rencredit-metering
+COPY packages/export-growth-domain /app/packages/export-growth-domain
 COPY packages/paths /app/packages/paths
 COPY ee/packages/utils /app/ee/packages/utils
 COPY ee/packages/den-db /app/ee/packages/den-db
