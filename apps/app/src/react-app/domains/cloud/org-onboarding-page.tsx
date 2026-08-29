@@ -16,6 +16,7 @@ import {
 } from "@heroicons/react/24/solid";
 
 import {
+  buildDenDashboardUrl,
   createDenClient,
   readDenBootstrapConfig,
   readDenSettings,
@@ -83,6 +84,10 @@ import {
   hasWorkspaceBranding,
   workspaceBrandingFingerprint,
 } from "./workspace-branding-restart";
+import {
+  initialOrgOnboardingSelectionState,
+  resolveOrgOnboardingPostListStep,
+} from "./org-onboarding-state";
 
 const RELOAD_AFTER_ONBOARDING_KEY = "openwork.reloadAfterOrgOnboarding";
 const APPLIED_BRANDING_FINGERPRINT_KEY = "openwork.den.appliedBrandingFingerprint";
@@ -334,55 +339,6 @@ function markProvidersSeen(providers: DenOrgLlmProvider[]) {
   } catch {}
 }
 
-type OrgOnboardingInitialSelectionState = {
-  hasSelectedOrganization: boolean;
-  autoContinueResources: boolean;
-};
-
-export function initialOrgOnboardingSelectionState(): OrgOnboardingInitialSelectionState {
-  return {
-    hasSelectedOrganization: false,
-    autoContinueResources: false,
-  };
-}
-
-type OrgOnboardingPostListStep =
-  | { kind: "auto-select-single-org"; organization: DenOrgSummary }
-  | { kind: "choose-org"; defaultOrganization: DenOrgSummary }
-  | { kind: "resources"; autoContinue: boolean };
-
-export function resolveOrgOnboardingPostListStep({
-  orgs,
-  activeOrgId,
-  hasSelectedOrganization,
-  autoContinueResources,
-  autoSelectFailedOrgId,
-}: {
-  orgs: DenOrgSummary[];
-  activeOrgId: string;
-  hasSelectedOrganization: boolean;
-  autoContinueResources: boolean;
-  autoSelectFailedOrgId: string | null;
-}): OrgOnboardingPostListStep {
-  const singleOrg = orgs.length === 1 ? orgs[0] : null;
-
-  if (orgs.length > 0 && !hasSelectedOrganization) {
-    if (singleOrg && autoSelectFailedOrgId !== singleOrg.id) {
-      return { kind: "auto-select-single-org", organization: singleOrg };
-    }
-
-    return {
-      kind: "choose-org",
-      defaultOrganization: orgs.find((org) => org.id === activeOrgId) ?? orgs[0],
-    };
-  }
-
-  return {
-    kind: "resources",
-    autoContinue: autoContinueResources || orgs.length <= 1,
-  };
-}
-
 /**
  * Full-screen onboarding page shown after sign-in + org selection.
  * Fetches all org resources (providers, marketplaces, skills)
@@ -392,6 +348,7 @@ export function resolveOrgOnboardingPostListStep({
  */
 export function OrgOnboardingPage() {
   const navigate = useNavigate();
+  const platform = usePlatform();
   const { authToken, denClient, orgId, settings } = useDenClient();
   const { markRouteReady } = useBootState();
   const prepared = usePreparedBootstrap();
@@ -438,7 +395,7 @@ export function OrgOnboardingPage() {
     navigate("/session", { replace: true });
   }, [authToken, navigate, orgId]);
 
-  const { data, error, isPending } = useQuery({
+  const { data, error, isFetching, isPending, refetch } = useQuery({
     queryKey: ["den-org-onboarding", settings.baseUrl, "orgs"],
     enabled: Boolean(authToken),
     queryFn: () => denClient.listOrgs(),
@@ -529,6 +486,55 @@ export function OrgOnboardingPage() {
               </AlertDescription>
             </Alert>
           </PageHeader>
+          <PageFooter>
+            <Button type="button" onClick={() => void refetch()} disabled={isFetching}>
+              {isFetching ? "Checking..." : "Try again"}
+            </Button>
+          </PageFooter>
+        </PageContainer>
+      </Page>
+    );
+  }
+
+  if (postListStep.kind === "no-org") {
+    return (
+      <Page>
+        <PageBackground />
+        <PageTitlebarRegion />
+        <PageContainer>
+          <PageHeader>
+            <PageTitle>Create your first RenWork workspace</PageTitle>
+            <PageDescription>
+              Your account is ready. Create an organization to keep members, models, and RenCredit separate.
+            </PageDescription>
+          </PageHeader>
+          <PageContent>
+            <Empty className="h-fit flex-none">
+              <EmptyHeader>
+                <EmptyTitle>No organization yet</EmptyTitle>
+                <EmptyDescription>
+                  Open RenWork Cloud to create one, then return here and check again.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </PageContent>
+          <PageFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
+              {isFetching ? "Checking..." : "Check again"}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => platform.openLink(buildDenDashboardUrl(settings.baseUrl))}
+            >
+              Open RenWork Cloud
+              <ArrowUpRightIcon data-icon="inline-end" />
+            </Button>
+          </PageFooter>
         </PageContainer>
       </Page>
     );
@@ -619,7 +625,7 @@ export function ResourceSelectionPage({ autoContinue = false }: { autoContinue?:
     combine: ([providersQuery, marketplacesQuery]) => ({
       providers: providersQuery.data ?? [],
       marketplaces: marketplacesQuery.data ?? [],
-      loading: providersQuery.isPending || marketplacesQuery.isPending,
+      loading: providersQuery.isLoading || marketplacesQuery.isLoading,
       error: providersQuery.error?.message ?? marketplacesQuery.error?.message ?? null,
     }),
   });
