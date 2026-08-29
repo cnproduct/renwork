@@ -1,6 +1,7 @@
 import { readFile, writeFile, rm, stat } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import type { Writable } from "node:stream";
 import { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 import { resolveGlobalOpencodeConfigPath } from "@openwork/paths";
 import {
@@ -699,7 +700,35 @@ function toUnixNano(): string {
   return (BigInt(Date.now()) * 1_000_000n).toString();
 }
 
-export function createServerLogger(config: ServerConfig): ServerLogger {
+const logOutputWriters = new WeakMap<Writable, (line: string) => void>();
+
+function outputWriter(output: Writable): (line: string) => void {
+  const existing = logOutputWriters.get(output);
+  if (existing) return existing;
+
+  let available = output.writable && !output.destroyed;
+  output.on("error", () => {
+    available = false;
+  });
+
+  const write = (line: string) => {
+    if (!available || !output.writable || output.destroyed) return;
+    try {
+      output.write(line, (error) => {
+        if (error) available = false;
+      });
+    } catch {
+      available = false;
+    }
+  };
+  logOutputWriters.set(output, write);
+  return write;
+}
+
+export function createServerLogger(
+  config: Pick<ServerConfig, "logFormat">,
+  output: Writable = process.stdout,
+): ServerLogger {
   const runId = process.env.OPENWORK_RUN_ID ?? shortId();
   const host = hostname().trim();
   const resource: Record<string, string> = {
@@ -714,6 +743,7 @@ export function createServerLogger(config: ServerConfig): ServerLogger {
     "run.id": runId,
     "process.pid": process.pid,
   };
+  const write = outputWriter(output);
 
   const emit = (level: LogLevel, message: string, attributes?: LogAttributes) => {
     const merged = { ...baseAttributes, ...(attributes ?? {}) };
@@ -726,10 +756,10 @@ export function createServerLogger(config: ServerConfig): ServerLogger {
         attributes: merged,
         resource,
       };
-      process.stdout.write(`${JSON.stringify(record)}\n`);
+      write(`${JSON.stringify(record)}\n`);
       return;
     }
-    process.stdout.write(`${message}\n`);
+    write(`${message}\n`);
   };
 
   return { log: emit };
