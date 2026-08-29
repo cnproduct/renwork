@@ -37,6 +37,7 @@ type CloudAccountSession = Pick<
   | "baseUrlBusy"
   | "baseUrlDraft"
   | "baseUrlError"
+  | "dashboardUrl"
   | "needsOrgSelection"
   | "orgs"
   | "orgsBusy"
@@ -51,6 +52,7 @@ type CloudAccountSession = Pick<
   | "onClearAuthError"
   | "onOpenBrowserAuth"
   | "onOpenControlPlane"
+  | "onOpenDashboard"
   | "onRefreshOrgs"
   | "onResetBaseUrl"
   | "onSignOut"
@@ -229,13 +231,14 @@ export function CloudAccountView({ developerMode, session }: CloudAccountViewPro
           <CloudAccountSection
             activeOrgId={activeOrganization?.id ?? ""}
             authBusy={session.authBusy}
+            dashboardUrl={session.dashboardUrl}
             needsOrgSelection={session.needsOrgSelection}
             orgs={session.orgs}
             orgsBusy={session.orgsBusy}
             orgsError={session.orgsError}
             sessionBusy={session.sessionBusy}
             onActiveOrgChange={session.onActiveOrgChange}
-            onOpenDashboard={session.onOpenControlPlane}
+            onOpenDashboard={session.onOpenDashboard}
             onRefreshOrgs={session.onRefreshOrgs}
             onSignOut={session.onSignOut}
           />

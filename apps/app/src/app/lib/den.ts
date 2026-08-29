@@ -954,6 +954,10 @@ export function resolveDenBaseUrls(input: { baseUrl?: string | null; apiBaseUrl?
   };
 }
 
+export function buildDenDashboardUrl(baseUrl: string): string {
+  return new URL("/dashboard", resolveDenBaseUrls(baseUrl).baseUrl).toString();
+}
+
 /** The MCP endpoint served through the Den web proxy from the single base URL. */
 export function getDenMcpUrl(): string {
   const { apiBaseUrl } = resolveDenBaseUrls(readDenBootstrapConfig());

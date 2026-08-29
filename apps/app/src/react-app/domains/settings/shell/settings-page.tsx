@@ -10,6 +10,7 @@ import {
   CreditCard,
   Cog,
   FolderLock,
+  History,
   Info,
   Paintbrush,
   Puzzle,
@@ -85,6 +86,8 @@ export function getSettingsTabIcon(tab: SettingsTab) {
       return Sparkles;
     case "memory":
       return BrainCircuit;
+    case "computer-history":
+      return History;
     case "extensions":
       return Puzzle;
     case "environment":
@@ -126,6 +129,8 @@ export function getSettingsTabLabel(tab: SettingsTab) {
       return t("settings.tab_skills");
     case "memory":
       return t("memory.tab_label");
+    case "computer-history":
+      return t("computer_history.tab_label");
     case "extensions":
       return t("settings.tab_extensions");
     case "environment":
@@ -169,6 +174,8 @@ export function getSettingsTabDescription(tab: SettingsTab) {
       return t("settings.tab_description_skills");
     case "memory":
       return t("memory.tab_description");
+    case "computer-history":
+      return t("computer_history.tab_description");
     case "extensions":
       return t("settings.tab_description_extensions");
     case "environment":
@@ -198,7 +205,7 @@ export function getGlobalSettingsTabs(
   developerMode: boolean,
   capabilities: Pick<PlatformCapabilities, "autoUpdate" | "localRuntimeControl">,
 ): SettingsTab[] {
-  const tabs: SettingsTab[] = ["ai", "appearance", "environment"];
+  const tabs: SettingsTab[] = ["ai", "appearance", "computer-history", "environment"];
   if (capabilities.autoUpdate) tabs.push("updates");
   if (capabilities.localRuntimeControl) tabs.push("recovery");
   if (developerMode) tabs.push("debug");

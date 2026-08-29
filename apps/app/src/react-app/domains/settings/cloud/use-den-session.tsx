@@ -3,6 +3,7 @@ import * as React from "react";
 import { toast } from "@/components/ui/sonner";
 
 import {
+  buildDenDashboardUrl,
   buildDenAuthUrl,
   clearDenSession,
   createDenClient,
@@ -237,6 +238,11 @@ export function useDenSession({
   const openControlPlane = React.useCallback(() => {
     openLink(resolveDenBaseUrls(baseUrl).baseUrl);
   }, [baseUrl, openLink]);
+
+  const dashboardUrl = buildDenDashboardUrl(baseUrl);
+  const openDashboard = React.useCallback(() => {
+    openLink(dashboardUrl);
+  }, [dashboardUrl, openLink]);
 
   const openBrowserAuth = React.useCallback(
     (mode: "sign-in" | "sign-up") => {
@@ -608,6 +614,7 @@ export function useDenSession({
     authBusy,
     authError,
     baseUrl,
+    dashboardUrl,
     baseUrlBusy,
     baseUrlDraft,
     baseUrlError,
@@ -627,6 +634,7 @@ export function useDenSession({
     onClearAuthError: () => setAuthError(null),
     onOpenBrowserAuth: openBrowserAuth,
     onOpenControlPlane: openControlPlane,
+    onOpenDashboard: openDashboard,
     onRefreshOrgs: refreshOrgs,
     onResetBaseUrl: () => setBaseUrlDraft(baseUrl),
     onResetBaseUrlToDefault: resetBaseUrlToDefault,

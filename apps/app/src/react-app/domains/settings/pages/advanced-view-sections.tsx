@@ -162,9 +162,14 @@ function ServerEndpointsCard(props: { cloudMcpUrl: string | null }) {
       </div>
 
       {hasBootstrapSource ? (
-        <div className="text-[11px] text-amber-11">
-          {t("settings.server_endpoints_bootstrap_hint", { path: DESKTOP_BOOTSTRAP_PATH_HINT })}
-        </div>
+        <details className="rounded-lg bg-amber-2/50 p-2 text-[11px] text-amber-11">
+          <summary className="cursor-pointer font-medium">
+            {t("settings.compatibility_details")}
+          </summary>
+          <div className="mt-2">
+            {t("settings.server_endpoints_bootstrap_hint", { path: DESKTOP_BOOTSTRAP_PATH_HINT })}
+          </div>
+        </details>
       ) : null}
     </SettingsInset>
   );
@@ -314,8 +319,8 @@ export function AdvancedRuntimeSection(props: AdvancedRuntimeSectionProps) {
         />
         <RuntimeStatusCard
           icon={<Server size={18} />}
-          title={t("settings.openwork_server_label")}
-          description={t("settings.openwork_server_desc")}
+          title={t("settings.renwork_server_label")}
+          description={t("settings.renwork_server_desc")}
           statusLabel={props.openworkStatusLabel}
           tone={props.openworkTone}
           detailLines={props.openworkDetailLines}
@@ -532,7 +537,8 @@ function RuntimeConfigSummary(props: { config: Record<string, unknown> }) {
   const mcps = countRecord(config.mcp);
   const permissions = countRecord(config.permission);
   const disabledProviders = countArray(config.disabled_providers);
-  const defaultAgent = typeof config.default_agent === "string" ? config.default_agent : "not set";
+  const rawDefaultAgent = typeof config.default_agent === "string" ? config.default_agent : "not set";
+  const defaultAgent = /^(openwork|renwork)$/i.test(rawDefaultAgent) ? "RenWork" : rawDefaultAgent;
 
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -609,7 +615,7 @@ export function AdvancedRuntimeMigrationSection(props: AdvancedRuntimeMigrationS
         <LayoutSectionItemHeader>
           <LayoutSectionItemTitle>Move RenWork-managed config</LayoutSectionItemTitle>
           <LayoutSectionItemDescription>
-            Moves older RenWork-owned runtime keys from `.opencode/openwork.json` and safe RenWork-managed keys from `opencode.jsonc` into the runtime database.
+            {t("settings.runtime_migration_desc")}
           </LayoutSectionItemDescription>
           <LayoutSectionItemHeaderActions>
             <Button
@@ -694,26 +700,33 @@ export function AdvancedRuntimeMigrationSection(props: AdvancedRuntimeMigrationS
               <div>Stored keys: {formatKeys(props.configStatus.runtimeKeys)}</div>
             </div>
             <div>
-              <div className="font-medium text-gray-12">Legacy RenWork metadata</div>
-              <div className="break-all">{props.configStatus.legacyOpenwork.path}</div>
-              {props.configStatus.legacyOpenwork.error ? (
-                <div className="text-amber-11">{props.configStatus.legacyOpenwork.error}; fix this file before moving legacy config.</div>
-              ) : null}
-              <div>Migratable keys: {formatKeys(props.configStatus.legacyOpenwork.keys)}</div>
-            </div>
-            <div>
               <div className="font-medium text-gray-12">User opencode.jsonc</div>
               <div className="break-all">{props.configStatus.userOpencode.path}</div>
               <div>{props.configStatus.userOpencode.exists ? "Found" : "Not found"}</div>
               <div>User-owned keys: {formatKeys(props.configStatus.userOpencode.keys)}</div>
               <div>Migratable keys: {formatKeys(props.configStatus.userOpencode.migratableKeys)}</div>
             </div>
-            <div>
-              <div className="font-medium text-gray-12">Runtime DB JSON</div>
-              <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-gray-3 p-2 font-mono text-[11px] text-gray-11">
-                {JSON.stringify(runtimeConfig, null, 2)}
-              </pre>
-            </div>
+            <details className="rounded-lg bg-gray-3 p-2">
+              <summary className="cursor-pointer text-[11px] font-medium text-gray-11">
+                {t("settings.compatibility_details")}
+              </summary>
+              <div className="mt-3 space-y-3">
+                <div>
+                  <div className="font-medium text-gray-12">{t("settings.legacy_renwork_metadata")}</div>
+                  <div className="break-all">{props.configStatus.legacyOpenwork.path}</div>
+                  {props.configStatus.legacyOpenwork.error ? (
+                    <div className="text-amber-11">{props.configStatus.legacyOpenwork.error}</div>
+                  ) : null}
+                  <div>Migratable keys: {formatKeys(props.configStatus.legacyOpenwork.keys)}</div>
+                </div>
+                <div>
+                  <div className="font-medium text-gray-12">Runtime DB JSON</div>
+                  <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-gray-2 p-2 font-mono text-[11px] text-gray-11">
+                    {JSON.stringify(runtimeConfig, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </details>
           </div>
         ) : null}
       </LayoutSectionItem>
@@ -856,7 +869,7 @@ export function AdvancedDeveloperSection(props: AdvancedDeveloperSectionProps) {
                   value={props.deepLinkInput}
                   onChange={(event) => props.onDeepLinkInput(event.currentTarget.value)}
                   rows={3}
-                  placeholder="openwork://..."
+                  placeholder="renwork://..."
                   className="font-mono text-xs"
                 />
               </Field>
@@ -930,7 +943,7 @@ export function AdvancedConnectionSection(props: AdvancedConnectionSectionProps)
               disabled={props.busy || props.restartBusy}
             >
               <RefreshCcw size={14} className={props.restartBusy ? "animate-spin" : ""} />
-              {props.restartBusy ? t("settings.restarting") : t("settings.restart_openwork_server")}
+              {props.restartBusy ? t("settings.restarting") : t("settings.restart_renwork_server")}
             </Button>
           ) : null}
 
