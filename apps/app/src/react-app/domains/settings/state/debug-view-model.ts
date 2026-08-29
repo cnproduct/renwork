@@ -572,7 +572,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
         return;
       }
       await revealDesktopItemInDir(`${appBundlePath}.migrate-bak`);
-      setElectronMigrationStatus("Requested Finder reveal for OpenWork.app.migrate-bak. The backup exists after an install handoff completes.");
+      setElectronMigrationStatus("Requested Finder reveal for RenWork.app.migrate-bak. The backup exists after an install handoff completes.");
     } catch (error) {
       setElectronMigrationStatus(error instanceof Error ? error.message : safeStringify(error));
     }
@@ -1009,7 +1009,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       startupPreference: "server",
       startupLabel:
         openworkServerSnapshot.openworkServerStatus === "connected"
-          ? t("settings.openwork_server_label")
+          ? t("settings.renwork_server_label")
           : t("status.disconnected_label"),
       runtimeSummary,
       runtimeDebugReportJson,
