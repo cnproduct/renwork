@@ -7,7 +7,7 @@ const gateway = readFileSync(join(root, "src", "routes", "inference-gateway.ts")
 const ledger = readFileSync(join(root, "src", "rencredit-ledger.ts"), "utf8")
 const orgInferenceRoute = readFileSync(join(root, "src", "routes", "org", "inference.ts"), "utf8")
 const schema = readFileSync(join(root, "..", "..", "packages", "den-db", "src", "schema", "inference.ts"), "utf8")
-const migration = readFileSync(join(root, "..", "..", "packages", "den-db", "drizzle", "0067_adorable_leper_queen.sql"), "utf8")
+const migration = readFileSync(join(root, "..", "..", "packages", "den-db", "drizzle", "0068_adorable_leper_queen.sql"), "utf8")
 
 describe("RenWork production inference gateway", () => {
   test("derives tenant identity from a hashed RenWork key and requires idempotency", () => {
