@@ -6,7 +6,7 @@ import type {
   RenworkPlanFeatures,
   RenworkPlanOffer,
 } from "@openwork/types/renwork-commerce";
-import { formatRenCredit } from "@openwork/rencredit-metering";
+import { formatRenCredit, type RenWorkPublicModelCatalog } from "@openwork/rencredit-metering";
 import { Check, Coins, History, LockKeyhole, ReceiptText, RefreshCcw, ShieldCheck, Users } from "lucide-react";
 
 import { isDenOrgAdminRole, type DenRenCreditLedgerEntry, type DenRenCreditTaskReceipt } from "@/app/lib/den";
@@ -102,42 +102,103 @@ function receiptTokenTotal(receipt: DenRenCreditTaskReceipt) {
   return usage.inputTokens + usage.outputTokens + usage.reasoningTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
 }
 
-function TaskReceiptRow({ receipt }: { receipt: DenRenCreditTaskReceipt }) {
+function receiptContextTokenTotal(receipt: DenRenCreditTaskReceipt) {
+  const usage = receipt.actualUsage;
+  if (!usage) return null;
+  return usage.inputTokens + usage.outputTokens + usage.reasoningTokens;
+}
+
+function TaskReceiptRow({ receipt, contextWindow }: { receipt: DenRenCreditTaskReceipt; contextWindow: number | null }) {
   const status = receiptStatus(receipt);
   const tokenTotal = receiptTokenTotal(receipt);
+  const contextTokens = receiptContextTokenTotal(receipt);
+  const contextPercent = contextTokens !== null && contextWindow
+    ? Math.min(100, Math.round((contextTokens / contextWindow) * 1000) / 10)
+    : null;
+  const usage = receipt.actualUsage;
   return (
-    <div className="flex flex-col gap-3 border-b border-dls-border py-3 last:border-b-0 sm:flex-row sm:items-start sm:justify-between" data-testid="rencredit-task-receipt">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm font-medium text-dls-text">{receipt.modelSku}</span>
-          <Badge variant="outline" className={status.className}>{status.label}</Badge>
-          {receipt.billingMode === "free" ? <Badge variant="secondary">{t("commerce.receipt_free")}</Badge> : null}
+    <div className="border-b border-dls-border py-4 last:border-b-0" data-testid="rencredit-task-receipt">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-sm font-medium text-dls-text">{receipt.modelSku}</span>
+            <Badge variant="outline" className={status.className}>{status.label}</Badge>
+            {receipt.billingMode === "free" ? <Badge variant="secondary">{t("commerce.receipt_free")}</Badge> : null}
+          </div>
+          <div className="mt-1 break-all text-xs text-dls-secondary">
+            {formatReceiptDate(receipt.createdAt)} · {t("commerce.receipt_task_id", { id: receipt.runId })}
+          </div>
         </div>
-        <div className="mt-1 break-all text-xs text-dls-secondary">
-          {formatReceiptDate(receipt.createdAt)} · {t("commerce.receipt_task_id", { id: receipt.runId })}
-        </div>
-        <div className="mt-1 text-xs text-dls-secondary">
-          {tokenTotal === null
-            ? t("commerce.receipt_usage_pending")
-            : t("commerce.receipt_tokens", {
-                total: new Intl.NumberFormat().format(tokenTotal),
-                input: new Intl.NumberFormat().format(receipt.actualUsage!.inputTokens),
-                output: new Intl.NumberFormat().format(receipt.actualUsage!.outputTokens),
-              })}
-        </div>
-      </div>
-      <div className="shrink-0 text-left sm:text-right">
-        <div className="text-sm font-semibold tabular-nums text-dls-text">
-          {receipt.status === "released" ? formatRenCreditBalance(0) : formatRenCreditBalance(receiptAmount(receipt))}
-        </div>
-        <div className="mt-1 text-xs text-dls-secondary">
-          {receipt.status === "reserved"
-            ? t("commerce.receipt_frozen")
-            : receipt.status === "released"
-              ? t("commerce.receipt_no_charge")
-              : t("commerce.receipt_charged")}
+        <div className="shrink-0 text-left sm:text-right">
+          <div className="text-sm font-semibold tabular-nums text-dls-text">
+            {receipt.status === "released" ? formatRenCreditBalance(0) : formatRenCreditBalance(receiptAmount(receipt))}
+          </div>
+          <div className="mt-1 text-xs text-dls-secondary">
+            {receipt.status === "reserved"
+              ? t("commerce.receipt_frozen")
+              : receipt.status === "released"
+                ? t("commerce.receipt_no_charge")
+                : t("commerce.receipt_charged")}
+          </div>
         </div>
       </div>
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-xl border border-dls-border bg-dls-sidebar/60 p-3" data-testid="rencredit-context-capacity">
+          <div className="flex items-center justify-between gap-3 text-xs">
+            <span className="font-medium text-dls-text">{t("commerce.context_capacity_title")}</span>
+            <span className="tabular-nums text-dls-secondary">
+              {contextTokens === null
+                ? "—"
+                : contextWindow
+                  ? t("commerce.context_capacity_value", {
+                      used: new Intl.NumberFormat().format(contextTokens),
+                      limit: new Intl.NumberFormat().format(contextWindow),
+                      percent: contextPercent ?? 0,
+                    })
+                  : t("commerce.context_capacity_unknown", { used: new Intl.NumberFormat().format(contextTokens) })}
+            </span>
+          </div>
+          <div
+            className="mt-2 h-1.5 overflow-hidden rounded-full bg-dls-border"
+            role="progressbar"
+            aria-label={t("commerce.context_capacity_title")}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={contextPercent ?? 0}
+          >
+            <div className="h-full rounded-full bg-blue-9 transition-[width]" style={{ width: `${contextPercent ?? 0}%` }} />
+          </div>
+          <div className="mt-2 text-[11px] leading-4 text-dls-secondary">{t("commerce.context_capacity_note")}</div>
+        </div>
+
+        <div className="rounded-xl border border-dls-border bg-dls-sidebar/60 p-3" data-testid="rencredit-settlement">
+          <div className="text-xs font-medium text-dls-text">{t("commerce.settlement_title")}</div>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+            <div><div className="text-dls-secondary">{t("commerce.settlement_reserved")}</div><div className="mt-1 tabular-nums text-dls-text">{formatRenCreditBalance(receipt.reservedMicroCredits)}</div></div>
+            <div><div className="text-dls-secondary">{t("commerce.settlement_captured")}</div><div className="mt-1 tabular-nums text-dls-text">{formatRenCreditBalance(receipt.capturedMicroCredits)}</div></div>
+            <div><div className="text-dls-secondary">{t("commerce.settlement_released")}</div><div className="mt-1 tabular-nums text-dls-text">{formatRenCreditBalance(receipt.releasedMicroCredits)}</div></div>
+          </div>
+        </div>
+      </div>
+
+      {usage ? (
+        <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-dls-secondary sm:grid-cols-5" data-testid="rencredit-token-breakdown">
+          <span>{t("commerce.token_input", { value: new Intl.NumberFormat().format(usage.inputTokens) })}</span>
+          <span>{t("commerce.token_output", { value: new Intl.NumberFormat().format(usage.outputTokens) })}</span>
+          <span>{t("commerce.token_reasoning", { value: new Intl.NumberFormat().format(usage.reasoningTokens) })}</span>
+          <span>{t("commerce.token_cache_read", { value: new Intl.NumberFormat().format(usage.cacheReadTokens) })}</span>
+          <span>{t("commerce.token_cache_write", { value: new Intl.NumberFormat().format(usage.cacheWriteTokens) })}</span>
+        </div>
+      ) : (
+        <div className="mt-3 text-xs text-dls-secondary">{t("commerce.receipt_usage_pending")}</div>
+      )}
+
+      {tokenTotal !== null ? (
+        <div className="mt-2 text-[11px] text-dls-secondary">
+          {t("commerce.receipt_billed_tokens", { total: new Intl.NumberFormat().format(tokenTotal) })}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -219,6 +280,7 @@ export function RenworkCommerceView() {
   const [catalog, setCatalog] = React.useState<Awaited<ReturnType<typeof client.getRenworkPlanCatalog>> | null>(null);
   const [wallet, setWallet] = React.useState<Awaited<ReturnType<typeof client.getRenCreditWallet>> | null>(null);
   const [receipts, setReceipts] = React.useState<DenRenCreditTaskReceipt[]>([]);
+  const [modelCatalog, setModelCatalog] = React.useState<RenWorkPublicModelCatalog | null>(null);
   const [ledger, setLedger] = React.useState<DenRenCreditLedgerEntry[]>([]);
   const [walletLoading, setWalletLoading] = React.useState(false);
   const [walletError, setWalletError] = React.useState(false);
@@ -250,6 +312,7 @@ export function RenworkCommerceView() {
     if (!isSignedIn || !organizationId) {
       setWallet(null);
       setReceipts([]);
+      setModelCatalog(null);
       setLedger([]);
       setWalletError(false);
       setActivityError(false);
@@ -259,10 +322,11 @@ export function RenworkCommerceView() {
     setWalletLoading(true);
     setWalletError(false);
     setActivityError(false);
-    const [walletResult, receiptsResult, ledgerResult] = await Promise.allSettled([
+    const [walletResult, receiptsResult, ledgerResult, modelCatalogResult] = await Promise.allSettled([
       client.getRenCreditWallet(organizationId),
       client.getRenCreditTaskReceipts(organizationId),
       canViewLedger ? client.getRenCreditLedger(organizationId) : Promise.resolve([]),
+      client.getRenWorkModelCatalog(organizationId),
     ]);
     if (walletResult.status === "fulfilled") setWallet(walletResult.value);
     else {
@@ -279,6 +343,7 @@ export function RenworkCommerceView() {
       setLedger([]);
       setActivityError(true);
     }
+    setModelCatalog(modelCatalogResult.status === "fulfilled" ? modelCatalogResult.value : null);
     setWalletLoading(false);
   }, [activeOrganization?.id, canViewLedger, client, isSignedIn]);
 
@@ -291,6 +356,10 @@ export function RenworkCommerceView() {
     .map((plan) => ({ plan, offer: offerForInterval(plan, interval) }))
     .filter((entry): entry is { plan: RenworkPlan; offer: RenworkPlanOffer } => entry.offer !== null)
     ?? [];
+
+  const modelContextWindows = React.useMemo(() => new Map(
+    modelCatalog?.models.map((model) => [model.sku, model.contextWindow] as const) ?? [],
+  ), [modelCatalog]);
 
   const openBilling = () => {
     const target = new URL("/dashboard/billing", baseUrl);
@@ -390,7 +459,13 @@ export function RenworkCommerceView() {
               <div className="py-4 text-sm text-dls-secondary">{t("commerce.activity_loading")}</div>
             ) : receipts.length === 0 ? (
               <div className="py-4 text-sm text-dls-secondary">{t("commerce.receipts_empty")}</div>
-            ) : receipts.map((receipt) => <TaskReceiptRow key={receipt.id} receipt={receipt} />)}
+            ) : receipts.map((receipt) => (
+              <TaskReceiptRow
+                key={receipt.id}
+                receipt={receipt}
+                contextWindow={modelContextWindows.get(receipt.modelSku) ?? null}
+              />
+            ))}
           </div>
         </SettingsInset>
 
