@@ -92,6 +92,13 @@ export function requireSuperAdmin(role: RenWorkActorRole): void {
   if (role !== "super_admin") throw new Error("super_admin role required.");
 }
 
+export function modelAllowedForPlan(model: Pick<RenWorkAdminModel, "allowedPlanIds">, planId: string): boolean {
+  const allowedPlans = new Set(model.allowedPlanIds);
+  if (allowedPlans.size === 0 || allowedPlans.has(planId)) return true;
+  if ((planId === "free" || planId === "team") && allowedPlans.has("individual")) return true;
+  return false;
+}
+
 export function toPublicModelCatalog(catalog: RenWorkAdminModelCatalog, now = new Date()): RenWorkPublicModelCatalog {
   validateAdminModelCatalog(catalog);
   const providers = new Map(catalog.providers.map((provider) => [provider.id, provider]));
@@ -134,6 +141,17 @@ export function toPublicModelCatalog(catalog: RenWorkAdminModelCatalog, now = ne
     });
 
   return { version: catalog.version, currency: "REN_CREDIT", models };
+}
+
+export function toPublicModelCatalogForPlan(
+  catalog: RenWorkAdminModelCatalog,
+  planId: string,
+  now = new Date(),
+): RenWorkPublicModelCatalog {
+  return toPublicModelCatalog({
+    ...catalog,
+    models: catalog.models.filter((model) => modelAllowedForPlan(model, planId)),
+  }, now);
 }
 
 export function findPublishedAdminModel(catalog: RenWorkAdminModelCatalog, sku: string): RenWorkAdminModel {

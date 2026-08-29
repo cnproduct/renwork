@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
 const route = readFileSync(join(import.meta.dir, "..", "src", "routes", "admin", "model-catalog.ts"), "utf8")
+const service = readFileSync(join(import.meta.dir, "..", "src", "model-catalog-service.ts"), "utf8")
 const env = readFileSync(join(import.meta.dir, "..", "src", "env.ts"), "utf8")
 const dockerfile = readFileSync(join(import.meta.dir, "..", "..", "..", "..", "packaging", "docker", "Dockerfile.den"), "utf8")
 
@@ -15,8 +16,8 @@ describe("RenWork model catalog admin proxy", () => {
 
   test("keeps the upstream token in Den API environment configuration", () => {
     expect(env).toContain("RENWORK_MODEL_CATALOG_ADMIN_TOKEN")
-    expect(route).toContain("Authorization: `Bearer ${config.token}`")
-    expect(route).not.toContain("NEXT_PUBLIC_RENWORK_MODEL_CATALOG")
+    expect(service).toContain("Authorization: `Bearer ${config.token}`")
+    expect(service).not.toContain("NEXT_PUBLIC_RENWORK_MODEL_CATALOG")
   })
 
   test("validates catalogs and returns only a projected member preview", () => {
