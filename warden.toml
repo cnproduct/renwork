@@ -15,13 +15,13 @@ ignorePaths = [
 ]
 
 [defaults.agent]
-model = "openrouter/z-ai/glm-5.2:free"
+model = "openrouter/openrouter/free"
 
 # Auxiliary verifies/merges findings and gates what survives to the report;
 # keep it on the same strong model so weak verification can't cause a false
 # clearance.
 [defaults.auxiliary]
-model = "openrouter/z-ai/glm-5.2:free"
+model = "openrouter/openrouter/free"
 
 [[skills]]
 name = "diff-security-review"
