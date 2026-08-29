@@ -64,7 +64,7 @@ function verifyRuntimeDependencies(context) {
   }
   // @electron/asar builds listed paths with path.join(), so Windows returns
   // backslashes while our expected archive paths intentionally use POSIX '/'.
-  const packagedFiles = new Set(asar.listPackage(appAsarPath).map(normalizeArchivePath));
+  const packagedFiles = new Set(asar.listPackage(appAsarPath, { isPack: false }).map(normalizeArchivePath));
   const stagedNodeModules = path.resolve(__dirname, "..", ".electron-runtime", "node_modules");
   const packageJsonPaths = [];
   function visitNodeModules(nodeModulesPath, archivePrefix) {
