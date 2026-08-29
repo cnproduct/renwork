@@ -134,6 +134,7 @@ import {
   shouldAutoOpenUnavailableModelPicker,
 } from "@/react-app/domains/connections/provider-auth/managed-models-recovery";
 import { useSessionProviderAuth } from "@/react-app/domains/connections/provider-auth/use-session-provider-auth";
+import { canManageDesktopModelProviders } from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
 import {
   disabledProvidersFromConfig,
   updateManagedDisabledProviders,
@@ -588,6 +589,12 @@ export function SessionRoute() {
     workspaceRoute: automationsRouteActive ? "automations" : "session",
     onServerSettingsChanged: () => setOpenworkServerSettingsVersion((value) => value + 1),
     onHostInfo: setOpenworkServerHostInfoState,
+  });
+  const localProviderManagementAllowed = canManageDesktopModelProviders({
+    signedIn: denAuth.isSignedIn,
+    hasAuthToken: Boolean(denSettings.authToken?.trim()),
+    hasActiveOrganization: Boolean(denSettings.activeOrgId?.trim()),
+    workspaceType: selectedWorkspace?.workspaceType,
   });
   const cloudWorkspace = useCloudWorkspaceStatus();
   const bootOverlayVisible = useBootOverlayVisible();
@@ -2037,11 +2044,15 @@ export function SessionRoute() {
     label: "Add a model provider",
     description: "Open the provider connection modal, optionally pre-filtered to a specific provider.",
     sideEffect: "mutation",
+    disabled: !localProviderManagementAllowed,
     requiresArgs: false,
     args: [
       { name: "providerId", type: "string" as const, required: false, description: "Provider id to pre-select, e.g. 'anthropic', 'openai', 'google'." },
     ],
     execute: async (rawArgs: unknown) => {
+      if (!localProviderManagementAllowed) {
+        return { ok: false, error: t("providers.custom_providers_disabled") };
+      }
       const providerId = typeof rawArgs === "object" && rawArgs !== null
         ? (rawArgs as Record<string, unknown>).providerId
         : undefined;
@@ -2054,10 +2065,17 @@ export function SessionRoute() {
       );
       return { ok: true, opened: "provider_auth_modal", preferredProviderId: preferred ?? null };
     },
-  }), [sessionProviderAuthStore]);
+  }), [localProviderManagementAllowed, sessionProviderAuthStore]);
   useControlAction(addProviderControlAction);
 
   const handleOpenProviderAuth = useCallback(() => {
+    if (!localProviderManagementAllowed) {
+      restrictionNotice.show({
+        title: t("restrictions.add_custom_providers_disabled_title"),
+        message: t("restrictions.add_custom_providers_disabled_message"),
+      });
+      return;
+    }
     if (sessionProviderAuthStore.isProviderAddRestricted()) {
       restrictionNotice.show({
         title: t("restrictions.add_custom_providers_disabled_title"),
@@ -2071,7 +2089,7 @@ export function SessionRoute() {
     void sessionProviderAuthStore.openProviderAuthModal({ returnFocusTarget: "composer" }).catch(() => {
       handleOpenSettings("/settings/ai");
     });
-  }, [handleOpenSettings, restrictionNotice, sessionProviderAuthStore]);
+  }, [handleOpenSettings, localProviderManagementAllowed, restrictionNotice, sessionProviderAuthStore]);
 
   // "Your API keys → Connect" in the compact model picker (and anything else
   // outside this route's prop tree) requests the provider auth modal here.
@@ -2599,7 +2617,7 @@ export function SessionRoute() {
       onChatFirstTask={handleChatFirstTask}
       chatFirstBusy={createWorkspaceBusy}
       newTaskComposer={newTaskComposerContext}
-      providerAuthModal={sessionProviderAuthSnapshot.providerAuthModalOpen ? {
+      providerAuthModal={localProviderManagementAllowed && sessionProviderAuthSnapshot.providerAuthModalOpen ? {
         open: true,
         loading: false,
         submitting: sessionProviderAuthSnapshot.providerAuthBusy,
@@ -3033,7 +3051,7 @@ export function SessionRoute() {
         focusPromptSoon();
       }}
       disabledProviders={disabledProviderIds}
-      allowProviderManagement={selectedWorkspace?.workspaceType === "local"}
+      allowProviderManagement={localProviderManagementAllowed}
       onBehaviorChange={() => {}}
       onToggleProvider={async (providerId, enable) => {
         if (!opencodeClient) return;

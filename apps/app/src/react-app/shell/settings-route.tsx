@@ -63,6 +63,7 @@ import { useOrgMcpConnections } from "@/react-app/domains/connections/use-org-mc
 import { createOpenworkServerStore, useOpenworkServerStoreSnapshot } from "@/react-app/domains/connections/openwork-server-store";
 import { createProviderAuthStore, useProviderAuthStoreSnapshot } from "@/react-app/domains/connections/provider-auth/store";
 import ProviderAuthModal from "@/react-app/domains/connections/provider-auth/provider-auth-modal";
+import { canManageDesktopModelProviders } from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
 import ConnectionsModals from "@/react-app/domains/connections/modals";
 import { AiSettingsView } from "@/react-app/domains/settings/pages/ai-view";
 import { CustomProvidersDialog } from "@/react-app/domains/settings/custom-providers-dialog";
@@ -812,6 +813,12 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     openLink: (url) => platform.openLink(url),
   });
   const cloudSession = useCloudSession();
+  const localProviderManagementAllowed = canManageDesktopModelProviders({
+    signedIn: cloudSession.isSignedIn,
+    hasAuthToken: Boolean(cloudSession.authToken.trim()),
+    hasActiveOrganization: cloudSession.hasActiveOrg,
+    workspaceType: selectedWorkspace?.workspaceType,
+  });
   const connectScope = useMemo(
     () => ({
       baseUrl: cloudSession.baseUrl,
@@ -915,6 +922,13 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
   }, [cloudSession.baseUrl, navigate, platform, providerAuthStore, selectedWorkspaceId]);
 
   const handleOpenProviderAuth = useCallback(() => {
+    if (!localProviderManagementAllowed) {
+      restrictionNotice.show({
+        title: t("restrictions.add_custom_providers_disabled_title"),
+        message: t("restrictions.add_custom_providers_disabled_message"),
+      });
+      return;
+    }
     if (providerAuthStore.isProviderAddRestricted()) {
       restrictionNotice.show({
         title: t("restrictions.add_custom_providers_disabled_title"),
@@ -924,7 +938,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     }
 
     void providerAuthStore.openProviderAuthModal();
-  }, [providerAuthStore, restrictionNotice]);
+  }, [localProviderManagementAllowed, providerAuthStore, restrictionNotice]);
 
   useEffect(() => {
     if (!activeClient || !selectedWorkspaceId) return;
@@ -2241,7 +2255,9 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             providerDisconnectStatus={configActionStatus}
             providerDisconnectError={null}
             onOpenProviderAuth={handleOpenProviderAuth}
-            onOpenCustomProviders={() => setCustomProvidersOpen(true)}
+            onOpenCustomProviders={() => {
+              if (localProviderManagementAllowed) setCustomProvidersOpen(true);
+            }}
             onDisconnectProvider={async (providerId) => {
               const message = await providerAuthStore.disconnectProvider(providerId);
               if (typeof message === "string" && message.trim()) {
@@ -2251,7 +2267,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             canDisconnectProvider={(provider) =>
               provider.id.trim().toLowerCase() === "opencode" || provider.source !== "env"
             }
-            canAddProviders={!providerAuthStore.isProviderAddRestricted()}
+            canAddProviders={localProviderManagementAllowed && !providerAuthStore.isProviderAddRestricted()}
             organizationName={cloudSession.activeOrgName}
             cloudProviderIds={new Set([
               ...Object.values(providerAuthSnapshot.importedCloudProviders ?? {}).map((p) => p.providerId),
@@ -2638,7 +2654,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
       />
 
       <ProviderAuthModal
-        open={providerAuthSnapshot.providerAuthModalOpen}
+        open={localProviderManagementAllowed && providerAuthSnapshot.providerAuthModalOpen}
         loading={false}
         submitting={providerAuthSnapshot.providerAuthBusy}
         error={providerAuthSnapshot.providerAuthError}
@@ -2676,7 +2692,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
         onClose={() => providerAuthStore.closeProviderAuthModal()}
       />
       <CustomProvidersDialog
-        open={customProvidersOpen}
+        open={customProvidersOpen && localProviderManagementAllowed}
         onOpenChange={setCustomProvidersOpen}
         client={openworkClient}
         onProvidersChanged={() => {
@@ -2766,7 +2782,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
           modelPicker.setOpen(false);
         }}
         onBehaviorChange={() => {}}
-        allowProviderManagement={selectedWorkspace?.workspaceType === "local"}
+        allowProviderManagement={localProviderManagementAllowed}
         onOpenSettings={() => {}}
         onClose={() => modelPicker.setOpen(false)}
       />
