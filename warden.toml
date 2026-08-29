@@ -15,13 +15,13 @@ ignorePaths = [
 ]
 
 [defaults.agent]
-model = "openai/gpt-5.6-luna"
+model = "openrouter/deepseek/deepseek-v4-flash"
 
 # Auxiliary verifies/merges findings and gates what survives to the report;
 # keep it on the same strong model so weak verification can't cause a false
 # clearance.
 [defaults.auxiliary]
-model = "openai/gpt-5.6-luna"
+model = "openrouter/deepseek/deepseek-v4-flash"
 
 [[skills]]
 name = "diff-security-review"
