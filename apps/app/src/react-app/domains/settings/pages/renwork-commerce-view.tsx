@@ -29,7 +29,6 @@ import {
 type BillingInterval = "monthly" | "annual";
 
 const FEATURE_LABELS: Array<{ key: keyof RenworkPlanFeatures; labelKey: string }> = [
-  { key: "localFreeCore", labelKey: "commerce.feature_local_free_core" },
   { key: "managedCloud", labelKey: "commerce.feature_managed_cloud" },
   { key: "officialPlugins", labelKey: "commerce.feature_official_plugins" },
   { key: "buyerGrowth", labelKey: "commerce.feature_buyer_growth" },
@@ -57,9 +56,18 @@ function offerPrice(offer: RenworkPlanOffer): string {
   }).format(offer.priceMinor / 100);
 }
 
+function formatCurrencyMinor(value: number, currency: string) {
+  return new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value / 100);
+}
+
 function offerCta(offer: RenworkPlanOffer): string {
   if (offer.cta === "current") return t("commerce.cta_current");
   if (offer.cta === "request_trial") return t("commerce.cta_request_trial");
+  if (offer.cta === "request_access") return t("commerce.cta_request_access");
   if (offer.cta === "contact_sales") return t("commerce.cta_contact_sales");
   return t("commerce.cta_checkout");
 }
@@ -228,16 +236,14 @@ function PlanCard(props: {
   return (
     <article
       data-testid={`renwork-plan-${props.plan.id}`}
-      className="flex min-h-[340px] flex-col rounded-2xl border border-dls-border bg-dls-surface p-5"
+      className={`flex min-h-[380px] flex-col rounded-2xl border bg-dls-surface p-5 ${props.plan.recommended ? "border-emerald-8 shadow-sm" : "border-dls-border"}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-dls-text">{props.plan.displayName}</h3>
           <p className="mt-1 text-xs leading-5 text-dls-secondary">{props.plan.summary}</p>
         </div>
-        {props.plan.audience === "enterprise" ? (
-          <Badge variant="secondary">{t("commerce.enterprise_badge")}</Badge>
-        ) : null}
+        {props.plan.badge ? <Badge variant="secondary">{props.plan.badge}</Badge> : null}
       </div>
 
       <div className="mt-5">
@@ -249,6 +255,11 @@ function PlanCard(props: {
               ? t("commerce.interval_annual_hint")
               : t("commerce.interval_not_applicable")}
         </div>
+        {props.offer.purchaseMode === "request_access" && props.offer.billingInterval === "annual" && props.offer.monthlyEquivalentPriceMinor ? (
+          <div className="mt-1 text-xs font-medium text-emerald-11">
+            {t("commerce.annual_monthly_equivalent", { price: formatCurrencyMinor(props.offer.monthlyEquivalentPriceMinor, props.offer.currency) })}
+          </div>
+        ) : null}
       </div>
 
       <Button
@@ -261,6 +272,26 @@ function PlanCard(props: {
       </Button>
 
       <div className="mt-5 flex flex-col gap-2 border-t border-dls-border pt-4">
+        {props.offer.includedRenCredits !== null ? (
+          <div className="flex items-start gap-2 text-xs text-dls-secondary">
+            <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-10" />
+            <span>{t("commerce.included_credits", { credits: new Intl.NumberFormat().format(props.offer.includedRenCredits) })}</span>
+          </div>
+        ) : null}
+        {props.plan.seatLimit ? (
+          <div className="flex items-start gap-2 text-xs text-dls-secondary">
+            <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-10" />
+            <span>{t("commerce.seat_limit", { seats: props.plan.seatLimit })}</span>
+          </div>
+        ) : null}
+        {props.plan.qualityModelLimit ? (
+          <div className="flex items-start gap-2 text-xs text-dls-secondary">
+            <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-10" />
+            <span>{props.plan.qualityModelLimit.fairUse
+              ? t("commerce.quality_model_fair_use")
+              : t("commerce.quality_model_limit", { calls: props.plan.qualityModelLimit.calls ?? 0, hours: props.plan.qualityModelLimit.windowHours })}</span>
+          </div>
+        ) : null}
         {enabledFeatures.map((feature) => (
           <div key={feature.key} className="flex items-start gap-2 text-xs text-dls-secondary">
             <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-10" />
@@ -429,7 +460,7 @@ export function RenworkCommerceView() {
           </SettingsInset>
         </div>
 
-        <SettingsNotice>{t("commerce.free_core_notice")}</SettingsNotice>
+        <SettingsNotice>{t("commerce.subscription_required_notice")}</SettingsNotice>
       </SettingsSection>
 
       <SettingsSection>
@@ -524,14 +555,17 @@ export function RenworkCommerceView() {
                 key={value}
                 size="sm"
                 variant={audience === value ? "secondary" : "ghost"}
-                onClick={() => setAudience(value)}
+                onClick={() => {
+                  setAudience(value);
+                  if (value === "enterprise") setInterval("annual");
+                }}
               >
                 {value === "personal" ? t("commerce.personal") : t("commerce.enterprise")}
               </Button>
             ))}
           </div>
 
-          <div className="flex rounded-xl border border-dls-border bg-dls-sidebar p-1" aria-label={t("commerce.interval_label")}>
+          {audience === "personal" ? <div className="flex rounded-xl border border-dls-border bg-dls-sidebar p-1" aria-label={t("commerce.interval_label")}>
             {(["monthly", "annual"] as const).map((value) => (
               <Button
                 key={value}
@@ -542,7 +576,7 @@ export function RenworkCommerceView() {
                 {value === "monthly" ? t("commerce.monthly") : t("commerce.annual")}
               </Button>
             ))}
-          </div>
+          </div> : null}
         </div>
 
         {loading ? (
@@ -564,7 +598,7 @@ export function RenworkCommerceView() {
         ) : null}
 
         {!loading && !error ? (
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className={`grid gap-3 ${audience === "personal" ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
             {plans.map(({ plan, offer }) => (
               <PlanCard key={plan.id} plan={plan} offer={offer} onAction={openBilling} />
             ))}

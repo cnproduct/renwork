@@ -154,7 +154,7 @@ export function AiSettingsView(props: AiSettingsViewProps) {
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Pricing is handled through RenWork Cloud. You can continue using OpenCode Zen or your own providers.
+                    {t("settings.renwork_model_billing_info")}
                   </p>
                 </div>
               </div>
@@ -170,7 +170,7 @@ export function AiSettingsView(props: AiSettingsViewProps) {
           </LayoutSectionItem>
         ) : null}
 
-        {props.connectedProviders.length > 0 ? (
+        {props.connectedProviders.length > 0 && props.canAddProviders ? (
           <div className="space-y-2">
             {props.connectedProviders.map((provider) => {
               const orgManaged = isCloudManagedProviderKey(provider.id);
@@ -277,7 +277,11 @@ export function AiSettingsView(props: AiSettingsViewProps) {
           <SettingsNotice tone="error">{props.providerDisconnectError}</SettingsNotice>
         ) : null}
 
-        <LayoutSectionItemFootnote>{t("settings.api_keys_info")}</LayoutSectionItemFootnote>
+        <LayoutSectionItemFootnote>
+          {props.canAddProviders
+            ? t("settings.api_keys_info")
+            : t("settings.renwork_provider_admin_only")}
+        </LayoutSectionItemFootnote>
       </LayoutSection>
 
       {props.cloudProvidersView}

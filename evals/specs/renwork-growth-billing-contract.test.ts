@@ -12,7 +12,7 @@ import { getRenworkPlanCatalog } from "../../ee/apps/den-api/src/renwork-growth/
 const approvedVoiceover = [
   "用户登录 RenWork 后看到已经验证的账号、所属工作区和当前运行方式；登录只确认身份与权益，不自动上传本地文件。",
   "用户打开“套餐与 RenCredit”，清楚看到当前订阅、有效周期、续费状态和 RenCredit 余额；订阅权益与用量流水分开显示。",
-  "用户可以切换个人版或企业版、月付或年付。所有套餐内容来自 RenWork 权威目录，本地 Agent、Ollama、BYOK 和本地知识始终标记为免费核心。",
+  "用户可以切换个人版或企业版、月付或年付。所有套餐内容来自 RenWork 权威目录；默认没有免费版，不开放 BYOK 或本地大模型。",
   "企业管理员可以看到席位、共享 Workspace、共享 RenCredit 池、成员额度和审计能力；普通成员不能修改企业账单，也看不到供应商密钥和内部成本。",
   "用户进入“AI 找客户”，只需填写产品、目标市场和理想客户类型，不需要理解供应商、API 或 MCP。",
   "RenWork 免费返回优先企业、匹配理由、证据等级、风险提示及脱敏决策人；联系人数据不会被直接描述成已经确认采购或交易的买家。",
@@ -38,7 +38,8 @@ test("approved RenWork growth billing voiceover is the implementation target", a
 test("one authoritative catalog separates subscription rights from outcome charging", async ({ evidence }) => {
   const catalog = renworkPlanCatalogSchema.parse(getRenworkPlanCatalog())
   expect(new Set(catalog.plans.map((plan) => plan.audience))).toEqual(new Set(["personal", "enterprise"]))
-  expect(catalog.plans.every((plan) => plan.features.localFreeCore)).toBe(true)
+  expect(catalog.plans.every((plan) => !plan.features.localFreeCore)).toBe(true)
+  expect(catalog.plans.flatMap((plan) => plan.offers).every((offer) => offer.purchaseMode !== "free")).toBe(true)
   expect(catalog.plans.flatMap((plan) => plan.offers).every((offer) => offer.purchaseMode !== "checkout")).toBe(true)
 
   const preview = renworkCreditPolicySchema.parse(
@@ -52,7 +53,7 @@ test("one authoritative catalog separates subscription rights from outcome charg
 
   evidence.fact(
     "Subscription and RenCredit are separate contracts",
-    "Personal and enterprise plans preserve the local free core; the pilot catalog exposes no checkout, previews are free, and contact unlock charges only after successful delivery.",
+    "Personal and enterprise plans require subscription or temporary access; the catalog exposes no client-side price fallback, previews are free, and contact unlock charges only after successful delivery.",
     true,
   )
 })

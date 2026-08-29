@@ -2,7 +2,7 @@ import { expect } from "vitest";
 import { test } from "@openwork/testkit";
 import { readFile } from "node:fs/promises";
 
-test("V6 keeps desktop model management read-only for signed-in organization users", async ({ evidence }) => {
+test("V7 keeps desktop model management read-only for every user profile", async ({ evidence }) => {
   const policy = await readFile("../apps/app/src/react-app/domains/connections/provider-auth/desktop-provider-management.ts", "utf8");
   const picker = await readFile("../apps/app/src/react-app/domains/session/modals/model-picker-modal.tsx", "utf8");
   const session = await readFile("../apps/app/src/react-app/shell/session-route.tsx", "utf8");
@@ -10,9 +10,7 @@ test("V6 keeps desktop model management read-only for signed-in organization use
   const aiView = await readFile("../apps/app/src/react-app/domains/settings/pages/ai-view.tsx", "utf8");
   const providerRoutes = await readFile("../ee/apps/den-api/src/routes/org/llm-providers.ts", "utf8");
 
-  expect(policy).toContain("!input.signedIn");
-  expect(policy).toContain("!input.hasAuthToken");
-  expect(policy).toContain("!input.hasActiveOrganization");
+  expect(policy).toContain("return false");
   expect(picker).toContain("canManageProvidersFromModelPicker(props.allowProviderManagement)");
   expect(session).toContain("disabled: !localProviderManagementAllowed");
   expect(session).toContain("localProviderManagementAllowed && sessionProviderAuthSnapshot.providerAuthModalOpen");
@@ -23,6 +21,6 @@ test("V6 keeps desktop model management read-only for signed-in organization use
   expect(providerRoutes.match(/adminRoute\(\)/g)?.length ?? 0).toBeGreaterThanOrEqual(7);
 
   evidence.fact("Signed-in desktops are read-only", "Members, organization Owners, organization administrators, and platform administrators cannot mutate providers from the desktop UI.", true);
-  evidence.fact("Independent local mode remains usable", "A signed-out local profile without a cloud token or active organization can still manage local Ollama and BYOK providers.", true);
+  evidence.fact("Independent local mode cannot bypass policy", "A signed-out local profile cannot add Ollama, BYOK, or other providers; temporary model access must come from a platform grant.", true);
   evidence.fact("Mutation routes remain platform-admin-only", "Provider create, update, test, delete, catalog, and access-grant routes require the server-side platform administrator allowlist.", true);
 });

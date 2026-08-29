@@ -51,7 +51,7 @@ describe("RenWork member model catalog", () => {
     expect(renWorkTierLabel("ultimate")).toBe("极致");
   });
 
-  test("marks a super-admin free policy as free in the member picker", () => {
+  test("marks an explicitly granted promotional model as free in the member picker", () => {
     const freeCatalog: RenWorkPublicModelCatalog = {
       ...catalog,
       models: [{ ...catalog.models[0]!, billingMode: "free" }],

@@ -19,16 +19,9 @@ import { createClient, unwrap } from "../../app/lib/opencode";
 import { useLocal } from "../kernel/local-provider";
 import { usePlatform } from "../kernel/platform";
 import { WelcomePage } from "../domains/onboarding/welcome-page";
-import { ProviderSelectionStep } from "../domains/onboarding/provider-selection-step";
 import { AttributionStep, type AttributionSource } from "../domains/onboarding/attribution-step";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
 import type { CreateWorkspaceOptions } from "../domains/workspace/types";
-import {
-  getOpenWorkModelsActionUrl,
-  hideOpenWorkModelsPromo,
-  useOpenWorkModelsPromoEligibility,
-  markOpenWorkModelsStartupPromoShown,
-} from "../domains/cloud/openwork-models-promo";
 import { useDenAuth } from "../domains/cloud/den-auth-provider";
 import { JoinOrganizationDialog } from "../domains/cloud/join-organization-dialog";
 import { resolveOpenworkConnection } from "./openwork-connection";
@@ -143,7 +136,6 @@ export function WelcomeRoute() {
   const [state, dispatch] = useReducer(welcomeReducer, initialWelcomeState);
   const [manualFolder, setManualFolder] = useState("");
   const [joinOrganizationOpen, setJoinOrganizationOpen] = useState(false);
-  const showOpenWorkModelsPromo = useOpenWorkModelsPromoEligibility();
   const denAuthTokenSnapshot = useSyncExternalStore(
     subscribeToDenSettings,
     readDenAuthTokenSnapshot,
@@ -253,8 +245,10 @@ export function WelcomeRoute() {
           if (targetSessionId) writeLastSessionFor(targetWorkspaceId, targetSessionId);
         }
         dispatch({ type: "close" });
-        // Show the provider selection step before navigating to the session.
-        dispatch({ type: "provider-step", workspaceId: targetWorkspaceId, sessionId: targetSessionId });
+        const route = targetWorkspaceId
+          ? workspaceSessionRoute(targetWorkspaceId, targetSessionId)
+          : "/session";
+        dispatch({ type: "attribution-step", route });
 
       } catch (error) {
         dispatch({
@@ -409,15 +403,7 @@ export function WelcomeRoute() {
     <>
       <WelcomePage
         onContinue={async (option) => {
-          if (option === "managed") {
-            await handleGetStarted();
-          } else if (option === "local") {
-            await handleGetStarted();
-          } else if (option === "byok") {
-            hideOpenWorkModelsPromo();
-            markOpenWorkModelsStartupPromoShown();
-            await handleGetStarted();
-          }
+          if (option === "managed") await handleGetStarted();
         }}
         busy={state.createBusy}
         error={state.createError}
@@ -451,35 +437,6 @@ export function WelcomeRoute() {
             : t("app.local_disabled_reason")
         }
       />
-      {state.providerStep ? (
-        <ProviderSelectionStep
-          showOpenWorkModels={showOpenWorkModelsPromo}
-          onOpenWorkModels={() => {
-            // Land on the RenWork Models value-prop page when already
-            // signed in to Den; otherwise start sign-up. Previously this
-            // always opened a bare sign-up page — payment before value.
-            platform.openLink(getOpenWorkModelsActionUrl(denAuth.isSignedIn, "sign-up"));
-            const route = state.pendingWorkspaceId
-              ? workspaceSessionRoute(state.pendingWorkspaceId, state.pendingSessionId)
-              : "/session";
-            dispatch({ type: "attribution-step", route });
-          }}
-          onBringYourOwn={() => {
-            markOpenWorkModelsStartupPromoShown();
-            hideOpenWorkModelsPromo();
-            const route = state.pendingWorkspaceId
-              ? workspaceSessionRoute(state.pendingWorkspaceId, state.pendingSessionId)
-              : "/session";
-            dispatch({ type: "attribution-step", route: `${route}?onboarding=1` });
-          }}
-          onSkip={() => {
-            const route = state.pendingWorkspaceId
-              ? workspaceSessionRoute(state.pendingWorkspaceId, state.pendingSessionId)
-              : "/session";
-            dispatch({ type: "attribution-step", route });
-          }}
-        />
-      ) : null}
       {state.attributionStep ? (
         <AttributionStep
           onSubmit={handleAttributionSubmit}

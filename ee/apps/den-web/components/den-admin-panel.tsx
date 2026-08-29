@@ -122,6 +122,10 @@ type AdminOrganization = {
   seatsFreeAdditional: number;
   billableSeatCount: number;
   capabilities: AdminOrganizationCapabilities;
+  renworkAccessGrant: {
+    source: "campaign" | "super_admin";
+    expiresAt: string;
+  } | null;
 };
 
 type AdminPageInfo = {
@@ -369,6 +373,7 @@ function parseAdminPayload(payload: unknown): AdminPayload | null {
         const plan = isRecord(value.plan) ? value.plan : {};
         const tier = plan.tier === "team" || plan.tier === "enterprise" ? plan.tier : "free";
         const capabilities = isRecord(value.capabilities) ? value.capabilities : {};
+        const accessGrant = isRecord(value.renworkAccessGrant) ? value.renworkAccessGrant : null;
 
         return {
           id: value.id,
@@ -390,7 +395,10 @@ function parseAdminPayload(payload: unknown): AdminPayload | null {
             mcpConnections: capabilities.mcpConnections === true,
             codemodeScripts: capabilities.codemodeScripts === true,
             cloud: capabilities.cloud === true
-          }
+          },
+          renworkAccessGrant: accessGrant && (accessGrant.source === "campaign" || accessGrant.source === "super_admin") && typeof accessGrant.expiresAt === "string"
+            ? { source: accessGrant.source, expiresAt: accessGrant.expiresAt }
+            : null
         };
       })
       .filter((value): value is AdminOrganization => value !== null)
@@ -727,7 +735,8 @@ function buildFixtureOrganization(index: number): AdminOrganization {
     freeSeatCount: target ? 25 : DEFAULT_FREE_SEAT_COUNT,
     seatsFreeAdditional: target ? 20 : 0,
     billableSeatCount: target ? 103 : 0,
-    capabilities: { installLinks: target, mcpConnections: target, codemodeScripts: false, cloud: false }
+    capabilities: { installLinks: target, mcpConnections: target, codemodeScripts: false, cloud: false },
+    renworkAccessGrant: null
   };
 }
 
@@ -1304,6 +1313,7 @@ export function DenAdminPanel() {
   const [modelPolicyOrganization, setModelPolicyOrganization] = useState<AdminOrganization | null>(null);
   const [savingFreeSeatsOrgId, setSavingFreeSeatsOrgId] = useState<string | null>(null);
   const [savingCapabilityOrgId, setSavingCapabilityOrgId] = useState<string | null>(null);
+  const [savingAccessGrantOrgId, setSavingAccessGrantOrgId] = useState<string | null>(null);
   const [capabilityError, setCapabilityError] = useState<{ orgId: string; message: string } | null>(null);
   const [deleteUserDialog, setDeleteUserDialog] = useState<AdminUser | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
@@ -1771,6 +1781,58 @@ export function DenAdminPanel() {
       setSavingOrgId(null);
     }
   }, [orgDrafts]);
+
+  const grantTemporaryRenworkAccess = useCallback(async (org: AdminOrganization) => {
+    setSavingAccessGrantOrgId(org.id);
+    setError(null);
+    try {
+      const startsAt = new Date();
+      const expiresAt = new Date(startsAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const { response, payload: nextPayload } = await putJson(`/v1/admin/organizations/${org.id}/renwork-access-grant`, {
+        source: "super_admin",
+        startsAt: startsAt.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        modelSkus: null,
+        reason: "Seven-day platform super-admin acceptance grant"
+      });
+      if (!response.ok) {
+        setError(getErrorMessage(nextPayload, `Could not grant temporary RenWork access to ${org.name}.`));
+        return;
+      }
+      setPayload((current) => current ? {
+        ...current,
+        organizations: current.organizations.map((entry) => entry.id === org.id
+          ? { ...entry, renworkAccessGrant: { source: "super_admin", expiresAt: expiresAt.toISOString() } }
+          : entry)
+      } : current);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Unknown network error");
+    } finally {
+      setSavingAccessGrantOrgId(null);
+    }
+  }, []);
+
+  const revokeTemporaryRenworkAccess = useCallback(async (org: AdminOrganization) => {
+    setSavingAccessGrantOrgId(org.id);
+    setError(null);
+    try {
+      const { response, payload: nextPayload } = await deleteJson(`/v1/admin/organizations/${org.id}/renwork-access-grant`);
+      if (!response.ok) {
+        setError(getErrorMessage(nextPayload, `Could not revoke temporary RenWork access from ${org.name}.`));
+        return;
+      }
+      setPayload((current) => current ? {
+        ...current,
+        organizations: current.organizations.map((entry) => entry.id === org.id
+          ? { ...entry, renworkAccessGrant: null }
+          : entry)
+      } : current);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Unknown network error");
+    } finally {
+      setSavingAccessGrantOrgId(null);
+    }
+  }, []);
 
   const saveOrganizationFreeSeats = useCallback(async () => {
     if (!freeSeatsDialog) {
@@ -2278,6 +2340,21 @@ export function DenAdminPanel() {
                       >
                         模型与额度策略
                       </button>
+                      <button
+                        type="button"
+                        data-testid={`admin-org-renwork-access-${org.slug}`}
+                        disabled={savingAccessGrantOrgId === org.id}
+                        onClick={() => {
+                          void (org.renworkAccessGrant ? revokeTemporaryRenworkAccess(org) : grantTemporaryRenworkAccess(org));
+                        }}
+                        className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-60"
+                      >
+                        {savingAccessGrantOrgId === org.id
+                          ? "Saving…"
+                          : org.renworkAccessGrant
+                            ? "撤销临时模型授权"
+                            : "特批 7 天模型访问"}
+                      </button>
                       <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-600">
                         {org.memberCount} / {org.seatLimit} seats
                       </span>
@@ -2294,6 +2371,10 @@ export function DenAdminPanel() {
                     <MetaCell label="Created" value={formatDateTime(org.createdAt)} />
                     <MetaCell label="Plan source" value={formatProvider(org.plan.source)} />
                     <MetaCell label="Members" value={String(org.memberCount)} />
+                    <MetaCell
+                      label="RenWork model access"
+                      value={org.renworkAccessGrant ? `特批至 ${formatDateTime(org.renworkAccessGrant.expiresAt)}` : "订阅校验或无特批"}
+                    />
                     <div>
                       <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Free seats</p>
                       <div className="mt-1 flex items-center gap-2">

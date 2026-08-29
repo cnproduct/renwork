@@ -7,13 +7,14 @@ import {
 } from "@openwork/types/renwork-commerce"
 import { getRenworkPlanCatalog } from "../src/renwork-growth/plan-catalog.js"
 
-test("RenWork pilot catalog keeps local work free and separates personal from enterprise", () => {
+test("RenWork V7 catalog requires paid access and separates personal from enterprise", () => {
   const catalog = renworkPlanCatalogSchema.parse(getRenworkPlanCatalog())
   expect(catalog.status).toBe("pilot")
-  expect(catalog.plans.every((plan) => plan.features.localFreeCore)).toBe(true)
+  expect(catalog.plans.every((plan) => !plan.features.localFreeCore)).toBe(true)
   expect(catalog.plans.some((plan) => plan.audience === "personal")).toBe(true)
   expect(catalog.plans.some((plan) => plan.audience === "enterprise")).toBe(true)
   expect(catalog.plans.flatMap((plan) => plan.offers).some((offer) => offer.purchaseMode === "checkout")).toBe(false)
+  expect(catalog.plans.flatMap((plan) => plan.offers).some((offer) => offer.purchaseMode === "free")).toBe(false)
 })
 
 test("RenWork catalog never exposes a provider or upstream credit contract", () => {
@@ -36,9 +37,9 @@ test("entitlement snapshots distinguish subscription rights from RenCredit balan
     snapshotId: "snapshot-personal-1",
     generatedAt: "2026-08-26T01:00:00.000Z",
     scope: { kind: "personal", accountId: "account-1" },
-    planId: "personal-free",
-    offerId: "personal-free-current",
-    subscriptionStatus: "free",
+    planId: "personal-light",
+    offerId: "personal-light-monthly",
+    subscriptionStatus: "active",
     currentPeriodEndsAt: null,
     cancelAtPeriodEnd: false,
     features: getRenworkPlanCatalog().plans[0]?.features,
@@ -51,9 +52,9 @@ test("entitlement snapshots distinguish subscription rights from RenCredit balan
       memberLimit: null,
     },
   })
-  expect(snapshot.features.localFreeCore).toBe(true)
+  expect(snapshot.features.localFreeCore).toBe(false)
   expect(snapshot.renCredit.available).toBe(80)
-  expect(snapshot.subscriptionStatus).toBe("free")
+  expect(snapshot.subscriptionStatus).toBe("active")
 })
 
 test("RenCredit receipts model successful capture and failure release without supplier cost", () => {
@@ -102,9 +103,9 @@ test("invalid balance math and incomplete release receipts fail closed", () => {
     snapshotId: "snapshot-invalid",
     generatedAt: "2026-08-26T01:00:00.000Z",
     scope: { kind: "personal", accountId: "account-1" },
-    planId: "personal-free",
-    offerId: "personal-free-current",
-    subscriptionStatus: "free",
+    planId: "personal-light",
+    offerId: "personal-light-monthly",
+    subscriptionStatus: "active",
     currentPeriodEndsAt: null,
     cancelAtPeriodEnd: false,
     features,
