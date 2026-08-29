@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Pencil, Trash2 } from "lucide-react";
+import { OrganizationModelPolicyDialog } from "./organization-model-policy-dialog";
 
 type AccessState = "loading" | "ready" | "signed-out" | "forbidden" | "error";
 type ViewMode = "users" | "companies" | "organizations";
@@ -1300,6 +1301,7 @@ export function DenAdminPanel() {
   const [orgDrafts, setOrgDrafts] = useState<Record<string, { tier: AdminOrganization["plan"]["tier"]; seatLimit: string }>>({});
   const [savingOrgId, setSavingOrgId] = useState<string | null>(null);
   const [freeSeatsDialog, setFreeSeatsDialog] = useState<{ org: AdminOrganization; totalFreeSeats: string } | null>(null);
+  const [modelPolicyOrganization, setModelPolicyOrganization] = useState<AdminOrganization | null>(null);
   const [savingFreeSeatsOrgId, setSavingFreeSeatsOrgId] = useState<string | null>(null);
   const [savingCapabilityOrgId, setSavingCapabilityOrgId] = useState<string | null>(null);
   const [capabilityError, setCapabilityError] = useState<{ orgId: string; message: string } | null>(null);
@@ -2268,6 +2270,14 @@ export function DenAdminPanel() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        data-testid={`admin-org-model-policy-${org.slug}`}
+                        onClick={() => setModelPolicyOrganization(org)}
+                        className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 transition hover:bg-orange-100"
+                      >
+                        模型与额度策略
+                      </button>
                       <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-600">
                         {org.memberCount} / {org.seatLimit} seats
                       </span>
@@ -2659,6 +2669,11 @@ export function DenAdminPanel() {
           </div>
         </div>
       ) : null}
+
+      <OrganizationModelPolicyDialog
+        organization={modelPolicyOrganization ? { id: modelPolicyOrganization.id, name: modelPolicyOrganization.name } : null}
+        onClose={() => setModelPolicyOrganization(null)}
+      />
 
       {deleteUserDialog ? (
         <div
