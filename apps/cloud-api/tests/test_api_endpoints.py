@@ -108,13 +108,22 @@ def test_api_actions_approval_and_audit():
     assert len(logs) >= 1
     assert logs[-1]["user_id"] == "USER-SARAH-LEAD"
 
-def test_api_credits_balance():
+def test_api_legacy_credits_balance_is_retired():
     response = client.get("/api/v1/credits/balance?workspace_id=WS-DEFAULT-001")
-    assert response.status_code == 200
+    assert response.status_code == 410
+    assert response.headers["cache-control"] == "no-store"
     data = response.json()
-    assert data["workspace_id"] == "WS-DEFAULT-001"
-    assert data["remaining_credits"] > 0
-    assert data["active_monitoring_accounts_count"] >= 18
+    assert data["error"]["code"] == "LEGACY_RENCREDIT_ENDPOINT_RETIRED"
+    assert data["error"]["replacement"]["wallet"] == "/api/den/v1/rencredit/wallet"
+    assert data["error"]["authentication_required"] is True
+    assert "workspace_id" not in data
+    assert "remaining_credits" not in data
+
+
+def test_api_all_legacy_credits_paths_are_retired():
+    response = client.post("/api/v1/credits/unknown-operation", json={"credits": 99})
+    assert response.status_code == 410
+    assert response.json()["error"]["code"] == "LEGACY_RENCREDIT_ENDPOINT_RETIRED"
 
 def test_api_signals_feedback_event():
     payload = {

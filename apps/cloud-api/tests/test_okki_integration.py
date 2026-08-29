@@ -227,16 +227,12 @@ def test_account_registry_stats_and_prospects():
     assert prospects_data["total_count"] > 0
 
 
-def test_credit_ledger_history():
-    """测试 10: 查询企业信用点详细扣减流水与账本记录"""
+def test_legacy_credit_ledger_is_retired():
+    """旧公开账本不得再暴露内存余额或交易记录。"""
     resp = client.get("/api/v1/credits/ledger?workspace_id=WS-TEST-001&limit=20")
-    assert resp.status_code == 200
-    ledger = resp.json()
-    assert "transactions" in ledger
-    assert len(ledger["transactions"]) > 0
-    # 验证交易流水的字段完整性
-    first_tx = ledger["transactions"][0]
-    assert "transaction_id" in first_tx
-    assert "action_type" in first_tx
-    assert "credits_deducted" in first_tx
-    assert "balance_after" in first_tx
+    assert resp.status_code == 410
+    data = resp.json()
+    assert data["error"]["code"] == "LEGACY_RENCREDIT_ENDPOINT_RETIRED"
+    assert data["error"]["replacement"]["ledger"] == "/api/den/v1/rencredit/ledger"
+    assert "workspace_id" not in data
+    assert "transactions" not in data
