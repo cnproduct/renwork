@@ -23,6 +23,7 @@ import {
   resolveProviderCredential,
 } from "../../llm/provider-credentials.js"
 import {
+  adminRoute,
   jsonValidator,
   orgMemberRoute,
   paramValidator,
@@ -35,7 +36,7 @@ import { denTypeIdSchema, emptyResponse, forbiddenSchema, invalidRequestSchema, 
 import { repairMemberInferenceAccessIfNeeded } from "../../inference.js"
 import { listAccessibleLlmProviderAccess } from "./llm-provider-access.js"
 import type { OrgRouteVariables } from "./shared.js"
-import { ensureOrganizationAdmin, idParamSchema, memberHasRole, orgAccessFailureStatus } from "./shared.js"
+import { idParamSchema, memberHasRole } from "./shared.js"
 
 type LlmProviderId = typeof LlmProviderTable.$inferSelect.id
 type LlmProviderAccessId = typeof LlmProviderAccessTable.$inferSelect.id
@@ -549,14 +550,16 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
     describeRoute({
       tags: ["LLM Providers"],
       summary: "Test a custom LLM provider endpoint",
-      description: "Probes an OpenAI-compatible endpoint (Azure AI Foundry, LiteLLM, vLLM, gateways) with the given credential: normalizes common base-URL mistakes, calls GET /models, and returns the model ids the endpoint actually serves — on Azure these are the deployment names. Nothing is stored.",
+      description: "Platform-super-admin diagnostic for an OpenAI-compatible endpoint. Nothing is stored.",
       responses: {
         200: jsonResponse("Probe completed (ok=false carries a human hint).", endpointProbeResponseSchema),
         400: jsonResponse("The probe request was invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to test provider endpoints.", unauthorizedSchema),
+        403: jsonResponse("Only a platform super-admin can test provider endpoints.", forbiddenSchema),
       },
     }),
     orgMemberRoute(),
+    adminRoute(),
     jsonValidator(endpointProbeRequestSchema),
     async (c) => {
       const input = c.req.valid("json")
@@ -578,15 +581,17 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
     describeRoute({
       tags: ["LLM Providers"],
       summary: "List LLM provider catalog",
-      description: "Lists the provider catalog from models.dev so an organization can choose which LLM providers to configure.",
+      description: "Lists the private provider catalog for platform super-admin configuration.",
       responses: {
         200: jsonResponse("Provider catalog returned successfully.", providerCatalogListResponseSchema),
         400: jsonResponse("The provider catalog path parameters were invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to browse the provider catalog.", unauthorizedSchema),
+        403: jsonResponse("Only a platform super-admin can browse the provider catalog.", forbiddenSchema),
         502: jsonResponse("The external provider catalog was unavailable.", providerCatalogUnavailableSchema),
       },
     }),
     orgMemberRoute(),
+    adminRoute(),
     async (c) => {
       try {
         const providers = await listModelsDevProviders()
@@ -610,11 +615,13 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
         200: jsonResponse("Provider catalog entry returned successfully.", providerCatalogResponseSchema),
         400: jsonResponse("The provider catalog path parameters were invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to inspect provider catalog entries.", unauthorizedSchema),
+        403: jsonResponse("Only a platform super-admin can inspect provider catalog entries.", forbiddenSchema),
         404: jsonResponse("The requested provider catalog entry could not be found.", notFoundSchema),
         502: jsonResponse("The external provider catalog was unavailable.", providerCatalogUnavailableSchema),
       },
     }),
     orgMemberRoute(),
+    adminRoute(),
     paramValidator(providerCatalogParamsSchema),
     async (c) => {
       const params = c.req.valid("param")
@@ -786,15 +793,17 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
     describeRoute({
       tags: ["LLM Providers"],
       summary: "Create organization LLM provider",
-      description: "Creates a new organization-scoped LLM provider from either a models.dev provider template, pasted JSON/JSONC custom configuration, or MCP-supplied customConfig object.",
+      description: "Platform-super-admin operation that creates a legacy organization-scoped provider during catalog migration.",
       responses: {
         201: jsonResponse("Organization LLM provider created successfully.", llmProviderResponseSchema),
         400: jsonResponse("The provider creation request was invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to create organization LLM providers.", unauthorizedSchema),
+        403: jsonResponse("Only a platform super-admin can create provider routes.", forbiddenSchema),
         404: jsonResponse("A referenced provider, model, member, or team could not be found.", notFoundSchema),
       },
     }),
     orgMemberRoute(),
+    adminRoute(),
     jsonValidator(llmProviderWriteSchema),
     async (c) => {
       const payload = c.get("organizationContext")
@@ -920,11 +929,12 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
         200: jsonResponse("Organization LLM provider updated successfully.", llmProviderResponseSchema),
         400: jsonResponse("The provider update request was invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to update organization LLM providers.", unauthorizedSchema),
-        403: jsonResponse("Only the provider creator or a workspace admin can update providers.", forbiddenSchema),
+        403: jsonResponse("Only a platform super-admin can update providers.", forbiddenSchema),
         404: jsonResponse("The provider or a referenced resource could not be found.", notFoundSchema),
       },
     }),
     orgMemberRoute(),
+    adminRoute(),
     paramValidator(orgLlmProviderParamsSchema),
     jsonValidator(llmProviderWriteSchema),
     async (c) => {
@@ -948,20 +958,6 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
       const provider = providerRows[0]
       if (!provider) {
         return c.json({ error: "llm_provider_not_found" }, 404)
-      }
-
-      if (!canManageLlmProvider(payload, provider)) {
-        return c.json({
-          error: "forbidden",
-          message: "Only the provider creator or a workspace admin can update providers.",
-        }, 403)
-      }
-
-      if (isOrganizationAdmin(payload)) {
-        const permission = ensureOrganizationAdmin(c, "Only the provider creator or a workspace admin can update providers.")
-        if (!permission.ok) {
-          return c.json(permission.response, orgAccessFailureStatus(permission.response))
-        }
       }
 
       try {
@@ -1082,11 +1078,12 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
         204: emptyResponse("Organization LLM provider deleted successfully."),
         400: jsonResponse("The provider deletion path parameters were invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to delete organization LLM providers.", unauthorizedSchema),
-        403: jsonResponse("Only the provider creator or a workspace admin can delete providers.", forbiddenSchema),
+        403: jsonResponse("Only a platform super-admin can delete providers.", forbiddenSchema),
         404: jsonResponse("The provider could not be found.", notFoundSchema),
       },
     }),
     orgMemberRoute(),
+    adminRoute(),
     paramValidator(orgLlmProviderParamsSchema),
     async (c) => {
       const payload = c.get("organizationContext")
@@ -1110,20 +1107,6 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
         return c.json({ error: "llm_provider_not_found" }, 404)
       }
 
-      if (!canManageLlmProvider(payload, provider)) {
-        return c.json({
-          error: "forbidden",
-          message: "Only the provider creator or a workspace admin can delete providers.",
-        }, 403)
-      }
-
-      if (isOrganizationAdmin(payload)) {
-        const permission = ensureOrganizationAdmin(c, "Only the provider creator or a workspace admin can delete providers.")
-        if (!permission.ok) {
-          return c.json(permission.response, orgAccessFailureStatus(permission.response))
-        }
-      }
-
       await db.transaction(async (tx) => {
         await tx.delete(LlmProviderAccessTable).where(eq(LlmProviderAccessTable.llmProviderId, provider.id))
         await tx.delete(LlmProviderModelTable).where(eq(LlmProviderModelTable.llmProviderId, provider.id))
@@ -1144,12 +1127,13 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
         204: emptyResponse("Organization LLM provider access removed successfully."),
         400: jsonResponse("The provider access deletion path parameters were invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to manage provider access.", unauthorizedSchema),
-        403: jsonResponse("Only the provider creator or a workspace admin can manage provider access.", forbiddenSchema),
+        403: jsonResponse("Only a platform super-admin can manage provider access.", forbiddenSchema),
         404: jsonResponse("The provider or access grant could not be found.", notFoundSchema),
         409: jsonResponse("The request tried to remove a protected provider access entry.", conflictSchema),
       },
     }),
     orgMemberRoute(),
+    adminRoute(),
     paramValidator(orgLlmProviderParamsSchema.extend(idParamSchema("accessId", "llmProviderAccess").shape)),
     async (c) => {
       const payload = c.get("organizationContext")
@@ -1173,17 +1157,6 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
       const provider = providerRows[0]
       if (!provider) {
         return c.json({ error: "llm_provider_not_found" }, 404)
-      }
-
-      if (!canManageLlmProvider(payload, provider)) {
-        return c.json({ error: "forbidden", message: "Only the provider creator or a workspace admin can manage access." }, 403)
-      }
-
-      if (isOrganizationAdmin(payload)) {
-        const permission = ensureOrganizationAdmin(c, "Only the provider creator or a workspace admin can manage access.")
-        if (!permission.ok) {
-          return c.json(permission.response, orgAccessFailureStatus(permission.response))
-        }
       }
 
       const accessRows = await db

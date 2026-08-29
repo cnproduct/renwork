@@ -17,6 +17,7 @@ import { db } from "../db.js"
 import { parseOrganizationPlan } from "../entitlements.js"
 import { env } from "../env.js"
 import { publicRoute } from "../middleware/index.js"
+import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
 import {
   authenticateInferenceKey,
   releaseInferenceCredits,
@@ -167,6 +168,10 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     if (!modelAllowedForPlan(model, plan)) {
       return c.json({ error: { code: "PLAN_UPGRADE_REQUIRED", message: "This model is not included in the current plan." } }, 402)
     }
+    const modelPolicy = readOrganizationModelPolicy(organization?.metadata)
+    if (modelPolicy.allowedModelSkus && !modelPolicy.allowedModelSkus.includes(model.sku)) {
+      return c.json({ error: { code: "MODEL_NOT_ALLOWED_BY_ORGANIZATION", message: "This model is not enabled by the organization owner." } }, 403)
+    }
 
     const providers = new Map(catalog.providers.map((provider) => [provider.id, provider]))
     const route = model.routes.filter((candidate) => candidate.enabled)
@@ -200,6 +205,11 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
         billingMode,
         estimatedUsage,
         reservedMicroCredits,
+        budgets: {
+          organizationDailyMicroCredits: modelPolicy.dailyBudgetMicroCredits,
+          organizationMonthlyMicroCredits: modelPolicy.monthlyBudgetMicroCredits,
+          memberMonthlyMicroCredits: resolveMemberMonthlyBudget(modelPolicy, principal.memberId),
+        },
         expiresAt: new Date(Date.now() + 30 * 60_000),
       })
       if (reserved.replayed) {
@@ -208,8 +218,20 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
       reservation = reserved.reservation
     } catch (error) {
       const code = error instanceof Error ? error.message : "RENCREDIT_RESERVATION_FAILED"
-      const status = code === "INSUFFICIENT_RENCREDIT" || code === "RENCREDIT_WALLET_UNAVAILABLE" ? 402 : 409
-      return c.json({ error: { code, message: status === 402 ? "RenCredit balance is insufficient." : "The inference request could not be reserved." } }, status)
+      const paymentRequiredCodes = new Set([
+        "INSUFFICIENT_RENCREDIT",
+        "RENCREDIT_WALLET_UNAVAILABLE",
+        "ORGANIZATION_DAILY_BUDGET_EXCEEDED",
+        "ORGANIZATION_MONTHLY_BUDGET_EXCEEDED",
+        "MEMBER_MONTHLY_QUOTA_EXCEEDED",
+      ])
+      const status = paymentRequiredCodes.has(code) ? 402 : 409
+      const message = code === "INSUFFICIENT_RENCREDIT" || code === "RENCREDIT_WALLET_UNAVAILABLE"
+        ? "RenCredit balance is insufficient."
+        : status === 402
+          ? "The organization RenCredit budget or member quota has been reached."
+          : "The inference request could not be reserved."
+      return c.json({ error: { code, message } }, status)
     }
 
     const upstreamBody: JsonRecord = { ...body, model: route.upstreamModelId }

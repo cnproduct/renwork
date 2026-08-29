@@ -45,6 +45,10 @@ export function resolveModelPickerSubtitle(subtitle: string | undefined) {
   return subtitle ?? MODEL_PICKER_DEFAULT_SUBTITLE;
 }
 
+export function canManageProvidersFromModelPicker(allowProviderManagement: boolean | undefined) {
+  return allowProviderManagement === true;
+}
+
 export type ModelPickerModalProps = {
   open: boolean;
   options: ModelOption[];
@@ -67,6 +71,8 @@ export type ModelPickerModalProps = {
   openWorkModelsSyncing?: boolean;
   onRefreshOrganizationModels?: () => void | Promise<void>;
   restrictToCloud?: boolean;
+  /** Local desktop workspaces may manage BYOK providers. Cloud workspaces never may. */
+  allowProviderManagement?: boolean;
 };
 
 type ProviderGroup = {
@@ -425,7 +431,7 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
                   group={group}
                   expanded={expandedProviders.has(group.id)}
                   current={props.current}
-                  canToggleProvider={!!props.onToggleProvider}
+                  canToggleProvider={canManageProvidersFromModelPicker(props.allowProviderManagement) && !!props.onToggleProvider}
                   onToggleExpand={() => toggleProvider(group.id)}
                   onToggleProvider={props.onToggleProvider}
                   onSelect={handleSelect}
@@ -438,19 +444,21 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
 
         {/* Footer */}
         <DialogFooter className="flex w-full items-center justify-between sm:justify-between shrink-0">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              props.onClose();
-              props.onOpenSettings();
-            }}
-            className="gap-1.5 text-xs text-primary hover:bg-primary/10"
-          >
-            <Sparkles className="size-3.5" />
-            + 自定义添加模型 (Ollama / OpenRouter)
-          </Button>
+          {canManageProvidersFromModelPicker(props.allowProviderManagement) ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                props.onClose();
+                props.onOpenSettings();
+              }}
+              className="gap-1.5 text-xs text-primary hover:bg-primary/10"
+            >
+              <Sparkles className="size-3.5" />
+              + 自定义添加模型 (Ollama / OpenRouter)
+            </Button>
+          ) : <span aria-hidden="true" />}
           <DialogClose render={<Button variant="outline" size="sm" />}>
             {t("models.done")}
           </DialogClose>

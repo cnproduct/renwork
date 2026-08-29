@@ -270,7 +270,7 @@ function getDashboardPageTitle(pathname: string, orgSlug: string | null) {
     return "My Automations";
   }
   if (pathname.startsWith(getCustomLlmProvidersRoute(orgSlug))) {
-    return "Bring your Own Keys";
+    return "Model policy";
   }
   if (pathname.startsWith(getDesktopPoliciesRoute(orgSlug))) {
     return "Desktop Policies";
@@ -447,19 +447,19 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
   // (single-org) deployments only manage their own LLM providers. Default
   // hidden until the runtime config confirms a hosted (multi-org) deployment.
   const showOpenWorkModels = runtimeConfigLoaded && runtimeConfig.orgMode === "multi_org";
-  const modelsGroup: DashboardNavItem | null = access.isAdmin && activeOrg
+  const modelsGroup: DashboardNavItem | null = access.isOwner && activeOrg
     ? {
         href: showOpenWorkModels
           ? getInferenceRoute(activeOrg.slug)
           : getCustomLlmProvidersRoute(activeOrg.slug),
         label: "Models",
         icon: Sparkles,
-        badge: "Providers",
+        badge: "Policy",
         children: [
           ...(showOpenWorkModels
             ? [{ href: getInferenceRoute(activeOrg.slug), label: "RenWork Models" }]
             : []),
-          { href: getCustomLlmProvidersRoute(activeOrg.slug), label: "Bring your Own Keys" },
+          { href: getCustomLlmProvidersRoute(activeOrg.slug), label: "Model policy" },
         ],
       }
     : null;

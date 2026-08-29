@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, lt } from "@openwork-ee/den-db/drizzle"
+import { and, desc, eq, gte, isNull, lt } from "@openwork-ee/den-db/drizzle"
 import {
   InferenceKeyTable,
   MemberTable,
@@ -64,6 +64,11 @@ export type ReserveInferenceInput = InferencePrincipal & {
   estimatedUsage: RenWorkTokenUsage
   reservedMicroCredits: number
   expiresAt: Date
+  budgets?: {
+    organizationDailyMicroCredits: number | null
+    organizationMonthlyMicroCredits: number | null
+    memberMonthlyMicroCredits: number | null
+  }
 }
 
 function hashInferenceKey(value: string) {
@@ -249,16 +254,68 @@ export async function grantRenCredit(input: {
 export async function reserveInferenceCredits(input: ReserveInferenceInput) {
   assertMicroCredits(input.reservedMicroCredits, "reservedMicroCredits")
   return db.transaction(async (tx) => {
+    const [wallet] = await tx.select().from(RenCreditWalletTable)
+      .where(eq(RenCreditWalletTable.organization_id, input.organizationId)).for("update").limit(1)
     const [existing] = await tx.select().from(RenCreditReservationTable).where(and(
       eq(RenCreditReservationTable.organization_id, input.organizationId),
       eq(RenCreditReservationTable.idempotency_key, input.idempotencyKey),
-    )).limit(1)
+    )).for("update").limit(1)
     if (existing) return { reservation: existing, replayed: true as const }
 
-    const [wallet] = await tx.select().from(RenCreditWalletTable)
-      .where(eq(RenCreditWalletTable.organization_id, input.organizationId)).for("update").limit(1)
     if (!wallet || wallet.status !== "active") throw new Error("RENCREDIT_WALLET_UNAVAILABLE")
     if (wallet.available_microcredits < input.reservedMicroCredits) throw new Error("INSUFFICIENT_RENCREDIT")
+
+    const now = new Date()
+    const dayStart = new Date(now)
+    dayStart.setUTCHours(0, 0, 0, 0)
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    const committedSince = async (start: Date, memberId?: MemberId) => {
+      // A locking read is deliberate: under MySQL REPEATABLE READ a plain
+      // aggregate could reuse a snapshot from before this transaction waited
+      // on the wallet row and admit two concurrent requests over the limit.
+      const rows = await tx.select({
+        status: RenCreditReservationTable.status,
+        reserved: RenCreditReservationTable.reserved_microcredits,
+        captured: RenCreditReservationTable.captured_microcredits,
+      })
+        .from(RenCreditReservationTable)
+        .where(and(
+          eq(RenCreditReservationTable.organization_id, input.organizationId),
+          gte(RenCreditReservationTable.created_at, start),
+          ...(memberId ? [eq(RenCreditReservationTable.org_membership_id, memberId)] : []),
+        )).for("update")
+      return rows.reduce((total, row) => total + (
+        row.status === "reserved" ? row.reserved : row.status === "captured" ? row.captured : 0
+      ), 0)
+    }
+    const budgets = input.budgets
+    if (input.reservedMicroCredits > 0 && budgets?.organizationDailyMicroCredits !== null && budgets?.organizationDailyMicroCredits !== undefined) {
+      const committed = await committedSince(dayStart)
+      if (committed + input.reservedMicroCredits > budgets.organizationDailyMicroCredits) {
+        throw new Error("ORGANIZATION_DAILY_BUDGET_EXCEEDED")
+      }
+    }
+    if (
+      input.reservedMicroCredits > 0 && (
+        budgets?.organizationMonthlyMicroCredits !== null && budgets?.organizationMonthlyMicroCredits !== undefined
+        || budgets?.memberMonthlyMicroCredits !== null && budgets?.memberMonthlyMicroCredits !== undefined
+      )
+    ) {
+      const organizationCommitted = await committedSince(monthStart)
+      if (
+        budgets?.organizationMonthlyMicroCredits !== null &&
+        budgets?.organizationMonthlyMicroCredits !== undefined &&
+        organizationCommitted + input.reservedMicroCredits > budgets.organizationMonthlyMicroCredits
+      ) {
+        throw new Error("ORGANIZATION_MONTHLY_BUDGET_EXCEEDED")
+      }
+      if (budgets?.memberMonthlyMicroCredits !== null && budgets?.memberMonthlyMicroCredits !== undefined) {
+        const memberCommitted = await committedSince(monthStart, input.memberId)
+        if (memberCommitted + input.reservedMicroCredits > budgets.memberMonthlyMicroCredits) {
+          throw new Error("MEMBER_MONTHLY_QUOTA_EXCEEDED")
+        }
+      }
+    }
 
     const reservationId = createDenTypeId("renCreditReservation")
     const available = wallet.available_microcredits - input.reservedMicroCredits
