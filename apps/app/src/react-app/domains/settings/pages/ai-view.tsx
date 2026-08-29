@@ -197,7 +197,7 @@ export function AiSettingsView(props: AiSettingsViewProps) {
                       <div className="truncate font-mono text-xs text-muted-foreground">{provider.id}</div>
                     </div>
                   </div>
-                  {!managedByCloud ? (
+                  {props.canAddProviders && !managedByCloud ? (
                     <Button
                       variant="destructive"
                       onClick={() => void props.onDisconnectProvider(provider.id)}
