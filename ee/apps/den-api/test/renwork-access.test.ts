@@ -10,10 +10,11 @@ function seedRequiredEnv() {
 }
 
 let readRenworkAccessGrant: typeof import("../src/renwork-access.js")["readRenworkAccessGrant"]
+let resolveRenworkModelAccessFromSources: typeof import("../src/renwork-access.js")["resolveRenworkModelAccessFromSources"]
 
 beforeAll(async () => {
   seedRequiredEnv()
-  ;({ readRenworkAccessGrant } = await import("../src/renwork-access.js"))
+  ;({ readRenworkAccessGrant, resolveRenworkModelAccessFromSources } = await import("../src/renwork-access.js"))
 })
 
 test("temporary RenWork access grants are time-bound and model-scoped", () => {
@@ -47,4 +48,29 @@ test("expired, future, and malformed grants fail closed", () => {
   expect(readRenworkAccessGrant({ renworkAccessGrant: { ...base, expiresAt: "2026-08-29T11:59:59.000Z" } }, now)).toBeNull()
   expect(readRenworkAccessGrant({ renworkAccessGrant: { ...base, startsAt: "2026-08-29T13:00:00.000Z" } }, now)).toBeNull()
   expect(readRenworkAccessGrant({ renworkAccessGrant: { ...base, modelSkus: [] } }, now)).toBeNull()
+})
+
+test("an approved temporary grant unlocks the same organization access gate as a subscription", () => {
+  const access = resolveRenworkModelAccessFromSources({
+    hasActiveSubscription: false,
+    now: new Date("2026-08-29T12:00:00.000Z"),
+    metadata: {
+      renworkAccessGrant: {
+        status: "active",
+        source: "super_admin",
+        startsAt: "2026-08-29T00:00:00.000Z",
+        expiresAt: "2026-08-30T00:00:00.000Z",
+        modelSkus: ["renwork-standard"],
+        reason: "Approved plan request",
+        grantedBy: "user_admin",
+      },
+    },
+  })
+
+  expect(access).toEqual({
+    allowed: true,
+    source: "super_admin",
+    expiresAt: "2026-08-30T00:00:00.000Z",
+    allowedModelSkus: ["renwork-standard"],
+  })
 })

@@ -78,7 +78,19 @@ export async function resolveRenworkModelAccess(input: {
   metadata: JsonRecord | string | null | undefined
   now?: Date
 }): Promise<RenworkModelAccess> {
-  if (await organizationHasActiveInferenceSubscription(input.organizationId)) {
+  return resolveRenworkModelAccessFromSources({
+    hasActiveSubscription: await organizationHasActiveInferenceSubscription(input.organizationId),
+    metadata: input.metadata,
+    now: input.now,
+  })
+}
+
+export function resolveRenworkModelAccessFromSources(input: {
+  hasActiveSubscription: boolean
+  metadata: JsonRecord | string | null | undefined
+  now?: Date
+}): RenworkModelAccess {
+  if (input.hasActiveSubscription) {
     return { allowed: true, source: "subscription", expiresAt: null, allowedModelSkus: null }
   }
 
