@@ -98,8 +98,11 @@ function mapRevision(row: RevisionRow): AutomationRevision {
     schedule: row.schedule_config,
     model: { providerId: row.provider_id, modelId: row.model_id, variant: row.model_variant ?? null },
     action,
-    connectors: [],
-    notifyMiniProgram: false,
+    workspaceId: row.workspace_id,
+    connectors: row.connectors,
+    effectiveStartAt: ms(row.effective_start_at),
+    effectiveEndAt: ms(row.effective_end_at),
+    notifyMiniProgram: row.notify_mini_program,
     executionTarget: row.execution_target,
     maximumRuntimeMs: row.maximum_runtime_ms,
     digest: row.digest,
@@ -163,6 +166,11 @@ function normalizedDefinition(definition: Parameters<AutomationRepository["creat
       executionTarget: definition.executionTarget,
       instructions: definition.action.kind === "agent" ? definition.action.instructions : "Execute the pinned saved Code Mode script.",
       model,
+      workspaceId: definition.workspaceId ?? null,
+      connectors: definition.connectors ?? [],
+      effectiveStartAt: definition.effectiveStartAt ?? null,
+      effectiveEndAt: definition.effectiveEndAt ?? null,
+      notifyMiniProgram: definition.notifyMiniProgram ?? false,
     }
   }
   return {
@@ -172,6 +180,11 @@ function normalizedDefinition(definition: Parameters<AutomationRepository["creat
     executionTarget: "desktop" as const,
     instructions: definition.instructions,
     model: definition.model,
+    workspaceId: definition.workspaceId ?? null,
+    connectors: definition.connectors ?? [],
+    effectiveStartAt: definition.effectiveStartAt ?? null,
+    effectiveEndAt: definition.effectiveEndAt ?? null,
+    notifyMiniProgram: definition.notifyMiniProgram ?? false,
   }
 }
 
@@ -226,6 +239,11 @@ export class DenAutomationRepository implements AutomationRepository {
       schedule: definition.schedule,
       model: definition.model,
       action: definition.action,
+      workspaceId: definition.workspaceId,
+      connectors: definition.connectors,
+      effectiveStartAt: definition.effectiveStartAt,
+      effectiveEndAt: definition.effectiveEndAt,
+      notifyMiniProgram: definition.notifyMiniProgram,
       executionTarget: definition.executionTarget,
       maximumRuntimeMs,
     })
@@ -243,6 +261,11 @@ export class DenAutomationRepository implements AutomationRepository {
         model_id: definition.model.modelId,
         model_variant: definition.model.variant ?? null,
         action: definition.action,
+        workspace_id: definition.workspaceId,
+        connectors: definition.connectors,
+        effective_start_at: date(definition.effectiveStartAt),
+        effective_end_at: date(definition.effectiveEndAt),
+        notify_mini_program: definition.notifyMiniProgram,
         execution_target: definition.executionTarget,
         maximum_runtime_ms: maximumRuntimeMs,
         digest,
@@ -299,6 +322,15 @@ export class DenAutomationRepository implements AutomationRepository {
       const executionTarget = current.execution_target
       const instructions = action.kind === "agent" ? action.instructions : "Execute the pinned saved Code Mode script."
       const schedule = input.changes.schedule ?? current.schedule_config
+      const workspaceId = input.changes.workspaceId === undefined ? current.workspace_id : input.changes.workspaceId
+      const connectors = input.changes.connectors ?? current.connectors
+      const effectiveStartAt = input.changes.effectiveStartAt === undefined
+        ? ms(current.effective_start_at)
+        : input.changes.effectiveStartAt
+      const effectiveEndAt = input.changes.effectiveEndAt === undefined
+        ? ms(current.effective_end_at)
+        : input.changes.effectiveEndAt
+      const notifyMiniProgram = input.changes.notifyMiniProgram ?? current.notify_mini_program
       const model = action.kind === "agent"
         ? action.model
         : { providerId: AUTOMATION_FREE_MODEL.providerId, modelId: AUTOMATION_FREE_MODEL.modelId, variant: null }
@@ -308,6 +340,11 @@ export class DenAutomationRepository implements AutomationRepository {
         schedule,
         model,
         action,
+        workspaceId,
+        connectors,
+        effectiveStartAt,
+        effectiveEndAt,
+        notifyMiniProgram,
         executionTarget,
         maximumRuntimeMs: current.maximum_runtime_ms,
       })
@@ -330,6 +367,11 @@ export class DenAutomationRepository implements AutomationRepository {
         model_id: model.modelId,
         model_variant: model.variant ?? null,
         action,
+        workspace_id: workspaceId,
+        connectors,
+        effective_start_at: date(effectiveStartAt),
+        effective_end_at: date(effectiveEndAt),
+        notify_mini_program: notifyMiniProgram,
         execution_target: executionTarget,
         maximum_runtime_ms: current.maximum_runtime_ms,
         digest,

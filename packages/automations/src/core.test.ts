@@ -97,6 +97,7 @@ describe("portable Automations core", () => {
       id: "revision_a", automationId: "automation_a", version: 1, instructions: "Run",
       schedule: { kind: "daily" as const, timezone: "UTC", hour: 9, minute: 0 },
       model: { providerId: "provider", modelId: "model" }, maximumRuntimeMs: 60_000,
+      connectors: [], notifyMiniProgram: false,
       digest: "0123456789abcdef", createdAt: 1,
     }
     const automation = {

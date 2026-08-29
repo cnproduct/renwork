@@ -5,11 +5,13 @@ import { readFile } from "node:fs/promises";
 test("platform super admin controls the private model catalog while members see RenWork choices", async ({ evidence }) => {
   const adminUi = await readFile("../ee/apps/den-web/components/renwork-model-catalog-admin.tsx", "utf8");
   const adminApi = await readFile("../ee/apps/den-api/src/routes/admin/model-catalog.ts", "utf8");
+  const modelCatalogService = await readFile("../ee/apps/den-api/src/model-catalog-service.ts", "utf8");
   const cloudApi = await readFile("../deploy/cloud-api-server/src/server.ts", "utf8");
   const metering = await readFile("../packages/rencredit-metering/src/service.ts", "utf8");
 
   expect(adminApi).toContain("adminRoute()");
-  expect(adminApi).toContain("RENWORK_MODEL_CATALOG_ADMIN_TOKEN");
+  expect(adminApi).not.toContain("RENWORK_MODEL_CATALOG_ADMIN_TOKEN");
+  expect(modelCatalogService).toContain("RENWORK_MODEL_CATALOG_ADMIN_TOKEN");
   expect(adminUi).toContain("真实 Key 必须注入服务端");
   expect(adminUi).toContain("普通用户模型选择器预览");
   expect(cloudApi).toContain("timingSafeEqual");

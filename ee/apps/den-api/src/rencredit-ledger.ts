@@ -18,6 +18,35 @@ type MemberId = typeof InferenceKeyTable.$inferSelect.org_membership_id
 type InferenceKeyId = typeof InferenceKeyTable.$inferSelect.id
 type ReservationId = typeof RenCreditReservationTable.$inferSelect.id
 
+export type RenCreditTaskReceipt = {
+  id: string
+  run_id: string
+  model_sku: string
+  billing_mode: "token_metered" | "free"
+  status: "reserved" | "captured" | "released"
+  reserved_microcredits: number
+  captured_microcredits: number
+  released_microcredits: number
+  actual_usage: RenWorkTokenUsage | null
+  has_result: boolean
+  created_at: string
+  settled_at: string | null
+}
+
+export type RenCreditLedgerRecord = {
+  id: string
+  reservation_id: string | null
+  entry_type: "grant" | "reserve" | "capture" | "release" | "refund" | "adjustment"
+  amount_microcredits: number
+  available_delta_microcredits: number
+  reserved_delta_microcredits: number
+  available_balance_after: number
+  reserved_balance_after: number
+  wallet_version_after: number
+  reason_code: string
+  created_at: string
+}
+
 export type InferencePrincipal = {
   organizationId: OrganizationId
   memberId: MemberId
@@ -45,6 +74,25 @@ function assertMicroCredits(value: number, field: string) {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${field} must be a non-negative safe integer.`)
 }
 
+function safeDate(value: Date | string | null): string | null {
+  if (!value) return null
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
+}
+
+function safeTokenUsage(value: unknown): RenWorkTokenUsage | null {
+  if (!value || typeof value !== "object") return null
+  const usage = value as Record<string, unknown>
+  const keys = ["inputTokens", "outputTokens", "reasoningTokens", "cacheReadTokens", "cacheWriteTokens"] as const
+  if (!keys.every((key) => Number.isSafeInteger(usage[key]) && (usage[key] as number) >= 0)) return null
+  return {
+    inputTokens: usage.inputTokens as number,
+    outputTokens: usage.outputTokens as number,
+    reasoningTokens: usage.reasoningTokens as number,
+    cacheReadTokens: usage.cacheReadTokens as number,
+    cacheWriteTokens: usage.cacheWriteTokens as number,
+  }
+}
+
 export async function authenticateInferenceKey(key: string): Promise<InferencePrincipal | null> {
   const [row] = await db
     .select({
@@ -69,13 +117,83 @@ export async function getRenCreditWallet(organizationId: OrganizationId) {
   return wallet ?? null
 }
 
-export async function listRenCreditLedger(organizationId: OrganizationId, limit = 50) {
-  return db
-    .select()
+/**
+ * Returns the organization's durable wallet, creating the zero-balance row on
+ * first access. Production callers must never synthesize an in-memory wallet:
+ * this MySQL row and its immutable ledger entries are the RenCredit source of
+ * truth for every product surface.
+ */
+export async function getOrCreateRenCreditWallet(organizationId: OrganizationId) {
+  await db.insert(RenCreditWalletTable).values({ organization_id: organizationId }).onDuplicateKeyUpdate({
+    set: { organization_id: organizationId },
+  })
+  const wallet = await getRenCreditWallet(organizationId)
+  if (!wallet) throw new Error("RENCREDIT_WALLET_UNAVAILABLE")
+  return wallet
+}
+
+export async function listRenCreditLedger(organizationId: OrganizationId, limit = 50): Promise<RenCreditLedgerRecord[]> {
+  const rows = await db
+    .select({
+      id: RenCreditLedgerEntryTable.id,
+      reservation_id: RenCreditLedgerEntryTable.reservation_id,
+      entry_type: RenCreditLedgerEntryTable.entry_type,
+      amount_microcredits: RenCreditLedgerEntryTable.amount_microcredits,
+      available_delta_microcredits: RenCreditLedgerEntryTable.available_delta_microcredits,
+      reserved_delta_microcredits: RenCreditLedgerEntryTable.reserved_delta_microcredits,
+      available_balance_after: RenCreditLedgerEntryTable.available_balance_after,
+      reserved_balance_after: RenCreditLedgerEntryTable.reserved_balance_after,
+      wallet_version_after: RenCreditLedgerEntryTable.wallet_version_after,
+      reason_code: RenCreditLedgerEntryTable.reason_code,
+      created_at: RenCreditLedgerEntryTable.created_at,
+    })
     .from(RenCreditLedgerEntryTable)
     .where(eq(RenCreditLedgerEntryTable.organization_id, organizationId))
     .orderBy(desc(RenCreditLedgerEntryTable.created_at))
     .limit(Math.max(1, Math.min(200, limit)))
+  return rows.map((row) => ({ ...row, created_at: safeDate(row.created_at)! }))
+}
+
+/**
+ * Returns only the signed-in member's task receipts. Provider routing,
+ * credentials, pricing snapshots and idempotency keys intentionally never
+ * cross this boundary.
+ */
+export async function listMemberRenCreditTaskReceipts(input: {
+  organizationId: OrganizationId
+  memberId: MemberId
+  limit?: number
+}): Promise<RenCreditTaskReceipt[]> {
+  const rows = await db
+    .select({
+      id: RenCreditReservationTable.id,
+      run_id: RenCreditReservationTable.run_id,
+      model_sku: RenCreditReservationTable.model_sku,
+      billing_mode: RenCreditReservationTable.billing_mode,
+      status: RenCreditReservationTable.status,
+      reserved_microcredits: RenCreditReservationTable.reserved_microcredits,
+      captured_microcredits: RenCreditReservationTable.captured_microcredits,
+      released_microcredits: RenCreditReservationTable.released_microcredits,
+      actual_usage: RenCreditReservationTable.actual_usage,
+      has_result: RenCreditReservationTable.has_result,
+      created_at: RenCreditReservationTable.created_at,
+      settled_at: RenCreditReservationTable.settled_at,
+    })
+    .from(RenCreditReservationTable)
+    .where(and(
+      eq(RenCreditReservationTable.organization_id, input.organizationId),
+      eq(RenCreditReservationTable.org_membership_id, input.memberId),
+    ))
+    .orderBy(desc(RenCreditReservationTable.created_at))
+    .limit(Math.max(1, Math.min(100, input.limit ?? 20)))
+
+  return rows.map((row) => ({
+    ...row,
+    billing_mode: row.billing_mode === "free" ? "free" : "token_metered",
+    actual_usage: safeTokenUsage(row.actual_usage),
+    created_at: safeDate(row.created_at)!,
+    settled_at: safeDate(row.settled_at),
+  }))
 }
 
 export async function grantRenCredit(input: {

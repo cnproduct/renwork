@@ -42,6 +42,7 @@ import { registerOrgRoutes } from "./routes/org/index.js"
 import { registerTelemetryRoutes } from "./routes/telemetry/index.js"
 import { registerInferenceGatewayRoutes } from "./routes/inference-gateway.js"
 import { registerVersionRoutes } from "./routes/version/index.js"
+import { registerRenworkCommerceRoutes } from "./routes/renwork-commerce/index.js"
 import { registerWebhookRoutes } from "./routes/webhooks/index.js"
 import { registerWorkerRoutes } from "./routes/workers/index.js"
 import type { AuthContextVariables } from "./session.js"
@@ -218,6 +219,7 @@ registerMemoryRoutes(app)
 registerAutomationRoutes(app)
 registerOrgRoutes(app)
 registerVersionRoutes(app)
+registerRenworkCommerceRoutes(app)
 registerWebhookRoutes(app)
 registerWorkerRoutes(app)
 registerMcpTokenRoutes(app)
