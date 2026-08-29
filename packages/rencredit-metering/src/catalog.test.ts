@@ -1,10 +1,28 @@
 import { describe, expect, test } from "bun:test";
 
-import { requireSuperAdmin, toPublicModelCatalog, validateAdminModelCatalog } from "./catalog.js";
+import { modelAllowedForPlan, requireSuperAdmin, toPublicModelCatalog, toPublicModelCatalogForPlan, validateAdminModelCatalog } from "./catalog.js";
 import { createDefaultRenWorkModelCatalog } from "./default-catalog.js";
 import { createTestCatalog } from "./test-fixtures.js";
 
 describe("RenWork model catalog", () => {
+  test("filters the member catalog by organization plan without exposing private routes", () => {
+    const catalog = createTestCatalog();
+    catalog.models[0]!.allowedPlanIds = ["individual"];
+    catalog.models.push({
+      ...catalog.models[0]!,
+      sku: "enterprise-only",
+      displayName: "Enterprise Only",
+      allowedPlanIds: ["enterprise"],
+      routes: catalog.models[0]!.routes.map((route) => ({ ...route, id: `${route.id}-enterprise` })),
+    });
+
+    expect(modelAllowedForPlan(catalog.models[0]!, "team")).toBe(true);
+    expect(modelAllowedForPlan(catalog.models.at(-1)!, "team")).toBe(false);
+    const publicCatalog = toPublicModelCatalogForPlan(catalog, "team");
+    expect(publicCatalog.models.map((model) => model.sku)).not.toContain("enterprise-only");
+    expect(JSON.stringify(publicCatalog)).not.toMatch(/providers|credentialRef|upstreamModelId|baseUrl/);
+  });
+
   test("publishes stable model SKUs without exposing routes or provider secrets", () => {
     const catalog = createTestCatalog();
     const publicCatalog = toPublicModelCatalog(catalog, new Date("2026-08-28T12:00:00.000Z"));

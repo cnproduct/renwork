@@ -80,6 +80,7 @@ import { SettingsStack } from "@/react-app/domains/settings/settings-section";
 import { AdvancedView } from "@/react-app/domains/settings/pages/advanced-view";
 import { AppearanceView } from "@/react-app/domains/settings/pages/appearance-view";
 import { CloudAccountView } from "@/react-app/domains/settings/pages/cloud-account-view";
+import { RenworkCommerceView } from "@/react-app/domains/settings/pages/renwork-commerce-view";
 import {
   EMPTY_CONNECT_CAPABILITY_INVENTORY,
   type ConnectCapabilityInventory,
@@ -291,6 +292,7 @@ export function parseSettingsPath(pathname: string): {
     case "debug":
       return { tab: head, redirectPath: null };
     case "cloud-account":
+    case "commerce":
     case "cloud-providers":
     case "memory":
       return { tab: head, redirectPath: null };
@@ -2403,6 +2405,8 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             session={denSession}
           />
         );
+      case "commerce":
+        return <RenworkCommerceView />;
       case "memory":
         return <MemoryView onOpenAccount={openCloudAccountSettings} />;
       case "cloud-providers":

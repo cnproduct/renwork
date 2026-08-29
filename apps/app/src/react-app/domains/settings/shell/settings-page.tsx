@@ -7,6 +7,7 @@ import {
   Cable,
   ChevronDown,
   CloudCog,
+  CreditCard,
   Cog,
   FolderLock,
   Info,
@@ -72,6 +73,8 @@ export function getSettingsTabIcon(tab: SettingsTab) {
       return FolderLock;
     case "cloud-account":
       return UserCircle;
+    case "commerce":
+      return CreditCard;
     case "connect":
       return Cable;
     case "cloud-marketplaces":
@@ -111,6 +114,8 @@ export function getSettingsTabLabel(tab: SettingsTab) {
       return t("settings.tab_permissions") || "权限管理";
     case "cloud-account":
       return t("settings.tab_cloud_account");
+    case "commerce":
+      return t("settings.tab_commerce");
     case "connect":
       return t("settings.tab_connect");
     case "cloud-marketplaces":
@@ -152,6 +157,8 @@ export function getSettingsTabDescription(tab: SettingsTab) {
       return "Authorized folders and file access";
     case "cloud-account":
       return t("settings.tab_description_cloud_account");
+    case "commerce":
+      return t("settings.tab_description_commerce");
     case "connect":
       return t("settings.tab_description_connect");
     case "cloud-marketplaces":
@@ -200,6 +207,7 @@ export function getGlobalSettingsTabs(
 
 export const CLOUD_SETTINGS_TABS: SettingsTab[] = [
   "cloud-account",
+  "commerce",
 ];
 
 export function isSettingsTabBeta(_tab: SettingsTab) {

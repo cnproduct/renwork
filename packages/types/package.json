@@ -34,6 +34,11 @@
       "development": "./src/renwork-semantic-tools.ts",
       "default": "./src/renwork-semantic-tools.ts"
     },
+    "./renwork-commerce": {
+      "types": "./src/renwork-commerce.ts",
+      "development": "./src/renwork-commerce.ts",
+      "default": "./src/renwork-commerce.ts"
+    },
     "./automations": {
       "types": "./src/automations.ts",
       "development": "./src/automations.ts",

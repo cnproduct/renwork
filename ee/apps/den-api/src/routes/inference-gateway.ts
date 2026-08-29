@@ -4,6 +4,7 @@ import {
   EMPTY_TOKEN_USAGE,
   calculateRenCreditMicroCharge,
   findPublishedAdminModel,
+  modelAllowedForPlan,
   normalizeOpenAiUsage,
   validateAdminModelCatalog,
   type RenWorkAdminModelCatalog,
@@ -163,11 +164,9 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
       return c.json({ error: { code: "INFERENCE_DISABLED", message: "RenWork inference is disabled for this organization." } }, 403)
     }
     const plan = parseOrganizationPlan(organization?.metadata).tier
-    const allowedPlans = new Set(model.allowedPlanIds)
-    const planAllowed = allowedPlans.size === 0 || allowedPlans.has(plan)
-      || plan === "team" && allowedPlans.has("individual")
-      || plan === "free" && allowedPlans.has("individual")
-    if (!planAllowed) return c.json({ error: { code: "PLAN_UPGRADE_REQUIRED", message: "This model is not included in the current plan." } }, 402)
+    if (!modelAllowedForPlan(model, plan)) {
+      return c.json({ error: { code: "PLAN_UPGRADE_REQUIRED", message: "This model is not included in the current plan." } }, 402)
+    }
 
     const providers = new Map(catalog.providers.map((provider) => [provider.id, provider]))
     const route = model.routes.filter((candidate) => candidate.enabled)
