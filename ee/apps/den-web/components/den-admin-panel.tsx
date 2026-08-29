@@ -126,6 +126,12 @@ type AdminOrganization = {
     source: "campaign" | "super_admin";
     expiresAt: string;
   } | null;
+  renworkSubscriptionRequest: {
+    id: string;
+    planId: string;
+    offerId: string;
+    requestedAt: string;
+  } | null;
 };
 
 type AdminPageInfo = {
@@ -374,6 +380,7 @@ function parseAdminPayload(payload: unknown): AdminPayload | null {
         const tier = plan.tier === "team" || plan.tier === "enterprise" ? plan.tier : "free";
         const capabilities = isRecord(value.capabilities) ? value.capabilities : {};
         const accessGrant = isRecord(value.renworkAccessGrant) ? value.renworkAccessGrant : null;
+        const subscriptionRequest = isRecord(value.renworkSubscriptionRequest) ? value.renworkSubscriptionRequest : null;
 
         return {
           id: value.id,
@@ -398,6 +405,18 @@ function parseAdminPayload(payload: unknown): AdminPayload | null {
           },
           renworkAccessGrant: accessGrant && (accessGrant.source === "campaign" || accessGrant.source === "super_admin") && typeof accessGrant.expiresAt === "string"
             ? { source: accessGrant.source, expiresAt: accessGrant.expiresAt }
+            : null,
+          renworkSubscriptionRequest: subscriptionRequest
+            && typeof subscriptionRequest.id === "string"
+            && typeof subscriptionRequest.planId === "string"
+            && typeof subscriptionRequest.offerId === "string"
+            && typeof subscriptionRequest.requestedAt === "string"
+            ? {
+                id: subscriptionRequest.id,
+                planId: subscriptionRequest.planId,
+                offerId: subscriptionRequest.offerId,
+                requestedAt: subscriptionRequest.requestedAt,
+              }
             : null
         };
       })
@@ -736,7 +755,8 @@ function buildFixtureOrganization(index: number): AdminOrganization {
     seatsFreeAdditional: target ? 20 : 0,
     billableSeatCount: target ? 103 : 0,
     capabilities: { installLinks: target, mcpConnections: target, codemodeScripts: false, cloud: false },
-    renworkAccessGrant: null
+    renworkAccessGrant: null,
+    renworkSubscriptionRequest: null
   };
 }
 
@@ -2374,6 +2394,12 @@ export function DenAdminPanel() {
                     <MetaCell
                       label="RenWork model access"
                       value={org.renworkAccessGrant ? `特批至 ${formatDateTime(org.renworkAccessGrant.expiresAt)}` : "订阅校验或无特批"}
+                    />
+                    <MetaCell
+                      label="RenWork 开通申请"
+                      value={org.renworkSubscriptionRequest
+                        ? `${org.renworkSubscriptionRequest.offerId} · ${formatDateTime(org.renworkSubscriptionRequest.requestedAt)}`
+                        : "暂无待处理申请"}
                     />
                     <div>
                       <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Free seats</p>

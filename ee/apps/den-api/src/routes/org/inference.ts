@@ -8,6 +8,7 @@ import { jsonValidator, orgRoleRoute } from "../../middleware/index.js"
 import { forbiddenSchema, invalidRequestSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
 import type { OrgRouteVariables } from "./shared.js"
 import { ensureOrganizationAdmin, orgAccessFailureStatus } from "./shared.js"
+import { getRenworkSubscriptionRequest } from "../../renwork-subscription-request.js"
 
 const inferenceSettingsSchema = z.object({
   enabled: z.boolean(),
@@ -29,6 +30,15 @@ const inferenceStatusSchema = z.object({
   proxyBaseUrl: z.string(),
   upstreamProviderConfigured: z.boolean(),
   subscribed: z.boolean().optional(),
+  subscriptionRequest: z.object({
+    id: z.string(),
+    status: z.literal("pending"),
+    catalogVersion: z.string(),
+    planId: z.string(),
+    offerId: z.string(),
+    requestedBy: z.string(),
+    requestedAt: z.string(),
+  }).nullable().optional(),
   buckets: z.array(inferenceUsageBucketSchema),
 }).meta({ ref: "InferenceStatus" })
 
@@ -158,6 +168,7 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
         inference: {
           ...await getInferenceStatus(payload.organization.id),
           subscribed: await organizationHasActiveInferenceSubscription(payload.organization.id),
+          subscriptionRequest: await getRenworkSubscriptionRequest(payload.organization.id),
         },
       })
     },

@@ -31,16 +31,20 @@ describe("RenWork Models page", () => {
     }
   });
 
-  test("keeps the billing subscribe and enable flows", () => {
-    expect(screen).toContain(': "Subscribe";');
-    expect(screen).not.toContain("Subscribe with Stripe");
+  test("uses the authoritative V7 plan request flow instead of legacy Stripe checkout", () => {
+    expect(screen).toContain("/v1/renwork/commerce/catalog");
+    expect(screen).toContain("/v1/renwork/commerce/access-requests");
+    expect(screen).toContain("Request access");
+    expect(screen).toContain("No free plan");
     expect(screen).toContain("Manage subscription");
-    expect(screen).toContain("/v1/billing/stripe/checkout");
+    expect(screen).not.toContain("/v1/billing/stripe/checkout");
+    expect(screen).not.toContain("$10 / user / month");
     expect(screen).toContain('method: "PATCH"');
   });
 
-  test("cross-links to bring your own keys", () => {
-    expect(screen).toContain("getCustomLlmProvidersRoute");
-    expect(screen).toContain("Set up Bring your Own Keys.");
+  test("does not advertise BYOK or local model fallback", () => {
+    expect(screen).not.toContain("Set up Bring your Own Keys.");
+    expect(screen).not.toContain("Keep your own provider keys");
+    expect(screen).toContain("no local model or personal API-key fallback");
   });
 });

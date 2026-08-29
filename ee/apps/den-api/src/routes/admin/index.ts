@@ -45,6 +45,7 @@ import { registerAdminModelCatalogRoutes } from "./model-catalog.js"
 import { registerAdminOrganizationModelPolicyRoutes } from "./model-policy.js"
 import { registerAdminRenCreditRoutes } from "./rencredit.js"
 import { readRenworkAccessGrant } from "../../renwork-access.js"
+import { readRenworkSubscriptionRequest } from "../../renwork-subscription-request.js"
 
 type UserId = typeof AuthUserTable.$inferSelect.id
 type OrganizationId = typeof OrganizationTable.$inferSelect.id
@@ -405,6 +406,7 @@ type AdminOrganizationRow = {
   billableSeatCount: number
   capabilities: ReturnType<typeof normalizeOrganizationCapabilities>
   renworkAccessGrant: ReturnType<typeof readRenworkAccessGrant>
+  renworkSubscriptionRequest: ReturnType<typeof readRenworkSubscriptionRequest>
 }
 
 type AdminSummary = {
@@ -902,6 +904,7 @@ async function shapeAdminOrganizationRows(rows: Array<Pick<typeof OrganizationTa
       billableSeatCount: seatCounts.chargeable,
       capabilities: readAdminVisibleOrganizationCapabilities(metadata),
       renworkAccessGrant: readRenworkAccessGrant(metadata),
+      renworkSubscriptionRequest: readRenworkSubscriptionRequest(metadata),
     }
   })
 }
@@ -1318,8 +1321,10 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
       if (!organization) return c.json({ error: "not_found", message: "Organization not found." }, 404)
 
       const currentUser = c.get("user")
+      const existingMetadata = normalizeMetadata(organization.metadata)
+      delete existingMetadata.renworkSubscriptionRequest
       const metadata = {
-        ...normalizeMetadata(organization.metadata),
+        ...existingMetadata,
         renworkAccessGrant: {
           status: "active",
           ...body.data,
