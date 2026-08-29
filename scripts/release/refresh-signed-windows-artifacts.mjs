@@ -44,6 +44,8 @@ async function regenerateBlockmap(installerPath) {
 
 function manifestName(installerName) {
   if (installerName.startsWith("renwork-cloud-win-")) return "cloud.yml";
+  if (installerName.startsWith("renwork-enterprise-win-")) return "enterprise.yml";
+  if (installerName.startsWith("renwork-win-")) return "latest.yml";
   // One-release compatibility for already-built signing bundles.
   if (installerName.startsWith("openwork-cloud-win-")) return "cloud.yml";
   if (installerName.startsWith("openwork-enterprise-win-")) return "enterprise.yml";
@@ -88,7 +90,7 @@ if (!existsSync(distRoot)) {
 }
 
 const installers = walk(distRoot).filter((file) =>
-  /^(?:renwork-cloud|openwork(?:-(?:cloud|enterprise))?)-win-(?:x64|arm64)-.+\.exe$/i.test(basename(file)),
+  /^(?:renwork(?:-(?:cloud|enterprise))?|openwork(?:-(?:cloud|enterprise))?)-win-(?:x64|arm64)-.+\.exe$/i.test(basename(file)),
 );
 
 if (installers.length !== expectedCount) {
