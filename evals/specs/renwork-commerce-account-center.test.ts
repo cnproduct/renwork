@@ -42,8 +42,16 @@ test("the account center reads RenCredit only from the durable organization wall
   const durableLedger = source(durableLedgerPath)
 
   expect(commerceView).toContain("client.getRenCreditWallet(organizationId)")
+  expect(commerceView).toContain("client.getRenCreditTaskReceipts(organizationId)")
+  expect(commerceView).toContain("canViewLedger ? client.getRenCreditLedger(organizationId)")
   expect(denClient).toContain('"/v1/rencredit/wallet"')
+  expect(denClient).toContain('`/v1/rencredit/receipts?limit=${encodeURIComponent(String(limit))}`')
+  expect(denClient).toContain('`/v1/rencredit/ledger?limit=${encodeURIComponent(String(limit))}`')
   expect(walletRoute).toContain("getOrCreateRenCreditWallet")
+  expect(walletRoute).toContain('"/v1/rencredit/receipts"')
+  expect(walletRoute).toContain("memberId: payload.currentMember.id")
+  expect(walletRoute).toContain('"/v1/rencredit/ledger"')
+  expect(walletRoute).toContain('orgRoleRoute(["admin"])')
   expect(walletRoute).not.toContain("available_microcredits: 0")
   expect(durableLedger).toContain("RenCreditWalletTable")
   expect(durableLedger).toContain("RenCreditLedgerEntryTable")
@@ -51,6 +59,10 @@ test("the account center reads RenCredit only from the durable organization wall
   expect(commerceView).toContain("commerce.credit_pending")
   expect(commerceView).toContain("commerce.free_core_notice")
   expect(commerceView).toContain("commerce.enterprise_admin_notice")
+  expect(commerceView).toContain('data-testid="rencredit-reserved-balance"')
+  expect(commerceView).toContain('data-testid="rencredit-task-receipt"')
+  expect(commerceView).toContain('data-testid="rencredit-admin-ledger"')
+  expect(commerceView).not.toMatch(/provider_response_id|upstream_model_id|credential_ref|idempotency_key/i)
 
   evidence.fact(
     "RenCredit has one production source of truth",

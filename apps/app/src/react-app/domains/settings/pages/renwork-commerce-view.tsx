@@ -7,8 +7,9 @@ import type {
   RenworkPlanOffer,
 } from "@openwork/types/renwork-commerce";
 import { formatRenCredit } from "@openwork/rencredit-metering";
-import { Check, Coins, RefreshCcw, ShieldCheck, Users } from "lucide-react";
+import { Check, Coins, History, LockKeyhole, ReceiptText, RefreshCcw, ShieldCheck, Users } from "lucide-react";
 
+import { isDenOrgAdminRole, type DenRenCreditLedgerEntry, type DenRenCreditTaskReceipt } from "@/app/lib/den";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
@@ -66,6 +67,93 @@ function offerCta(offer: RenworkPlanOffer): string {
 function formatRenCreditBalance(microCredits: number): string {
   const sign = microCredits < 0 ? "−" : "";
   return `${sign}${formatRenCredit(Math.abs(microCredits))}`;
+}
+
+function formatRenCreditDelta(microCredits: number): string {
+  if (microCredits === 0) return "0";
+  return `${microCredits > 0 ? "+" : "−"}${formatRenCredit(Math.abs(microCredits))}`;
+}
+
+function formatReceiptDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function receiptStatus(receipt: DenRenCreditTaskReceipt) {
+  if (receipt.status === "reserved") return { label: t("commerce.receipt_status_reserved"), className: "border-amber-7/40 bg-amber-3 text-amber-11" };
+  if (receipt.status === "captured") return { label: t("commerce.receipt_status_captured"), className: "border-emerald-7/40 bg-emerald-3 text-emerald-11" };
+  return { label: t("commerce.receipt_status_released"), className: "border-dls-border bg-dls-hover text-dls-secondary" };
+}
+
+function receiptAmount(receipt: DenRenCreditTaskReceipt) {
+  if (receipt.status === "reserved") return receipt.reservedMicroCredits;
+  return receipt.capturedMicroCredits;
+}
+
+function receiptTokenTotal(receipt: DenRenCreditTaskReceipt) {
+  const usage = receipt.actualUsage;
+  if (!usage) return null;
+  return usage.inputTokens + usage.outputTokens + usage.reasoningTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
+}
+
+function TaskReceiptRow({ receipt }: { receipt: DenRenCreditTaskReceipt }) {
+  const status = receiptStatus(receipt);
+  const tokenTotal = receiptTokenTotal(receipt);
+  return (
+    <div className="flex flex-col gap-3 border-b border-dls-border py-3 last:border-b-0 sm:flex-row sm:items-start sm:justify-between" data-testid="rencredit-task-receipt">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="truncate text-sm font-medium text-dls-text">{receipt.modelSku}</span>
+          <Badge variant="outline" className={status.className}>{status.label}</Badge>
+          {receipt.billingMode === "free" ? <Badge variant="secondary">{t("commerce.receipt_free")}</Badge> : null}
+        </div>
+        <div className="mt-1 break-all text-xs text-dls-secondary">
+          {formatReceiptDate(receipt.createdAt)} · {t("commerce.receipt_task_id", { id: receipt.runId })}
+        </div>
+        <div className="mt-1 text-xs text-dls-secondary">
+          {tokenTotal === null
+            ? t("commerce.receipt_usage_pending")
+            : t("commerce.receipt_tokens", {
+                total: new Intl.NumberFormat().format(tokenTotal),
+                input: new Intl.NumberFormat().format(receipt.actualUsage!.inputTokens),
+                output: new Intl.NumberFormat().format(receipt.actualUsage!.outputTokens),
+              })}
+        </div>
+      </div>
+      <div className="shrink-0 text-left sm:text-right">
+        <div className="text-sm font-semibold tabular-nums text-dls-text">
+          {receipt.status === "released" ? formatRenCreditBalance(0) : formatRenCreditBalance(receiptAmount(receipt))}
+        </div>
+        <div className="mt-1 text-xs text-dls-secondary">
+          {receipt.status === "reserved"
+            ? t("commerce.receipt_frozen")
+            : receipt.status === "released"
+              ? t("commerce.receipt_no_charge")
+              : t("commerce.receipt_charged")}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ledgerLabel(entry: DenRenCreditLedgerEntry) {
+  if (entry.entryType === "grant") return t("commerce.ledger_grant");
+  if (entry.entryType === "reserve") return t("commerce.ledger_reserve");
+  if (entry.entryType === "capture") return t("commerce.ledger_capture");
+  if (entry.entryType === "release") return t("commerce.ledger_release");
+  if (entry.entryType === "refund") return t("commerce.ledger_refund");
+  return t("commerce.ledger_adjustment");
+}
+
+function ledgerDisplayDelta(entry: DenRenCreditLedgerEntry) {
+  if (entry.entryType === "capture") return -entry.amountMicroCredits;
+  return entry.availableDeltaMicroCredits;
 }
 
 function PlanCard(props: {
@@ -130,8 +218,11 @@ export function RenworkCommerceView() {
   const [interval, setInterval] = React.useState<BillingInterval>("annual");
   const [catalog, setCatalog] = React.useState<Awaited<ReturnType<typeof client.getRenworkPlanCatalog>> | null>(null);
   const [wallet, setWallet] = React.useState<Awaited<ReturnType<typeof client.getRenCreditWallet>> | null>(null);
+  const [receipts, setReceipts] = React.useState<DenRenCreditTaskReceipt[]>([]);
+  const [ledger, setLedger] = React.useState<DenRenCreditLedgerEntry[]>([]);
   const [walletLoading, setWalletLoading] = React.useState(false);
   const [walletError, setWalletError] = React.useState(false);
+  const [activityError, setActivityError] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -152,29 +243,48 @@ export function RenworkCommerceView() {
     void loadCatalog();
   }, [loadCatalog]);
 
-  const loadWallet = React.useCallback(async () => {
+  const canViewLedger = isDenOrgAdminRole(activeOrganization?.role);
+
+  const loadCreditAccount = React.useCallback(async () => {
     const organizationId = activeOrganization?.id;
     if (!isSignedIn || !organizationId) {
       setWallet(null);
+      setReceipts([]);
+      setLedger([]);
       setWalletError(false);
+      setActivityError(false);
       setWalletLoading(false);
       return;
     }
     setWalletLoading(true);
     setWalletError(false);
-    try {
-      setWallet(await client.getRenCreditWallet(organizationId));
-    } catch {
+    setActivityError(false);
+    const [walletResult, receiptsResult, ledgerResult] = await Promise.allSettled([
+      client.getRenCreditWallet(organizationId),
+      client.getRenCreditTaskReceipts(organizationId),
+      canViewLedger ? client.getRenCreditLedger(organizationId) : Promise.resolve([]),
+    ]);
+    if (walletResult.status === "fulfilled") setWallet(walletResult.value);
+    else {
       setWallet(null);
       setWalletError(true);
-    } finally {
-      setWalletLoading(false);
     }
-  }, [activeOrganization?.id, client, isSignedIn]);
+    if (receiptsResult.status === "fulfilled") setReceipts(receiptsResult.value);
+    else {
+      setReceipts([]);
+      setActivityError(true);
+    }
+    if (ledgerResult.status === "fulfilled") setLedger(ledgerResult.value);
+    else {
+      setLedger([]);
+      setActivityError(true);
+    }
+    setWalletLoading(false);
+  }, [activeOrganization?.id, canViewLedger, client, isSignedIn]);
 
   React.useEffect(() => {
-    void loadWallet();
-  }, [loadWallet]);
+    void loadCreditAccount();
+  }, [loadCreditAccount]);
 
   const plans = catalog?.plans
     .filter((plan) => plan.audience === audience)
@@ -217,18 +327,31 @@ export function RenworkCommerceView() {
           </SettingsInset>
 
           <SettingsInset
-            className="flex items-start gap-3"
+            className="flex min-w-0 items-start gap-3 overflow-hidden"
             data-testid={wallet ? "rencredit-balance" : "rencredit-balance-unavailable"}
           >
             <Coins className="mt-0.5 size-5 shrink-0 text-amber-10" />
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-dls-text">RenCredit</div>
-              <div className="mt-1 text-xl font-semibold text-dls-text">
-                {walletLoading ? "…" : wallet ? formatRenCreditBalance(wallet.availableMicroCredits) : "—"}
+              <div className="mt-2 grid grid-cols-2 gap-4">
+                <div>
+                  <div className="whitespace-nowrap text-[11px] uppercase tracking-wide text-dls-secondary">{t("commerce.credit_available")}</div>
+                  <div className="mt-1 text-xl font-semibold tabular-nums text-dls-text">
+                    {walletLoading ? "…" : wallet ? formatRenCreditBalance(wallet.availableMicroCredits) : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1 whitespace-nowrap text-[11px] uppercase tracking-wide text-dls-secondary">
+                    <LockKeyhole className="size-3" />{t("commerce.credit_frozen")}
+                  </div>
+                  <div className="mt-1 text-xl font-semibold tabular-nums text-dls-text" data-testid="rencredit-reserved-balance">
+                    {walletLoading ? "…" : wallet ? formatRenCreditBalance(wallet.reservedMicroCredits) : "—"}
+                  </div>
+                </div>
               </div>
               <div className="mt-1 text-xs text-dls-secondary">
                 {wallet
-                  ? t("commerce.credit_reserved", { amount: formatRenCreditBalance(wallet.reservedMicroCredits) })
+                  ? t("commerce.credit_durable")
                   : walletError
                     ? t("commerce.credit_error")
                     : t("commerce.credit_pending")}
@@ -238,6 +361,73 @@ export function RenworkCommerceView() {
         </div>
 
         <SettingsNotice>{t("commerce.free_core_notice")}</SettingsNotice>
+      </SettingsSection>
+
+      <SettingsSection>
+        <SettingsSectionHeader>
+          <SettingsSectionHeaderContent>
+            <SettingsSectionHeaderTitle>{t("commerce.activity_title")}</SettingsSectionHeaderTitle>
+            <SettingsSectionHeaderDescription>{t("commerce.activity_description")}</SettingsSectionHeaderDescription>
+          </SettingsSectionHeaderContent>
+          <Button size="sm" variant="outline" disabled={walletLoading || !isSignedIn} onClick={() => void loadCreditAccount()}>
+            <RefreshCcw className={walletLoading ? "animate-spin" : ""} />
+            {t("commerce.refresh")}
+          </Button>
+        </SettingsSectionHeader>
+
+        {activityError ? <SettingsNotice tone="error">{t("commerce.activity_error")}</SettingsNotice> : null}
+
+        <SettingsInset className="min-w-0 overflow-hidden">
+          <div className="flex items-start gap-3">
+            <ReceiptText className="mt-0.5 size-5 shrink-0 text-blue-10" />
+            <div>
+              <div className="text-sm font-medium text-dls-text">{t("commerce.receipts_title")}</div>
+              <div className="mt-1 text-xs text-dls-secondary">{t("commerce.receipts_description")}</div>
+            </div>
+          </div>
+          <div className="mt-3">
+            {walletLoading && receipts.length === 0 ? (
+              <div className="py-4 text-sm text-dls-secondary">{t("commerce.activity_loading")}</div>
+            ) : receipts.length === 0 ? (
+              <div className="py-4 text-sm text-dls-secondary">{t("commerce.receipts_empty")}</div>
+            ) : receipts.map((receipt) => <TaskReceiptRow key={receipt.id} receipt={receipt} />)}
+          </div>
+        </SettingsInset>
+
+        {canViewLedger ? (
+          <SettingsInset className="min-w-0 overflow-hidden" data-testid="rencredit-admin-ledger">
+            <div className="flex items-start gap-3">
+              <History className="mt-0.5 size-5 shrink-0 text-violet-10" />
+              <div>
+                <div className="text-sm font-medium text-dls-text">{t("commerce.ledger_title")}</div>
+                <div className="mt-1 text-xs text-dls-secondary">{t("commerce.ledger_description")}</div>
+              </div>
+            </div>
+            <div className="mt-3">
+              {walletLoading && ledger.length === 0 ? (
+                <div className="py-4 text-sm text-dls-secondary">{t("commerce.activity_loading")}</div>
+              ) : ledger.length === 0 ? (
+                <div className="py-4 text-sm text-dls-secondary">{t("commerce.ledger_empty")}</div>
+              ) : ledger.map((entry) => (
+                <div key={entry.id} className="flex flex-col gap-2 border-b border-dls-border py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between" data-testid="rencredit-ledger-entry">
+                  <div>
+                    <div className="text-sm font-medium text-dls-text">{ledgerLabel(entry)}</div>
+                    <div className="mt-1 break-words text-xs text-dls-secondary">{formatReceiptDate(entry.createdAt)} · {entry.reasonCode}</div>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <div className="text-sm font-semibold tabular-nums text-dls-text">{formatRenCreditDelta(ledgerDisplayDelta(entry))}</div>
+                    <div className="mt-1 text-xs text-dls-secondary">
+                      {t("commerce.ledger_balance_after", {
+                        available: formatRenCreditBalance(entry.availableBalanceAfter),
+                        frozen: formatRenCreditBalance(entry.reservedBalanceAfter),
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SettingsInset>
+        ) : null}
       </SettingsSection>
 
       <SettingsSection>

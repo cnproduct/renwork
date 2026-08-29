@@ -225,6 +225,43 @@ export type DenRenCreditWallet = {
   version: number;
 };
 
+export type DenRenCreditTokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+};
+
+export type DenRenCreditTaskReceipt = {
+  id: string;
+  runId: string;
+  modelSku: string;
+  billingMode: "token_metered" | "free";
+  status: "reserved" | "captured" | "released";
+  reservedMicroCredits: number;
+  capturedMicroCredits: number;
+  releasedMicroCredits: number;
+  actualUsage: DenRenCreditTokenUsage | null;
+  hasResult: boolean;
+  createdAt: string;
+  settledAt: string | null;
+};
+
+export type DenRenCreditLedgerEntry = {
+  id: string;
+  reservationId: string | null;
+  entryType: "grant" | "reserve" | "capture" | "release" | "refund" | "adjustment";
+  amountMicroCredits: number;
+  availableDeltaMicroCredits: number;
+  reservedDeltaMicroCredits: number;
+  availableBalanceAfter: number;
+  reservedBalanceAfter: number;
+  walletVersionAfter: number;
+  reasonCode: string;
+  createdAt: string;
+};
+
 export type DenCanonicalOrgRole = "super-admin" | "owner" | "admin" | "member";
 export type DenOrgRole = string;
 
@@ -571,6 +608,115 @@ function getRenCreditWallet(payload: unknown): DenRenCreditWallet | null {
     status,
     version,
   };
+}
+
+function readSafeInteger(record: Record<string, unknown>, key: string): number | null {
+  const value = record[key];
+  return typeof value === "number" && Number.isSafeInteger(value) ? value : null;
+}
+
+function readRenCreditTokenUsage(value: unknown): DenRenCreditTokenUsage | null {
+  if (!isRecord(value)) return null;
+  const inputTokens = readSafeInteger(value, "inputTokens");
+  const outputTokens = readSafeInteger(value, "outputTokens");
+  const reasoningTokens = readSafeInteger(value, "reasoningTokens");
+  const cacheReadTokens = readSafeInteger(value, "cacheReadTokens");
+  const cacheWriteTokens = readSafeInteger(value, "cacheWriteTokens");
+  if ([inputTokens, outputTokens, reasoningTokens, cacheReadTokens, cacheWriteTokens].some((entry) => entry === null || entry < 0)) {
+    return null;
+  }
+  return {
+    inputTokens: inputTokens!,
+    outputTokens: outputTokens!,
+    reasoningTokens: reasoningTokens!,
+    cacheReadTokens: cacheReadTokens!,
+    cacheWriteTokens: cacheWriteTokens!,
+  };
+}
+
+function getRenCreditTaskReceipts(payload: unknown): DenRenCreditTaskReceipt[] | null {
+  if (!isRecord(payload) || !Array.isArray(payload.receipts)) return null;
+  const receipts: DenRenCreditTaskReceipt[] = [];
+  for (const value of payload.receipts) {
+    if (!isRecord(value)) return null;
+    const id = typeof value.id === "string" ? value.id : "";
+    const runId = typeof value.run_id === "string" ? value.run_id : "";
+    const modelSku = typeof value.model_sku === "string" ? value.model_sku : "";
+    const billingMode = value.billing_mode;
+    const status = value.status;
+    const reservedMicroCredits = readSafeInteger(value, "reserved_microcredits");
+    const capturedMicroCredits = readSafeInteger(value, "captured_microcredits");
+    const releasedMicroCredits = readSafeInteger(value, "released_microcredits");
+    const createdAt = typeof value.created_at === "string" ? value.created_at : "";
+    const settledAt = value.settled_at === null || typeof value.settled_at === "string" ? value.settled_at : undefined;
+    if (
+      !id || !runId || !modelSku || !createdAt
+      || (billingMode !== "token_metered" && billingMode !== "free")
+      || (status !== "reserved" && status !== "captured" && status !== "released")
+      || reservedMicroCredits === null || reservedMicroCredits < 0
+      || capturedMicroCredits === null || capturedMicroCredits < 0
+      || releasedMicroCredits === null || releasedMicroCredits < 0
+      || typeof value.has_result !== "boolean"
+      || settledAt === undefined
+    ) return null;
+    const actualUsage = value.actual_usage === null ? null : readRenCreditTokenUsage(value.actual_usage);
+    if (value.actual_usage !== null && !actualUsage) return null;
+    receipts.push({
+      id,
+      runId,
+      modelSku,
+      billingMode,
+      status,
+      reservedMicroCredits,
+      capturedMicroCredits,
+      releasedMicroCredits,
+      actualUsage,
+      hasResult: value.has_result,
+      createdAt,
+      settledAt,
+    });
+  }
+  return receipts;
+}
+
+function getRenCreditLedgerEntries(payload: unknown): DenRenCreditLedgerEntry[] | null {
+  if (!isRecord(payload) || !Array.isArray(payload.entries)) return null;
+  const entries: DenRenCreditLedgerEntry[] = [];
+  for (const value of payload.entries) {
+    if (!isRecord(value)) return null;
+    const id = typeof value.id === "string" ? value.id : "";
+    const reservationId = value.reservation_id === null || typeof value.reservation_id === "string" ? value.reservation_id : undefined;
+    const entryType = value.entry_type;
+    const amountMicroCredits = readSafeInteger(value, "amount_microcredits");
+    const availableDeltaMicroCredits = readSafeInteger(value, "available_delta_microcredits");
+    const reservedDeltaMicroCredits = readSafeInteger(value, "reserved_delta_microcredits");
+    const availableBalanceAfter = readSafeInteger(value, "available_balance_after");
+    const reservedBalanceAfter = readSafeInteger(value, "reserved_balance_after");
+    const walletVersionAfter = readSafeInteger(value, "wallet_version_after");
+    const reasonCode = typeof value.reason_code === "string" ? value.reason_code : "";
+    const createdAt = typeof value.created_at === "string" ? value.created_at : "";
+    if (
+      !id || reservationId === undefined || !reasonCode || !createdAt
+      || !["grant", "reserve", "capture", "release", "refund", "adjustment"].includes(String(entryType))
+      || amountMicroCredits === null || availableDeltaMicroCredits === null || reservedDeltaMicroCredits === null
+      || availableBalanceAfter === null || reservedBalanceAfter === null || reservedBalanceAfter < 0
+      || walletVersionAfter === null || walletVersionAfter < 0
+    ) return null;
+    entries.push({
+      id,
+      reservationId,
+      entryType: entryType as DenRenCreditLedgerEntry["entryType"],
+      amountMicroCredits,
+      availableDeltaMicroCredits,
+      reservedDeltaMicroCredits,
+      availableBalanceAfter,
+      reservedBalanceAfter,
+      walletVersionAfter,
+      reasonCode,
+      createdAt,
+    });
+  }
+  return entries;
 }
 
 function readStringArray(value: unknown): string[] {
@@ -2574,6 +2720,32 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
         throw new DenApiError(409, "rencredit_wallet_scope_mismatch", "RenCredit wallet did not match the active organization.");
       }
       return wallet;
+    },
+
+    async getRenCreditTaskReceipts(orgId: string, limit = 20): Promise<DenRenCreditTaskReceipt[]> {
+      const payload = await requestJson<unknown>(baseUrls, `/v1/rencredit/receipts?limit=${encodeURIComponent(String(limit))}`, {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      const receipts = getRenCreditTaskReceipts(payload);
+      if (!receipts) {
+        throw new DenApiError(500, "invalid_rencredit_receipts_payload", "RenCredit task receipt response was invalid.");
+      }
+      return receipts;
+    },
+
+    async getRenCreditLedger(orgId: string, limit = 50): Promise<DenRenCreditLedgerEntry[]> {
+      const payload = await requestJson<unknown>(baseUrls, `/v1/rencredit/ledger?limit=${encodeURIComponent(String(limit))}`, {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      const entries = getRenCreditLedgerEntries(payload);
+      if (!entries) {
+        throw new DenApiError(500, "invalid_rencredit_ledger_payload", "RenCredit ledger response was invalid.");
+      }
+      return entries;
     },
 
     async getDesktopConfig(orgId?: string | null): Promise<DenDesktopConfig> {

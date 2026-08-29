@@ -5,6 +5,7 @@ import { join } from "node:path"
 const root = join(import.meta.dir, "..")
 const gateway = readFileSync(join(root, "src", "routes", "inference-gateway.ts"), "utf8")
 const ledger = readFileSync(join(root, "src", "rencredit-ledger.ts"), "utf8")
+const orgInferenceRoute = readFileSync(join(root, "src", "routes", "org", "inference.ts"), "utf8")
 const schema = readFileSync(join(root, "..", "..", "packages", "den-db", "src", "schema", "inference.ts"), "utf8")
 const migration = readFileSync(join(root, "..", "..", "packages", "den-db", "drizzle", "0067_adorable_leper_queen.sql"), "utf8")
 
@@ -42,5 +43,28 @@ describe("RenCredit persistent multi-tenant ledger", () => {
     expect(migration).toContain("UNIQUE(`organization_id`,`idempotency_key`)")
     expect(migration).toContain("UNIQUE(`organization_id`,`provider_response_id`)")
     expect(ledger).toContain('.for("update")')
+  })
+
+  test("serves member-scoped receipts and admin-only sanitized ledger records", () => {
+    expect(orgInferenceRoute).toContain('"/v1/rencredit/receipts"')
+    expect(orgInferenceRoute).toContain("memberId: payload.currentMember.id")
+    expect(orgInferenceRoute).toContain('"/v1/rencredit/ledger"')
+    expect(orgInferenceRoute).toContain('orgRoleRoute(["admin"])')
+    expect(ledger).toContain("eq(RenCreditReservationTable.org_membership_id, input.memberId)")
+
+    const publicLedgerSelector = ledger.slice(
+      ledger.indexOf("export async function listRenCreditLedger"),
+      ledger.indexOf("export async function listMemberRenCreditTaskReceipts"),
+    )
+    expect(publicLedgerSelector).not.toContain("idempotency_key")
+    expect(publicLedgerSelector).not.toContain("metadata:")
+
+    const receiptSelector = ledger.slice(
+      ledger.indexOf("export async function listMemberRenCreditTaskReceipts"),
+      ledger.indexOf("export async function grantRenCredit"),
+    )
+    for (const secretField of ["provider_id", "upstream_model_id", "inference_key_id", "idempotency_key", "pricing_snapshot", "provider_response_id"]) {
+      expect(receiptSelector).not.toContain(secretField)
+    }
   })
 })
