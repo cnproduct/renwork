@@ -43,7 +43,7 @@ describe("Electron distribution configs", () => {
     assert.equal(config.publish.repo, "renwork");
   });
 
-  it("defines an enterprise flavor with the standard app identity and release provider", async () => {
+  it("defines a RenWork-branded enterprise flavor with the compatibility protocol and release provider", async () => {
     const config = await readConfig("electron-builder.enterprise.yml");
     assert.equal(config.extends, "./electron-builder.base.yml");
     assert.equal(config.appId, "com.differentai.openwork");
@@ -56,7 +56,7 @@ describe("Electron distribution configs", () => {
     assert.equal(config.publish[0].channel, "enterprise");
     assert.equal(
       config.artifactName,
-      "openwork-enterprise-${os}-${arch}-${version}.${ext}",
+      "renwork-enterprise-${os}-${arch}-${version}.${ext}",
     );
   });
 

@@ -11,7 +11,7 @@ on:
         required: false
         type: string
       release_name:
-        description: "Release title (defaults to OpenWork <tag>)"
+        description: "Release title (defaults to RenWork <tag>)"
         required: false
         type: string
       release_body:
@@ -121,19 +121,19 @@ jobs:
           if [ -n "$RELEASE_NAME_INPUT" ]; then
             RELEASE_NAME="$RELEASE_NAME_INPUT"
           else
-            RELEASE_NAME="OpenWork $TAG"
+            RELEASE_NAME="RenWork $TAG"
           fi
 
           RELEASE_BODY_INPUT="${INPUT_RELEASE_BODY:-}"
           if [ -n "$RELEASE_BODY_INPUT" ]; then
             RELEASE_BODY="$RELEASE_BODY_INPUT"
           else
-            printf -v RELEASE_BODY '%s\n\nOpenWork %s desktop release.\n\n%s\n%s\n%s\n%s' \
+            printf -v RELEASE_BODY '%s\n\nRenWork %s desktop release.\n\n%s\n%s\n%s\n%s' \
               "## What's new" \
               "$TAG" \
-              "- Public artifacts use the openwork-* naming convention." \
+              "- Public artifacts use the renwork-* naming convention." \
               "- Cloud artifacts use renwork-cloud-* and require sign-in without enterprise activation." \
-              "- Enterprise artifacts use openwork-enterprise-* while retaining the standard OpenWork app identity." \
+              "- Enterprise artifacts use renwork-enterprise-* and the RenWork Enterprise app identity." \
               "- Public, Cloud, and enterprise Electron builds use separate updater manifests on this release."
           fi
 
@@ -274,7 +274,7 @@ jobs:
             os_type: macos
             artifact: electron-macos-arm64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--mac --arm64"
             target_triple: aarch64-apple-darwin
@@ -282,7 +282,7 @@ jobs:
             os_type: macos
             artifact: electron-macos-x64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--mac --x64"
             target_triple: x86_64-apple-darwin
@@ -290,7 +290,7 @@ jobs:
             os_type: linux
             artifact: electron-linux-x64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--linux --x64"
             target_triple: x86_64-unknown-linux-gnu
@@ -298,7 +298,7 @@ jobs:
             os_type: linux
             artifact: electron-linux-arm64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--linux --arm64"
             target_triple: aarch64-unknown-linux-gnu
@@ -306,7 +306,7 @@ jobs:
             os_type: windows
             artifact: electron-windows-x64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--win --x64"
             target_triple: x86_64-pc-windows-msvc
@@ -314,7 +314,7 @@ jobs:
             os_type: windows
             artifact: electron-windows-arm64
             builder_config: electron-builder.yml
-            asset_prefix: openwork
+            asset_prefix: renwork
             manifest_pattern: latest*.yml
             electron_args: "--win --arm64"
             target_triple: aarch64-pc-windows-msvc
@@ -370,7 +370,7 @@ jobs:
             os_type: macos
             artifact: electron-enterprise-macos-arm64
             builder_config: electron-builder.enterprise.yml
-            asset_prefix: openwork-enterprise
+            asset_prefix: renwork-enterprise
             manifest_pattern: enterprise*.yml
             electron_args: "--mac --arm64"
             target_triple: aarch64-apple-darwin
@@ -378,7 +378,7 @@ jobs:
             os_type: macos
             artifact: electron-enterprise-macos-x64
             builder_config: electron-builder.enterprise.yml
-            asset_prefix: openwork-enterprise
+            asset_prefix: renwork-enterprise
             manifest_pattern: enterprise*.yml
             electron_args: "--mac --x64"
             target_triple: x86_64-apple-darwin
@@ -386,7 +386,7 @@ jobs:
             os_type: linux
             artifact: electron-enterprise-linux-x64
             builder_config: electron-builder.enterprise.yml
-            asset_prefix: openwork-enterprise
+            asset_prefix: renwork-enterprise
             manifest_pattern: enterprise*.yml
             electron_args: "--linux --x64"
             target_triple: x86_64-unknown-linux-gnu
@@ -394,7 +394,7 @@ jobs:
             os_type: linux
             artifact: electron-enterprise-linux-arm64
             builder_config: electron-builder.enterprise.yml
-            asset_prefix: openwork-enterprise
+            asset_prefix: renwork-enterprise
             manifest_pattern: enterprise*.yml
             electron_args: "--linux --arm64"
             target_triple: aarch64-unknown-linux-gnu
@@ -402,7 +402,7 @@ jobs:
             os_type: windows
             artifact: electron-enterprise-windows-x64
             builder_config: electron-builder.enterprise.yml
-            asset_prefix: openwork-enterprise
+            asset_prefix: renwork-enterprise
             manifest_pattern: enterprise*.yml
             electron_args: "--win --x64"
             target_triple: x86_64-pc-windows-msvc
@@ -410,7 +410,7 @@ jobs:
             os_type: windows
             artifact: electron-enterprise-windows-arm64
             builder_config: electron-builder.enterprise.yml
-            asset_prefix: openwork-enterprise
+            asset_prefix: renwork-enterprise
             manifest_pattern: enterprise*.yml
             electron_args: "--win --arm64"
             target_triple: aarch64-pc-windows-msvc
@@ -554,14 +554,14 @@ jobs:
       # electron-builder may still emit latest*.yml for a custom distribution.
       # Normalize each non-public feed so it cannot update into another flavor.
       - name: Normalize custom distribution updater manifests
-        if: matrix.asset_prefix != 'openwork'
+        if: matrix.asset_prefix != 'renwork'
         shell: bash
         run: |
           set -euo pipefail
           cd apps/desktop/dist-electron
           shopt -s nullglob
           channel="${{ matrix.asset_prefix }}"
-          channel="${channel#openwork-}"
+          channel="${channel#renwork-}"
           for manifest in latest*.yml; do
             target="${channel}${manifest#latest}"
             if [ -e "$target" ]; then
@@ -952,7 +952,7 @@ jobs:
           version="${RELEASE_TAG#v}"
           branch="automation/aur-${version}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           git add packaging/aur/PKGBUILD packaging/aur/.SRCINFO
-          git -c user.name="OpenWork Release Bot" \
+          git -c user.name="RenWork Release Bot" \
               -c user.email="release-bot@users.noreply.github.com" \
               commit -m "chore(aur): update PKGBUILD for ${version}"
           git push origin "HEAD:${branch}"
