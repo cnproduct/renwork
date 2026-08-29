@@ -15,13 +15,13 @@ ignorePaths = [
 ]
 
 [defaults.agent]
-model = "openrouter/deepseek/deepseek-v4-flash"
+model = "openrouter/minimax/minimax-m3:free"
 
 # Auxiliary verifies/merges findings and gates what survives to the report;
 # keep it on the same strong model so weak verification can't cause a false
 # clearance.
 [defaults.auxiliary]
-model = "openrouter/deepseek/deepseek-v4-flash"
+model = "openrouter/minimax/minimax-m3:free"
 
 [[skills]]
 name = "diff-security-review"
