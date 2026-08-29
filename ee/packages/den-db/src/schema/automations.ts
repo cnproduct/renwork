@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm"
-import { bigint, index, int, json, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core"
+import { bigint, boolean, index, int, json, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core"
 import type {
   AutomationAction,
   AutomationError,
@@ -53,13 +53,18 @@ export const AutomationRevisionTable = mysqlTable(
     automation_id: denTypeIdColumn("automation", "automation_id").notNull(),
     version: int("version").notNull(),
     instructions: encryptedMediumTextColumn("instructions").notNull(),
-    schedule_kind: mysqlEnum("schedule_kind", ["once", "daily", "weekly"]).notNull(),
+    schedule_kind: mysqlEnum("schedule_kind", ["once", "daily", "weekly", "monthly", "interval"]).notNull(),
     schedule_config: json("schedule_config").$type<AutomationSchedule>().notNull(),
     timezone: varchar("timezone", { length: 120 }).notNull(),
     provider_id: varchar("provider_id", { length: 160 }).notNull(),
     model_id: varchar("model_id", { length: 240 }).notNull(),
     model_variant: varchar("model_variant", { length: 60 }),
     action: encryptedJsonColumn<AutomationAction>("action"),
+    workspace_id: varchar("workspace_id", { length: 160 }),
+    connectors: json("connectors").$type<string[]>().notNull(),
+    effective_start_at: timestamp("effective_start_at", { fsp: 3 }),
+    effective_end_at: timestamp("effective_end_at", { fsp: 3 }),
+    notify_mini_program: boolean("notify_mini_program").notNull().default(false),
     execution_target: mysqlEnum("execution_target", ["desktop", "cloud"]).notNull().default("desktop"),
     maximum_runtime_ms: int("maximum_runtime_ms").notNull(),
     digest: varchar("digest", { length: 128 }).notNull(),
