@@ -550,7 +550,7 @@ export default {
   "den.cloud_section_title": "RenWork Cloud",
   "den.cloud_sleep_hint": "Sign in to RenWork Cloud to keep your tasks alive even when your computer sleeps.",
   "den.cloud_signed_in_desc": "You are signed in and ready to use RenWork Cloud.",
-  "den.open_dashboard": "Open Den dashboard",
+  "den.open_dashboard": "Open RenWork admin dashboard",
   "den.cloud_unavailable_body": "Local work remains available. Reconnecting automatically.",
   "den.cloud_unavailable_title": "RenWork Cloud is temporarily unavailable.",
   "den.copy_signin_link": "Copy sign-in link",

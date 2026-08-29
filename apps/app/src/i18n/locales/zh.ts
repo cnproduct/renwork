@@ -251,6 +251,7 @@ export default {
   "den.cloud_providers_title": "云端提供商",
   "den.cloud_section_desc": "登录、选择组织，打开Cloud工作区或团队模板。",
   "den.cloud_section_title": "RenWork Cloud",
+  "den.open_dashboard": "打开 RenWork 管理后台",
   "den.cloud_sleep_hint": "登录RenWork Cloud，即使电脑进入睡眠状态也能保持任务运行。",
   "den.create_account": "创建账户",
   "den.credentials_ready_badge": "凭据就绪",
