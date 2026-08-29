@@ -27,7 +27,7 @@ describe("Den org sidebar information architecture", () => {
     expect(shell).toContain("observabilityItems.length > 0");
   });
 
-  test("admins see Manage then Observability then Team, with Models as a Providers category", () => {
+  test("admins see Manage then Observability then Team, while only Owners receive model policy", () => {
     const marketplace = indexOfNeedle('label: "Marketplace"');
     const pluginDirectory = indexOfNeedle('label: "Plugin Directory"');
     const connectors = indexOfNeedle('label: "Connectors"');
@@ -46,7 +46,8 @@ describe("Den org sidebar information architecture", () => {
     expect(workSection).toBeLessThan(manageSection);
     expect(manageSection).toBeLessThan(observabilitySection);
     expect(observabilitySection).toBeLessThan(teamSection);
-    expect(shell).toContain('badge: "Providers"');
+    expect(shell).toContain('badge: "Policy"');
+    expect(shell).toContain("access.isOwner && activeOrg");
     expect(shell).toContain('badge: "MCPs"');
     expect(shell).toContain('label: "Tool Tester"');
     expect(shell).toContain("mcpConnectionsEnabled && access.isAdmin");

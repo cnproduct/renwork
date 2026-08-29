@@ -585,6 +585,7 @@ export function AutomationEditor(props: AutomationEditorProps) {
           ...current,
           model: { providerId: model.providerID, modelId: model.modelID, variant },
         }))}
+        allowProviderManagement={false}
         onOpenSettings={() => setPickerOpen(false)}
         onClose={() => setPickerOpen(false)}
       />

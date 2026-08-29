@@ -11,35 +11,32 @@ function readComponent(...segments: string[]) {
 const screen = readComponent("dashboard", "_components", "llm-providers-screen.tsx");
 const shell = readComponent("dashboard", "_components", "org-dashboard-shell.tsx");
 
-describe("Bring your Own Keys page", () => {
-  test("sidebar and page title use the product name", () => {
-    expect(shell).toContain('label: "Bring your Own Keys"');
-    expect(shell).toContain('return "Bring your Own Keys";');
+describe("organization model policy page", () => {
+  test("sidebar and page title expose policy instead of provider administration", () => {
+    expect(shell).toContain('label: "Model policy"');
+    expect(shell).toContain('return "Model policy";');
     expect(shell).not.toContain('"LLM Providers"');
-    expect(screen).toContain('title="Bring your Own Keys"');
+    expect(screen).toContain('title="Model policy"');
+    expect(screen).not.toContain("Bring your Own Keys");
   });
 
-  test("access controls keep the ids the invitee flow drives", () => {
-    for (const testId of [
-      "models-access-card",
-      "models-access-open",
-      "models-access-managed",
-      "models-access-admin-exception",
-      "models-access-zen",
-      "models-access-save",
-      "models-access-outcome",
-    ]) {
-      expect(screen).toContain(testId);
-    }
+  test("Owner policy covers only the approved governance controls", () => {
+    expect(screen).toContain("allowedModelSkus");
+    expect(screen).toContain("defaultModelSku");
+    expect(screen).toContain("dailyBudgetMicroCredits");
+    expect(screen).toContain("monthlyBudgetMicroCredits");
+    expect(screen).toContain("memberMonthlyBudgetMicroCredits");
+    expect(screen).not.toContain("test-connection");
+    expect(screen).not.toContain("apiKey");
   });
 
-  test("screen is built from shared primitives instead of local markup", () => {
-    for (const primitive of ["DenOptionCard", "DenSectionHeader", "DenTable", "DenBrandMark", "DenBadge", "DenNotice"]) {
+  test("screen uses the shared dashboard surface and native accessible form controls", () => {
+    for (const primitive of ["DashboardPageTemplate", "DenCard", "DenButton", "DenNotice"]) {
       expect(screen).toContain(primitive);
     }
     expect(screen).not.toContain("<table");
-    expect(screen).not.toContain("<input");
-    expect(screen).not.toContain("hover:-translate-y-0.5");
+    expect(screen).toContain("<input");
+    expect(screen).toContain("<select");
   });
 
   test("option card renders a native input so keyboard and e2e flows keep working", () => {

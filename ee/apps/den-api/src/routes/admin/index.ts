@@ -42,6 +42,7 @@ import type { AuthContextVariables } from "../../session.js"
 import { calculateOrganizationSeatBillingCounts, getOrganizationSeatBillingCounts, refreshOrgSubscriptionFromStripe, syncSeatSubscriptionQuantityAfterMemberChange } from "../../stripe-billing.js"
 import { buildAdminPageInfo, normalizeAdminPageRequest, sanitizeAdminSearchForLike, type AdminPageRequest } from "./scale-performance.js"
 import { registerAdminModelCatalogRoutes } from "./model-catalog.js"
+import { registerAdminOrganizationModelPolicyRoutes } from "./model-policy.js"
 import { registerAdminRenCreditRoutes } from "./rencredit.js"
 
 type UserId = typeof AuthUserTable.$inferSelect.id
@@ -1171,6 +1172,7 @@ export async function loadAdminInitialOverviewPayload(user: AdminOverviewViewer,
 
 export function registerAdminRoutes<T extends { Variables: AuthContextVariables }>(app: Hono<T>) {
   registerAdminModelCatalogRoutes(app)
+  registerAdminOrganizationModelPolicyRoutes(app)
   registerAdminRenCreditRoutes(app)
   app.delete(
     "/v1/admin/users/:userId",

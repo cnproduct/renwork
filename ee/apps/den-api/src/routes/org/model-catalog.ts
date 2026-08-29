@@ -10,6 +10,7 @@ import { z } from "zod"
 import { parseOrganizationPlan } from "../../entitlements.js"
 import { orgRoleRoute } from "../../middleware/index.js"
 import { modelCatalogSchema, requestModelCatalog } from "../../model-catalog-service.js"
+import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../../organization-model-policy.js"
 import { forbiddenSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
 import type { OrgRouteVariables } from "./shared.js"
 
@@ -34,6 +35,12 @@ const publicModelCatalogSchema = z.object({
   version: z.string(),
   currency: z.literal("REN_CREDIT"),
   models: z.array(publicModelSchema),
+  policy: z.object({
+    defaultModelSku: z.string().nullable(),
+    dailyBudgetMicroCredits: z.number().int().nonnegative().nullable(),
+    monthlyBudgetMicroCredits: z.number().int().nonnegative().nullable(),
+    memberMonthlyBudgetMicroCredits: z.number().int().nonnegative().nullable(),
+  }),
 })
 
 const unavailableSchema = z.object({
@@ -57,7 +64,8 @@ export function registerOrgModelCatalogRoutes<T extends { Variables: OrgRouteVar
     }),
     orgRoleRoute(["member"]),
     async (c) => {
-      const organization = c.get("organizationContext").organization
+      const organizationContext = c.get("organizationContext")
+      const organization = organizationContext.organization
       try {
         const upstream = await requestModelCatalog("/v1/admin/models/catalog")
         if (!upstream.configured || !upstream.response.ok) {
@@ -73,8 +81,26 @@ export function registerOrgModelCatalogRoutes<T extends { Variables: OrgRouteVar
         }
 
         const plan = parseOrganizationPlan(organization.metadata).tier
+        const publicCatalog = toPublicModelCatalogForPlan(parsed.data, plan)
+        const policy = readOrganizationModelPolicy(organization.metadata)
+        const allowed = policy.allowedModelSkus ? new Set(policy.allowedModelSkus) : null
+        const models = allowed
+          ? publicCatalog.models.filter((model) => allowed.has(model.sku))
+          : publicCatalog.models
+        const defaultModelSku = policy.defaultModelSku && models.some((model) => model.sku === policy.defaultModelSku)
+          ? policy.defaultModelSku
+          : models[0]?.sku ?? null
         c.header("Cache-Control", "private, no-store")
-        return c.json(toPublicModelCatalogForPlan(parsed.data, plan))
+        return c.json({
+          ...publicCatalog,
+          models,
+          policy: {
+            defaultModelSku,
+            dailyBudgetMicroCredits: policy.dailyBudgetMicroCredits,
+            monthlyBudgetMicroCredits: policy.monthlyBudgetMicroCredits,
+            memberMonthlyBudgetMicroCredits: resolveMemberMonthlyBudget(policy, organizationContext.currentMember.id),
+          },
+        })
       } catch {
         return c.json({ error: "MODEL_CATALOG_UNAVAILABLE", message: "RenWork model catalog is temporarily unavailable." }, 503)
       }

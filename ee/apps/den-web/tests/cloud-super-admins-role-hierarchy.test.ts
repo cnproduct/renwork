@@ -83,7 +83,7 @@ describe("cloud super-admin role hierarchy", () => {
   test("exposes exact admin sidebar destinations for Manage, Observability, and Team", () => {
     const shell = read("../app/(den)/dashboard/_components/org-dashboard-shell.tsx");
 
-    for (const label of ["Marketplace", "Plugin Directory", "Connectors", "Sources", "Models", "RenWork Models", "Bring your Own Keys", "Workflow Runs", "Analytics", "Members", "Settings"]) {
+    for (const label of ["Marketplace", "Plugin Directory", "Connectors", "Sources", "Models", "RenWork Models", "Model policy", "Workflow Runs", "Analytics", "Members", "Settings"]) {
       expect(shell).toContain(`label: "${label}"`);
     }
 
@@ -99,6 +99,7 @@ describe("cloud super-admin role hierarchy", () => {
     expect(shell).not.toContain('label: "Your Connections"');
     expect(shell).toContain("access.canViewSettings");
     expect(shell).toContain("access.isAdmin && activeOrg");
+    expect(shell).toContain("access.isOwner && activeOrg");
   });
 
   test("keeps admins read-only across Settings while super-admins inherit mutation flags", () => {

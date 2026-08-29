@@ -3033,6 +3033,7 @@ export function SessionRoute() {
         focusPromptSoon();
       }}
       disabledProviders={disabledProviderIds}
+      allowProviderManagement={selectedWorkspace?.workspaceType === "local"}
       onBehaviorChange={() => {}}
       onToggleProvider={async (providerId, enable) => {
         if (!opencodeClient) return;

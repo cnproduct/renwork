@@ -2766,6 +2766,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
           modelPicker.setOpen(false);
         }}
         onBehaviorChange={() => {}}
+        allowProviderManagement={selectedWorkspace?.workspaceType === "local"}
         onOpenSettings={() => {}}
         onClose={() => modelPicker.setOpen(false)}
       />
