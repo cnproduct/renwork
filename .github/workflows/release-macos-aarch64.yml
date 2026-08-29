@@ -761,7 +761,7 @@ jobs:
       needs.verify-release.result == 'success' &&
       needs.publish-electron.result == 'success' &&
       (needs.resolve-release.outputs.sign_windows != 'true' || needs.sign-and-publish-windows.result == 'success')
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     env:
       RELEASE_TAG: ${{ needs.resolve-release.outputs.release_tag }}
     steps:
@@ -797,7 +797,7 @@ jobs:
       needs.resolve-release.result == 'success' &&
       needs.verify-release.result == 'success' &&
       needs.resolve-release.outputs.publish_npm == 'true'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     env:
       RELEASE_TAG: ${{ needs.resolve-release.outputs.release_tag }}
     steps:
@@ -920,7 +920,7 @@ jobs:
     # Outages there (e.g. "The AUR is down due to maintenance", 2026-08-04)
     # must not mark an otherwise-published release run as failed.
     continue-on-error: true
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     env:
@@ -1023,7 +1023,7 @@ jobs:
       (needs.resolve-release.outputs.build_electron != 'true' || needs.publish-electron-assets.result == 'success') &&
       (needs.publish-npm.result == 'success' || needs.publish-npm.result == 'skipped') &&
       needs.publish-daytona-snapshot.result != 'cancelled'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     env:
       RELEASE_TAG: ${{ needs.resolve-release.outputs.release_tag }}
       RELEASE_PRERELEASE: ${{ needs.resolve-release.outputs.prerelease }}
