@@ -1,6 +1,7 @@
 export const MIN_SUPPORTED_DESKTOP_VERSION = "0.17.0" as const;
 
 export const PUBLISHED_DESKTOP_VERSIONS = [
+  "0.18.53",
   "0.18.52",
   "0.18.51",
   "0.18.50",
