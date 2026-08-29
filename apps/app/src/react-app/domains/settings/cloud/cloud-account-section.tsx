@@ -18,6 +18,7 @@ import { useOrgListWindow } from "../../cloud/use-org-list-window";
 export interface CloudAccountSectionProps {
   activeOrgId: string;
   authBusy: boolean;
+  dashboardUrl: string;
   needsOrgSelection?: boolean;
   orgs: DenOrgSummary[];
   orgsBusy: boolean;
@@ -32,6 +33,7 @@ export interface CloudAccountSectionProps {
 export function CloudAccountSection({
   activeOrgId,
   authBusy,
+  dashboardUrl,
   needsOrgSelection,
   orgs,
   orgsBusy,
@@ -69,6 +71,8 @@ export function CloudAccountSection({
             size="sm"
             onClick={onOpenDashboard}
             disabled={controlsDisabled}
+            data-testid="open-renwork-admin-dashboard"
+            data-dashboard-url={dashboardUrl}
           >
             {t("den.open_dashboard")}
             <ArrowUpRight className="size-3.5" />
