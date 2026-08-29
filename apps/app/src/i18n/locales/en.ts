@@ -1903,6 +1903,8 @@ export default {
   "commerce.subscription_signin": "Sign in to inspect account entitlements.",
   "commerce.workspace_label": "Workspace: {workspace}",
   "commerce.credit_pending": "Balance appears after the RenCredit entitlement service is activated.",
+  "commerce.credit_reserved": "{amount} reserved. Balance is read from the durable cloud ledger.",
+  "commerce.credit_error": "The durable cloud ledger is temporarily unavailable. Try again shortly.",
   "commerce.free_core_notice": "Local Agent, Ollama, your own model keys, and local knowledge remain free. RenCredit is used only by priced official capabilities after explicit confirmation.",
   "commerce.plans_title": "RenWork plans",
   "commerce.catalog_version": "Authoritative cloud catalog: {version}",

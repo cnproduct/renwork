@@ -2,7 +2,7 @@ import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
 import { getInferenceStatus, setInferenceEnabled } from "../../inference.js"
-import { getRenCreditWallet, listRenCreditLedger } from "../../rencredit-ledger.js"
+import { getOrCreateRenCreditWallet, listRenCreditLedger } from "../../rencredit-ledger.js"
 import { organizationHasActiveInferenceSubscription } from "../../stripe-billing.js"
 import { jsonValidator, orgRoleRoute } from "../../middleware/index.js"
 import { forbiddenSchema, invalidRequestSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
@@ -47,16 +47,10 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
     orgRoleRoute(["member"]),
     async (c) => {
       const payload = c.get("organizationContext")
-      const wallet = await getRenCreditWallet(payload.organization.id)
+      const wallet = await getOrCreateRenCreditWallet(payload.organization.id)
       return c.json({
         ok: true,
-        wallet: wallet ?? {
-          organization_id: payload.organization.id,
-          available_microcredits: 0,
-          reserved_microcredits: 0,
-          status: "active",
-          version: 0,
-        },
+        wallet,
       })
     },
   )

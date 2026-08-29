@@ -6,6 +6,7 @@ import type {
   RenworkPlanFeatures,
   RenworkPlanOffer,
 } from "@openwork/types/renwork-commerce";
+import { formatRenCredit } from "@openwork/rencredit-metering";
 import { Check, Coins, RefreshCcw, ShieldCheck, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +61,11 @@ function offerCta(offer: RenworkPlanOffer): string {
   if (offer.cta === "request_trial") return t("commerce.cta_request_trial");
   if (offer.cta === "contact_sales") return t("commerce.cta_contact_sales");
   return t("commerce.cta_checkout");
+}
+
+function formatRenCreditBalance(microCredits: number): string {
+  const sign = microCredits < 0 ? "−" : "";
+  return `${sign}${formatRenCredit(Math.abs(microCredits))}`;
 }
 
 function PlanCard(props: {
@@ -123,6 +129,9 @@ export function RenworkCommerceView() {
   const [audience, setAudience] = React.useState<RenworkPlanAudience>("personal");
   const [interval, setInterval] = React.useState<BillingInterval>("annual");
   const [catalog, setCatalog] = React.useState<Awaited<ReturnType<typeof client.getRenworkPlanCatalog>> | null>(null);
+  const [wallet, setWallet] = React.useState<Awaited<ReturnType<typeof client.getRenCreditWallet>> | null>(null);
+  const [walletLoading, setWalletLoading] = React.useState(false);
+  const [walletError, setWalletError] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -142,6 +151,30 @@ export function RenworkCommerceView() {
   React.useEffect(() => {
     void loadCatalog();
   }, [loadCatalog]);
+
+  const loadWallet = React.useCallback(async () => {
+    const organizationId = activeOrganization?.id;
+    if (!isSignedIn || !organizationId) {
+      setWallet(null);
+      setWalletError(false);
+      setWalletLoading(false);
+      return;
+    }
+    setWalletLoading(true);
+    setWalletError(false);
+    try {
+      setWallet(await client.getRenCreditWallet(organizationId));
+    } catch {
+      setWallet(null);
+      setWalletError(true);
+    } finally {
+      setWalletLoading(false);
+    }
+  }, [activeOrganization?.id, client, isSignedIn]);
+
+  React.useEffect(() => {
+    void loadWallet();
+  }, [loadWallet]);
 
   const plans = catalog?.plans
     .filter((plan) => plan.audience === audience)
@@ -183,12 +216,23 @@ export function RenworkCommerceView() {
             </div>
           </SettingsInset>
 
-          <SettingsInset className="flex items-start gap-3" data-testid="rencredit-balance-unavailable">
+          <SettingsInset
+            className="flex items-start gap-3"
+            data-testid={wallet ? "rencredit-balance" : "rencredit-balance-unavailable"}
+          >
             <Coins className="mt-0.5 size-5 shrink-0 text-amber-10" />
             <div>
               <div className="text-sm font-medium text-dls-text">RenCredit</div>
-              <div className="mt-1 text-xl font-semibold text-dls-text">—</div>
-              <div className="mt-1 text-xs text-dls-secondary">{t("commerce.credit_pending")}</div>
+              <div className="mt-1 text-xl font-semibold text-dls-text">
+                {walletLoading ? "…" : wallet ? formatRenCreditBalance(wallet.availableMicroCredits) : "—"}
+              </div>
+              <div className="mt-1 text-xs text-dls-secondary">
+                {wallet
+                  ? t("commerce.credit_reserved", { amount: formatRenCreditBalance(wallet.reservedMicroCredits) })
+                  : walletError
+                    ? t("commerce.credit_error")
+                    : t("commerce.credit_pending")}
+              </div>
             </div>
           </SettingsInset>
         </div>

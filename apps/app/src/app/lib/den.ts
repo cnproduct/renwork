@@ -217,6 +217,14 @@ export type DenBootstrapConfig = DenBaseUrls & {
 
 export type DenDesktopConfig = SharedDesktopConfig;
 
+export type DenRenCreditWallet = {
+  organizationId: string;
+  availableMicroCredits: number;
+  reservedMicroCredits: number;
+  status: "active" | "suspended";
+  version: number;
+};
+
 export type DenCanonicalOrgRole = "super-admin" | "owner" | "admin" | "member";
 export type DenOrgRole = string;
 
@@ -532,6 +540,37 @@ export function isDenSessionRevokedError(error: unknown): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function getRenCreditWallet(payload: unknown): DenRenCreditWallet | null {
+  if (!isRecord(payload) || !isRecord(payload.wallet)) return null;
+  const wallet = payload.wallet;
+  const organizationId = typeof wallet.organization_id === "string" ? wallet.organization_id : "";
+  const availableMicroCredits = wallet.available_microcredits;
+  const reservedMicroCredits = wallet.reserved_microcredits;
+  const status = wallet.status;
+  const version = wallet.version;
+  if (
+    !organizationId
+    || typeof availableMicroCredits !== "number"
+    || !Number.isSafeInteger(availableMicroCredits)
+    || typeof reservedMicroCredits !== "number"
+    || !Number.isSafeInteger(reservedMicroCredits)
+    || reservedMicroCredits < 0
+    || (status !== "active" && status !== "suspended")
+    || typeof version !== "number"
+    || !Number.isSafeInteger(version)
+    || version < 0
+  ) {
+    return null;
+  }
+  return {
+    organizationId,
+    availableMicroCredits,
+    reservedMicroCredits,
+    status,
+    version,
+  };
 }
 
 function readStringArray(value: unknown): string[] {
@@ -2519,6 +2558,22 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
         method: "GET",
       });
       return renworkPlanCatalogSchema.parse(payload);
+    },
+
+    async getRenCreditWallet(orgId: string): Promise<DenRenCreditWallet> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/rencredit/wallet", {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      const wallet = getRenCreditWallet(payload);
+      if (!wallet) {
+        throw new DenApiError(500, "invalid_rencredit_wallet_payload", "RenCredit wallet response was invalid.");
+      }
+      if (wallet.organizationId !== orgId) {
+        throw new DenApiError(409, "rencredit_wallet_scope_mismatch", "RenCredit wallet did not match the active organization.");
+      }
+      return wallet;
     },
 
     async getDesktopConfig(orgId?: string | null): Promise<DenDesktopConfig> {

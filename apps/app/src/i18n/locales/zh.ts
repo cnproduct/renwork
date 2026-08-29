@@ -1234,6 +1234,8 @@ export default {
   "commerce.subscription_signin": "登录后查看账户权益。",
   "commerce.workspace_label": "当前工作区：{workspace}",
   "commerce.credit_pending": "RenCredit 权益服务启用后显示真实余额。",
+  "commerce.credit_reserved": "已冻结 {amount}，余额来自云端持久化账本。",
+  "commerce.credit_error": "暂时无法读取云端持久化账本，请稍后重试。",
   "commerce.free_core_notice": "本地 Agent、Ollama、自有模型 Key 与本地知识库保持免费；只有明确定价的官方能力在用户确认后才使用 RenCredit。",
   "commerce.plans_title": "RenWork 套餐",
   "commerce.catalog_version": "云端权威目录：{version}",

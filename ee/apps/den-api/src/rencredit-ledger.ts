@@ -69,6 +69,21 @@ export async function getRenCreditWallet(organizationId: OrganizationId) {
   return wallet ?? null
 }
 
+/**
+ * Returns the organization's durable wallet, creating the zero-balance row on
+ * first access. Production callers must never synthesize an in-memory wallet:
+ * this MySQL row and its immutable ledger entries are the RenCredit source of
+ * truth for every product surface.
+ */
+export async function getOrCreateRenCreditWallet(organizationId: OrganizationId) {
+  await db.insert(RenCreditWalletTable).values({ organization_id: organizationId }).onDuplicateKeyUpdate({
+    set: { organization_id: organizationId },
+  })
+  const wallet = await getRenCreditWallet(organizationId)
+  if (!wallet) throw new Error("RENCREDIT_WALLET_UNAVAILABLE")
+  return wallet
+}
+
 export async function listRenCreditLedger(organizationId: OrganizationId, limit = 50) {
   return db
     .select()
