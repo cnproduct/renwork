@@ -1,0 +1,24 @@
+# Existing dangling translation references on origin/dev at 1e54c3dd1.
+# CI continues to report these but fails only when a pull request adds new entries.
+apps/app/src/app/constants.ts	mcp.quick_connect_openwork_cloud_title
+apps/app/src/app/constants.ts	mcp.quick_connect_openwork_cloud_desc
+apps/app/src/app/constants.ts	mcp.quick_connect_openwork_ui_title
+apps/app/src/app/constants.ts	mcp.quick_connect_openwork_ui_desc
+apps/app/src/react-app/domains/cloud/join-organization-dialog.tsx	join_org.openwork_cloud
+apps/app/src/react-app/domains/cloud/join-organization-dialog.tsx	join_org.openwork_cloud
+apps/app/src/react-app/domains/settings/pages/advanced-view-sections.tsx	settings.openwork_server_label
+apps/app/src/react-app/domains/settings/pages/advanced-view-sections.tsx	settings.openwork_server_desc
+apps/app/src/react-app/domains/settings/pages/advanced-view-sections.tsx	settings.restart_openwork_server
+apps/app/src/react-app/domains/settings/pages/debug-view.tsx	settings.debug_openwork_server_version
+apps/app/src/react-app/domains/settings/pages/debug-view.tsx	settings.openwork_server_label
+apps/app/src/react-app/domains/settings/pages/debug-view.tsx	settings.openwork_config_sidecar_desc
+apps/app/src/react-app/domains/settings/pages/debug-view.tsx	settings.restart_openwork_server
+apps/app/src/react-app/domains/settings/pages/debug-view.tsx	settings.openwork_diagnostics_title
+apps/app/src/react-app/domains/settings/pages/debug-view.tsx	settings.reset_openwork_title
+apps/app/src/react-app/domains/settings/pages/debug-view.tsx	settings.reset_openwork_desc_dev
+apps/app/src/react-app/domains/settings/pages/debug-view.tsx	settings.reset_openwork_desc_prod
+apps/app/src/react-app/domains/settings/pages/updates-view.tsx	settings.current_version
+apps/app/src/react-app/domains/settings/pages/updates-view.tsx	settings.release_channel
+apps/app/src/react-app/domains/settings/pages/updates-view.tsx	settings.release_channel_desc
+apps/app/src/react-app/domains/settings/state/debug-view-model.ts	settings.openwork_server_label
+apps/app/src/react-app/domains/workspace/share-workspace-state.ts	session.share_openwork_workers_only
