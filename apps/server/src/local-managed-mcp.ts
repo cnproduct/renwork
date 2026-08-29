@@ -125,7 +125,7 @@ function secureVaultStorageUnavailable(): ApiError {
   return new ApiError(
     503,
     "managed_mcp_secure_storage_unavailable",
-    "Secure storage for OpenWork-managed MCP credentials is unavailable. Start through OpenWork Desktop or set OPENWORK_ENCRYPTION_KEY.",
+    "Secure storage for RenWork-managed MCP credentials is unavailable. Start through RenWork Desktop or set OPENWORK_ENCRYPTION_KEY.",
   );
 }
 
@@ -453,7 +453,7 @@ async function enterpriseConnection(config: ServerConfig, workspaceId: string, n
 function enterpriseClient() {
   return createEnterpriseMcpClient({
     fetch: guardedFetch,
-    clientName: "OpenWork Local MCP Gateway",
+    clientName: "RenWork Local MCP Gateway",
     clientVersion: "1.0.0",
     operationTimeoutMs: 45_000,
   });
@@ -812,7 +812,7 @@ export async function handleLocalManagedMcpGateway(
       throw new McpError(
         ErrorCode.InternalError,
         reconnect
-          ? "This MCP connection needs to be reconnected in OpenWork."
+          ? "This MCP connection needs to be reconnected in RenWork."
           : "This MCP tool catalog could not be loaded. Retry the request.",
       );
     }
@@ -832,7 +832,7 @@ export async function handleLocalManagedMcpGateway(
       throw new McpError(
         ErrorCode.InternalError,
         reconnect
-          ? "This MCP tool could not run. Reconnect it in OpenWork and retry."
+          ? "This MCP tool could not run. Reconnect it in RenWork and retry."
           : "This MCP tool could not run. Review the tool input or provider response and retry.",
       );
     }

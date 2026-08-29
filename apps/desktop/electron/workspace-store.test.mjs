@@ -531,6 +531,57 @@ test("desktop bootstrap writes include a fresh writtenAt stamp", async () => {
   });
 });
 
+test("desktop bootstrap migrates legacy hosted URLs to RenWork and preserves self-hosted URLs", async () => {
+  await withIsolatedBootstrapStore(async ({ store, canonicalPath }) => {
+    await writeBootstrapConfig(canonicalPath, {
+      baseUrl: "https://app.openworklabs.com/api/den/",
+      apiBaseUrl: "https://api.openworklabs.com/v1/",
+      requireSignin: true,
+      claimLinks: [{
+        id: "claim_owner",
+        role: "owner",
+        url: "https://app.openworklabs.com/workspace-claim?token=one-time",
+        expiresAt: "2030-01-01T00:00:00.000Z",
+      }],
+      handoff: {
+        grant: "grant_test",
+        denBaseUrl: "https://api.openworklabs.com",
+        orgId: "org_test",
+        orgName: "Test Org",
+        orgSlug: "test-org",
+        skillId: "skill_test",
+        skillTitle: "Test Skill",
+        createdAt: "2026-08-28T00:00:00.000Z",
+      },
+      enterpriseActivation: {
+        activatedAt: "2026-08-28T00:00:00.000Z",
+        denBaseUrl: "https://app.openworklabs.com/api/den",
+      },
+    });
+
+    const config = await store.getDesktopBootstrapConfig();
+    assert.equal(config.baseUrl, "https://www.rrenn.com");
+    assert.equal(config.apiBaseUrl, "https://www.rrenn.com/api/den");
+    assert.equal(config.claimLinks[0].url, "https://www.rrenn.com/workspace-claim?token=one-time");
+    assert.equal(config.handoff.denBaseUrl, "https://www.rrenn.com");
+    assert.equal(config.enterpriseActivation.denBaseUrl, "https://www.rrenn.com");
+
+    const persisted = JSON.parse(await readFile(canonicalPath, "utf8"));
+    assert.equal(JSON.stringify(persisted).includes("openworklabs.com"), false);
+  });
+
+  await withIsolatedBootstrapStore(async ({ store, canonicalPath }) => {
+    await writeBootstrapConfig(canonicalPath, {
+      baseUrl: "https://den.customer.example/control",
+      apiBaseUrl: "https://api.customer.example/den",
+      requireSignin: true,
+    });
+    const config = await store.getDesktopBootstrapConfig();
+    assert.equal(config.baseUrl, "https://den.customer.example/control");
+    assert.equal(config.apiBaseUrl, "https://api.customer.example/den");
+  });
+});
+
 test("enterprise activation is preserved, required activation is overrideable, and forced sign-in cannot be disabled", async () => {
   await withIsolatedBootstrapStore(async ({ createStore, canonicalPath }) => {
     const store = createStore({
@@ -552,7 +603,7 @@ test("enterprise activation is preserved, required activation is overrideable, a
     assert.equal(config.requireActivation, false);
     assert.deepEqual(config.enterpriseActivation, {
       activatedAt: "2026-07-27T12:00:00.000Z",
-      denBaseUrl: "https://app.openworklabs.com",
+      denBaseUrl: "https://www.rrenn.com",
     });
     const persisted = JSON.parse(await readFile(canonicalPath, "utf8"));
     assert.equal(persisted.requireSignin, true);

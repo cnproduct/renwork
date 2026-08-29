@@ -2,11 +2,18 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import os from "node:os";
 import { ApiError } from "../errors.js";
+import { externalFetch, loopbackFetch } from "../server-fetch.js";
 import type { ServerConfig, TokenScope, WorkspaceInfo } from "../types.js";
 import { addRoute, type RequestContext, type Route } from "./registry.js";
 
 type JsonResponse = (data: unknown, status?: number) => Response;
 type ReadJsonBody = (request: Request) => Promise<Record<string, unknown>>;
+
+function providerFetch(url: string, init?: RequestInit): Promise<Response> {
+  const hostname = new URL(url).hostname;
+  const isLoopback = hostname === "127.0.0.1" || hostname === "localhost" || hostname === "[::1]";
+  return isLoopback ? loopbackFetch(url, init) : externalFetch(url, init);
+}
 
 export interface CustomModelDefinition {
   id: string;
@@ -267,7 +274,7 @@ export function registerCustomProviderRoutes(options: {
     // 1. Try GET /models first
     const modelsURL = `${cleanBaseURL}/models`;
     try {
-      const response = await fetch(modelsURL, {
+      const response = await providerFetch(modelsURL, {
         headers,
         signal: AbortSignal.timeout(6000),
       });
@@ -303,7 +310,7 @@ export function registerCustomProviderRoutes(options: {
     const probeModel = testModel || (type === "openrouter" ? "stealth/ox-alpha" : type === "ollama" ? "qwen3.5:27b" : "deepseek-ai/DeepSeek-V3");
 
     try {
-      const probeResponse = await fetch(chatURL, {
+      const probeResponse = await providerFetch(chatURL, {
         method: "POST",
         headers: {
           ...headers,
@@ -370,7 +377,7 @@ export function registerCustomProviderRoutes(options: {
     const host = queryURL.replace(/\/v1\/?$/, "").replace(/\/+$/, "");
 
     try {
-      const response = await fetch(`${host}/api/tags`, {
+      const response = await providerFetch(`${host}/api/tags`, {
         signal: AbortSignal.timeout(4000),
       });
       if (!response.ok) {

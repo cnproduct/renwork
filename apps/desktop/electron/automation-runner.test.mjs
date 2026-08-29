@@ -152,7 +152,7 @@ test("a runner credential bound elsewhere reports why this desktop stays disconn
   ])
 })
 
-test("desktop Automation execution creates a normal visible local OpenWork thread", async () => {
+test("desktop Automation execution creates a normal visible local RenWork thread", async () => {
   const requests = []
   let snapshots = 0
   const fetchImpl = async (url, options = {}) => {
@@ -170,7 +170,10 @@ test("desktop Automation execution creates a normal visible local OpenWork threa
       return Response.json({ item: {
         status: { type: snapshots === 1 ? "busy" : "idle" },
         messages: snapshots === 1 ? [] : [{
-          info: { role: "assistant", tokens: { input: 12, output: 7 } },
+          info: {
+            role: "assistant",
+            tokens: { input: 12, output: 7, reasoning: 3, cache: { read: 5, write: 2 } },
+          },
           parts: [{ type: "text", text: "Desktop runner result" }],
         }],
       } })
@@ -183,7 +186,7 @@ test("desktop Automation execution creates a normal visible local OpenWork threa
     runId: "run-1",
     automationId: "automation-1",
     automationName: "Daily brief",
-    instructions: "Prepare the brief",
+    instructions: "Prepare the brief, then call renwork_execute.",
     model: { providerId: "opencode", modelId: "big-pickle" },
     timeoutMs: 30_000,
     leaseExpiresAt: Date.now() + 60_000,
@@ -197,11 +200,18 @@ test("desktop Automation execution creates a normal visible local OpenWork threa
   assert.equal(result.sessionId, "session-1")
   assert.equal(result.workspaceId, "workspace-1")
   assert.equal(result.resultSummary, "Desktop runner result")
-  assert.deepEqual(result.usage, { inputTokens: 12, outputTokens: 7, costMicros: null })
+  assert.deepEqual(result.usage, {
+    inputTokens: 12,
+    outputTokens: 7,
+    reasoningTokens: 3,
+    cacheReadTokens: 5,
+    cacheWriteTokens: 2,
+    costMicros: null,
+  })
   const create = requests.find((request) => request.path === "/workspace/workspace-1/sessions")
   assert.deepEqual(create?.body, {
     title: "Automation: Daily brief",
-    prompt: "Prepare the brief",
+    prompt: "Prepare the brief, then call renwork_execute.",
     providerId: "opencode",
     modelId: "big-pickle",
   })

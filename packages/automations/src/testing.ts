@@ -11,6 +11,8 @@ export async function verifyAutomationRepositoryConformance(
     instructions: "Return the word ready.",
     schedule: { kind: "daily" as const, timezone: "UTC", hour: 9, minute: 0 },
     model: { providerId: "provider_conformance", modelId: "model_conformance" },
+    connectors: [],
+    notifyMiniProgram: false,
   }
   const created = await repository.create({
     organizationId: "org_conformance",

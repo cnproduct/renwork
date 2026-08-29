@@ -101,6 +101,6 @@ describe("settings route parsing", () => {
 describe("settings navigation", () => {
   test("includes Library in workspace settings", () => {
     expect(getWorkspaceSettingsTabs()).toEqual(["preferences", "permissions", "extensions", "advanced"]);
-    expect(getSettingsTabLabel("extensions")).toBe("Library");
+    expect(getSettingsTabLabel("extensions")).toBe("资料库");
   });
 });

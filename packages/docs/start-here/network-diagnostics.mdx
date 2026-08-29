@@ -1,9 +1,9 @@
 ---
 title: "Network diagnostics"
-description: "Diagnose DNS, TLS, proxy, catalog, and Den outbound issues in locked-down OpenWork deployments."
+description: "Diagnose DNS, TLS, proxy, catalog, and Den outbound issues in locked-down RenWork deployments."
 ---
 
-Use this page when OpenWork reaches the wrong server, cannot complete TLS, is blocked by a proxy, or needs proof that Den can reach an approved diagnostic origin. For non-network runtime, MCP, and stale-tool problems, use [Diagnostic prompts](/start-here/troubleshooting/diagnostic-prompts).
+Use this page when RenWork reaches the wrong server, cannot complete TLS, is blocked by a proxy, or needs proof that Den can reach an approved diagnostic origin. For non-network runtime, MCP, and stale-tool problems, use [Diagnostic prompts](/start-here/troubleshooting/diagnostic-prompts).
 
 ## Windows desktop network doctor
 
@@ -27,7 +27,7 @@ Use your Den web origin for `-WebUrl`. Use the separate Den API origin only if y
 
 | Verdict | What it usually means | First fix to check |
 | --- | --- | --- |
-| `LIKELY TLS INTERCEPTION` | The leaf issuer is an internal or proxy CA instead of the expected public issuer. | Allowlist the OpenWork hosts through the proxy, or install the enterprise root in every OpenWork trust surface that needs it. |
+| `LIKELY TLS INTERCEPTION` | The leaf issuer is an internal or proxy CA instead of the expected public issuer. | Allowlist the RenWork hosts through the proxy, or install the enterprise root in every RenWork trust surface that needs it. |
 | `LIKELY MISSING INTERMEDIATE OR UNTRUSTED ROOT` | The server may be serving a leaf without the intermediate, or the machine lacks the issuing root. | Fix the server `fullchain`/certificate bundle first, then verify client trust. |
 | `MISSING INTERMEDIATE CONFIRMED BY OPENSSL` | OpenSSL could not build the served chain. | Replace the server certificate bundle with a complete chain. |
 | `LIKELY DNS ISSUE` | The hostname does not resolve on that machine. | Check VPN state, split-horizon DNS, and whether the internal hostnames exist. |
@@ -35,9 +35,9 @@ Use your Den web origin for `-WebUrl`. Use the separate Den API origin only if y
 
 ## Cloud catalog diagnostic trust
 
-Settings → Debug includes a cloud catalog diagnostic that probes the managed `openwork-cloud` MCP entry and verifies that Cloud exposes exactly `search_capabilities` and `execute_capability`.
+Settings → Debug includes a cloud catalog diagnostic that probes the managed `renwork-cloud` MCP entry and verifies that Cloud exposes exactly `search_capabilities` and `execute_capability`.
 
-For self-hosted Den origins, set `OPENWORK_AGENT_DIAGNOSTICS_TRUSTED_ORIGINS` before OpenWork launches:
+For self-hosted Den origins, set `OPENWORK_AGENT_DIAGNOSTICS_TRUSTED_ORIGINS` before RenWork launches:
 
 ```bash
 OPENWORK_AGENT_DIAGNOSTICS_TRUSTED_ORIGINS=https://openwork.example.com

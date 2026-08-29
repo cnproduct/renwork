@@ -54,7 +54,7 @@ import {
   useOpenWorkModelsPromoEligibility,
 } from "../../cloud/openwork-models-promo";
 
-const DOCS_URL = "https://openworklabs.com/docs";
+const DOCS_URL = "https://www.rrenn.com/docs";
 const BOOT_STARTED_AT = Date.now();
 const INITIALIZING_MS = 15_000;
 
@@ -133,7 +133,7 @@ function connectDotVariant(status: OpenWorkConnectStatus): StatusDotVariant {
 
 /**
  * Non-developer mode shows one status row: the runtime status, unless
- * OpenWork Connect needs attention (or is the only signal available).
+ * RenWork Connect needs attention (or is the only signal available).
  * Developer mode keeps the two separate rows.
  */
 export function resolveCollapsedStatus(
@@ -144,7 +144,7 @@ export function resolveCollapsedStatus(
   if (connect && connect.state === "needs_attention") {
     return {
       variant: "disconnected",
-      label: `OpenWork Connect: ${connect.label}`,
+      label: `RenWork Connect: ${connect.label}`,
       detail: connect.description,
     };
   }
@@ -152,7 +152,7 @@ export function resolveCollapsedStatus(
   if (connect) {
     return {
       variant: connectDotVariant(connect),
-      label: `OpenWork Connect: ${connect.label}`,
+      label: `RenWork Connect: ${connect.label}`,
       detail: connect.description,
     };
   }
@@ -233,7 +233,7 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
 
   const docsControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "status.docs.open",
-    label: "Open OpenWork docs",
+    label: "Open RenWork docs",
     description: "Open the documentation from the account menu.",
     sideEffect: "external",
     targetRef: triggerRef,
@@ -244,7 +244,7 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
   const feedbackControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "status.feedback.open",
     label: "Send feedback",
-    description: "Open the OpenWork feedback surface from the account menu.",
+    description: "Open the RenWork feedback surface from the account menu.",
     sideEffect: "external",
     disabled: !props.onSendFeedback,
     targetRef: triggerRef,
@@ -355,7 +355,7 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
             title={connectNeedsAttention
               ? openWorkConnectAttentionTitle(connectStatus.description)
               : connectStatus
-                ? `${runtimeStatus ? `${runtimeStatus.label} · ` : ""}OpenWork Connect: ${connectStatus.label}`
+                ? `${runtimeStatus ? `${runtimeStatus.label} · ` : ""}RenWork Connect: ${connectStatus.label}`
                 : runtimeStatus?.label}
           >
               {signedIn ? (

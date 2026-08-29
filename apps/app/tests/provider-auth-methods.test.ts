@@ -113,7 +113,7 @@ describe("OpenAI provider auth methods", () => {
 
     expect(store.getSnapshot().providerAuthMethods.openai).toEqual([
       { type: "oauth", label: "Sign in with ChatGPT", methodIndex: 0 },
-      { type: "api", label: "API key" },
+      { type: "api", label: "API密钥" },
     ]);
   });
 
@@ -129,7 +129,7 @@ describe("OpenAI provider auth methods", () => {
 
     expect(store.getSnapshot().providerAuthMethods.openai).toEqual([
       { type: "oauth", label: "Headless device flow", methodIndex: 1 },
-      { type: "api", label: "API key" },
+      { type: "api", label: "API密钥" },
     ]);
   });
 
@@ -141,7 +141,7 @@ describe("OpenAI provider auth methods", () => {
     await store.openProviderAuthModal();
 
     expect(store.getSnapshot().providerAuthMethods.openai).toEqual([
-      { type: "api", label: "API key" },
+      { type: "api", label: "API密钥" },
     ]);
   });
 });

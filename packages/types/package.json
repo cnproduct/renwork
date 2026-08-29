@@ -1,6 +1,6 @@
 {
   "name": "@openwork/types",
-  "version": "0.0.0",
+  "version": "0.18.50",
   "private": true,
   "type": "module",
   "exports": {
@@ -28,6 +28,11 @@
       "types": "./src/openwork-provider.ts",
       "development": "./src/openwork-provider.ts",
       "default": "./src/openwork-provider.ts"
+    },
+    "./renwork-semantic-tools": {
+      "types": "./src/renwork-semantic-tools.ts",
+      "development": "./src/renwork-semantic-tools.ts",
+      "default": "./src/renwork-semantic-tools.ts"
     },
     "./automations": {
       "types": "./src/automations.ts",

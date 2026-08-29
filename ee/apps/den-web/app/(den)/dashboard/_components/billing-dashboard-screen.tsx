@@ -615,12 +615,12 @@ export function BillingDashboardScreen() {
             <DenActionRow
               description={
                 aiConfigured
-                  ? `Turning this on costs ${aiChargeLabel} per ${stripeBilling.interval} for your ${activeMemberCount} ${activeMemberCount === 1 ? "member" : "members"}, not ${stripePrice}. You subscribe from the OpenWork Models page.`
+                  ? `Turning this on costs ${aiChargeLabel} per ${stripeBilling.interval} for your ${activeMemberCount} ${activeMemberCount === 1 ? "member" : "members"}, not ${stripePrice}. You subscribe from the RenWork Models page.`
                   : "See which models OpenWork ships with and how your team connects their own provider keys."
               }
               action={
                 <DenButton onClick={() => router.push(getInferenceRoute(activeOrg?.slug))}>
-                  View OpenWork Models
+                  View RenWork Models
                 </DenButton>
               }
             />

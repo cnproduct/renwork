@@ -13,8 +13,8 @@ const refreshScriptPath = join(repoRoot, "scripts", "release", "refresh-signed-w
 const installers = [
   ["openwork-win-x64-1.2.3.exe", "latest.yml"],
   ["openwork-win-arm64-1.2.3.exe", "latest.yml"],
-  ["openwork-cloud-win-x64-1.2.3.exe", "cloud.yml"],
-  ["openwork-cloud-win-arm64-1.2.3.exe", "cloud.yml"],
+  ["renwork-cloud-win-x64-1.2.3.exe", "cloud.yml"],
+  ["renwork-cloud-win-arm64-1.2.3.exe", "cloud.yml"],
   ["openwork-enterprise-win-x64-1.2.3.exe", "enterprise.yml"],
   ["openwork-enterprise-win-arm64-1.2.3.exe", "enterprise.yml"],
 ] as const;

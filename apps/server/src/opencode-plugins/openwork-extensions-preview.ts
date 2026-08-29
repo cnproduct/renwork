@@ -41,9 +41,9 @@ const callArgsSchema = z.object({
 });
 
 const openworkAffordanceRequestSchema = z.object({
-  id: z.string().trim().min(1).describe("Semantic affordance id from openwork_context."),
+  id: z.string().trim().min(1).describe("Semantic affordance id from renwork_context."),
   args: z.record(z.string(), z.unknown()).optional().describe("JSON arguments for the affordance."),
-  expectedRevision: z.number().int().nonnegative().optional().describe("Context revision from openwork_context. Use for commands to prevent stale writes."),
+  expectedRevision: z.number().int().nonnegative().optional().describe("Context revision from renwork_context. Use for commands to prevent stale writes."),
   actor: z.string().trim().min(1).optional().describe("Optional agent or client id used to attribute serialized commands."),
 });
 
@@ -137,16 +137,16 @@ const sessionMessagesEnvelopeSchema = z.object({
 
 const OPENWORK_AGENT_SURFACE_INSTRUCTION =
   `## RenWork app context
-Use openwork_context when the request depends on the current RenWork screen, open tabs, split view, focused pane, sidebar, side panel, settings panel, or available app actions.
-Each affordance declares its effects and executor. Use openwork_query only for side-effect-free affordances whose executor is RenWork. Use openwork_execute for RenWork commands without activating the desktop window. If executor names another tool, call that exact tool instead.
+Use renwork_context when the request depends on the current RenWork screen, open tabs, split view, focused pane, sidebar, side panel, settings panel, or available app actions.
+Each affordance declares its effects and executor. Use renwork_query only for side-effect-free affordances whose executor is RenWork. Use renwork_execute for RenWork commands without activating the desktop window. If executor names another tool, call that exact tool instead.
 Reading another session does not require opening it. Prefer session.search then session.read for transcript questions; use session.create for new chats and a UI command only when the user asks to navigate.
-To open settings or navigate the app, use openwork_execute with ids from openwork_context such as settings.panel.open — never browser_* tools for the RenWork app itself.`;
+To open settings or navigate the app, use renwork_execute with ids from renwork_context such as settings.panel.open — never browser_* tools for the RenWork app itself.`;
 
 const OPENWORK_BROWSER_INSTRUCTION =
   `Do NOT use browser_navigate, browser_click, or browser_snapshot to interact with the RenWork app itself. Those are for browsing external websites.
 
 ## Built-in Browser (external websites)
-For web browsing tasks, ALWAYS start with openwork_execute id browser.open_url. It creates/selects a built-in RenWork browser tab and returns browser_url plus target_id. Use that exact browser_url and target_id for every later browser_snapshot, browser_click, browser_fill, browser_eval, and browser_screenshot call.
+For web browsing tasks, ALWAYS start with renwork_execute id browser.open_url. It creates/selects a built-in RenWork browser tab and returns browser_url plus target_id. Use that exact browser_url and target_id for every later browser_snapshot, browser_click, browser_fill, browser_eval, and browser_screenshot call.
 Do not call browser_navigate without a target_id returned by browser.open_url. Do not use browser_* tools on the RenWork app target (avoid targets with title "RenWork" or URLs containing ":5173/#/").`;
 
 // ── UI control bridge discovery ──
@@ -335,7 +335,7 @@ async function discoverUiBridge(): Promise<UiBridge | null> {
 
 async function uiBridgeRequest(path: string, options: { method?: string; body?: unknown } = {}): Promise<unknown> {
   const bridge = await discoverUiBridge();
-  if (!bridge) return { ok: false, error: "OpenWork UI bridge not available. The desktop app may not be running." };
+  if (!bridge) return { ok: false, error: "RenWork UI bridge not available. The desktop app may not be running." };
   try {
     const response = await fetch(`${bridge.baseUrl}${path}`, {
       method: options.method || "GET",
@@ -361,7 +361,7 @@ async function serverGet(path: string): Promise<unknown> {
     headers: { Authorization: `Bearer ${token}` },
   });
   const payload = await parseResponse(response);
-  if (!response.ok) throw new Error(errorMessage(payload, "OpenWork server request failed"));
+  if (!response.ok) throw new Error(errorMessage(payload, "RenWork server request failed"));
   return payload;
 }
 
@@ -458,7 +458,7 @@ async function queryOpenworkAffordance(rawArgs: unknown): Promise<unknown> {
   if (request.id.startsWith("connect.")) {
     return unavailableAffordance(
       request.id,
-      "This affordance declares a dedicated Connect executor. Call the tool named in openwork_context.",
+      "This affordance declares a dedicated Connect executor. Call the tool named in renwork_context.",
     );
   }
   const result = await uiBridgeRequest("/query", {
@@ -467,7 +467,7 @@ async function queryOpenworkAffordance(rawArgs: unknown): Promise<unknown> {
   });
   return isRecord(result) && typeof result.ok === "boolean"
     ? result
-    : unavailableAffordance(request.id, "OpenWork UI query returned an invalid response.");
+    : unavailableAffordance(request.id, "RenWork UI query returned an invalid response.");
 }
 
 async function executeOpenworkAffordance(
@@ -505,7 +505,7 @@ async function executeOpenworkAffordance(
   if (request.id.startsWith("connect.")) {
     return unavailableAffordance(
       request.id,
-      "This affordance declares a dedicated Connect executor. Call the tool named in openwork_context.",
+      "This affordance declares a dedicated Connect executor. Call the tool named in renwork_context.",
     );
   }
   const result = await uiBridgeRequest("/command", {
@@ -514,7 +514,7 @@ async function executeOpenworkAffordance(
   });
   return isRecord(result) && typeof result.ok === "boolean"
     ? result
-    : unavailableAffordance(request.id, "OpenWork UI command returned an invalid response.");
+    : unavailableAffordance(request.id, "RenWork UI command returned an invalid response.");
 }
 
 function collapseWhitespace(value: string): string {
@@ -671,7 +671,7 @@ async function searchOpenWorkSessions(rawArgs: unknown): Promise<object> {
   const queryLower = args.query.trim().toLowerCase();
   const workspaces = filterWorkspaces(await listOpenWorkWorkspaces(), args.workspaceId);
   if (!workspaces.length) {
-    return { ok: false, error: args.workspaceId ? `No workspace matched ${args.workspaceId}` : "No OpenWork workspaces are available" };
+    return { ok: false, error: args.workspaceId ? `No workspace matched ${args.workspaceId}` : "No RenWork workspaces are available" };
   }
 
   const sessions: Array<{ workspace: OpenWorkWorkspace; session: SessionInfo }> = [];
@@ -726,7 +726,7 @@ async function readOpenWorkSession(rawArgs: unknown): Promise<object> {
   const count = args.count ?? 30;
   const workspaces = filterWorkspaces(await listOpenWorkWorkspaces(), args.workspaceId);
   if (!workspaces.length) {
-    return { ok: false, error: args.workspaceId ? `No workspace matched ${args.workspaceId}` : "No OpenWork workspaces are available" };
+    return { ok: false, error: args.workspaceId ? `No workspace matched ${args.workspaceId}` : "No RenWork workspaces are available" };
   }
 
   for (const workspace of workspaces) {
@@ -757,7 +757,7 @@ async function readOpenWorkSession(rawArgs: unknown): Promise<object> {
     }
   }
 
-  return { ok: false, error: `Session ${args.sessionId} was not found in matching OpenWork workspaces` };
+  return { ok: false, error: `Session ${args.sessionId} was not found in matching RenWork workspaces` };
 }
 
 function serverUrl(): string {
@@ -772,7 +772,7 @@ function requireOpenWorkServer(): { url: string; token: string } {
   const url = serverUrl();
   const token = serverToken();
   if (!url || !token) {
-    throw new Error("OpenWork extension tools are only available when OpenCode is launched by OpenWork.");
+    throw new Error("RenWork extension tools are only available when OpenCode is launched by RenWork.");
   }
   return { url, token };
 }
@@ -808,7 +808,7 @@ function normalizeDirPath(path: string): string {
 
 async function resolveContextWorkspace(workspaceId: string | undefined, context: OpenCodeContext): Promise<OpenWorkWorkspace> {
   const workspaces = await listOpenWorkWorkspaces();
-  if (!workspaces.length) throw new Error("No OpenWork workspaces are available");
+  if (!workspaces.length) throw new Error("No RenWork workspaces are available");
   if (workspaceId) {
     const match = filterWorkspaces(workspaces, workspaceId).at(0);
     if (!match) throw new Error(`No workspace matched ${workspaceId}`);
@@ -830,7 +830,7 @@ async function resolveContextWorkspace(workspaceId: string | undefined, context:
   }
   const only = workspaces.at(0);
   if (workspaces.length === 1 && only) return only;
-  throw new Error(`Multiple OpenWork workspaces match; pass workspaceId. Available: ${workspaces.map((workspace) => workspaceLabel(workspace)).join(", ")}`);
+  throw new Error(`Multiple RenWork workspaces match; pass workspaceId. Available: ${workspaces.map((workspace) => workspaceLabel(workspace)).join(", ")}`);
 }
 
 async function createOpenWorkSessions(rawArgs: unknown, context: OpenCodeContext): Promise<object> {
@@ -898,7 +898,7 @@ async function postJson(path: string, body: ExtensionActionPayload | Record<stri
   });
   const payload = await parseResponse(response);
   if (!response.ok) {
-    throw new Error(errorMessage(payload, "OpenWork extension call failed"));
+    throw new Error(errorMessage(payload, "RenWork extension call failed"));
   }
   return payload;
 }
@@ -918,71 +918,75 @@ export const OpenWorkExtensionsPreview = async (factoryInput?: unknown) => {
   const factoryContext = normalizeOpenCodeContext(factoryInput);
   const engineMcpStatusClient = readEngineMcpStatusClient(factoryInput);
   const engineMcpStatusDirectory = factoryContext.directory ?? factoryContext.worktree;
+  const renworkContextTool = {
+    description: "Read one semantic snapshot of RenWork: current screen, retained conversation tabs, split view and focused pane, sidebar and side panel state, settings panel, provider contributions, remote skill guidance, and available affordances with explicit effects and executors.",
+    args: {},
+    async execute() {
+      return JSON.stringify(
+        await readOpenworkAgentContext(engineMcpStatusClient, engineMcpStatusDirectory),
+        null,
+        2,
+      );
+    },
+  };
+  const renworkQueryTool = {
+    description: "Run a side-effect-free RenWork affordance whose executor is RenWork. Use the exact id and arguments from renwork_context. This reads backend or app state without navigation or window focus.",
+    args: openworkAffordanceRequestSchema.shape,
+    async execute(rawArgs: unknown) {
+      return JSON.stringify(await queryOpenworkAffordance(rawArgs), null, 2);
+    },
+  };
+  const renworkExecuteTool = {
+    description: "Execute a RenWork command whose executor is RenWork without activating the desktop window. Use the exact id and arguments from renwork_context, and pass expectedRevision for UI commands to prevent stale writes. If the descriptor names another executor tool, call that tool instead.",
+    args: openworkAffordanceRequestSchema.shape,
+    async execute(rawArgs: unknown, context: OpenCodeContext) {
+      const mergedContext = { ...factoryContext, ...normalizeOpenCodeContext(context) };
+      return JSON.stringify(await executeOpenworkAffordance(rawArgs, mergedContext), null, 2);
+    },
+  };
+
   return {
-  "tool.execute.after": async (_input: unknown, output: unknown) => {
-    // OpenCode 1.17.x keeps the text projection of an MCP result but drops
-    // structuredContent and result _meta before persisting the completed tool
-    // part. Preserve those standard fields in the existing metadata channel
-    // so OpenWork can host the UI without replaying the tool call.
-    preserveMcpResult(output);
-  },
-  "experimental.chat.system.transform": async (input: unknown, output: { system: string[] }) => {
-    const mergedInput = mergeTransformInputWithFactoryContext(input, factoryContext);
-    const [extensionInstruction, skillInstruction, automationInstruction] = await Promise.all([
-      resolveOpenWorkExtensionDiscoveryInstruction(mergedInput, fetch, {
-        client: engineMcpStatusClient,
-        directory: engineMcpStatusDirectory,
-      }),
-      resolveOpenWorkConnectSkillInstruction(mergedInput, fetch),
-      resolveOpenWorkAutomationInstruction(mergedInput, fetch),
-    ]);
-    const skillAuthoring = composeSkillAuthoringInstruction(extensionInstruction);
-    if (process.env.OPENWORK_DEV_MODE === "1") {
-      console.log("[openwork:skill-authoring] system prompt selected", {
-        mode: skillAuthoring.mode,
-        prompt: skillAuthoring.prompt,
-        directory: normalizeOpenCodeContext(mergedInput).directory ?? factoryContext.directory ?? null,
-      });
-    }
-    // One section id per concern — combine drops empties/duplicates so routing,
-    // remote skills, session, and browser guidance never overlap by accident.
-    const sections = combineInstructionSections(
-      createInstructionSection("routing", extensionInstruction),
-      createInstructionSection("agent-surface", OPENWORK_AGENT_SURFACE_INSTRUCTION),
-      createInstructionSection("skill-authoring", skillAuthoring.prompt),
-      createInstructionSection("connect-skills", skillInstruction),
-      createInstructionSection("automations", automationInstruction),
-      createInstructionSection("browser", OPENWORK_BROWSER_INSTRUCTION),
-    );
-    output.system.push(...composeAgentInstructions(sections));
-  },
-  tool: {
-    openwork_context: {
-      description: "Read one semantic snapshot of RenWork: current screen, retained conversation tabs, split view and focused pane, sidebar and side panel state, settings panel, provider contributions, remote skill guidance, and available affordances with explicit effects and executors.",
-      args: {},
-      async execute() {
-        return JSON.stringify(
-          await readOpenworkAgentContext(engineMcpStatusClient, engineMcpStatusDirectory),
-          null,
-          2,
-        );
-      },
+    "tool.execute.after": async (_input: unknown, output: unknown) => {
+      // OpenCode 1.17.x keeps the text projection of an MCP result but drops
+      // structuredContent and result _meta before persisting the completed tool
+      // part. Preserve those standard fields in the existing metadata channel
+      // so RenWork can host the UI without replaying the tool call.
+      preserveMcpResult(output);
     },
-    openwork_query: {
-      description: "Run a side-effect-free OpenWork affordance whose executor is OpenWork. Use the exact id and arguments from openwork_context. This reads backend or app state without navigation or window focus.",
-      args: openworkAffordanceRequestSchema.shape,
-      async execute(rawArgs: unknown) {
-        return JSON.stringify(await queryOpenworkAffordance(rawArgs), null, 2);
-      },
+    "experimental.chat.system.transform": async (input: unknown, output: { system: string[] }) => {
+      const mergedInput = mergeTransformInputWithFactoryContext(input, factoryContext);
+      const [extensionInstruction, skillInstruction, automationInstruction] = await Promise.all([
+        resolveOpenWorkExtensionDiscoveryInstruction(mergedInput, fetch, {
+          client: engineMcpStatusClient,
+          directory: engineMcpStatusDirectory,
+        }),
+        resolveOpenWorkConnectSkillInstruction(mergedInput, fetch),
+        resolveOpenWorkAutomationInstruction(mergedInput, fetch),
+      ]);
+      const skillAuthoring = composeSkillAuthoringInstruction(extensionInstruction);
+      if (process.env.OPENWORK_DEV_MODE === "1") {
+        console.log("[openwork:skill-authoring] system prompt selected", {
+          mode: skillAuthoring.mode,
+          prompt: skillAuthoring.prompt,
+          directory: normalizeOpenCodeContext(mergedInput).directory ?? factoryContext.directory ?? null,
+        });
+      }
+      // One section id per concern — combine drops empties/duplicates so routing,
+      // remote skills, session, and browser guidance never overlap by accident.
+      const sections = combineInstructionSections(
+        createInstructionSection("routing", extensionInstruction),
+        createInstructionSection("agent-surface", OPENWORK_AGENT_SURFACE_INSTRUCTION),
+        createInstructionSection("skill-authoring", skillAuthoring.prompt),
+        createInstructionSection("connect-skills", skillInstruction),
+        createInstructionSection("automations", automationInstruction),
+        createInstructionSection("browser", OPENWORK_BROWSER_INSTRUCTION),
+      );
+      output.system.push(...composeAgentInstructions(sections));
     },
-    openwork_execute: {
-      description: "Execute an OpenWork command whose executor is OpenWork without activating the desktop window. Use the exact id and arguments from openwork_context, and pass expectedRevision for UI commands to prevent stale writes. If the descriptor names another executor tool, call that tool instead.",
-      args: openworkAffordanceRequestSchema.shape,
-      async execute(rawArgs: unknown, context: OpenCodeContext) {
-        const mergedContext = { ...factoryContext, ...normalizeOpenCodeContext(context) };
-        return JSON.stringify(await executeOpenworkAffordance(rawArgs, mergedContext), null, 2);
-      },
+    tool: {
+      renwork_context: renworkContextTool,
+      renwork_query: renworkQueryTool,
+      renwork_execute: renworkExecuteTool,
     },
-  },
   };
 };

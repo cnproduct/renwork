@@ -11,6 +11,7 @@ import {
 } from "./inference-reporting.js"
 import type { InferenceReporter } from "./inference-reporting.js"
 import { listModelCatalog, resolveModelAlias } from "./model-catalog.js"
+import { createOpenRouterProviderAdapter, createRenWorkProviderGateway } from "./provider-gateway.js"
 
 type JsonObject = Record<string, unknown>
 type PreparedBody = {
@@ -18,6 +19,7 @@ type PreparedBody = {
   incomingModel: string
   modelAlias: string
   upstreamModel: string | null
+  gatewayProviderId: string
 }
 type PreparedBodyResult = PreparedBody | {
   error: Response
@@ -155,11 +157,13 @@ function sanitizeHeaders(request: Request, apiKey: string, openworkRequestId: st
   if (accept) headers.set("accept", accept)
   headers.set("authorization", `Bearer ${apiKey}`)
   headers.set("content-type", "application/json")
+  headers.set("x-renwork-request-id", openworkRequestId)
+  // Temporary wire-compatibility header for existing OpenRouter traces.
   headers.set("x-openwork-request-id", openworkRequestId)
   if (env.proxyBaseUrl) {
     headers.set("http-referer", env.proxyBaseUrl)
   }
-  headers.set("x-title", "OpenWork Inference")
+  headers.set("x-title", "RenWork Model Gateway")
   return headers
 }
 
@@ -400,7 +404,7 @@ async function prepareBody(request: Request, input: {
       resolvedUpstreamModel: model ? model.upstreamModel : null,
       status: 400,
     })
-    return { error: openAiError(400, "unsupported_model_selection", `OpenWork inference does not allow alternate model selection (${blockedSelection}).`), incomingModel: requestedModel, upstreamModel: model ? model.upstreamModel : null }
+    return { error: openAiError(400, "unsupported_model_selection", `RenWork inference does not allow alternate model selection (${blockedSelection}).`), incomingModel: requestedModel, upstreamModel: model ? model.upstreamModel : null }
   }
 
   if (requestedModel === null) {
@@ -428,7 +432,7 @@ async function prepareBody(request: Request, input: {
 
   const body = json
   if (!model) {
-    logProxyError("Unknown OpenWork model alias", {
+    logProxyError("Unknown RenWork model alias", {
       openworkRequestId: input.openworkRequestId,
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
@@ -448,7 +452,7 @@ async function prepareBody(request: Request, input: {
       resolvedUpstreamModel: null,
       status: 404,
     })
-    return { error: openAiError(404, "model_not_found", `Unknown OpenWork model alias: ${requestedModel}`), incomingModel: requestedModel, upstreamModel: null }
+    return { error: openAiError(404, "model_not_found", `Unknown RenWork model alias: ${requestedModel}`), incomingModel: requestedModel, upstreamModel: null }
   }
 
   body.model = model.upstreamModel
@@ -456,7 +460,7 @@ async function prepareBody(request: Request, input: {
   body.session_id = input.openworkRequestId
   body.trace = {
     trace_id: input.openworkRequestId,
-    trace_name: "OpenWork Inference",
+    trace_name: "RenWork Model Gateway",
     generation_name: model.alias,
     org_membership_id: input.orgMembershipId,
     inference_key_id: input.inferenceKeyId,
@@ -468,6 +472,7 @@ async function prepareBody(request: Request, input: {
     incomingModel: requestedModel,
     modelAlias: model.alias,
     upstreamModel: model.upstreamModel,
+    gatewayProviderId: model.gatewayProviderId,
   }
 }
 
@@ -478,7 +483,7 @@ function listOpenAiModels() {
       id: model.alias,
       object: "model",
       created: 0,
-      owned_by: "openwork",
+      owned_by: "renwork",
     })),
   }
 }
@@ -490,23 +495,29 @@ function localRouteRejection(path: string, method: string) {
   if (path === modelsPath) {
     return openAiError(405, "method_not_allowed", `Method ${method} is not allowed for ${path}. Use GET.`)
   }
-  return openAiError(404, "not_found", `Unsupported OpenWork inference route: ${method} ${path}.`)
+  return openAiError(404, "not_found", `Unsupported RenWork inference route: ${method} ${path}.`)
 }
 
 export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies = defaultProxyDependencies) {
   const reporter = dependencies.reporter ?? sentryInferenceReporter
+  const providerGateway = createRenWorkProviderGateway([
+    createOpenRouterProviderAdapter({
+      baseUrl: env.openRouterUpstreamUrl,
+      resolveCredential: dependencies.getOpenRouterProviderKey,
+    }),
+  ])
 
   async function handleApiRequest(c: Context) {
     const rawKey = readApiKey(c.req.raw)
     if (!rawKey) {
       logProxyError("Missing inference API key", { path: c.req.path, method: c.req.method })
-      return c.json({ error: { message: "Missing OpenWork inference API key.", type: "authentication_error", code: "missing_api_key" } }, 401)
+      return c.json({ error: { message: "Missing RenWork inference API key.", type: "authentication_error", code: "missing_api_key" } }, 401)
     }
 
     const inferenceKey = await dependencies.findActiveInferenceKey(rawKey)
     if (!inferenceKey) {
       logProxyError("Invalid inference API key", { path: c.req.path, method: c.req.method })
-      return c.json({ error: { message: "Invalid OpenWork inference API key.", type: "authentication_error", code: "invalid_api_key" } }, 401)
+      return c.json({ error: { message: "Invalid RenWork inference API key.", type: "authentication_error", code: "invalid_api_key" } }, 401)
     }
 
     if (c.req.path === modelsPath && c.req.method === "GET") {
@@ -548,7 +559,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
         resolvedUpstreamModel: null,
         status: 400,
       })
-      return openAiError(400, "unsupported_query_parameters", "OpenWork chat completions does not accept query parameters.")
+      return openAiError(400, "unsupported_query_parameters", "RenWork chat completions does not accept query parameters.")
     }
 
     const prepared = await prepareBody(c.req.raw, {
@@ -593,17 +604,25 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
       }, 429)
     }
 
-    const providerKey = await dependencies.getOpenRouterProviderKey(inferenceKey.organization_id)
-    if (!providerKey) {
-      logProxyError("Missing active OpenRouter provider key", {
+    const upstreamPath = c.req.path.replace(/^\/api\/v1/, "")
+    const gatewayResult = await providerGateway.route({
+      organizationId: inferenceKey.organization_id,
+      providerId: prepared.gatewayProviderId,
+      upstreamPath,
+    })
+    if (!gatewayResult.ok) {
+      const missingCredential = gatewayResult.code === "provider_credential_missing"
+      logProxyError("RenWork provider gateway could not route request", {
         path: c.req.path,
         organizationId: inferenceKey.organization_id,
         orgMembershipId: inferenceKey.org_membership_id,
         inferenceKeyId: inferenceKey.id,
         openworkRequestId,
+        providerId: gatewayResult.providerId,
+        gatewayCode: gatewayResult.code,
       })
       reporter.handledError({
-        reason: "missing_provider_key",
+        reason: missingCredential ? "missing_provider_key" : "provider_not_registered",
         organizationId: inferenceKey.organization_id,
         orgMembershipId: inferenceKey.org_membership_id,
         inferenceKeyId: inferenceKey.id,
@@ -613,18 +632,23 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
         headers: incomingHeaders,
         incomingModel: prepared.incomingModel,
         resolvedUpstreamModel: prepared.upstreamModel,
-        status: 400,
+        status: missingCredential ? 400 : 503,
       })
-      return c.json({ error: { message: "No active OpenRouter provider key configured for organization.", type: "invalid_request_error", code: "missing_provider_key" } }, 400)
+      return c.json({ error: {
+        message: missingCredential
+          ? "No active provider credential is configured for this organization."
+          : "The selected RenWork model provider is not registered.",
+        type: "invalid_request_error",
+        code: missingCredential ? "missing_provider_key" : "provider_not_registered",
+      } }, missingCredential ? 400 : 503)
     }
 
-    const upstreamPath = c.req.path.replace(/^\/api\/v1/, "")
-    const upstreamUrl = new URL(`${env.openRouterUpstreamUrl}${upstreamPath}`)
+    const { upstreamUrl, apiKey } = gatewayResult.route
     let upstream: Response
     try {
       const upstreamInit: ProxyRequestInit = {
         method: c.req.method,
-        headers: sanitizeHeaders(c.req.raw, providerKey.encrypted_api_key, openworkRequestId),
+        headers: sanitizeHeaders(c.req.raw, apiKey, openworkRequestId),
         body: prepared.body,
         duplex: "half",
       }
@@ -678,6 +702,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
     }
 
     const headers = new Headers(upstream.headers)
+    headers.set("x-renwork-request-id", openworkRequestId)
     headers.set("x-openwork-request-id", openworkRequestId)
     return new Response(trackStream(
       upstream.body,

@@ -19,7 +19,7 @@ afterEach(async () => {
   await setDenBootstrapConfig({ baseUrl: DEFAULT_DEN_BASE_URL, requireSignin: false });
 });
 
-describe("OpenWork Models promo eligibility", () => {
+describe("RenWork Models promo eligibility", () => {
   test("allows promotions on the default Den URL after normalization", () => {
     expect(isOpenWorkModelsPromoEligibleForDenBaseUrl(`${HOSTED_DEFAULT_DEN_BASE_URL}/api/den/`)).toBe(true);
   });
@@ -34,17 +34,23 @@ describe("OpenWork Models promo eligibility", () => {
 });
 
 describe("hasOpenWorkModelsAvailable", () => {
-  test("requires a connected openwork provider with at least one model", () => {
+  test("requires a connected RenWork provider with at least one model", () => {
     expect(
       hasOpenWorkModelsAvailable({
-        providerConnectedIds: ["openwork"],
-        providers: [{ id: "openwork", models: {} }],
+        providerConnectedIds: ["renwork"],
+        providers: [{ id: "renwork", models: {} }],
       }),
     ).toBe(false);
     expect(
       hasOpenWorkModelsAvailable({
+        providerConnectedIds: ["renwork"],
+        providers: [{ id: "renwork", models: { "gpt-5": {} } }],
+      }),
+    ).toBe(true);
+    expect(
+      hasOpenWorkModelsAvailable({
         providerConnectedIds: ["openwork"],
-        providers: [{ id: "openwork", models: { "gpt-5": {} } }],
+        providers: [{ id: "openwork", models: { "legacy-model": {} } }],
       }),
     ).toBe(true);
   });

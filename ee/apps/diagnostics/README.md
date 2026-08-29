@@ -155,7 +155,7 @@ https://<deployment>/via/<scenario>/<DEBUG_PROXY_ACCESS_KEY>[/~<encoded-upstream
 This is a Den **control plane base URL**, not a manually configured MCP server
 URL. Saving it signs the desktop out of the previous control plane. Sign in
 again through the browser; the desktop will derive the `/api/den` API routes,
-mint its short-lived MCP token, and manage the hidden `openwork-cloud` MCP
+mint its short-lived MCP token, and manage the hidden `renwork-cloud` MCP
 entry automatically.
 
 Browser sign-in uses root-relative Den web assets and API calls. The first HTML

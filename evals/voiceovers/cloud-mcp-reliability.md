@@ -8,7 +8,7 @@
 
 4. I click **Repair and test**. OpenWork repairs access for this exact workspace and verifies the live connection and tools.
 
-5. Every stage becomes healthy, and the card shows both `openwork-cloud_search_capabilities` and `openwork-cloud_execute_capability` as available to my current model.
+5. Every stage becomes healthy, and the card shows both `renwork-cloud_search_capabilities` and `renwork-cloud_execute_capability` as available to my current model.
 
 6. In **Advanced Settings**, I can inspect workspace, revision, delivery, version, plugin, and compatibility diagnostics or copy a sanitized report without exposing credentials.
 

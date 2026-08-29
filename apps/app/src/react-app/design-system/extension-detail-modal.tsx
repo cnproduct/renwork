@@ -107,7 +107,7 @@ const taxonomyDesc: Record<ExtensionTaxonomy, string> = {
   connection: "An account your agent can act in, once it is signed in.",
   mcp: "Connects as a Model Context Protocol server, giving your agent access to external tools and data.",
   skill: "A reusable workflow that your agent can execute on demand.",
-  plugin: "Extends OpenWork with additional capabilities managed by your organization.",
+  plugin: "Extends RenWork with additional capabilities managed by your organization.",
 };
 
 const uiControlClientConfig = `{
@@ -656,7 +656,7 @@ function UiControlConnectionDetails(props: UiControlConnectionDetailsProps) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
-            <div>OpenWork desktop starts a private localhost bridge automatically.</div>
+            <div>RenWork desktop starts a private localhost bridge automatically.</div>
             <div>Your MCP client starts <span className="font-mono text-card-foreground">openwork-ui-mcp</span> over stdio; the wrapper discovers the bridge and proxies UI tools to it.</div>
             <div>Do not point clients at the random localhost bridge URL directly.</div>
           </div>

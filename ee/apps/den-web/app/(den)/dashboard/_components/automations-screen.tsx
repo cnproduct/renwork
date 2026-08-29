@@ -25,8 +25,13 @@ function statusTone(status: string) {
 
 function scheduleLabel(schedule: import("@openwork/types/automations").AutomationSchedule) {
   if (schedule.kind === "once") return `Once · ${new Date(schedule.at).toLocaleString()} · ${schedule.timezone}`;
+  if (schedule.kind === "interval") return `Every ${schedule.intervalMinutes} minutes${schedule.timezone ? ` · ${schedule.timezone}` : ""}`;
   const time = `${String(schedule.hour).padStart(2, "0")}:${String(schedule.minute).padStart(2, "0")}`;
   if (schedule.kind === "daily") return `Daily · ${time} · ${schedule.timezone}`;
+  if (schedule.kind === "monthly") {
+    const day = schedule.dayOfMonth === -1 ? "last day" : `day ${schedule.dayOfMonth}`;
+    return `Monthly on ${day} · ${time} · ${schedule.timezone}`;
+  }
   const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return `Weekly ${schedule.daysOfWeek.map((day) => names[day]).join(", ")} · ${time} · ${schedule.timezone}`;
 }

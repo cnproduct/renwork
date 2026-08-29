@@ -463,6 +463,13 @@
       "when": 1786661029943,
       "tag": "0066_lying_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "5",
+      "when": 1787938432636,
+      "tag": "0067_adorable_leper_queen",
+      "breakpoints": true
     }
   ]
 }

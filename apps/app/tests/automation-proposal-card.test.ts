@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseAutomationProposal } from "../src/components/tools/openwork-automation-proposal";
+import type { DynamicToolUIPart } from "ai";
+
+import {
+  isAutomationProposalToolPart,
+  parseAutomationProposal,
+} from "../src/components/tools/openwork-automation-proposal";
 
 const dailyProposal = {
   ok: true,
@@ -18,7 +23,7 @@ const dailyProposal = {
 };
 
 describe("Automation proposal card", () => {
-  test("reads a proposal out of an openwork_execute result, string or object", () => {
+  test("reads a proposal out of a renwork_execute result, string or object", () => {
     const fromObject = parseAutomationProposal(dailyProposal);
     const fromString = parseAutomationProposal(JSON.stringify(dailyProposal));
 
@@ -31,6 +36,19 @@ describe("Automation proposal card", () => {
       minute: 0,
     });
     expect(fromObject?.model).toBeUndefined();
+  });
+
+  test("recognizes only the formal RenWork tool name", () => {
+    const toolPart = (toolName: string): DynamicToolUIPart => ({
+      type: "dynamic-tool",
+      toolName,
+      toolCallId: `call_${toolName}`,
+      state: "output-available",
+      input: {},
+      output: dailyProposal,
+    } as DynamicToolUIPart);
+
+    expect(isAutomationProposalToolPart(toolPart("renwork_execute"))).toBe(true);
   });
 
   test("ignores results that are not Automation proposals", () => {

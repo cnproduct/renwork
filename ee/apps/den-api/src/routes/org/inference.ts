@@ -2,6 +2,7 @@ import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
 import { getInferenceStatus, setInferenceEnabled } from "../../inference.js"
+import { getRenCreditWallet, listRenCreditLedger } from "../../rencredit-ledger.js"
 import { organizationHasActiveInferenceSubscription } from "../../stripe-billing.js"
 import { jsonValidator, orgRoleRoute } from "../../middleware/index.js"
 import { forbiddenSchema, invalidRequestSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
@@ -42,11 +43,42 @@ const inferenceProviderMissingSchema = z.object({
 
 export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariables }>(app: Hono<T>) {
   app.get(
+    "/v1/rencredit/wallet",
+    orgRoleRoute(["member"]),
+    async (c) => {
+      const payload = c.get("organizationContext")
+      const wallet = await getRenCreditWallet(payload.organization.id)
+      return c.json({
+        ok: true,
+        wallet: wallet ?? {
+          organization_id: payload.organization.id,
+          available_microcredits: 0,
+          reserved_microcredits: 0,
+          status: "active",
+          version: 0,
+        },
+      })
+    },
+  )
+
+  app.get(
+    "/v1/rencredit/ledger",
+    orgRoleRoute(["admin"]),
+    async (c) => {
+      const payload = c.get("organizationContext")
+      const rawLimit = Number(c.req.query("limit") ?? "50")
+      const limit = Number.isSafeInteger(rawLimit) ? rawLimit : 50
+      const entries = await listRenCreditLedger(payload.organization.id, limit)
+      return c.json({ ok: true, entries })
+    },
+  )
+
+  app.get(
     "/v1/inference",
     describeRoute({
       tags: ["Inference"],
       summary: "Get inference settings",
-      description: "Returns OpenWork Models enablement and limit context for the active organization.",
+      description: "Returns RenWork Models enablement and limit context for the active organization.",
       responses: {
         200: jsonResponse("Inference settings returned successfully.", inferenceStatusResponseSchema),
         401: jsonResponse("The caller must be signed in to read inference settings.", unauthorizedSchema),
@@ -70,7 +102,7 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
     describeRoute({
       tags: ["Inference"],
       summary: "Update inference settings",
-      description: "Enables or disables OpenWork Models for the active organization.",
+      description: "Enables or disables RenWork Models for the active organization.",
       responses: {
         200: jsonResponse("Inference settings updated successfully.", inferenceStatusResponseSchema),
         400: jsonResponse("The inference settings request was invalid.", z.union([invalidRequestSchema, inferenceProviderMissingSchema])),
@@ -112,7 +144,7 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
         if (error instanceof Error && error.message === "openrouter_management_api_key_missing") {
           return c.json({
             error: "openrouter_management_api_key_missing",
-            message: "Set OPENROUTER_MANAGEMENT_API_KEY on Den API before enabling OpenWork Models.",
+            message: "Set OPENROUTER_MANAGEMENT_API_KEY on Den API before enabling RenWork Models.",
           }, 400)
         }
         throw error

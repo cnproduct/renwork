@@ -34,6 +34,7 @@ import {
 } from "./slash-command";
 import { encodeConnectSkillToken } from "./connect-skill-token";
 import { FILE_URL_RE, HTTP_URL_RE, type PastedTextChip } from "./pasted-text";
+import { enhancePrompt } from "./prompt-enhancer";
 
 type MentionItem = {
   id: string;
@@ -754,6 +755,21 @@ export function ReactSessionComposer(props: ComposerProps) {
     !isOpenWorkExtensionHidden(entry) && isComposerExtensionAvailable(entry)
   );
   const canSend = props.draft.trim().length > 0 || props.attachments.length > 0;
+  const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
+
+  const handleEnhancePrompt = useCallback(async () => {
+    if (isEnhancingPrompt) return;
+    setIsEnhancingPrompt(true);
+    try {
+      const res = await enhancePrompt(props.draft);
+      props.onDraftChange(res.enhancedPrompt);
+      toast.success(`✨ 已识别意图「${res.inferredIntent}」，成功生成专业结构化 Prompt！`);
+    } catch {
+      toast.error("增强 Prompt 失败，请重试");
+    } finally {
+      setIsEnhancingPrompt(false);
+    }
+  }, [props.draft, props.onDraftChange, isEnhancingPrompt]);
 
   useEffect(() => {
     if (!toolMenuSection.startsWith("plugin:")) return;
@@ -858,7 +874,7 @@ export function ReactSessionComposer(props: ComposerProps) {
     setToolMenuOpen(false);
   };
 
-  // Configure lands on the matching OpenWork Extensions section: skills and
+  // Configure lands on the matching RenWork Extensions section: skills and
   // plugin tabs keep their scoped views, everything else opens the inventory.
   const openToolMenuSettings = () => {
     const section: ToolMenuSettingsSection =
@@ -1816,6 +1832,33 @@ export function ReactSessionComposer(props: ComposerProps) {
                     <span>{props.submissionPreparing ? "Preparing connected service tools…" : t("composer.run_task")}</span>
                   </button>
                 )}
+
+                {/* 增强 Prompt 按钮 (位于最右侧边缘，带蓝色Logo与悬浮提示) */}
+                <div className="relative inline-flex items-center">
+                  <button
+                    type="button"
+                    onClick={handleEnhancePrompt}
+                    disabled={isEnhancingPrompt}
+                    className={`group relative inline-flex h-9 w-9 max-h-9 max-w-9 items-center justify-center rounded-full border shadow-sm transition-all active:scale-95 max-lg:h-11 max-lg:w-11 max-lg:max-h-11 max-lg:max-w-11 ${
+                      isEnhancingPrompt
+                        ? "border-blue-400 bg-blue-100 text-blue-600 animate-pulse cursor-wait"
+                        : "border-blue-200 bg-blue-50/90 text-blue-600 hover:scale-105 hover:border-blue-400 hover:bg-blue-100 hover:text-blue-700 dark:border-blue-800/80 dark:bg-blue-950/60 dark:text-blue-400 dark:hover:border-blue-600 dark:hover:bg-blue-900/80"
+                    }`}
+                    title={isEnhancingPrompt ? "正在探索意图并生成专业 Prompt..." : "增强 prompt"}
+                    aria-label="增强 prompt"
+                  >
+                    {isEnhancingPrompt ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
+                    ) : (
+                      <EnhancePromptIcon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
+                    )}
+                    {/* 鼠标靠近时显示的浮动提示文字 */}
+                    <div className="pointer-events-none absolute -top-8.5 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-12 px-2.5 py-1 text-[11px] font-medium text-gray-1 opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 dark:bg-gray-2 dark:text-gray-12">
+                      {isEnhancingPrompt ? "正在智能探索意图并增强..." : "增强 prompt"}
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-12 dark:border-t-gray-2" />
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1823,5 +1866,30 @@ export function ReactSessionComposer(props: ComposerProps) {
 
       </div>
     </div>
+  );
+}
+
+function EnhancePromptIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {/* 中心四角星光 (带微透明填充) */}
+      <path
+        d="M12 3C12 7.2 14.8 10 19 10C14.8 10 12 12.8 12 17C12 12.8 9.2 10 5 10C9.2 10 12 7.2 12 3Z"
+        fill="currentColor"
+        fillOpacity="0.22"
+      />
+      {/* 右上角加号 + */}
+      <path d="M19 2V6M17 4H21" strokeWidth="2.2" />
+      {/* 左下角小圆点 • */}
+      <circle cx="5.5" cy="18.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
   );
 }

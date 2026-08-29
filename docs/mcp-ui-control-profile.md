@@ -49,7 +49,7 @@ This may navigate OpenWork away from the user's current session while the lookup
 
 ### OpenWork agents
 
-Inside OpenWork, agents control the app through the semantic tools (`openwork_context`, `openwork_query`, `openwork_execute`) using affordance ids from context. External MCP clients can also use the hidden **OpenWork UI Control** MCP via **Settings -> Extensions -> Show hidden**.
+Inside RenWork, agents control the app through the semantic tools (`renwork_context`, `renwork_query`, `renwork_execute`) using affordance ids from context. External MCP clients can also use the hidden **RenWork UI Control** MCP via **Settings -> Extensions -> Show hidden**.
 
 ## Install
 

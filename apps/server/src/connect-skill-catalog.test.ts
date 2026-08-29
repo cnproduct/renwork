@@ -105,10 +105,10 @@ describe("OpenWork Connect skill catalog", () => {
     expect(instruction).toContain("<plugin>Customer &lt;Ops&gt;</plugin>");
     expect(instruction).toContain("<location>skill://customer-briefing/SKILL.md</location>");
     expect(instruction).toContain("<capability>skill:skill_customer_briefing</capability>");
-    expect(instruction).toContain("openwork-cloud_execute_capability");
+    expect(instruction).toContain("renwork-cloud_execute_capability");
     expect(instruction).toContain("NEVER use the native Load Skill tool");
     expect(instruction).toContain("exact value from that skill's <capability> field");
-    expect(instruction).toContain("Do not call openwork-cloud_search_capabilities first");
+    expect(instruction).toContain("Do not call renwork-cloud_search_capabilities first");
     expect(instruction).toContain("transient HTTP 502, 503, or 504");
     expect(instruction).toContain("retry the same capability once");
     expect(instruction).not.toContain("# Customer Briefing");

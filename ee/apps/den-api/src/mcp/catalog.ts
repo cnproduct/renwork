@@ -6,10 +6,12 @@ const METHODS = new Set(["get", "post", "put", "patch", "delete"])
 
 // AWS Bedrock's Converse API rejects any `toolConfig.tools.*.member.toolSpec.name`
 // longer than 64 characters. MCP clients namespace our tools as
-// `<serverName>_<name>` (e.g. `openwork-cloud_` adds 15 chars), so the raw
+// `<serverName>_<name>` (e.g. `renwork-cloud_` adds 14 chars), so the raw
 // operationId budget is even tighter. We keep the registered tool name well
 // under 64 so the prefixed name still validates on Bedrock.
 export const BEDROCK_MAX_TOOL_NAME_LENGTH = 64
+// Keep the legacy 15-character budget for one release so old clients can
+// still read the same catalog without receiving overlong tool IDs.
 export const MAX_CLIENT_PREFIX = "openwork-cloud_".length // 15
 export const MAX_TOOL_NAME_LENGTH = BEDROCK_MAX_TOOL_NAME_LENGTH - MAX_CLIENT_PREFIX // 49
 
@@ -319,7 +321,7 @@ export function buildMcpCatalog(document: OpenApiDocument): McpToolOperation[] {
       }
 
       // Guard against future regressions: a tool name that overflows the client
-      // prefix budget (e.g. `openwork-cloud_` + name > 64) is rejected by AWS
+      // prefix budget (e.g. `renwork-cloud_` + name > 64) is rejected by AWS
       // Bedrock's Converse API and breaks every Bedrock model. Surface it here,
       // at catalog-build time (covered by tests/CI), instead of in production.
       const prefixedLength = MAX_CLIENT_PREFIX + name.length

@@ -17,7 +17,11 @@ export type ChatToolReconnectProgress =
   | { phase: "authorization_opened"; authorizeUrl: string }
 export type ChatToolReconnectResult = "connected"
 
-const OPENWORK_CLOUD_CAPABILITY_TOOLS = new Set([
+const RENWORK_CLOUD_CAPABILITY_TOOLS = new Set([
+  "renwork-cloud_search_capabilities",
+  "renwork-cloud_execute_capability",
+  // One-release read compatibility for restored sessions whose persisted tool
+  // calls still carry the retired MCP server prefix.
   "openwork-cloud_search_capabilities",
   "openwork-cloud_execute_capability",
 ])
@@ -77,11 +81,12 @@ export function reconnectActionFromChatToolResult(
   toolName: string,
   result: unknown,
 ): ChatToolReconnectAction | null {
-  // Tool output is otherwise untrusted. Only the two canonical OpenWork Cloud
-  // capability tools may turn a structured Den response into a UI action.
+  // Tool output is otherwise untrusted. Only the RenWork Cloud capability
+  // tools (plus their one-release legacy aliases) may turn a structured Den
+  // response into a UI action.
   // Discovery is included because it performs a live connection probe before
   // the agent can safely proceed to execution.
-  if (!OPENWORK_CLOUD_CAPABILITY_TOOLS.has(toolName)) return null
+  if (!RENWORK_CLOUD_CAPABILITY_TOOLS.has(toolName)) return null
 
   const parsed = parseResultRecord(result)
   if (!parsed) return null
@@ -125,15 +130,15 @@ export function attributeChatToolError(errorText: string): ToolErrorAttribution 
   const providerCode = stringValue(diagnostic, "providerCode")
 
   if (
-    errorText.includes("OpenWork stopped waiting after")
+    errorText.includes("RenWork stopped waiting after")
     || /The capability call exceeded \d+(?:\.\d+)?s\b/.test(errorText)
     || code === "MCP_LIFECYCLE_DEADLINE"
     || code === "MCP_REQUEST_TIMEOUT"
     || category === "lifecycle_deadline"
   ) {
     return confirmed(
-      "OpenWork timeout",
-      "OpenWork created this deadline. The external operation may still have completed, so verify its state before retrying.",
+      "RenWork timeout",
+      "RenWork created this deadline. The external operation may still have completed, so verify its state before retrying.",
     )
   }
 
@@ -142,7 +147,7 @@ export function attributeChatToolError(errorText: string): ToolErrorAttribution 
     || code === "MCP_URL_BLOCKED"
     || code === "MCP_FETCH_FORBIDDEN_PORT"
   ) {
-    return confirmed("Blocked by OpenWork", "OpenWork blocked the request before it was sent.")
+    return confirmed("Blocked by RenWork", "RenWork blocked the request before it was sent.")
   }
 
   if (httpStatus !== undefined && (httpStatus < 200 || httpStatus >= 300)) {

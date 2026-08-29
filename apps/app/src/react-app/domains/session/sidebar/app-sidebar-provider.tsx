@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import * as React from "react";
-import type { WorkspaceConnectionState, WorkspaceInfo } from "../../../../app/types";
+import type { WorkspaceConnectionState } from "../../../../app/types";
+import type { WorkspaceInfo } from "../../../../app/lib/desktop-types";
 import type { SessionNumberShortcutOs } from "../../../shell/session-number-shortcuts";
 
 export type SidebarContextValue = {

@@ -34,14 +34,14 @@ export function automationRuntimeKnowledge(runtimeProvider = process.env.DEN_RUN
   }
   return [
     ...shared,
-    "This chat is running in RenWork Desktop. For new recurring work, use openwork_execute id automation.propose so the person can review and create it in the app. Desktop creation fixes placement to Desktop and each occurrence requires the signed-in desktop runner.",
+    "This chat is running in RenWork Desktop. For new recurring work, use renwork_execute id automation.propose so the person can review and create it in the app. Desktop creation fixes placement to Desktop and each occurrence requires the signed-in desktop runner.",
     "Do not use createCloudAutomation from Desktop chat and never claim a Desktop Automation will run while the app is offline.",
   ].map((line) => `- ${line}`).join("\n");
 }
 
 const OPENWORK_CAPABILITIES_KNOWLEDGE = `You are running inside RenWork (人人易 AI 数字员工工作台).
 
-CRITICAL: To navigate or control the RenWork app (open settings, add providers, etc.), use openwork_context then openwork_execute, NOT browser tools. For example, to open settings: openwork_execute({id:"settings.panel.open", args:{panel:"general"}}).
+CRITICAL: To navigate or control the RenWork app (open settings, add providers, etc.), use renwork_context then renwork_execute, NOT browser tools. For example, to open settings: renwork_execute({id:"settings.panel.open", args:{panel:"general"}}).
 
 For RenWork product questions, use openwork_docs_search and openwork_docs_read as the first source of truth. RenWork documentation tools answer product questions. Never use them as a substitute for performing an action against a connected service, marketplace capability, or remote skill. Read and summarize relevant docs before answering. Cite the docs path when it helps the user verify or continue. If the docs are missing, ambiguous, or appear stale, inspect the implementation code as a last resort and say that you are inferring from code.
 
@@ -82,11 +82,11 @@ Here is what you can help users with:
 - \`Settings > Extensions\` and custom MCP commands/URLs are also for a custom or local MCP server that is not available through RenWork Cloud.
 
 ## Using RenWork Connect from an external MCP client
-- RenWork Connect's public hosted endpoint is \`https://api.openworklabs.com/mcp/agent\`. \`app.openworklabs.com/api/den\` is an internal same-origin desktop proxy, not an external-client URL.
-- OpenCode is verified with native remote MCP OAuth. Codex is setup-only until native proof is rerun on this exact branch, but its add/login/reconnect commands remain: \`codex mcp add openwork --url https://api.openworklabs.com/mcp/agent\`, \`codex mcp login openwork\`, and \`codex mcp logout openwork\` then \`codex mcp login openwork\`. Cursor, ChatGPT Desktop, Claude Code, VS Code, and other clients have setup guides only.
+- RenWork Connect's public hosted endpoint is \`https://www.rrenn.com/api/den/mcp/agent\`.
+- OpenCode is verified with native remote MCP OAuth. Codex is setup-only until native proof is rerun on this exact branch, but its add/login/reconnect commands remain: \`codex mcp add renwork --url https://www.rrenn.com/api/den/mcp/agent\`, \`codex mcp login renwork\`, and \`codex mcp logout renwork\` then \`codex mcp login renwork\`. Cursor, ChatGPT Desktop, Claude Code, VS Code, and other clients have setup guides only.
 - Cursor setup covers Cursor Desktop and Cursor Web/Agents. Cursor Web/Agents use HTTPS OAuth callbacks; Cursor Desktop OAuth uses \`cursor://anysphere.cursor-mcp/oauth/callback\`, which RenWork accepts through an exact private-use allowlist with PKCE S256 enforced. For ChatGPT, use ChatGPT Settings > MCP servers.
-- RenWork Connect OAuth uses RFC9728 discovery, authorization/browser sign-in at \`https://app.openworklabs.com/api/auth\`, the exact resource \`https://api.openworklabs.com/mcp/agent\`, dynamic client registration fallback, and PKCE S256. For OpenCode, add the remote config then run \`opencode mcp auth openwork\`; reconnect or switch orgs with \`opencode mcp logout openwork\` then \`opencode mcp auth openwork\`. The organization chosen in the browser is pinned into the token.
-- \`/mcp/agent\` exposes \`search_capabilities\` and \`execute_capability\`; available capabilities are governed by org membership, roles, policies, and exposure allowlists. Public OAuth access tokens are JWTs signed and validated with EdDSA, exact issuer \`https://app.openworklabs.com/api/auth\`, exact audience \`https://api.openworklabs.com/mcp/agent\`, and a 45-minute expiry. Refresh tokens are opaque rotating grants with a 30-day inactivity window plus a 30-second rotation overlap for near-simultaneous refreshes; because RenWork stores only token hashes, replay during overlap can issue another successor, while replay after the overlap returns \`invalid_grant\` and revokes the client/user family. Support requests should include \`X-Request-Id\` plus MCP \`referenceId\` or OAuth \`reference_id\`. For setup details, read packages/docs/cloud/run-in-the-cloud/cloud-mcp.mdx.
+- RenWork Connect OAuth uses RFC9728 discovery, authorization/browser sign-in at \`https://www.rrenn.com/api/auth\`, the exact resource \`https://www.rrenn.com/api/den/mcp/agent\`, dynamic client registration fallback, and PKCE S256. For OpenCode, add the remote config then run \`opencode mcp auth renwork\`; reconnect or switch orgs with \`opencode mcp logout renwork\` then \`opencode mcp auth renwork\`. The organization chosen in the browser is pinned into the token.
+- \`/mcp/agent\` exposes \`search_capabilities\` and \`execute_capability\`; available capabilities are governed by org membership, roles, policies, and exposure allowlists. Public OAuth access tokens are JWTs signed and validated with EdDSA, exact issuer \`https://www.rrenn.com/api/auth\`, exact audience \`https://www.rrenn.com/api/den/mcp/agent\`, and a 45-minute expiry. Refresh tokens are opaque rotating grants with a 30-day inactivity window plus a 30-second rotation overlap for near-simultaneous refreshes; because RenWork stores only token hashes, replay during overlap can issue another successor, while replay after the overlap returns \`invalid_grant\` and revokes the client/user family. Support requests should include \`X-Request-Id\` plus MCP \`referenceId\` or OAuth \`reference_id\`. For setup details, read packages/docs/cloud/run-in-the-cloud/cloud-mcp.mdx.
 
 ## Voice Mode
 - Available as a side panel in sessions when the RenWork Voice extension is enabled.
@@ -95,7 +95,7 @@ Here is what you can help users with:
 
 ## Browsing the Web
 - The built-in browser lets the agent navigate, click, type, and screenshot web pages.
-- For reliable browser automation, first open the page with \`openwork_execute\` id \`browser.open_url\`, then use the returned \`browser_url\` and \`target_id\` with browser snapshot/click/fill/eval tools.
+- For reliable browser automation, first open the page with \`renwork_execute\` id \`browser.open_url\`, then use the returned \`browser_url\` and \`target_id\` with browser snapshot/click/fill/eval tools.
 - The browser panel is visible on the right side of the session view.
 
 ## Cross-chat Session Memory
@@ -129,7 +129,7 @@ ${automationRuntimeKnowledge()}
 When users ask "what can I do?" or "what can RenWork do?", summarize these capabilities. When they ask how to do something specific, read the relevant docs first with openwork_docs_search/openwork_docs_read, then give direct steps. If docs do not answer it, inspect code as a last resort and clearly label that as code-derived guidance.`;
 
 const docsSearchArgsSchema = z.object({
-  query: z.string().min(1).describe("OpenWork docs search query, for example 'connect slack mcp'."),
+  query: z.string().min(1).describe("RenWork docs search query, for example 'connect slack mcp'."),
   limit: z.number().int().min(1).max(10).optional().describe("Maximum number of matching docs to return."),
 });
 
@@ -249,7 +249,7 @@ export const OpenWorkCapabilitiesKnowledge = async () => ({
   },
   tool: {
     openwork_docs_search: {
-      description: "Search the bundled OpenWork documentation. Use this first for OpenWork product questions before inspecting implementation code.",
+      description: "Search the bundled RenWork documentation. Use this first for RenWork product questions before inspecting implementation code.",
       args: docsSearchArgsSchema.shape,
       async execute(rawArgs: unknown) {
         const args = docsSearchArgsSchema.parse(rawArgs);
@@ -269,7 +269,7 @@ export const OpenWorkCapabilitiesKnowledge = async () => ({
       },
     },
     openwork_docs_read: {
-      description: "Read a bundled OpenWork documentation page by docs-relative path returned from openwork_docs_search.",
+      description: "Read a bundled RenWork documentation page by docs-relative path returned from openwork_docs_search.",
       args: docsReadArgsSchema.shape,
       async execute(rawArgs: unknown) {
         const args = docsReadArgsSchema.parse(rawArgs);
@@ -277,7 +277,7 @@ export const OpenWorkCapabilitiesKnowledge = async () => ({
         if (normalized.split("/").includes("..")) throw new Error("Invalid docs path");
         const docs = await loadDocs();
         const entry = docs.find((doc) => doc.path === normalized);
-        if (!entry) throw new Error(`OpenWork docs page not found: ${normalized}`);
+        if (!entry) throw new Error(`RenWork docs page not found: ${normalized}`);
         return JSON.stringify(entry, null, 2);
       },
     },

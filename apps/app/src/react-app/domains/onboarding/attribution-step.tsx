@@ -87,7 +87,7 @@ export function AttributionStep({ onSubmit, onSkip }: AttributionStepProps) {
 
       <div className="relative z-10 mx-6 w-full max-w-md rounded-3xl border border-border bg-background px-8 py-10">
         <PageHeader className="mb-8 text-center">
-          <PageTitle>How did you hear about OpenWork?</PageTitle>
+          <PageTitle>How did you hear about RenWork?</PageTitle>
           <PageDescription>
             One quick question — it helps us know where to show up.
           </PageDescription>

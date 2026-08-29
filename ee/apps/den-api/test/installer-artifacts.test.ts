@@ -55,9 +55,9 @@ test.each([
 })
 
 test.each([
-  ["mac-arm64", "v9.9.9", "openwork-cloud-mac-arm64-9.9.9.dmg"],
-  ["win-x64", "v9.9.9", "openwork-cloud-win-x64-9.9.9.exe"],
-  ["linux-x64", "v9.9.9", "openwork-cloud-linux-x86_64-9.9.9.AppImage"],
+  ["mac-arm64", "v9.9.9", "renwork-cloud-mac-arm64-9.9.9.dmg"],
+  ["win-x64", "v9.9.9", "renwork-cloud-win-x64-9.9.9.exe"],
+  ["linux-x64", "v9.9.9", "renwork-cloud-linux-x86_64-9.9.9.AppImage"],
 ])("maps %s to the Cloud release artifact", (platform, releaseTag, expected) => {
   expect(cloudDesktopReleaseAssetName(platform, releaseTag)).toBe(expected)
 })
@@ -74,14 +74,14 @@ test("resolves only a mounted installer asset and reports its size", async () =>
     size: 15,
   })
   await expect(resolveConfiguredInstallerArtifact("missing.exe")).resolves.toBeNull()
-  await expect(resolveConfiguredInstallerArtifact("openwork-cloud-win-x64-9.9.9.exe")).resolves.toBeNull()
+  await expect(resolveConfiguredInstallerArtifact("renwork-cloud-win-x64-9.9.9.exe")).resolves.toBeNull()
 
   envModule.env.installerArtifactsDir = undefined
 })
 
 test("ignores a directory with the expected filename", async () => {
   const artifactsDir = mkdtempSync(path.join(os.tmpdir(), "ow-installer-artifacts-"))
-  const fileName = "openwork-cloud-win-x64-9.9.9.exe"
+  const fileName = "renwork-cloud-win-x64-9.9.9.exe"
   mkdirSync(path.join(artifactsDir, fileName))
   envModule.env.installerArtifactsDir = artifactsDir
 

@@ -50,6 +50,7 @@ type ProviderOAuthSession = ProviderOAuthStartResult & {
 };
 
 const PROVIDER_LABELS: Record<string, string> = {
+  renwork: "RenWork",
   openwork: "RenWork",
   opencode: "OpenCode Zen",
   openai: "OpenAI",
@@ -58,7 +59,8 @@ const PROVIDER_LABELS: Record<string, string> = {
   openrouter: "OpenRouter",
 };
 
-const OPENWORK_MODELS_PROVIDER_ID = "openwork";
+const RENWORK_MODELS_PROVIDER_ID = "renwork";
+const LEGACY_MANAGED_PROVIDER_IDS = ["openwork"];
 
 export type ProviderAuthModalProps = {
   open: boolean;
@@ -197,16 +199,20 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       .sort(compareProviders);
 
     if (props.showOpenWorkModelsSubscribe) {
-      const connectedToOpenWork = connected.has(OPENWORK_MODELS_PROVIDER_ID);
+      const connectedToRenWork = [RENWORK_MODELS_PROVIDER_ID, ...LEGACY_MANAGED_PROVIDER_IDS]
+        .some((providerId) => connected.has(providerId));
       return [
         {
-          id: OPENWORK_MODELS_PROVIDER_ID,
+          id: RENWORK_MODELS_PROVIDER_ID,
           name: "RenWork",
           methods: [{ type: "cloud", label: "Subscribe" }],
-          connected: connectedToOpenWork,
+          connected: connectedToRenWork,
           env: [],
         },
-        ...nextEntries.filter((entry) => entry.id.trim().toLowerCase() !== OPENWORK_MODELS_PROVIDER_ID),
+        ...nextEntries.filter((entry) =>
+          ![RENWORK_MODELS_PROVIDER_ID, ...LEGACY_MANAGED_PROVIDER_IDS]
+            .includes(entry.id.trim().toLowerCase()),
+        ),
       ];
     }
 
@@ -537,7 +543,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     setLocalError(null);
     setSelectedProviderId(entry.id);
 
-    if (props.showOpenWorkModelsSubscribe && entry.id.trim().toLowerCase() === OPENWORK_MODELS_PROVIDER_ID) {
+    if (props.showOpenWorkModelsSubscribe && entry.id.trim().toLowerCase() === RENWORK_MODELS_PROVIDER_ID) {
       setView("openwork-subscribe");
       return;
     }
@@ -676,15 +682,15 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
         : "Use OpenAI's device flow when the local browser callback is unreliable.";
     }
     if (method.type === "oauth") {
-      return "Continue in the browser and let OpenWork finish the connection automatically.";
+      return "Continue in the browser and let RenWork finish the connection automatically.";
     }
     if (method.type === "cloud") {
-      return "Subscribe to OpenWork Models.";
+      return "Subscribe to RenWork Models.";
     }
     if (isOpencodeZenProvider(entry.id)) {
       return "Sign in to OpenCode Zen with an API key to unlock paid models alongside the free tier.";
     }
-    return "Paste a secret key that OpenWork stores locally on this device.";
+    return "Paste a secret key that RenWork stores locally on this device.";
   };
 
   return (
@@ -913,7 +919,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                 <div className="rounded-xl border border-blue-6/50 bg-blue-2/25 shadow-sm p-5 space-y-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <div className="text-sm font-medium text-gray-12">OpenWork Models</div>
+                      <div className="text-sm font-medium text-gray-12">RenWork Models</div>
                       <div className="text-xs text-gray-10 mt-1">
                         Frontier intelligence, hand picked for your team&apos;s most ambitious work.
                       </div>

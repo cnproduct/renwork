@@ -91,6 +91,12 @@ export function sweepLegacyConfigContent(content: string): { content: string; re
   let updated = content;
 
   if (isRecord(parsed.mcp) && Object.hasOwn(parsed.mcp, "openwork-cloud")) {
+    // One-release migration path: preserve the old Cloud MCP configuration
+    // under the canonical RenWork identity. If both keys exist, the explicit
+    // canonical entry wins and only the legacy duplicate is removed.
+    if (!Object.hasOwn(parsed.mcp, "renwork-cloud")) {
+      updated = setJsoncPath(updated, ["mcp", "renwork-cloud"], parsed.mcp["openwork-cloud"]);
+    }
     updated = removeJsoncPath(updated, ["mcp", "openwork-cloud"]);
     removedKeys.push("mcp.openwork-cloud");
   }

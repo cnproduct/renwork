@@ -1,9 +1,9 @@
 ---
 title: "Installer delivery"
-description: "Choose how organization install links deliver standard OpenWork desktop installers."
+description: "Choose how organization install links deliver standard RenWork desktop installers."
 ---
 
-Organization install links help members install the standard OpenWork desktop and connect it to the correct Den organization. Den does not build a customer-specific installer or wrap the installer in a ZIP. The implementation and security details remain in the repository's [Organization Install Links guide](https://github.com/different-ai/openwork/blob/dev/docs/org-install-links.md#installer-delivery).
+Organization install links help members install the standard RenWork desktop and connect it to the correct Den organization. Den does not build a customer-specific installer or wrap the installer in a ZIP. The implementation and security details remain in the repository's [Organization Install Links guide](https://github.com/different-ai/openwork/blob/dev/docs/org-install-links.md#installer-delivery).
 
 ## Delivery matrix
 
@@ -33,7 +33,7 @@ For multi-replica Den API deployments, mount the same read-only PVC at the same 
 
 For normal signed-in desktop traffic, prefer one desktop-facing Den web origin. The desktop derives API and MCP paths through that origin's `/api/den` proxy.
 
-If `DEN_API_PUBLIC_URL` is configured as a separate API origin, the one-time **Open OpenWork** install-link exchange must also reach that API origin. External MCP clients that use the published MCP URL must reach it too. This does not mean every steady-state desktop request needs both origins in the single-origin topology.
+If `DEN_API_PUBLIC_URL` is configured as a separate API origin, the one-time **Open RenWork** install-link exchange must also reach that API origin. External MCP clients that use the published MCP URL must reach it too. This does not mean every steady-state desktop request needs both origins in the single-origin topology.
 
 ## MDM bootstrap alternative
 

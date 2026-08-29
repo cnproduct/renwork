@@ -27,14 +27,14 @@ async function replaceProtectedKey(filePath, encrypted) {
 function decodeKey(encoded) {
   const key = Buffer.from(encoded, "base64");
   if (key.byteLength !== KEY_BYTES) {
-    throw new Error("The protected OpenWork credential key is invalid.");
+    throw new Error("The protected RenWork credential key is invalid.");
   }
   return key;
 }
 
 /**
  * Creates a lazy key provider so Electron does not initialize secure storage
- * until a user opts into OpenWork-managed OAuth.
+ * until a user opts into RenWork-managed OAuth.
  *
  * @param {{
  *   filePath: string;
@@ -53,10 +53,10 @@ export function createDesktopVaultKeyProvider({
   async function loadKey() {
     const safeStorage = loadSafeStorage();
     if (!safeStorage || !(await safeStorage.isAsyncEncryptionAvailable())) {
-      throw new Error("Operating-system secure storage is unavailable for OpenWork-managed OAuth.");
+      throw new Error("Operating-system secure storage is unavailable for RenWork-managed OAuth.");
     }
     if (platform === "linux" && safeStorage.getSelectedStorageBackend() === "basic_text") {
-      throw new Error("A secure Linux password store is required for OpenWork-managed OAuth.");
+      throw new Error("A secure Linux password store is required for RenWork-managed OAuth.");
     }
 
     try {

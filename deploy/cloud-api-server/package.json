@@ -1,0 +1,21 @@
+{
+  "name": "renwork-cloud-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm --filter @openwork/rencredit-metering build && tsup src/server.ts --format esm,cjs --clean",
+    "test": "NODE_ENV=test bun test src",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@openwork/rencredit-metering": "workspace:*",
+    "@hono/node-server": "^1.13.7",
+    "hono": "^4.6.14",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.7.3"
+  }
+}

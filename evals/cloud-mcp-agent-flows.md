@@ -1,7 +1,7 @@
 # Cloud MCP agent flows
 
 End-to-end flows where the **agent itself** (composer prompts) operates OpenWork
-Cloud through the `openwork-cloud` MCP. These validate the real product story:
+Cloud through the `renwork-cloud` MCP. These validate the real product story:
 a signed-in user types plain English and the agent manages their org.
 
 All flows verified 2026-06-09 against a local Den stack (MySQL + den-api +
@@ -27,7 +27,7 @@ via Den API/DB, not just the transcript.
 ## Flow 1: Which cloud am I connected to
 
 **Prompt:** "Which OpenWork Cloud organization am I connected to? Use your
-openwork-cloud tools to check."
+renwork-cloud tools to check."
 
 **Expected:** agent calls `getV1Org` / `getV1Me` and answers with the org name,
 slug, the signed-in user, and their role.
@@ -39,7 +39,7 @@ and have the owner role."
 ## Flow 2: Invite a member
 
 **Prompt:** "Add omar@openworklabs.com to my organization as a member using
-your openwork-cloud tools."
+your renwork-cloud tools."
 
 **Expected:**
 - If the email's domain is not allowed, the agent first updates the org's
@@ -54,7 +54,7 @@ your openwork-cloud tools."
 
 ## Flow 3: Assign a member to a team
 
-**Prompt:** "Assign <member> to the Sales team using your openwork-cloud tools."
+**Prompt:** "Assign <member> to the Sales team using your renwork-cloud tools."
 
 **Expected:**
 - For a **pending invitee**, the agent refuses with a correct explanation

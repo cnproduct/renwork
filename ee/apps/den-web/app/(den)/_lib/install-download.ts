@@ -21,7 +21,7 @@ export function installerFileName(platform: InstallPlatform | null, version: str
 }
 
 export function cloudInstallerFileName(platform: InstallPlatform | null, version: string) {
-  return installerFileName(platform, version)?.replace(/^openwork-enterprise-/, "openwork-cloud-") ?? null;
+  return installerFileName(platform, version)?.replace(/^openwork-enterprise-/, "renwork-cloud-") ?? null;
 }
 
 export function buildInstallDownloadHref(apiUrl: string, platform: InstallPlatform, token: string) {

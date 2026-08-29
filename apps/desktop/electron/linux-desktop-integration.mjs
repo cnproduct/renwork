@@ -186,7 +186,7 @@ export function buildOpenworkDesktopEntry({
 Type=Application
 Version=1.0
 Name=${cleanDesktopValue(appName)}
-Comment=Run agents, skills, and MCP with OpenWork
+Comment=Run agents, skills, and MCP with RenWork
 Exec=${quoteDesktopExec(appImagePath)} %U
 TryExec=${cleanDesktopValue(appImagePath)}
 Icon=${OPENWORK_DESKTOP_NAME}
@@ -419,7 +419,7 @@ export function createLinuxDesktopIntegration({
       return {
         ok: false,
         status: before,
-        error: "The canonical OpenWork launcher is externally managed and will not be overwritten.",
+        error: "The canonical RenWork launcher is externally managed and will not be overwritten.",
       };
     }
 
@@ -473,7 +473,7 @@ export function createLinuxDesktopIntegration({
         status: before,
         error: before.ownership === "external"
           ? "Remove this AppImage with the tool that manages it."
-          : "OpenWork does not own a desktop integration to remove.",
+          : "RenWork does not own a desktop integration to remove.",
       };
     }
 
@@ -530,7 +530,7 @@ export function createLinuxDesktopIntegration({
       return status;
     }
 
-    // The user already accepted this integration, so drift in the files OpenWork
+    // The user already accepted this integration, so drift in the files RenWork
     // owns is maintenance rather than a new decision. A self-update lands under a
     // new versioned filename and a moved AppImage changes its path; both stale the
     // launcher. Repair silently instead of prompting after every release.
@@ -546,9 +546,9 @@ export function createLinuxDesktopIntegration({
 
     const { response, checkboxChecked } = await dialog.showMessageBox(window, {
       type: "question",
-      title: "Add OpenWork to your applications?",
-      message: "Add OpenWork to your application launcher and register browser sign-in callbacks?",
-      detail: `The launcher will use this AppImage in its current location:\n${appImagePath}\n\nIf you move or update it later, OpenWork repairs the launcher automatically. You can change or remove this in Settings → Preferences → AppImage desktop integration.`,
+      title: "Add RenWork to your applications?",
+      message: "Add RenWork to your application launcher and register browser sign-in callbacks?",
+      detail: `The launcher will use this AppImage in its current location:\n${appImagePath}\n\nIf you move or update it later, RenWork repairs the launcher automatically. You can change or remove this in Settings → Preferences → AppImage desktop integration.`,
       buttons: ["Not now", "Integrate"],
       defaultId: 1,
       cancelId: 0,
@@ -566,7 +566,7 @@ export function createLinuxDesktopIntegration({
       await dialog.showMessageBox(window, {
         type: "warning",
         title: "Desktop integration failed",
-        message: "OpenWork could not complete desktop integration.",
+        message: "RenWork could not complete desktop integration.",
         detail: result.error ?? "Unknown error",
         buttons: ["OK"],
       });

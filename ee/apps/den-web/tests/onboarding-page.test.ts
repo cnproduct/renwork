@@ -23,11 +23,12 @@ describe("Marketplace onboarding page", () => {
     expect(publicInstallers).toContain('name.startsWith("openwork-enterprise-")');
   });
 
-  test("offers OpenWork Models and Bring your Own Keys as the model path", () => {
+  test("offers RenWork Models and Bring your Own Keys as the model path", () => {
     expect(screen).toContain("onboarding-choice-openwork-models");
     expect(screen).toContain("onboarding-choice-byok");
     expect(screen).toContain("Turn on models");
     expect(screen).toContain("Bring your Own Keys");
+    expect(screen).toContain("RenWork Models");
     expect(screen).toContain("/openwork-mark.svg");
   });
 

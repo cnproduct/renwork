@@ -568,7 +568,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       const env = await updaterEnvironmentCmd() as { appBundlePath?: string };
       const appBundlePath = env.appBundlePath?.trim();
       if (!appBundlePath) {
-        setElectronMigrationStatus("Could not resolve the current OpenWork.app bundle path.");
+        setElectronMigrationStatus("Could not resolve the current RenWork.app bundle path.");
         return;
       }
       await revealDesktopItemInDir(`${appBundlePath}.migrate-bak`);
@@ -810,7 +810,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       });
       setOpenworkServiceStatus({
         tone: "success",
-        message: t("settings.restart_succeeded_template", { service: "OpenWork server" }),
+        message: t("settings.restart_succeeded_template", { service: "RenWork server" }),
       });
       pushDeveloperLog("Restarted openwork-server");
       await openworkServerStore.reconnectOpenworkServer();
@@ -818,7 +818,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       const message = error instanceof Error ? error.message : safeStringify(error);
       setOpenworkServiceStatus({
         tone: "error",
-        message: `${t("settings.restart_failed_template", { service: "OpenWork server" })} ${message}`,
+        message: `${t("settings.restart_failed_template", { service: "RenWork server" })} ${message}`,
       });
       setServiceRestartError(message);
     } finally {
@@ -883,7 +883,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     }
     try {
       await navigator.clipboard.writeText(text);
-      setOpenworkLogStatus(t("settings.copied_service_logs", { service: "OpenWork server" }));
+      setOpenworkLogStatus(t("settings.copied_service_logs", { service: "RenWork server" }));
     } catch (error) {
       setOpenworkLogStatus(error instanceof Error ? error.message : safeStringify(error));
     }
@@ -915,7 +915,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       if (!isDesktopRuntime()) return;
       const message =
         mode === "all"
-          ? "Reset ALL OpenWork app data? Open sessions and workspaces will be removed."
+          ? "Reset ALL RenWork app data? Open sessions and workspaces will be removed."
           : "Reset onboarding state only?";
       if (typeof window !== "undefined" && !window.confirm(message)) {
         return;
@@ -927,7 +927,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
           clearOpenworkLocalStorageForReset(mode);
           setResetStatus(
             mode === "all"
-              ? "Reset OpenWork state. Restart the app to see changes."
+              ? "Reset RenWork state. Restart the app to see changes."
               : "Reset onboarding state. Restart the app to see changes.",
           );
           pushDeveloperLog(`reset_openwork_state mode=${mode}`);

@@ -77,7 +77,7 @@ function ignoredHostReason(host) {
   }
 
   // Placeholder used in customer-facing self-hosted examples.
-  if (value === "openwork.yourcompany.com") {
+  if (value === "openwork.yourcompany.com" || value === "renwork.yourcompany.com") {
     return "customer placeholder hostname";
   }
 

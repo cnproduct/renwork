@@ -2,14 +2,14 @@ import type { AutomationExecutionThread } from "@openwork/types/automations"
 
 export type AutomationExecutionIdentity = {
   icon: "desktop" | "cloud"
-  label: "Desktop" | "OpenWork Cloud"
+  label: "Desktop" | "RenWork Cloud"
 }
 
 export function automationExecutionIdentity(
   thread: Pick<AutomationExecutionThread, "executionLocation">,
 ): AutomationExecutionIdentity {
   return thread.executionLocation === "cloud"
-    ? { icon: "cloud", label: "OpenWork Cloud" }
+    ? { icon: "cloud", label: "RenWork Cloud" }
     : { icon: "desktop", label: "Desktop" }
 }
 

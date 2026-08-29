@@ -524,9 +524,9 @@ export function readDesktopDistributionInfo(): DesktopDistributionInfo {
     : window.__OPENWORK_ELECTRON__?.meta?.distribution;
   return distribution ?? {
     flavor: "public",
-    appName: "OpenWork",
+    appName: "RenWork",
     appIdentifier: "com.differentai.openwork",
-    protocolScheme: "openwork",
+    protocolScheme: "renwork",
     requireSignin: false,
     requireActivation: false,
   };

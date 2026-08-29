@@ -138,7 +138,7 @@ function verbPhrase(action: string, tense: "present" | "past"): string {
 /**
  * Build the human sentence for a dynamic (MCP / capability) tool call.
  * Tool names follow "{connection}_{tool}", e.g.
- * "openwork-cloud_search_capabilities".
+ * "renwork-cloud_search_capabilities".
  */
 export function getCapabilityCallSentence(
   part: DynamicToolUIPart,
@@ -147,6 +147,30 @@ export function getCapabilityCallSentence(
   const toolName = part.toolName
   const query = options?.includeQuery === false ? null : extractQuery(part.input)
   const quoted = query ? ` “${query}”` : ""
+
+  if (toolName === "renwork_context") {
+    return {
+      service: "RenWork",
+      present: "读取 RenWork 上下文",
+      past: "读取 RenWork 上下文",
+    }
+  }
+
+  if (toolName === "renwork_execute") {
+    return {
+      service: "RenWork",
+      present: "执行 RenWork 操作",
+      past: "执行 RenWork 操作",
+    }
+  }
+
+  if (toolName === "renwork_query") {
+    return {
+      service: "RenWork",
+      present: "查询 RenWork 数据",
+      past: "查询 RenWork 数据",
+    }
+  }
 
   if (toolName.endsWith("search_capabilities")) {
     return {
@@ -247,4 +271,3 @@ export function getCapabilityCallSentence(
     past: `${verbPhrase(toolName, "past")}${suffix}`,
   }
 }
-
