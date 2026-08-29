@@ -1,0 +1,69 @@
+name: RenCredit Ledger Check
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/rencredit-ledger-check.yml"
+      - "ee/apps/den-api/package.json"
+      - "ee/apps/den-api/src/rencredit-ledger.ts"
+      - "ee/apps/den-api/test/rencredit-two-tenant-mysql.test.ts"
+      - "ee/packages/den-db/**"
+      - "packages/rencredit-metering/**"
+
+permissions:
+  contents: read
+
+jobs:
+  two-tenant-ledger:
+    name: Two-tenant persistent ledger
+    runs-on: ubuntu-22.04
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: repro
+          MYSQL_DATABASE: openwork_test_rencredit_v6
+        ports:
+          - 33063:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -prepro"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: mysql://root:repro@127.0.0.1:33063/openwork_test_rencredit_v6
+      RENCREDIT_LEDGER_TEST_DATABASE_URL: mysql://root:repro@127.0.0.1:33063/openwork_test_rencredit_v6
+      DB_MODE: mysql
+      DEN_DB_ENCRYPTION_KEY: rencredit-ledger-ci-encryption-key-1234567890
+      BETTER_AUTH_SECRET: rencredit-ledger-ci-auth-secret-1234567890
+      BETTER_AUTH_URL: https://den.example.test
+      DEN_API_PUBLIC_URL: https://api.den.example.test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.4.0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Bootstrap schema and apply committed migrations
+        run: pnpm --filter @openwork-ee/den-db db:bootstrap
+
+      - name: Verify tenant isolation and settlement lifecycle
+        run: pnpm --dir ee/apps/den-api test:rencredit:mysql
