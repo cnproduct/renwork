@@ -10,7 +10,7 @@
 ## 上线前门禁
 
 1. 备份生产数据库，并确认 Den API 与目录服务当前健康版本及回滚镜像。
-2. 通过正式 migration job 执行 `0067_adorable_leper_queen.sql`。不要在应用启动命令中自动迁移。
+2. 通过正式 migration job 执行 RenCredit 迁移。独立 RenWork `dev` 线使用 `0067_adorable_leper_queen.sql`；与腾讯云正式认证库的 `0067_moaning_human_fly.sql` 合并发布时，必须按时间顺序改为 `0068_adorable_leper_queen.sql`。不要在应用启动命令中自动迁移。
 3. 在目录服务注入 `RENWORK_SUPER_ADMIN_TOKEN`，在 Den API 注入同值的 `RENWORK_MODEL_CATALOG_ADMIN_TOKEN` 与目录服务 HTTPS 地址。
 4. 将目录中每个 `env://NAME` 对应的 `NAME` 注入 Den API；`secret://path/name` 对应运行时变量 `RENWORK_SECRET_PATH_NAME`。Secret 不得写入仓库、网页构建变量或桌面端。
 5. 发布并复查 active 目录；至少保留一个 `openai_compatible` 或 `opencode` 的健康路由。当前首版生产转发支持这两种 OpenAI 兼容协议。
