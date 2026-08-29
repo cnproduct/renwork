@@ -44,6 +44,8 @@ import { buildAdminPageInfo, normalizeAdminPageRequest, sanitizeAdminSearchForLi
 import { registerAdminModelCatalogRoutes } from "./model-catalog.js"
 import { registerAdminOrganizationModelPolicyRoutes } from "./model-policy.js"
 import { registerAdminRenCreditRoutes } from "./rencredit.js"
+import { readRenworkAccessGrant } from "../../renwork-access.js"
+import { readRenworkSubscriptionRequest } from "../../renwork-subscription-request.js"
 
 type UserId = typeof AuthUserTable.$inferSelect.id
 type OrganizationId = typeof OrganizationTable.$inferSelect.id
@@ -91,6 +93,18 @@ const updateOrganizationCapabilitiesSchema = z.object({
     codemodeScripts: z.boolean().nullable().optional(),
     cloud: z.boolean().nullable().optional(),
   }),
+})
+
+const updateRenworkAccessGrantSchema = z.object({
+  source: z.enum(["campaign", "super_admin"]),
+  startsAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  modelSkus: z.array(z.string().trim().min(1).max(160)).min(1).nullable().default(null),
+  reason: z.string().trim().min(1).max(500),
+}).superRefine((grant, context) => {
+  if (Date.parse(grant.expiresAt) <= Date.parse(grant.startsAt)) {
+    context.addIssue({ code: "custom", message: "expiresAt must be later than startsAt.", path: ["expiresAt"] })
+  }
 })
 
 const adminActivityPointSchema = z.object({
@@ -391,6 +405,8 @@ type AdminOrganizationRow = {
   seatsFreeAdditional: number
   billableSeatCount: number
   capabilities: ReturnType<typeof normalizeOrganizationCapabilities>
+  renworkAccessGrant: ReturnType<typeof readRenworkAccessGrant>
+  renworkSubscriptionRequest: ReturnType<typeof readRenworkSubscriptionRequest>
 }
 
 type AdminSummary = {
@@ -887,6 +903,8 @@ async function shapeAdminOrganizationRows(rows: Array<Pick<typeof OrganizationTa
       seatsFreeAdditional: seatCounts.additionalFree,
       billableSeatCount: seatCounts.chargeable,
       capabilities: readAdminVisibleOrganizationCapabilities(metadata),
+      renworkAccessGrant: readRenworkAccessGrant(metadata),
+      renworkSubscriptionRequest: readRenworkSubscriptionRequest(metadata),
     }
   })
 }
@@ -1285,6 +1303,54 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
         .where(eq(OrganizationTable.id, organizationId))
 
       return c.json({ ok: true, organization: { id: organizationId, plan: parseOrganizationPlan(metadata), seatLimit: body.data.seatLimit } })
+    },
+  )
+
+  app.put(
+    "/v1/admin/organizations/:organizationId/renwork-access-grant",
+    adminRoute(),
+    async (c) => {
+      const body = updateRenworkAccessGrantSchema.safeParse(await c.req.json().catch(() => null))
+      if (!body.success) {
+        return c.json({ error: "invalid_request", message: body.error.issues[0]?.message ?? "Invalid RenWork access grant." }, 400)
+      }
+      const organizationId = c.req.param("organizationId")
+      if (!isOrganizationId(organizationId)) return c.json({ error: "invalid_request", message: "Invalid organization id." }, 400)
+      const [organization] = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable)
+        .where(eq(OrganizationTable.id, organizationId)).limit(1)
+      if (!organization) return c.json({ error: "not_found", message: "Organization not found." }, 404)
+
+      const currentUser = c.get("user")
+      const existingMetadata = normalizeMetadata(organization.metadata)
+      delete existingMetadata.renworkSubscriptionRequest
+      const metadata = {
+        ...existingMetadata,
+        renworkAccessGrant: {
+          status: "active",
+          ...body.data,
+          modelSkus: body.data.modelSkus ? [...new Set(body.data.modelSkus)] : null,
+          grantedBy: currentUser.id,
+          updatedAt: new Date().toISOString(),
+        },
+      }
+      await db.update(OrganizationTable).set({ metadata }).where(eq(OrganizationTable.id, organizationId))
+      return c.json({ ok: true, organizationId, grant: metadata.renworkAccessGrant })
+    },
+  )
+
+  app.delete(
+    "/v1/admin/organizations/:organizationId/renwork-access-grant",
+    adminRoute(),
+    async (c) => {
+      const organizationId = c.req.param("organizationId")
+      if (!isOrganizationId(organizationId)) return c.json({ error: "invalid_request", message: "Invalid organization id." }, 400)
+      const [organization] = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable)
+        .where(eq(OrganizationTable.id, organizationId)).limit(1)
+      if (!organization) return c.json({ error: "not_found", message: "Organization not found." }, 404)
+      const metadata = normalizeMetadata(organization.metadata)
+      delete metadata.renworkAccessGrant
+      await db.update(OrganizationTable).set({ metadata }).where(eq(OrganizationTable.id, organizationId))
+      return c.json({ ok: true, organizationId })
     },
   )
 

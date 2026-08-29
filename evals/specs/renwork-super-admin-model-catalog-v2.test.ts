@@ -25,7 +25,7 @@ test("platform super admin controls the private model catalog while members see 
   );
   evidence.fact(
     "All route sources share one enforceable billing policy",
-    "Official, BYOK, and local sources default to token metering and settlement uses the actual route source selected for each usage event.",
+    "Platform-configured upstream routes share token metering and settlement uses the actual private route source selected for each usage event; ordinary users never receive BYOK or local-provider controls.",
     true,
   );
   evidence.fact(

@@ -18,6 +18,7 @@ import { parseOrganizationPlan } from "../entitlements.js"
 import { env } from "../env.js"
 import { publicRoute } from "../middleware/index.js"
 import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
+import { accessAllowsModel, resolveRenworkModelAccess } from "../renwork-access.js"
 import {
   authenticateInferenceKey,
   releaseInferenceCredits,
@@ -161,11 +162,21 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     const [organization] = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable)
       .where(eq(OrganizationTable.id, principal.organizationId)).limit(1)
     const inferenceMetadata = isRecord(organization?.metadata?.inference) ? organization.metadata.inference : null
-    if (inferenceMetadata?.enabled !== true) {
+    const access = await resolveRenworkModelAccess({
+      organizationId: principal.organizationId,
+      metadata: organization?.metadata,
+    })
+    if (!access.allowed) {
+      return c.json({ error: { code: "SUBSCRIPTION_REQUIRED", message: "An active RenWork subscription or temporary access grant is required." } }, 402)
+    }
+    if (access.source === "subscription" && inferenceMetadata?.enabled !== true) {
       return c.json({ error: { code: "INFERENCE_DISABLED", message: "RenWork inference is disabled for this organization." } }, 403)
     }
+    if (!accessAllowsModel(access, model.sku)) {
+      return c.json({ error: { code: "MODEL_NOT_INCLUDED_IN_GRANT", message: "This model is not included in the temporary access grant." } }, 403)
+    }
     const plan = parseOrganizationPlan(organization?.metadata).tier
-    if (!modelAllowedForPlan(model, plan)) {
+    if (access.source === "subscription" && !modelAllowedForPlan(model, plan)) {
       return c.json({ error: { code: "PLAN_UPGRADE_REQUIRED", message: "This model is not included in the current plan." } }, 402)
     }
     const modelPolicy = readOrganizationModelPolicy(organization?.metadata)

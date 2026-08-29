@@ -37,9 +37,12 @@ describe("RenWork member model catalog route", () => {
     expect(response.status).toBe(401)
   })
 
-  test("uses the active organization plan and returns only the public projection", () => {
+  test("uses subscription plans or a scoped temporary grant and returns only the public projection", () => {
+    expect(route).toContain('access.source === "subscription"')
     expect(route).toContain("parseOrganizationPlan(organization.metadata).tier")
-    expect(route).toContain("toPublicModelCatalogForPlan(parsed.data, plan)")
+    expect(route).toContain("toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier)")
+    expect(route).toContain("toPublicModelCatalog(parsed.data)")
+    expect(route).toContain("access.allowedModelSkus")
     expect(route).not.toContain("parsed.data.providers")
     expect(route).not.toContain("credentialRef")
     expect(route).not.toContain("upstreamModelId")

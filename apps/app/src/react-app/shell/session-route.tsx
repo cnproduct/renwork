@@ -941,7 +941,7 @@ export function SessionRoute() {
     }
     return new URL("/dashboard/custom-llm-providers", readDenSettings().baseUrl).toString();
   }, [activeOrganizationRole, denSessionVersion]);
-  const restrictToCloudProviders = checkDesktopRestriction({ restriction: "allowCustomProviders" });
+  const restrictToCloudProviders = true;
   const entitledModelOptions = useMemo(() => {
     const runtimeOptions = providerListModelEntitlementOptions(
       cloudProviderList ?? providerListQuery.data,
@@ -985,6 +985,10 @@ export function SessionRoute() {
     fallbackOptions: organizationAssignedModelOptions,
     cloudProvidersEnabled: denAuth.isSignedIn,
   });
+  const entitledPickerOptions = useMemo(() => {
+    const entitledKeys = new Set(entitledModelOptions.map((option) => `${option.providerID}:${option.modelID}`));
+    return modelPicker.options.filter((option) => entitledKeys.has(`${option.providerID}:${option.modelID}`));
+  }, [entitledModelOptions, modelPicker.options]);
   // Which session the open model picker targets. Selecting a model while a
   // session is targeted remembers it for that conversation only; null means
   // the picker edits the global default (e.g. opened from the new-providers
@@ -1327,7 +1331,12 @@ export function SessionRoute() {
         const sessionModelSelection = getSessionModelSelection(targetSessionId);
         const sendModel = sessionModelSelection?.model ?? local.prefs.defaultModel;
         const sendVariant = sessionModelSelection ? sessionModelSelection.variant : modelVariantValue;
-        if (!sessionModelSelection && selectedModelUnavailable) throw new Error("Selected model is unavailable. Choose another model before sending.");
+        const sendModelAllowed = sendModel && entitledModelOptions.some(
+          (option) => option.providerID === sendModel.providerID && option.modelID === sendModel.modelID,
+        );
+        if (!sendModelAllowed || (!sessionModelSelection && selectedModelUnavailable)) {
+          throw new Error("Selected model is unavailable for this RenWork subscription. Choose an entitled model before sending.");
+        }
 
         return submitWithCloudMcpReadiness({
           // Temporarily bypass the pre-send Cloud MCP gate: it blocks every
@@ -3019,7 +3028,7 @@ export function SessionRoute() {
     />
     <ModelPickerModal
       open={modelPicker.open}
-      options={modelPicker.options}
+      options={entitledPickerOptions}
       organizationModelsEmpty={organizationModelsEmpty}
       organizationModelsSettingsUrl={organizationModelsSettingsUrl}
 

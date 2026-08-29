@@ -76,15 +76,15 @@ describe("welcome one-field contract", () => {
     expect(source).toContain('clearDenSession({ includeBaseUrls: false });');
   });
 
-  test("the post-sign-in welcome page offers the three RenWork model-source choices", () => {
+  test("the post-sign-in welcome page offers only subscription-managed RenWork models", () => {
     const pageSource = readFileSync(welcomePagePath, "utf8");
     const routeSource = readFileSync(welcomeRoutePath, "utf8");
 
     expect(pageSource).toContain('data-testid="welcome-model-source-managed"');
-    expect(pageSource).toContain('data-testid="welcome-model-source-local"');
-    expect(pageSource).toContain('data-testid="welcome-model-source-byok"');
+    expect(pageSource).not.toContain('data-testid="welcome-model-source-local"');
+    expect(pageSource).not.toContain('data-testid="welcome-model-source-byok"');
     expect(pageSource).toContain('data-testid="welcome-model-source-continue"');
-    expect(pageSource).toContain("RenWork 托管");
+    expect(pageSource).toContain("RenWork 官方模型");
     expect(pageSource).not.toContain("OpenDesign");
     expect(pageSource).not.toContain("OrganizationServerAffordance");
     expect(pageSource).not.toContain("organizationServerUrl");

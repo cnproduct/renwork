@@ -3,11 +3,12 @@ import { describeRoute } from "hono-openapi"
 import { z } from "zod"
 import { getInferenceStatus, setInferenceEnabled } from "../../inference.js"
 import { getOrCreateRenCreditWallet, listMemberRenCreditTaskReceipts, listRenCreditLedger } from "../../rencredit-ledger.js"
-import { organizationHasActiveInferenceSubscription } from "../../stripe-billing.js"
+import { resolveRenworkModelAccess } from "../../renwork-access.js"
 import { jsonValidator, orgRoleRoute } from "../../middleware/index.js"
 import { forbiddenSchema, invalidRequestSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
 import type { OrgRouteVariables } from "./shared.js"
 import { ensureOrganizationAdmin, orgAccessFailureStatus } from "./shared.js"
+import { getRenworkSubscriptionRequest } from "../../renwork-subscription-request.js"
 
 const inferenceSettingsSchema = z.object({
   enabled: z.boolean(),
@@ -29,6 +30,15 @@ const inferenceStatusSchema = z.object({
   proxyBaseUrl: z.string(),
   upstreamProviderConfigured: z.boolean(),
   subscribed: z.boolean().optional(),
+  subscriptionRequest: z.object({
+    id: z.string(),
+    status: z.literal("pending"),
+    catalogVersion: z.string(),
+    planId: z.string(),
+    offerId: z.string(),
+    requestedBy: z.string(),
+    requestedAt: z.string(),
+  }).nullable().optional(),
   buckets: z.array(inferenceUsageBucketSchema),
 }).meta({ ref: "InferenceStatus" })
 
@@ -154,10 +164,15 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
     orgRoleRoute(["admin"]),
     async (c) => {
       const payload = c.get("organizationContext")
+      const access = await resolveRenworkModelAccess({
+        organizationId: payload.organization.id,
+        metadata: payload.organization.metadata,
+      })
       return c.json({
         inference: {
           ...await getInferenceStatus(payload.organization.id),
-          subscribed: await organizationHasActiveInferenceSubscription(payload.organization.id),
+          subscribed: access.allowed,
+          subscriptionRequest: await getRenworkSubscriptionRequest(payload.organization.id),
         },
       })
     },
@@ -188,8 +203,11 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
       const input = c.req.valid("json")
 
       if (input.enabled) {
-        const subscribed = await organizationHasActiveInferenceSubscription(payload.organization.id)
-        if (!subscribed) {
+        const access = await resolveRenworkModelAccess({
+          organizationId: payload.organization.id,
+          metadata: payload.organization.metadata,
+        })
+        if (!access.allowed) {
           return c.json({
             inference: {
               ...await getInferenceStatus(payload.organization.id),
@@ -205,7 +223,11 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
           enabled: input.enabled,
           tier: input.tier,
         })
-        return c.json({ inference: { ...inference, subscribed: await organizationHasActiveInferenceSubscription(payload.organization.id) } })
+        const access = await resolveRenworkModelAccess({
+          organizationId: payload.organization.id,
+          metadata: payload.organization.metadata,
+        })
+        return c.json({ inference: { ...inference, subscribed: access.allowed } })
       } catch (error) {
         if (error instanceof Error && error.message === "openrouter_management_api_key_missing") {
           return c.json({

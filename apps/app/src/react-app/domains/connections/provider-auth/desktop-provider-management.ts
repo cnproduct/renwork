@@ -4,8 +4,6 @@ export function canManageDesktopModelProviders(input: {
   hasActiveOrganization: boolean;
   workspaceType: string | null | undefined;
 }) {
-  return input.workspaceType === "local"
-    && !input.signedIn
-    && !input.hasAuthToken
-    && !input.hasActiveOrganization;
+  void input;
+  return false;
 }

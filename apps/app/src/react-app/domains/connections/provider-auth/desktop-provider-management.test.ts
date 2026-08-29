@@ -25,13 +25,13 @@ describe("desktop provider management", () => {
     })).toBe(false);
   });
 
-  test("allows only an independent local profile with no cloud identity", () => {
+  test("does not allow an independent local profile to bypass subscription model policy", () => {
     expect(canManageDesktopModelProviders({
       signedIn: false,
       hasAuthToken: false,
       hasActiveOrganization: false,
       workspaceType: "local",
-    })).toBe(true);
+    })).toBe(false);
     expect(canManageDesktopModelProviders({
       signedIn: false,
       hasAuthToken: false,

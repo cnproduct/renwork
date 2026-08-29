@@ -10,6 +10,7 @@ import { env } from "../../env.js"
 import { ORGANIZATION_SUPER_ADMIN_ROLE, organizationRoleValueSatisfies } from "../../organization-role-hierarchy.js"
 import type { OrgRouteVariables } from "./shared.js"
 import { ensureOrganizationAdmin, ensureOrganizationSuperAdmin, orgAccessFailureStatus } from "./shared.js"
+import { createRenworkSubscriptionRequest } from "../../renwork-subscription-request.js"
 
 const stripeBillingResponseSchema = z.object({}).passthrough().meta({ ref: "OrgStripeBillingResponse" })
 const stripeCheckoutRequestSchema = z.object({ type: z.enum(["inference", "seat"]).optional() })
@@ -17,6 +18,20 @@ const stripeCheckoutResponseSchema = z.object({ url: z.string() }).meta({ ref: "
 const stripeCheckoutSyncRequestSchema = z.object({ sessionId: z.string().trim().min(1) })
 const stripeCheckoutSyncResponseSchema = z.object({ synced: z.boolean() }).meta({ ref: "OrgStripeCheckoutSyncResponse" })
 const stripePortalResponseSchema = z.object({ url: z.string() }).meta({ ref: "OrgStripePortalResponse" })
+const renworkAccessRequestSchema = z.object({ offerId: z.string().trim().min(1).max(160) })
+const renworkAccessRequestResponseSchema = z.object({
+  ok: z.literal(true),
+  created: z.boolean(),
+  request: z.object({
+    id: z.string(),
+    status: z.literal("pending"),
+    catalogVersion: z.string(),
+    planId: z.string(),
+    offerId: z.string(),
+    requestedBy: z.string(),
+    requestedAt: z.string(),
+  }),
+})
 
 function getRequestOrigin(c: { req: { raw: Request } }) {
   const url = new URL(c.req.raw.url)
@@ -74,6 +89,42 @@ function checkoutCancelUrl(c: { req: { raw: Request } }) {
 }
 
 export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariables }>(app: Hono<T>) {
+  app.post(
+    "/v1/renwork/commerce/access-requests",
+    describeRoute({
+      tags: ["RenWork Commerce"],
+      summary: "Request a RenWork subscription plan",
+      description: "Persists an organization plan request for platform-super-admin review without claiming that payment has completed.",
+      responses: {
+        200: jsonResponse("An existing matching request was returned.", renworkAccessRequestResponseSchema),
+        201: jsonResponse("The subscription request was created.", renworkAccessRequestResponseSchema),
+        400: jsonResponse("The selected offer cannot be requested.", stripeBillingResponseSchema),
+        401: jsonResponse("The caller must be signed in.", unauthorizedSchema),
+        403: jsonResponse("Only workspace owners and admins can request a plan.", forbiddenSchema),
+      },
+    }),
+    orgRoleRoute(["admin"]),
+    async (c) => {
+      const permission = ensureOrganizationAdmin(c, "Only workspace owners and admins can request a RenWork plan.")
+      if (!permission.ok) return c.json(permission.response, orgAccessFailureStatus(permission.response))
+
+      const parsed = renworkAccessRequestSchema.safeParse(await c.req.json().catch(() => null))
+      if (!parsed.success) return c.json({ error: "invalid_request", message: "Select a valid RenWork plan offer." }, 400)
+
+      const payload = c.get("organizationContext")
+      const result = await createRenworkSubscriptionRequest({
+        organizationId: payload.organization.id,
+        requestedBy: c.get("user").id,
+        offerId: parsed.data.offerId,
+      })
+      if (!result.ok) {
+        const status = result.reason === "organization_not_found" ? 404 : 400
+        return c.json({ error: result.reason, message: result.reason === "organization_not_found" ? "Organization not found." : "This RenWork offer is not available for access requests." }, status)
+      }
+      return c.json({ ok: true as const, created: result.created, request: result.request }, result.created ? 201 : 200)
+    },
+  )
+
   app.get(
     "/v1/billing",
     describeRoute({
@@ -146,15 +197,25 @@ export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariable
       const payload = c.get("organizationContext")
       const subscriptionType = parsed.data.type ?? "inference"
       const createCheckoutSession = subscriptionType === "seat" ? createSeatCheckoutSession : createInferenceCheckoutSession
-      const session = await createCheckoutSession({
-        organizationId: payload.organization.id,
-        orgMemberId: payload.currentMember.id,
-        email,
-        name: user.name ?? email,
-        successUrl: subscriptionType === "seat" ? seatCheckoutSuccessUrl(c) : checkoutSuccessUrl(c),
-        cancelUrl: checkoutCancelUrl(c),
-      })
-      return c.json({ url: session.url })
+      try {
+        const session = await createCheckoutSession({
+          organizationId: payload.organization.id,
+          orgMemberId: payload.currentMember.id,
+          email,
+          name: user.name ?? email,
+          successUrl: subscriptionType === "seat" ? seatCheckoutSuccessUrl(c) : checkoutSuccessUrl(c),
+          cancelUrl: checkoutCancelUrl(c),
+        })
+        return c.json({ url: session.url })
+      } catch (error) {
+        if (error instanceof Error && ["stripe_secret_key_missing", "stripe_inference_price_id_missing", "stripe_seat_price_id_missing"].includes(error.message)) {
+          return c.json({
+            error: "subscription_checkout_unavailable",
+            message: "Online payment is not configured for this offer. Choose a plan and submit an access request instead.",
+          }, 503)
+        }
+        throw error
+      }
     },
   )
 

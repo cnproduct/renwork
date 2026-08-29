@@ -57,7 +57,7 @@ test("the account center reads RenCredit only from the durable organization wall
   expect(durableLedger).toContain("RenCreditLedgerEntryTable")
   expect(existsSync(memoryLedgerPath)).toBe(false)
   expect(commerceView).toContain("commerce.credit_pending")
-  expect(commerceView).toContain("commerce.free_core_notice")
+  expect(commerceView).toContain("commerce.subscription_required_notice")
   expect(commerceView).toContain("commerce.enterprise_admin_notice")
   expect(commerceView).toContain('data-testid="rencredit-reserved-balance"')
   expect(commerceView).toContain('data-testid="rencredit-task-receipt"')

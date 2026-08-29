@@ -19,7 +19,7 @@ describe("workspace branding polish", () => {
     expect(source).toContain("export function WorkspaceFavicon");
     expect(source).toContain("getManagedBrandIconUrl(metadata ?? null)");
     expect(source).toContain('<WorkspaceFavicon metadata={orgContext?.organization.metadata} />');
-    expect(source).toContain('DEFAULT_WORKSPACE_FAVICON_HREF = "/openwork-mark.svg"');
+    expect(source).toContain('DEFAULT_WORKSPACE_FAVICON_HREF = "/renwork-mark.png"');
     expect(source).toContain("favicon.href = DEFAULT_WORKSPACE_FAVICON_HREF");
   });
 
@@ -35,7 +35,7 @@ describe("workspace branding polish", () => {
     const source = readFileSync(dashboardLayoutPath, "utf8");
 
     expect(source).toContain("export async function generateMetadata");
-    expect(source).toContain("/v1/me/orgs");
+    expect(source).toContain('joinBaseUrl(apiBase, "v1/me/orgs")');
     expect(source).toContain("getManagedBrandIconUrl(activeOrg.metadata)");
     expect(source).toContain("icons: { icon: iconUrl }");
   });

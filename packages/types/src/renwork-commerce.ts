@@ -8,7 +8,7 @@ export const renworkPlanAudienceSchema = z.enum(["personal", "enterprise"])
 export type RenworkPlanAudience = z.infer<typeof renworkPlanAudienceSchema>
 
 export const renworkPlanFeaturesSchema = z.object({
-  localFreeCore: z.literal(true),
+  localFreeCore: z.literal(false),
   managedCloud: z.boolean(),
   officialPlugins: z.boolean(),
   buyerGrowth: z.boolean(),
@@ -21,6 +21,16 @@ export const renworkPlanFeaturesSchema = z.object({
 export type RenworkPlanFeatures = z.infer<typeof renworkPlanFeaturesSchema>
 
 export const renworkPlanOfferSchema = z.discriminatedUnion("purchaseMode", [
+  z.object({
+    id: identifierSchema,
+    purchaseMode: z.literal("request_access"),
+    billingInterval: billingIntervalSchema,
+    currency: currencySchema,
+    priceMinor: z.number().int().positive(),
+    monthlyEquivalentPriceMinor: z.number().int().positive().nullable(),
+    includedRenCredits: z.number().int().nonnegative(),
+    cta: z.literal("request_access"),
+  }),
   z.object({
     id: identifierSchema,
     purchaseMode: z.literal("free"),
@@ -65,7 +75,14 @@ export const renworkPlanSchema = z.object({
   audience: renworkPlanAudienceSchema,
   displayName: z.string().trim().min(1).max(80),
   summary: z.string().trim().min(1).max(240),
+  badge: z.string().trim().min(1).max(32).nullable().optional(),
+  recommended: z.boolean().optional(),
   seatLimit: z.number().int().positive().nullable(),
+  qualityModelLimit: z.object({
+    calls: z.number().int().positive().nullable(),
+    windowHours: z.number().int().positive(),
+    fairUse: z.boolean(),
+  }).nullable().optional(),
   features: renworkPlanFeaturesSchema,
   offers: z.array(renworkPlanOfferSchema).min(1),
 })

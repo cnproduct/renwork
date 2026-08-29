@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useState, useRef } from "react";
-import { Sparkles, Bot, KeyRound, Globe, ChevronDown, Check, Home } from "lucide-react";
+import { Sparkles, ShieldCheck, Globe, ChevronDown, Check, Home } from "lucide-react";
 
 import { currentLocale, setLocale, LANGUAGE_OPTIONS, type Language } from "../../../i18n";
 import { useBootState } from "../../shell/boot-state";
@@ -8,7 +8,7 @@ import { Page, PageTitlebarRegion } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollAreaViewport } from "@/components/ui/scroll-area";
 
-export type ModelSourceOption = "managed" | "local" | "byok";
+export type ModelSourceOption = "managed";
 
 type WelcomePageProps = {
   onContinue: (option: ModelSourceOption) => void;
@@ -23,7 +23,7 @@ export function WelcomePage({
   error,
   defaultOption = "managed",
 }: WelcomePageProps) {
-  const [selectedOption, setSelectedOption] = useState<ModelSourceOption>(defaultOption);
+  const selectedOption = defaultOption;
   const [currentLang, setCurrentLang] = useState<Language>(currentLocale());
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const langMenuRef = useRef<HTMLDivElement>(null);
@@ -85,160 +85,51 @@ export function WelcomePage({
               {/* Header Title & Subtitle */}
               <div className="text-center mb-8">
                 <h1 className="text-[32px] font-bold tracking-tight text-foreground sm:text-[36px]">
-                  选择模型来源
+                  开始使用 RenWork
                 </h1>
                 <p className="mt-2.5 text-[14px] leading-relaxed text-muted-foreground max-w-lg mx-auto">
-                  使用 RenWork 托管服务、连接本地 Agent，或使用你自己的模型 Key。
+                  一个账号，连接企业增长全链路。模型由 RenWork 统一托管、计量并使用 RenCredit 结算。
                 </p>
               </div>
 
-              {/* 3 Model Source Cards */}
               <div className="w-full space-y-3.5">
-                {/* Option 1: Managed */}
                 <div
                   data-testid="welcome-model-source-managed"
-                  onClick={() => setSelectedOption("managed")}
-                  className={`group relative flex items-center justify-between p-4.5 rounded-2xl border-2 transition-all cursor-pointer ${
-                    selectedOption === "managed"
-                      ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm"
-                      : "border-border bg-card/60 hover:border-border/90 hover:bg-accent/30"
-                  }`}
+                  className="group relative flex items-center justify-between rounded-2xl border-2 border-emerald-500 bg-emerald-50/50 p-4.5 shadow-sm dark:bg-emerald-950/20"
                 >
                   <div className="flex items-center gap-4 min-w-0 pr-3">
                     <div
-                      className={`size-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-                        selectedOption === "managed"
-                          ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400"
-                          : "bg-muted text-muted-foreground"
-                      }`}
+                      className="size-12 rounded-2xl flex items-center justify-center shrink-0 bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400"
                     >
                       <Sparkles className="size-6" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[15px] font-bold text-foreground">
-                          RenWork 托管
+                          RenWork 官方模型
                         </span>
                         <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-900/80 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
                           推荐
                         </span>
                       </div>
                       <p className="mt-1 text-[12.5px] leading-normal text-muted-foreground">
-                        限时优惠、高并发使用 Claude、GPT、Fable 5 和 5.6 sol。
+                        登录后按个人版或企业版权益选择模型；所有正式模型用量统一计入 RenCredit。
                       </p>
                     </div>
                   </div>
 
                   {/* Radio Indicator */}
                   <div className="shrink-0 flex items-center justify-center">
-                    <div
-                      className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                        selectedOption === "managed"
-                          ? "border-emerald-600 dark:border-emerald-400"
-                          : "border-muted-foreground/30"
-                      }`}
-                    >
-                      {selectedOption === "managed" ? (
-                        <div className="size-2.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-                      ) : null}
+                    <div className="size-5 rounded-full border-2 border-emerald-600 dark:border-emerald-400 flex items-center justify-center">
+                      <div className="size-2.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                     </div>
                   </div>
                 </div>
-
-                {/* Option 2: Local Agent */}
-                <div
-                  data-testid="welcome-model-source-local"
-                  onClick={() => setSelectedOption("local")}
-                  className={`group relative flex items-center justify-between p-4.5 rounded-2xl border-2 transition-all cursor-pointer ${
-                    selectedOption === "local"
-                      ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm"
-                      : "border-border bg-card/60 hover:border-border/90 hover:bg-accent/30"
-                  }`}
-                >
-                  <div className="flex items-center gap-4 min-w-0 pr-3">
-                    <div
-                      className={`size-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-                        selectedOption === "local"
-                          ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      <Bot className="size-6" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[15px] font-bold text-foreground">
-                          本地 Agent
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[12.5px] leading-normal text-muted-foreground">
-                        使用 Claude Code、Codex、Cursor、OpenCode、Kimi、Qwen、Hermes、Kiro 等。
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Radio Indicator */}
-                  <div className="shrink-0 flex items-center justify-center">
-                    <div
-                      className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                        selectedOption === "local"
-                          ? "border-emerald-600 dark:border-emerald-400"
-                          : "border-muted-foreground/30"
-                      }`}
-                    >
-                      {selectedOption === "local" ? (
-                        <div className="size-2.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Option 3: Bring your own Key */}
-                <div
-                  data-testid="welcome-model-source-byok"
-                  onClick={() => setSelectedOption("byok")}
-                  className={`group relative flex items-center justify-between p-4.5 rounded-2xl border-2 transition-all cursor-pointer ${
-                    selectedOption === "byok"
-                      ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm"
-                      : "border-border bg-card/60 hover:border-border/90 hover:bg-accent/30"
-                  }`}
-                >
-                  <div className="flex items-center gap-4 min-w-0 pr-3">
-                    <div
-                      className={`size-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-                        selectedOption === "byok"
-                          ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      <KeyRound className="size-6" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[15px] font-bold text-foreground">
-                          使用自己的 Key
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[12.5px] leading-normal text-muted-foreground">
-                        使用自己的 API Key，安全连接你偏好的模型服务商。
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Radio Indicator */}
-                  <div className="shrink-0 flex items-center justify-center">
-                    <div
-                      className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                        selectedOption === "byok"
-                          ? "border-emerald-600 dark:border-emerald-400"
-                          : "border-muted-foreground/30"
-                      }`}
-                    >
-                      {selectedOption === "byok" ? (
-                        <div className="size-2.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-                      ) : null}
-                    </div>
-                  </div>
+                <div className="flex items-start gap-3 rounded-2xl border border-border bg-card/60 px-4 py-3.5 text-left">
+                  <ShieldCheck className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+                  <p className="text-[12.5px] leading-relaxed text-muted-foreground">
+                    默认不开放自有 API Key、本地大模型或供应商配置。临时活动模型与特殊授权由 RenWork 平台超级管理员统一开通并设置有效期。
+                  </p>
                 </div>
               </div>
 
@@ -257,7 +148,7 @@ export function WelcomePage({
                   onClick={() => onContinue(selectedOption)}
                   disabled={busy}
                 >
-                  {busy ? "正在连接配置..." : "继续"}
+                  {busy ? "正在检查账号权益..." : "登录并查看套餐"}
                 </Button>
               </div>
             </div>
