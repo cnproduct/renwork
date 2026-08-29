@@ -349,6 +349,43 @@ export type RunningAppsResult = {
   apps: string[];
 };
 
+export type ComputerHistoryApp = {
+  name: string;
+  bundleIdentifier: string;
+};
+
+export type ComputerHistoryEntry = {
+  id: string;
+  appName: string;
+  bundleIdentifier: string;
+  windowTitle: string;
+  summary: string;
+  capturedAt: string;
+  lastSeenAt: string;
+  durationSeconds: number;
+};
+
+export type ComputerHistorySettings = {
+  enabled: boolean;
+  paused: boolean;
+  retentionDays: 7 | 30 | 90 | 0;
+  allowedApps: ComputerHistoryApp[];
+};
+
+export type ComputerHistoryState = {
+  settings: ComputerHistorySettings;
+  entries: ComputerHistoryEntry[];
+  supported: boolean;
+  permissions?: ComputerUsePermissions;
+};
+
+export type ComputerHistoryAppsResult = {
+  ok: boolean;
+  apps: ComputerHistoryApp[];
+};
+
+export type ComputerHistoryClearRange = "today" | "7d" | "30d" | "all";
+
 // ---------------------------------------------------------------------------
 // The command map
 // ---------------------------------------------------------------------------
@@ -440,6 +477,21 @@ export type DesktopCommandMap = {
   openComputerUsePermissionSetup: { args: []; result: ComputerUsePermissions };
   openComputerUsePermissionSettings: { args: []; result: unknown };
 
+  // Local-only, opt-in computer history. The renderer never receives raw
+  // screenshots, AX text, or secure-field contents through this contract.
+  computerHistoryGetState: { args: []; result: ComputerHistoryState };
+  computerHistoryUpdateSettings: {
+    args: [settings: Partial<ComputerHistorySettings>];
+    result: ComputerHistoryState;
+  };
+  computerHistoryListApps: { args: []; result: ComputerHistoryAppsResult };
+  computerHistoryCaptureNow: { args: []; result: ComputerHistoryState };
+  computerHistoryDeleteEntry: { args: [id: string]; result: ComputerHistoryState };
+  computerHistoryClear: {
+    args: [input: { range: ComputerHistoryClearRange }];
+    result: ComputerHistoryState;
+  };
+
   // Bootstrap config
   getDesktopBootstrapConfig: { args: []; result: DesktopBootstrapConfig };
   debugDesktopBootstrapConfig: { args: []; result: unknown };
@@ -476,6 +528,7 @@ export type DesktopCommandMap = {
   };
 
   // Dialogs
+  getDefaultWorkspacePath: { args: []; result: string };
   pickDirectory: {
     args: [options?: { title?: string; defaultPath?: string; multiple?: boolean }];
     result: string | string[] | null;

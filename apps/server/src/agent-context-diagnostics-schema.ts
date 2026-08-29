@@ -626,13 +626,13 @@ export const agentContextDiagnosticsReportSchema = z.object({
   ) {
     const runtimeCloudMcp = value.mcps.find((mcp) =>
       mcp.source === "config.remote"
-      && mcp.name === "openwork-cloud"
+      && (mcp.name === "renwork-cloud" || mcp.name === "openwork-cloud")
       && mcp.path !== null
     );
     if (!runtimeCloudMcp) {
       context.addIssue({
         code: "custom",
-        message: "cloud handshake evidence requires the retained runtime OpenWork Cloud entry",
+        message: "cloud handshake evidence requires the retained runtime RenWork Cloud entry",
         path: ["mcps"],
       });
     }

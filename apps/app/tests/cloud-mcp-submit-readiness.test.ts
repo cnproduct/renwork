@@ -39,7 +39,7 @@ function health(input?: {
   const usable = input?.usable ?? true;
   const projectionSource = input?.projectionSource ?? "experimental_tool";
   const projected = usable
-    ? ["openwork-cloud_search_capabilities", "openwork-cloud_execute_capability"]
+    ? ["renwork-cloud_search_capabilities", "renwork-cloud_execute_capability"]
     : [];
   const projectionPresent = projectionSource === "experimental_tool" ? projected : [];
   const direct = usable ? ["search_capabilities", "execute_capability"] : [];
@@ -52,7 +52,7 @@ function health(input?: {
     workspace: { id: "workspace_1", type: "local", directory: "/workspace", path: "/workspace" },
     desired: {
       present: true,
-      name: "openwork-cloud",
+      name: "renwork-cloud",
       revision: "rev_1",
       config: { type: "remote", enabled: true },
       token: { present: true, metadata: {} },
@@ -67,9 +67,9 @@ function health(input?: {
     },
     engine: { status: usable ? "connected" : "missing" },
     tools: {
-      expected: ["openwork-cloud_search_capabilities", "openwork-cloud_execute_capability"],
+      expected: ["renwork-cloud_search_capabilities", "renwork-cloud_execute_capability"],
       present: projected,
-      missing: usable ? [] : ["openwork-cloud_search_capabilities", "openwork-cloud_execute_capability"],
+      missing: usable ? [] : ["renwork-cloud_search_capabilities", "renwork-cloud_execute_capability"],
       direct: {
         checked: true,
         source: "mcp_tools_list",
@@ -90,7 +90,7 @@ function health(input?: {
             }
           : {}),
         present: projectionPresent,
-        missing: projectionPresent.length ? [] : ["openwork-cloud_search_capabilities", "openwork-cloud_execute_capability"],
+        missing: projectionPresent.length ? [] : ["renwork-cloud_search_capabilities", "renwork-cloud_execute_capability"],
       },
     },
     pluginCanaries: { expected: ["openwork_docs_search"], present: usable ? ["openwork_docs_search"] : [], missing: usable ? [] : ["openwork_docs_search"] },
@@ -101,18 +101,18 @@ function health(input?: {
       supportedFeatures: { dynamicMcp: true, directoryScoping: true, toolIds: true, providerToolProjection: projectionSource === "experimental_tool", pluginCanaries: true },
       experimentalToolIds: {
         checked: true,
-        expected: ["openwork-cloud_search_capabilities", "openwork-cloud_execute_capability"],
+        expected: ["renwork-cloud_search_capabilities", "renwork-cloud_execute_capability"],
         present: projected,
-        missing: usable ? [] : ["openwork-cloud_search_capabilities", "openwork-cloud_execute_capability"],
+        missing: usable ? [] : ["renwork-cloud_search_capabilities", "renwork-cloud_execute_capability"],
         includesMcpTools: usable,
       },
       experimentalProviderTools: {
         checked: true,
         provider: PROVIDER_MODEL.provider,
         model: PROVIDER_MODEL.model,
-        expected: ["openwork-cloud_search_capabilities", "openwork-cloud_execute_capability"],
+        expected: ["renwork-cloud_search_capabilities", "renwork-cloud_execute_capability"],
         present: projected,
-        missing: usable ? [] : ["openwork-cloud_search_capabilities", "openwork-cloud_execute_capability"],
+        missing: usable ? [] : ["renwork-cloud_search_capabilities", "renwork-cloud_execute_capability"],
         includesMcpTools: projectionSource === "experimental_tool" && usable,
       },
     },

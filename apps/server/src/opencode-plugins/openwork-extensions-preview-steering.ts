@@ -136,16 +136,16 @@ const connectCatalogResponseSchema = z.object({
 }).passthrough();
 
 export const OPENWORK_EXTENSION_DISCOVERY_INSTRUCTION =
-  "If the user asks for something you cannot do with obvious built-in tools, check RenWork extensions before saying the capability is unavailable. Use openwork_query with id extension.actions to inspect available extension actions, then openwork_execute with id extension.call for the matching action.";
+  "If the user asks for something you cannot do with obvious built-in tools, check RenWork extensions before saying the capability is unavailable. Use renwork_query with id extension.actions to inspect available extension actions, then renwork_execute with id extension.call for the matching action.";
 
 export const OPENWORK_CLOUD_SKILL_AUTHORING_INSTRUCTION =
-  "Skill creation: Cloud. When the user asks to create a skill, retrieve and follow the listed create-skill remote skill by calling openwork-cloud_execute_capability with its exact <capability>. Create the skill in RenWork Cloud as a private plugin, not in the workspace. For later steps, use share-plugin when the user wants a specific person or team to use a skill, and use add-to-marketplace or add-user-to-marketplace only when the user asks. Use a workspace-local skill only when the user explicitly requests one. Do not create both copies.";
+  "Skill creation: Cloud. When the user asks to create a skill, retrieve and follow the listed create-skill remote skill by calling renwork-cloud_execute_capability with its exact <capability>. Create the skill in RenWork Cloud as a private plugin, not in the workspace. For later steps, use share-plugin when the user wants a specific person or team to use a skill, and use add-to-marketplace or add-user-to-marketplace only when the user asks. Use a workspace-local skill only when the user explicitly requests one. Do not create both copies.";
 
 export const OPENWORK_LOCAL_SKILL_AUTHORING_INSTRUCTION =
   "Skill creation: Local. Create or update a workspace-local skill only when the user requests one. Keep one skill in .opencode/skills/<skill-name>/SKILL.md, validate it, and re-read it after writing. Do not create a Cloud copy.";
 
 export const OPENWORK_CLOUD_CONNECTION_INSTRUCTION =
-  "The RenWork Cloud connection is verified ready for this exact workspace/model. For org-connected services, use openwork-cloud_search_capabilities with 2-4 keyword variants, then openwork-cloud_execute_capability with an exact returned name — and only mention services that search (or available_skills) actually returns. When a remote skill is listed under available_skills, call openwork-cloud_execute_capability with that skill's <capability> directly; do not treat the local OpenCode skill list as the full inventory. Local RenWork extensions remain available through openwork_query/openwork_execute with extension.actions and extension.call. Settings > Extensions is the member inventory surface for org and local apps. A successful search proves RenWork Cloud itself is authorized, so a downstream connector failure does not mean RenWork Cloud needs to be reconnected. If a result has kind connection_status, name connectionStatus.connectionName and relay connectionStatus.action exactly: use Your Connections for the member, the organization Connections dashboard for an org admin, or the provider admin console for a provider-side failure. After the requested human fixes that connector, search again in the same task because results are live, not cached, so unchanged retries return the same error.";
+  "The RenWork Cloud connection is verified ready for this exact workspace/model. For org-connected services, use renwork-cloud_search_capabilities with 2-4 keyword variants, then renwork-cloud_execute_capability with an exact returned name — and only mention services that search (or available_skills) actually returns. When a remote skill is listed under available_skills, call renwork-cloud_execute_capability with that skill's <capability> directly; do not treat the local OpenCode skill list as the full inventory. Local RenWork extensions remain available through renwork_query/renwork_execute with extension.actions and extension.call. Settings > Extensions is the member inventory surface for org and local apps. A successful search proves RenWork Cloud itself is authorized, so a downstream connector failure does not mean RenWork Cloud needs to be reconnected. If a result has kind connection_status, name connectionStatus.connectionName and relay connectionStatus.action exactly: use Your Connections for the member, the organization Connections dashboard for an org admin, or the provider admin console for a provider-side failure. After the requested human fixes that connector, search again in the same task because results are live, not cached, so unchanged retries return the same error.";
 
 export const OPENWORK_CONNECT_SIGN_IN_INSTRUCTION =
   `${OPENWORK_EXTENSION_DISCOVERY_INSTRUCTION} RenWork Cloud is not signed in or no desired agent access configuration exists for this workspace. Direct the user to sign in to RenWork and connect the service in Settings → Connect.`;
@@ -153,7 +153,8 @@ export const OPENWORK_CONNECT_SIGN_IN_INSTRUCTION =
 export const OPENWORK_CONNECT_DISABLED_INSTRUCTION =
   `${OPENWORK_EXTENSION_DISCOVERY_INSTRUCTION} RenWork Cloud agent access is explicitly disabled for this workspace. Explain that the user can enable agent access in Settings → Connect.`;
 
-const OPENWORK_CLOUD_MCP_NAME = "openwork-cloud";
+const RENWORK_CLOUD_MCP_NAME = "renwork-cloud";
+const LEGACY_OPENWORK_CLOUD_MCP_NAME = "openwork-cloud";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -212,7 +213,7 @@ function requireOpenWorkServer(): { url: string; token: string } {
   const url = serverUrl();
   const token = serverToken();
   if (!url || !token) {
-    throw new Error("OpenWork extension tools are only available when OpenCode is launched by OpenWork.");
+    throw new Error("RenWork extension tools are only available when OpenCode is launched by RenWork.");
   }
   return { url, token };
 }
@@ -253,7 +254,9 @@ function engineStatusPayload(result: unknown): unknown {
 }
 
 function readEngineMcpStatus(result: unknown): EngineMcpStatusResult {
-  const entry = getRecordProperty(engineStatusPayload(result), OPENWORK_CLOUD_MCP_NAME);
+  const payload = engineStatusPayload(result);
+  const entry = getRecordProperty(payload, RENWORK_CLOUD_MCP_NAME)
+    ?? getRecordProperty(payload, LEGACY_OPENWORK_CLOUD_MCP_NAME);
   if (entry === undefined) return { found: false };
   if (typeof entry === "string") return { found: true, status: readString(entry) };
   return { found: true, status: readNestedString(entry, ["status"]) };
@@ -284,7 +287,7 @@ async function fetchOpenWorkConnectState(input: unknown, fetcher: OpenWorkFetch)
     headers: { Authorization: `Bearer ${token}` },
   });
   const payload = await parseResponse(response);
-  if (!response.ok) throw new Error(errorMessage(payload, "OpenWork connect state request failed"));
+  if (!response.ok) throw new Error(errorMessage(payload, "RenWork connect state request failed"));
   const parsed = connectStateResponseSchema.parse(payload);
   return {
     connectEnabled: parsed.connectEnabled,

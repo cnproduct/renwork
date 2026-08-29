@@ -1,8 +1,8 @@
 {
   "name": "openwork-ui-mcp",
-  "version": "0.2.0",
-  "description": "MCP server for OpenWork app context and semantic UI control",
-  "author": "OpenWork <support@openworklabs.com>",
+  "version": "0.18.50",
+  "description": "MCP server for RenWork app context and semantic UI control",
+  "author": "RenWork",
   "license": "MIT",
   "type": "module",
   "bin": {

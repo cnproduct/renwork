@@ -6,11 +6,15 @@ import {
 } from "../src/components/tools/error-attribution"
 import { normalizeErrorText } from "../src/lib/error-text"
 
-function reconnectStatus(connectionId = "emc_knowledge", connectionName = "Knowledge Hub") {
+function reconnectStatus(
+  connectionId = "emc_knowledge",
+  connectionName = "Knowledge Hub",
+  source: "renwork-cloud" | "openwork-cloud" = "renwork-cloud",
+) {
   return {
     version: 1,
     kind: "connection_action",
-    source: "openwork-cloud",
+    source,
     connectionId,
     connectionName,
     authType: "oauth",
@@ -27,15 +31,15 @@ function reconnectStatus(connectionId = "emc_knowledge", connectionName = "Knowl
 }
 
 describe("chat tool error attribution", () => {
-  test("identifies an OpenWork-created capability deadline", () => {
+  test("identifies a RenWork-created capability deadline", () => {
     expect(attributeChatToolError("The capability call exceeded 180s. Retry once.")).toEqual({
-      label: "OpenWork timeout",
+      label: "RenWork timeout",
       confidence: "Confirmed",
-      description: "OpenWork created this deadline. The external operation may still have completed, so verify its state before retrying.",
+      description: "RenWork created this deadline. The external operation may still have completed, so verify its state before retrying.",
     })
   })
 
-  test("identifies a structured OpenWork lifecycle deadline", () => {
+  test("identifies a structured RenWork lifecycle deadline", () => {
     expect(attributeChatToolError(JSON.stringify({
       error: "connection_failed",
       diagnostic: {
@@ -44,16 +48,16 @@ describe("chat tool error attribution", () => {
         phase: "MCP_TOOL_EXECUTION",
       },
     }))).toMatchObject({
-      label: "OpenWork timeout",
+      label: "RenWork timeout",
       confidence: "Confirmed",
     })
   })
 
-  test("identifies an OpenWork block before send", () => {
+  test("identifies a RenWork block before send", () => {
     expect(attributeChatToolError(JSON.stringify({
       diagnostic: { code: "MCP_URL_BLOCKED", category: "security_blocked" },
     }))).toMatchObject({
-      label: "Blocked by OpenWork",
+      label: "Blocked by RenWork",
       confidence: "Confirmed",
     })
   })
@@ -124,7 +128,7 @@ describe("chat tool error attribution", () => {
       connectionStatus: reconnectStatus(),
     })
 
-    expect(reconnectActionFromChatToolResult("openwork-cloud_execute_capability", errorText)).toEqual({
+    expect(reconnectActionFromChatToolResult("renwork-cloud_execute_capability", errorText)).toEqual({
       connectionId: "emc_knowledge",
       connectionName: "Knowledge Hub",
       label: "Reconnect",
@@ -139,9 +143,21 @@ describe("chat tool error attribution", () => {
       }],
     })
 
-    expect(reconnectActionFromChatToolResult("openwork-cloud_search_capabilities", output)).toEqual({
+    expect(reconnectActionFromChatToolResult("renwork-cloud_search_capabilities", output)).toEqual({
       connectionId: "emc_knowledge",
       connectionName: "Knowledge Hub",
+      label: "Reconnect",
+    })
+  })
+
+  test("restores one-release legacy tool and action source aliases", () => {
+    const errorText = JSON.stringify({
+      connectionStatus: reconnectStatus("emc_legacy", "Legacy connection", "openwork-cloud"),
+    })
+
+    expect(reconnectActionFromChatToolResult("openwork-cloud_execute_capability", errorText)).toEqual({
+      connectionId: "emc_legacy",
+      connectionName: "Legacy connection",
       label: "Reconnect",
     })
   })

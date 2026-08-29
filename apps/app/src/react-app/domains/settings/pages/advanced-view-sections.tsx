@@ -162,9 +162,14 @@ function ServerEndpointsCard(props: { cloudMcpUrl: string | null }) {
       </div>
 
       {hasBootstrapSource ? (
-        <div className="text-[11px] text-amber-11">
-          {t("settings.server_endpoints_bootstrap_hint", { path: DESKTOP_BOOTSTRAP_PATH_HINT })}
-        </div>
+        <details className="rounded-lg bg-amber-2/50 p-2 text-[11px] text-amber-11">
+          <summary className="cursor-pointer font-medium">
+            {t("settings.compatibility_details")}
+          </summary>
+          <div className="mt-2">
+            {t("settings.server_endpoints_bootstrap_hint", { path: DESKTOP_BOOTSTRAP_PATH_HINT })}
+          </div>
+        </details>
       ) : null}
     </SettingsInset>
   );
@@ -314,8 +319,8 @@ export function AdvancedRuntimeSection(props: AdvancedRuntimeSectionProps) {
         />
         <RuntimeStatusCard
           icon={<Server size={18} />}
-          title={t("settings.openwork_server_label")}
-          description={t("settings.openwork_server_desc")}
+          title={t("settings.renwork_server_label")}
+          description={t("settings.renwork_server_desc")}
           statusLabel={props.openworkStatusLabel}
           tone={props.openworkTone}
           detailLines={props.openworkDetailLines}
@@ -400,13 +405,13 @@ export function AdvancedCloudMcpDiagnosticsSection(props: AdvancedCloudMcpDiagno
       <LayoutSectionHeader>
         <LayoutSectionTitle>Agent access diagnostics</LayoutSectionTitle>
         <LayoutSectionDescription>
-          Technical details for OpenWork Cloud MCP delivery. Tokens and Authorization headers are redacted before display or copy.
+          Technical details for RenWork Cloud MCP delivery. Tokens and Authorization headers are redacted before display or copy.
         </LayoutSectionDescription>
       </LayoutSectionHeader>
 
       <LayoutSectionItem>
         <LayoutSectionItemHeader>
-          <LayoutSectionItemTitle>OpenWork Cloud MCP health</LayoutSectionItemTitle>
+          <LayoutSectionItemTitle>RenWork Cloud MCP health</LayoutSectionItemTitle>
           <LayoutSectionItemDescription>
             Use this when support needs exact runtime state. The main Connect card stays user-facing.
           </LayoutSectionItemDescription>
@@ -458,7 +463,7 @@ export function AdvancedCloudMcpDiagnosticsSection(props: AdvancedCloudMcpDiagno
               <DiagnosticRow label="Safe capabilities" value={`schema v${props.cloudMcpHealth.schemaVersion}; connect catalog ${props.cloudMcpHealth.connectCatalogEnabled ? "enabled" : "disabled"}`} />
               {compatibility ? (
                 <>
-                  <DiagnosticRow label="OpenWork versions" value={`server ${formatMaybe(compatibility.openwork.serverVersion)}; app ${formatMetadataRecord(compatibility.openwork.app)}`} />
+                  <DiagnosticRow label="RenWork versions" value={`server ${formatMaybe(compatibility.openwork.serverVersion)}; app ${formatMetadataRecord(compatibility.openwork.app)}`} />
                   <DiagnosticRow label="OpenCode compatibility" value={`expected ${formatMaybe(compatibility.opencode.expectedVersion)}; actual ${formatMaybe(compatibility.opencode.actualVersion)}; probe ${compatibility.opencode.probe}`} />
                   <DiagnosticRow label="Feature probes" value={formatSupportedFeatures(compatibility.supportedFeatures)} />
                   <DiagnosticRow label="Experimental tool IDs" value={formatMcpToolExposure(compatibility.experimentalToolIds)} />
@@ -532,7 +537,8 @@ function RuntimeConfigSummary(props: { config: Record<string, unknown> }) {
   const mcps = countRecord(config.mcp);
   const permissions = countRecord(config.permission);
   const disabledProviders = countArray(config.disabled_providers);
-  const defaultAgent = typeof config.default_agent === "string" ? config.default_agent : "not set";
+  const rawDefaultAgent = typeof config.default_agent === "string" ? config.default_agent : "not set";
+  const defaultAgent = /^(openwork|renwork)$/i.test(rawDefaultAgent) ? "RenWork" : rawDefaultAgent;
 
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -601,15 +607,15 @@ export function AdvancedRuntimeMigrationSection(props: AdvancedRuntimeMigrationS
       <LayoutSectionHeader>
         <LayoutSectionTitle>OpenCode config sources</LayoutSectionTitle>
         <LayoutSectionDescription>
-          Inspect what OpenWork controls at runtime versus what belongs to your workspace config. This works through the OpenWork server and does not require the OpenCode engine to be healthy.
+          Inspect what RenWork controls at runtime versus what belongs to your workspace config. This works through the RenWork server and does not require the OpenCode engine to be healthy.
         </LayoutSectionDescription>
       </LayoutSectionHeader>
 
       <LayoutSectionItem>
         <LayoutSectionItemHeader>
-          <LayoutSectionItemTitle>Move OpenWork-managed config</LayoutSectionItemTitle>
+          <LayoutSectionItemTitle>Move RenWork-managed config</LayoutSectionItemTitle>
           <LayoutSectionItemDescription>
-            Moves older OpenWork-owned runtime keys from `.opencode/openwork.json` and safe OpenWork-managed keys from `opencode.jsonc` into the runtime database.
+            {t("settings.runtime_migration_desc")}
           </LayoutSectionItemDescription>
           <LayoutSectionItemHeaderActions>
             <Button
@@ -639,9 +645,9 @@ export function AdvancedRuntimeMigrationSection(props: AdvancedRuntimeMigrationS
         {props.configStatus ? (
           <div className="space-y-3 rounded-xl border border-gray-6 bg-gray-1/60 p-3 text-xs text-gray-10">
             <div className="space-y-2 rounded-xl border border-blue-6/50 bg-blue-2/40 p-3">
-              <div className="font-medium text-gray-12">Desired OpenWork runtime config</div>
+              <div className="font-medium text-gray-12">Desired RenWork runtime config</div>
               <div className="text-[11px] text-gray-9">
-                This is the OpenWork-built config object requested for the runtime database and injected safely by the server. Sensitive headers are redacted here.
+                This is the RenWork-built config object requested for the runtime database and injected safely by the server. Sensitive headers are redacted here.
               </div>
               <RuntimeConfigSummary config={effectiveRuntimeConfig ?? {}} />
               <details className="rounded-lg bg-gray-3 p-2">
@@ -656,7 +662,7 @@ export function AdvancedRuntimeMigrationSection(props: AdvancedRuntimeMigrationS
                 <div>
                   <div className="font-medium text-gray-12">OpenCode source breakdown</div>
                   <div className="text-[11px] text-gray-9">
-                    OpenCode also reads its own project and global config files. OpenWork injects the runtime config separately; for OpenWork-managed keys, the injected config is the source to inspect.
+                    OpenCode also reads its own project and global config files. RenWork injects the runtime config separately; for RenWork-managed keys, the injected config is the source to inspect.
                   </div>
                 </div>
                 <RuntimeConfigSourceBlock
@@ -676,14 +682,14 @@ export function AdvancedRuntimeMigrationSection(props: AdvancedRuntimeMigrationS
                   config={props.configStatus.sources.globalOpencode.config}
                 />
                 <RuntimeConfigSourceBlock
-                  title="OpenWork runtime DB"
-                  description="OpenWork-managed runtime values stored outside workspace files."
+                  title="RenWork runtime DB"
+                  description="RenWork-managed runtime values stored outside workspace files."
                   keys={props.configStatus.sources.runtimeDatabase.keys}
                   config={props.configStatus.sources.runtimeDatabase.config}
                 />
                 <RuntimeConfigSourceBlock
-                  title="OpenWork injected config"
-                  description="The object OpenWork injects into OpenCode at runtime."
+                  title="RenWork injected config"
+                  description="The object RenWork injects into OpenCode at runtime."
                   keys={props.configStatus.sources.injected.keys}
                   config={props.configStatus.sources.injected.config}
                 />
@@ -694,26 +700,33 @@ export function AdvancedRuntimeMigrationSection(props: AdvancedRuntimeMigrationS
               <div>Stored keys: {formatKeys(props.configStatus.runtimeKeys)}</div>
             </div>
             <div>
-              <div className="font-medium text-gray-12">Legacy OpenWork metadata</div>
-              <div className="break-all">{props.configStatus.legacyOpenwork.path}</div>
-              {props.configStatus.legacyOpenwork.error ? (
-                <div className="text-amber-11">{props.configStatus.legacyOpenwork.error}; fix this file before moving legacy config.</div>
-              ) : null}
-              <div>Migratable keys: {formatKeys(props.configStatus.legacyOpenwork.keys)}</div>
-            </div>
-            <div>
               <div className="font-medium text-gray-12">User opencode.jsonc</div>
               <div className="break-all">{props.configStatus.userOpencode.path}</div>
               <div>{props.configStatus.userOpencode.exists ? "Found" : "Not found"}</div>
               <div>User-owned keys: {formatKeys(props.configStatus.userOpencode.keys)}</div>
               <div>Migratable keys: {formatKeys(props.configStatus.userOpencode.migratableKeys)}</div>
             </div>
-            <div>
-              <div className="font-medium text-gray-12">Runtime DB JSON</div>
-              <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-gray-3 p-2 font-mono text-[11px] text-gray-11">
-                {JSON.stringify(runtimeConfig, null, 2)}
-              </pre>
-            </div>
+            <details className="rounded-lg bg-gray-3 p-2">
+              <summary className="cursor-pointer text-[11px] font-medium text-gray-11">
+                {t("settings.compatibility_details")}
+              </summary>
+              <div className="mt-3 space-y-3">
+                <div>
+                  <div className="font-medium text-gray-12">{t("settings.legacy_renwork_metadata")}</div>
+                  <div className="break-all">{props.configStatus.legacyOpenwork.path}</div>
+                  {props.configStatus.legacyOpenwork.error ? (
+                    <div className="text-amber-11">{props.configStatus.legacyOpenwork.error}</div>
+                  ) : null}
+                  <div>Migratable keys: {formatKeys(props.configStatus.legacyOpenwork.keys)}</div>
+                </div>
+                <div>
+                  <div className="font-medium text-gray-12">Runtime DB JSON</div>
+                  <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-gray-2 p-2 font-mono text-[11px] text-gray-11">
+                    {JSON.stringify(runtimeConfig, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </details>
           </div>
         ) : null}
       </LayoutSectionItem>
@@ -856,7 +869,7 @@ export function AdvancedDeveloperSection(props: AdvancedDeveloperSectionProps) {
                   value={props.deepLinkInput}
                   onChange={(event) => props.onDeepLinkInput(event.currentTarget.value)}
                   rows={3}
-                  placeholder="openwork://..."
+                  placeholder="renwork://..."
                   className="font-mono text-xs"
                 />
               </Field>
@@ -930,7 +943,7 @@ export function AdvancedConnectionSection(props: AdvancedConnectionSectionProps)
               disabled={props.busy || props.restartBusy}
             >
               <RefreshCcw size={14} className={props.restartBusy ? "animate-spin" : ""} />
-              {props.restartBusy ? t("settings.restarting") : t("settings.restart_openwork_server")}
+              {props.restartBusy ? t("settings.restarting") : t("settings.restart_renwork_server")}
             </Button>
           ) : null}
 

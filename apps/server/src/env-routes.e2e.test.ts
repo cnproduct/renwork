@@ -294,7 +294,7 @@ describe("env routes", () => {
     expect(put.status).toBe(400);
     const body = (await put.json()) as { code: string; message: string };
     expect(body.code).toBe("reserved_env_key");
-    expect(body.message).toBe("Environment variable name is reserved for OpenWork internals");
+    expect(body.message).toBe("Environment variable name is reserved for RenWork internals");
     expect(body.message).not.toContain("OPENWORK_TOKEN");
   });
 
@@ -337,6 +337,16 @@ describe("env routes", () => {
       const url = String(input);
       if (url === "https://api.openai.com/v1/realtime/client_secrets") {
         expect(init?.headers).toMatchObject({ Authorization: "Bearer sk-test" });
+        const requestBody = JSON.parse(String(init?.body)) as {
+          session?: { instructions?: string; tools?: Array<{ name?: string }> };
+        };
+        expect(requestBody.session?.tools?.map((tool) => tool.name)).toEqual([
+          "renwork_context",
+          "renwork_query",
+          "renwork_execute",
+        ]);
+        expect(requestBody.session?.instructions).toContain("RenWork Voice Mode");
+        expect(requestBody.session?.instructions).toContain("renwork_execute with browser.open_url");
         return Promise.resolve(new Response(JSON.stringify({ client_secret: { value: "rt-secret", expires_at: 123 } }), {
           status: 200,
           headers: { "content-type": "application/json" },
@@ -364,6 +374,7 @@ describe("env routes", () => {
       ok: true,
       clientSecret: "rt-secret",
       expiresAt: 123,
+      tools: ["renwork_context", "renwork_query", "renwork_execute"],
     });
   });
 
@@ -393,7 +404,7 @@ describe("env routes", () => {
           expiresAt: 456,
           model: "gpt-realtime-2",
           transcriptionModel: "gpt-4o-transcribe",
-          tools: ["openwork_snapshot"],
+          tools: ["renwork_context", "renwork_query", "renwork_execute"],
           source: "openwork-models",
         }), {
           status: 200,
@@ -424,6 +435,7 @@ describe("env routes", () => {
       ok: true,
       clientSecret: "managed-rt-secret",
       expiresAt: 456,
+      tools: ["renwork_context", "renwork_query", "renwork_execute"],
       source: "openwork-models",
     });
   });

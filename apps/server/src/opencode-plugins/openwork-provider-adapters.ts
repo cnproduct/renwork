@@ -180,7 +180,7 @@ function connectContribution(
   cloudMcp: EngineMcpDescriptor | undefined,
 ): OpenworkFeatureContribution | null {
   if (skills.length === 0 && !cloudMcp) return null;
-  const provider: OpenworkProviderRef = { id: "openwork-cloud", kind: "connect" };
+  const provider: OpenworkProviderRef = { id: "renwork-cloud", kind: "connect" };
   const guidance: OpenworkGuidanceDescriptor[] = skills.map((skill) => ({
     ref: skill.capability,
     title: skill.title?.trim() || skill.name,
@@ -204,7 +204,7 @@ function connectContribution(
           argument("type", "string", false, "Optional capability type filter."),
         ],
         effects: { data: "read", ui: "none", external: true },
-        tool: "openwork-cloud_search_capabilities",
+        tool: "renwork-cloud_search_capabilities",
       }),
       affordance({
         id: "connect.capability.execute",
@@ -220,7 +220,7 @@ function connectContribution(
           argument("body", "object", false, "Request body for the capability."),
         ],
         effects: { data: "write", ui: "none", external: true },
-        tool: "openwork-cloud_execute_capability",
+        tool: "renwork-cloud_execute_capability",
       }),
     ],
     guidance,
@@ -240,14 +240,15 @@ export function buildOpenworkProviderContributions(
   skills: ConnectSkillDescriptor[],
   mcps: EngineMcpDescriptor[] = [],
 ): OpenworkFeatureContribution[] {
-  const cloudMcp = mcps.find((mcp) => mcp.name === "openwork-cloud");
+  const cloudMcp = mcps.find((mcp) => mcp.name === "renwork-cloud")
+    ?? mcps.find((mcp) => mcp.name === "openwork-cloud");
   const connect = connectContribution(skills, cloudMcp);
   return [
     sessionContribution(),
     automationContribution(),
     extensionContribution(),
     ...mcps
-      .filter((mcp) => mcp.name !== "openwork-cloud")
+      .filter((mcp) => mcp.name !== "renwork-cloud" && mcp.name !== "openwork-cloud")
       .map(mcpContribution),
     ...(connect ? [connect] : []),
   ];

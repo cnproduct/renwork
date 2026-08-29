@@ -136,7 +136,7 @@ async function startMockBroker() {
         expiresAt: 987654321,
         model: "gpt-realtime-2",
         transcriptionModel: "gpt-4o-transcribe",
-        tools: ["openwork_snapshot", "openwork_list_actions", "openwork_execute_action"],
+        tools: ["renwork_context", "renwork_query", "renwork_execute"],
         source: "openwork-models",
       }));
     });
@@ -251,6 +251,7 @@ try {
     assert.equal(body.ok, true);
     assert.equal(body.clientSecret, "managed-e2e-client-secret");
     assert.equal(body.source, "openwork-models");
+    assert.deepEqual(body.tools, ["renwork_context", "renwork_query", "renwork_execute"]);
     return body;
   });
 

@@ -76,7 +76,7 @@ const databaseAuthorityStore: AutomationModelAuthorityStore = {
       eq(LlmProviderTable.organizationId, normalizeDenTypeId("organization", input.organizationId)),
       eq(LlmProviderTable.createdByOrgMembershipId, normalizeDenTypeId("member", input.ownerMemberId)),
       eq(LlmProviderTable.source, "openwork"),
-      eq(LlmProviderTable.providerId, "openwork"),
+      inArray(LlmProviderTable.providerId, ["renwork", "openwork"]),
     )).limit(1)
     return providers[0] ?? null
   },
@@ -183,17 +183,17 @@ export async function resolveAutomationModelAccessWithStore(
     }
   }
 
-  if (input.providerId === "openwork") {
+  if (["renwork", "openwork"].includes(input.providerId)) {
     const model = enabledOpenWorkModel(input.modelId)
     if (!model) {
-      return { ok: false, code: "model_access_lost", message: "The selected OpenWork-managed model is not available." }
+      return { ok: false, code: "model_access_lost", message: "The selected RenWork-managed model is not available." }
     }
     const provider = await store.findOpenWorkProvider(input)
     if (!provider) {
-      return { ok: false, code: "provider_unavailable", message: "OpenWork Models are not available for the Automation owner." }
+      return { ok: false, code: "provider_unavailable", message: "RenWork Models are not available for the Automation owner." }
     }
     if (!await store.canAccessProvider({ member, providerRecordId: provider.id })) {
-      return { ok: false, code: "model_access_lost", message: "The Automation owner no longer has access to OpenWork Models." }
+      return { ok: false, code: "model_access_lost", message: "The Automation owner no longer has access to RenWork Models." }
     }
     return {
       ok: true,
@@ -203,7 +203,7 @@ export async function resolveAutomationModelAccessWithStore(
         providerId: input.providerId,
         modelId: input.modelId,
         providerName: provider.name,
-        modelName: model.displayName.replace(/^OpenWork:\s*/, ""),
+        modelName: model.displayName.replace(/^RenWork:\s*/, ""),
       },
     }
   }

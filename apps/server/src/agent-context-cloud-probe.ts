@@ -27,8 +27,7 @@ const BEARER = /^Bearer [A-Za-z0-9\-._~+/]+=*$/;
 const REQUEST_ID = /^[A-Za-z0-9_.:-]{1,128}$/;
 const REQUIRED_TERMINAL_PATH = "/mcp/agent";
 const DEFAULT_TRUSTED_ORIGINS = new Set([
-  "https://app.openworklabs.com",
-  "https://api.openworklabs.com",
+  "https://www.rrenn.com",
 ]);
 
 export type CloudCatalogProbeStatus = "observed" | "not-performed" | "failed";
@@ -1008,9 +1007,9 @@ export function differentialCloudVerdict(
 
 /**
  * Performs one credential-safe direct verification of the exact
- * runtime-managed OpenWork Cloud entry supplied by the caller, running the
+ * runtime-managed RenWork Cloud entry supplied by the caller, running the
  * complete bounded MCP handshake (initialize, initialized notification,
- * tools/list, best-effort session termination) on the OpenWork runtime's own
+ * tools/list, best-effort session termination) on the RenWork runtime's own
  * fetch stack. This function never discovers another MCP, follows redirects,
  * calls a tool, mutates configuration, or returns endpoint, credential,
  * header, response-body, or caught-error values.

@@ -16,11 +16,17 @@ import type { CdpClient, EvaluateOptions } from "./cdp.ts";
 /** Copy the app renders while it is still settling (from apps/app/src/i18n/locales/en.ts). */
 export const APP_TRANSITIONAL_TEXTS = [
   "Preparing workspace",
+  "正在准备工作区",
   "Connecting signed-in services",
+  "正在连接已登录的服务",
   "Connecting services",
+  "正在连接服务",
   "Loading available resources",
+  "正在加载可用资源",
   "Loading tasks",
+  "正在加载任务",
   "Pulling in the latest messages",
+  "正在拉取此任务的最新消息",
 ] as const;
 
 export type AppSurfaceState = "welcome" | "workspace" | "no-workspace";
@@ -89,9 +95,15 @@ const PROBE_EXPRESSION = `(() => {
   const transitional = ${JSON.stringify([...APP_TRANSITIONAL_TEXTS])}
     .find((message) => text.includes(message)) ?? null;
   const buttonLabels = [...document.querySelectorAll("button")].map((button) => (button.textContent ?? "").trim());
-  const taskUi = text.includes("What do you need done?") || buttonLabels.includes("Run task");
-  const needsWorkspace = text.includes("Create or connect a workspace");
-  const welcome = text.includes("Welcome to OpenWork");
+  const taskUi = text.includes("What do you need done?")
+    || text.includes("今天需要为您完成什么外贸任务？")
+    || buttonLabels.includes("Run task")
+    || buttonLabels.includes("运行任务");
+  const needsWorkspace = text.includes("Create or connect a workspace")
+    || text.includes("创建或连接工作区");
+  const welcome = text.includes("Welcome to RenWork")
+    || text.includes("欢迎使用 RenWork")
+    || text.includes("选择模型来源");
   // The product's own active-workspace state; the route is only a fallback
   // because a selected workspace does not always appear in the hash.
   const stored = localStorage.getItem("openwork.react.activeWorkspace");
@@ -99,7 +111,12 @@ const PROBE_EXPRESSION = `(() => {
   const workspaceId = (stored && stored.length > 0 ? stored : null) ?? routeMatch;
   // Any settings/extensions surface inside a workspace is interactive too.
   const settingsSurface = /\\/workspace\\/[^/?#]+\\/(settings|extensions)/.test(route)
-    && (text.includes("Extensions") || text.includes("Preferences") || text.includes("Permissions"));
+    && (text.includes("Extensions")
+      || text.includes("Preferences")
+      || text.includes("Permissions")
+      || text.includes("扩展")
+      || text.includes("偏好设置")
+      || text.includes("权限管理"));
   const surface = welcome
     ? "welcome"
     : (taskUi || settingsSurface) && workspaceId && !needsWorkspace

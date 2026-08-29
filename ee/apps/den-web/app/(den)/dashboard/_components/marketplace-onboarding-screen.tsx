@@ -118,12 +118,12 @@ export function MarketplaceOnboardingScreen({
       <section className="mt-12 grid gap-5">
         <DenSectionHeader
           align="center"
-          title="Then bring your own keys, or use OpenWork Models"
+          title="Then bring your own keys, or use RenWork Models"
           description={
             modelsLoading
-              ? "Checking whether OpenWork Models are already on…"
+              ? "Checking whether RenWork Models are already on…"
               : modelsEnabled
-                ? "OpenWork Models are on for this workspace."
+                ? "RenWork Models are on for this workspace."
                 : "Pick one now, change it whenever — both live under Models."
           }
           action={
@@ -138,7 +138,7 @@ export function MarketplaceOnboardingScreen({
           <DenChoiceCard
             testId="onboarding-choice-openwork-models"
             icon={<OpenWorkMark />}
-            title="OpenWork Models"
+            title="RenWork Models"
             subtitle="No API keys, nothing to configure"
             badge={<DenBadge tone="info">Recommended</DenBadge>}
             description="Hand-picked frontier and open models, billed per member. Turn it on and everyone has models in the app immediately."

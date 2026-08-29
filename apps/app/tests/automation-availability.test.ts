@@ -7,8 +7,8 @@ const read = (relative: string) =>
 
 /**
  * Automations shipped out of preview: there is no per-device feature flag any
- * more. The surface is available on every desktop, gated only by the runtime
- * (desktop-only) and the live Den availability probe. These checks pin that
+ * more. The surface is available on every desktop and its local runner does
+ * not depend on the live Den availability probe. These checks pin that
  * contract so a refactor cannot silently reintroduce an opt-in gate or expose
  * the surface on web.
  */
@@ -21,13 +21,13 @@ describe("Automations availability", () => {
     expect(flags).not.toContain("automations")
   })
 
-  test("the shell gates route, Den probe, and navigation on desktop runtime only", () => {
+  test("the shell gates the route on desktop while keeping local navigation available", () => {
     const source = read("src/react-app/shell/session-route.tsx")
     expect(source).toContain("const automationsEnabled = isDesktopRuntime()")
     expect(source).not.toContain("featureFlags?.automations")
     expect(source).toContain("automationsEnabled && automationsRouteRequested")
     expect(source).toContain("!automationsEnabled || !denAuth.isSignedIn")
-    expect(source).toContain("automationsEnabled && automationsSupported")
+    expect(source).toContain("const automationsNavigationAvailable = automationsEnabled")
   })
 
   test("the runner bridge registers on desktop without an opt-in", () => {
@@ -44,7 +44,7 @@ describe("Automations availability", () => {
   test("the in-chat proposal tool only blocks on sign-in", () => {
     const proposal = read("src/components/tools/openwork-automation-proposal.tsx")
     expect(proposal).not.toContain("automationsEnabled")
-    expect(proposal).toContain("Sign in to OpenWork Cloud")
+    expect(proposal).toContain("请先登录以创建并激活该自动化任务。")
     expect(proposal).toContain("resolveProposalModel")
     expect(proposal).toContain("data-automation-model-resolution")
   })

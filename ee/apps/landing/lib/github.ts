@@ -136,6 +136,7 @@ export const getGithubData = async () => {
   const isNonPublicDesktopAsset = (asset: ReleaseAsset) => {
     const name = String(asset?.name || "").toLowerCase();
     return name.startsWith("openwork-installer-")
+      || name.startsWith("renwork-cloud-")
       || name.startsWith("openwork-cloud-")
       || name.startsWith("openwork-enterprise-");
   };

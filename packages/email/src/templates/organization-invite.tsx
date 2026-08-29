@@ -1,7 +1,5 @@
 import React, { type CSSProperties } from "react"
-import { Body, Button, Container, Head, Heading, Hr, Html, Img, Preview, Section, Text } from "@react-email/components"
-
-const LOGO_URL = "https://openworklabs.com/email/openwork-mark.png"
+import { Body, Button, Container, Head, Heading, Hr, Html, Preview, Section, Text } from "@react-email/components"
 
 export type OrganizationInviteEmailProps = {
   inviteLink: string
@@ -23,16 +21,15 @@ export function OrganizationInviteEmail({
   return (
     <Html>
       <Head />
-      <Preview>{invitedByName} invited you to join {organizationName} on OpenWork</Preview>
+      <Preview>{invitedByName} invited you to join {organizationName} on RenWork</Preview>
       <Body style={styles.body}>
         <Container style={styles.frame}>
           <Section style={styles.brand}>
-            <Img src={LOGO_URL} width="31" height="24" alt="OpenWork" style={styles.brandLogo} />
-            <span style={styles.brandName}>OpenWork</span>
+            <span style={styles.brandName}>RenWork</span>
           </Section>
           <Section style={styles.card}>
             <Text style={styles.eyebrow}>Invitation</Text>
-            <Heading style={styles.heading}>Join {organizationName} on OpenWork</Heading>
+            <Heading style={styles.heading}>Join {organizationName} on RenWork</Heading>
             <Text style={styles.text}>
               {inviter} invited you to join the <span style={styles.strong}>{organizationName}</span> workspace as {articleFor(role)} {role}.
             </Text>
@@ -42,9 +39,9 @@ export function OrganizationInviteEmail({
             <Text style={styles.link}>{inviteLink}</Text>
           </Section>
           <Text style={styles.footer}>
-            You received this email because someone invited you to an OpenWork workspace.
+            You received this email because someone invited you to a RenWork workspace.
             <br />
-            OpenWork · openworklabs.com
+            RenWork · rrenn.com
           </Text>
         </Container>
       </Body>
@@ -72,15 +69,10 @@ const styles = {
     marginBottom: "20px",
     paddingLeft: "4px",
   },
-  brandLogo: {
-    display: "inline-block",
-    verticalAlign: "middle",
-  },
   brandName: {
     color: "#1C2024",
     fontSize: "15px",
     fontWeight: 600,
-    marginLeft: "8px",
     verticalAlign: "middle",
   },
   card: {

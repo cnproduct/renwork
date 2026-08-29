@@ -265,7 +265,14 @@ export function createFakeAutomationEngineAdapter(input?: {
         status: "cancelled",
         threadId: null,
         resultSummary: null,
-        usage: { inputTokens: null, outputTokens: null, costMicros: null },
+        usage: {
+          inputTokens: null,
+          outputTokens: null,
+          reasoningTokens: null,
+          cacheReadTokens: null,
+          cacheWriteTokens: null,
+          costMicros: null,
+        },
         error: {
           code: "cancelled",
           message: "The Automation engine execution was cancelled.",
@@ -347,7 +354,14 @@ function conformanceAdmission(input?: {
     finishedAt: null,
     error: null,
     resultSummary: null,
-    usage: { inputTokens: null, outputTokens: null, costMicros: null },
+    usage: {
+      inputTokens: null,
+      outputTokens: null,
+      reasoningTokens: null,
+      cacheReadTokens: null,
+      cacheWriteTokens: null,
+      costMicros: null,
+    },
     createdAt: 20_000,
     updatedAt: 20_000,
   })
@@ -439,7 +453,14 @@ export async function verifyFakeAutomationEngineAdapterConformance(
     status: "succeeded",
     threadId: "thread_engine_conformance",
     resultSummary: "ready",
-    usage: { inputTokens: 1, outputTokens: 1, costMicros: null },
+    usage: {
+      inputTokens: 1,
+      outputTokens: 1,
+      reasoningTokens: null,
+      cacheReadTokens: null,
+      cacheWriteTokens: null,
+      costMicros: null,
+    },
     error: null,
     finishedAt: 23_000,
   })

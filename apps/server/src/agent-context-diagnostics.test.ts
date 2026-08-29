@@ -128,12 +128,12 @@ function effectiveEngineInspection(
     hidden?: boolean;
     prompt?: string;
     pluginSpecs?: string[];
-    decisions?: Partial<Record<"openwork-cloud_search_capabilities" | "openwork-cloud_execute_capability", "allow" | "ask" | "deny">>;
+    decisions?: Partial<Record<"renwork-cloud_search_capabilities" | "renwork-cloud_execute_capability", "allow" | "ask" | "deny">>;
   },
 ): InspectAgentDiagnosticsEngine {
   const decisions = {
-    "openwork-cloud_search_capabilities": "allow" as const,
-    "openwork-cloud_execute_capability": "allow" as const,
+    "renwork-cloud_search_capabilities": "allow" as const,
+    "renwork-cloud_execute_capability": "allow" as const,
     ...options?.decisions,
   };
   const canonicalConfig = buildOpenworkRuntimeConfigObjectFromSnapshot(runtime);
@@ -353,8 +353,8 @@ function startRecordingServer() {
           mode: "primary",
           prompt: canonicalAgents.openwork?.prompt,
           permission: [
-            { permission: "openwork-cloud_search_capabilities", pattern: "*", action: "allow" },
-            { permission: "openwork-cloud_execute_capability", pattern: "*", action: "allow" },
+            { permission: "renwork-cloud_search_capabilities", pattern: "*", action: "allow" },
+            { permission: "renwork-cloud_execute_capability", pattern: "*", action: "allow" },
           ],
           options: {},
         }]);
@@ -814,7 +814,7 @@ describe("agent context diagnostics analyzer", () => {
       dependencies: {
         fetchImpl: catalogFetch(["search_capabilities", "execute_capability"], fetchCalls),
         inspectEffectiveEngine: effectiveEngineInspection(diagnosticRuntimeConfig(), {
-          decisions: { "openwork-cloud_search_capabilities": "deny" },
+          decisions: { "renwork-cloud_search_capabilities": "deny" },
         }),
       },
     });
@@ -858,7 +858,7 @@ describe("agent context diagnostics analyzer", () => {
       dependencies: {
         fetchImpl: catalogFetch(["search_capabilities", "execute_capability"], fetchCalls),
         inspectEffectiveEngine: effectiveEngineInspection(diagnosticRuntimeConfig(), {
-          decisions: { "openwork-cloud_search_capabilities": "ask" },
+          decisions: { "renwork-cloud_search_capabilities": "ask" },
         }),
       },
     }));
@@ -1653,7 +1653,7 @@ describe("agent context diagnostics analyzer", () => {
     expect(checkById(report, "cloud-tool-catalog")).toMatchObject({
       status: "failed",
       code: "credential_missing",
-      message: "The managed OpenWork Cloud entry does not contain one unambiguous authentication value.",
+      message: "The managed RenWork Cloud entry does not contain one unambiguous authentication value.",
     });
     expect(fetchCalls).toEqual([]);
   });
@@ -1662,12 +1662,12 @@ describe("agent context diagnostics analyzer", () => {
     const fixture = await createFixture();
     await writeFile(join(fixture.workspaceRoot, "opencode.jsonc"), JSON.stringify({
       permission: {
-        "openwork-cloud_*": "allow",
+        "renwork-cloud_*": "allow",
       },
       agent: {
         openwork: {
           permission: {
-            "openwork-cloud_search_capabilities": "deny",
+            "renwork-cloud_search_capabilities": "deny",
           },
         },
       },
@@ -1705,9 +1705,12 @@ describe("agent context diagnostics analyzer", () => {
       code: "cloud_catalog_exact_match",
       details: { requestPerformed: true },
     });
+    // The fixture deliberately restores the one-release legacy MCP name. The
+    // canonical RenWork policy is reported above, while the literal legacy
+    // inventory row remains independently observable during compatibility.
     expect(report.mcps.find((mcp) => (
       mcp.name === "openwork-cloud" && mcp.source === "config.remote"
-    ))?.disabledByTools).toBe(true);
+    ))?.disabledByTools).toBe(false);
     expect(report.safety.cloudCatalogToolsListPerformed).toBe(true);
     expect(fetchCalls).toHaveLength(4);
   });

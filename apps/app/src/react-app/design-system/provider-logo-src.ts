@@ -35,6 +35,7 @@ const SIMPLE_ICON_MISSES = new Set([
   "amazonwebservices",
   "fireworks",
   "opencode",
+  "renwork",
   "openwork",
 ]);
 
@@ -61,7 +62,8 @@ const PROVIDER_DOMAINS: Record<string, string> = {
   ollama: "ollama.com",
   xai: "x.ai",
   opencode: "opencode.ai",
-  openwork: "openworklabs.com",
+  renwork: "rrenn.com",
+  openwork: "rrenn.com",
   abacus: "abacus.ai",
 };
 

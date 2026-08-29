@@ -1,5 +1,5 @@
 import type { SessionCloudMcpMaintenanceState } from "./use-session-mcp-maintenance";
-import { t } from "@/i18n";
+import { t } from "../../../i18n";
 
 export type OpenWorkConnectStateStatus = "available" | "missing" | "invalid" | "unreadable";
 
@@ -74,7 +74,7 @@ export function resolveOpenWorkConnectStatus(
     return {
       state: "ready",
       label: "Ready",
-      description: "Signed in to OpenWork Cloud. Connected service tools will be checked when a workspace is active.",
+      description: "Signed in to RenWork Cloud. Connected service tools will be checked when a workspace is active.",
     };
   }
 
@@ -86,12 +86,30 @@ export function resolveOpenWorkConnectStatus(
     };
   }
 
-  if (maintenance.status === "failed" || maintenance.status === "skipped") {
+  // A skipped maintenance pass means the optional cloud-tool bridge is not
+  // applicable to the current workspace. It is not a failed RenWork account
+  // connection and must never create a red "Needs attention" warning.
+  if (maintenance.status === "skipped") {
+    const description = maintenance.skipReason === "missing_org"
+      ? "Signed in to RenWork Cloud. Choose an organization to use connected service tools."
+      : maintenance.skipReason === "missing_workspace"
+        ? "Signed in to RenWork Cloud. Connected service tools will be checked when a workspace is active."
+        : maintenance.skipReason === "signed_out"
+          ? "RenWork Cloud sign-in is still being restored."
+          : "RenWork Cloud is connected. Connected service tools are not enabled for this workspace.";
+    return {
+      state: "ready",
+      label: "Ready",
+      description,
+    };
+  }
+
+  if (maintenance.status === "failed") {
     return {
       state: "needs_attention",
       label: "Needs attention",
       description: maintenance.issue?.message
-        ?? "OpenWork Connect could not verify connected service tools. Run diagnostics for details.",
+        ?? "RenWork Connect could not verify connected service tools. Run diagnostics for details.",
     };
   }
 

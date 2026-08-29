@@ -53,7 +53,7 @@ export function enterpriseDesktopReleaseAssetName(platform: string, releaseTag: 
 
 export function cloudDesktopReleaseAssetName(platform: string, releaseTag: string) {
   const publicName = desktopReleaseAssetName(platform, releaseTag)
-  return publicName?.replace(/^openwork-/, "openwork-cloud-") ?? null
+  return publicName?.replace(/^openwork-/, "renwork-cloud-") ?? null
 }
 
 /**

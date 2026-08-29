@@ -85,6 +85,8 @@ const EnvSchema = z.object({
   DEN_MARKETING_URL: z.string().optional(),
   DEN_MCP_CLAIM_NAMESPACE: z.string().optional(),
   DEN_BOOTSTRAP_ADMIN_EMAILS: z.string().optional(),
+  RENWORK_MODEL_CATALOG_BASE_URL: z.string().optional(),
+  RENWORK_MODEL_CATALOG_ADMIN_TOKEN: z.string().optional(),
   WORKER_PROXY_PORT: z.string().optional(),
   WORKER_PROVISIONING_RECONCILE_INTERVAL_MS: z.string().optional(),
   WORKER_PROVISIONING_RECONCILE_STALE_MS: z.string().optional(),
@@ -366,6 +368,32 @@ function normalizeOptionalHttpsOrigin(envName: string, value: string | undefined
   return url.origin
 }
 
+function normalizeModelCatalogOrigin(value: string | undefined, allowInsecureHttp: boolean) {
+  const configured = optionalString(value)
+  if (!configured) {
+    return undefined
+  }
+
+  let url: URL
+  try {
+    url = new URL(configured)
+  } catch {
+    throw new Error("RENWORK_MODEL_CATALOG_BASE_URL must be an absolute http or https origin.")
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("RENWORK_MODEL_CATALOG_BASE_URL must be an absolute http or https origin.")
+  }
+  if (url.username || url.password || url.search || url.hash || (url.pathname !== "/" && url.pathname !== "")) {
+    throw new Error("RENWORK_MODEL_CATALOG_BASE_URL cannot contain credentials, a path, a query string, or a fragment.")
+  }
+  const isLoopback = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1"
+  if (url.protocol !== "https:" && !allowInsecureHttp && !isLoopback) {
+    throw new Error("RENWORK_MODEL_CATALOG_BASE_URL must use HTTPS unless it targets a loopback service.")
+  }
+  return url.origin
+}
+
 function normalizeAbsoluteUrlCsv(envName: string, value: string | undefined) {
   const entries = splitCsv(value)
   const invalidEntries: string[] = []
@@ -441,6 +469,11 @@ const remoteMcpAppsEnabled =
   (parsed.DEN_REMOTE_MCP_APPS_ENABLED ?? "true").trim().toLowerCase() === "true"
 
 const devMode = (parsed.OPENWORK_DEV_MODE ?? "0").trim() === "1"
+const modelCatalogBaseUrl = normalizeModelCatalogOrigin(parsed.RENWORK_MODEL_CATALOG_BASE_URL, devMode)
+const modelCatalogAdminToken = optionalString(parsed.RENWORK_MODEL_CATALOG_ADMIN_TOKEN)
+if (modelCatalogAdminToken && modelCatalogAdminToken.length < 24) {
+  throw new Error("RENWORK_MODEL_CATALOG_ADMIN_TOKEN must contain at least 24 characters.")
+}
 const botIdProtectionEnabled = (parsed.DEN_BOTID_PROTECTION_ENABLED ?? "0").trim() === "1"
 const diagnosticsOrigin = normalizeDiagnosticsOrigin(parsed.DEN_DIAGNOSTICS_ORIGIN, devMode)
 const diagnosticsBearerToken = optionalString(parsed.DEN_DIAGNOSTICS_BEARER_TOKEN)
@@ -619,6 +652,10 @@ export const env = {
   marketingUrl: optionalString(parsed.DEN_MARKETING_URL),
   mcpClaimNamespace: normalizeOrigin(optionalString(parsed.DEN_MCP_CLAIM_NAMESPACE) ?? parsed.BETTER_AUTH_URL),
   bootstrapAdminEmails: splitCsv(parsed.DEN_BOOTSTRAP_ADMIN_EMAILS).map((email) => email.toLowerCase()),
+  modelCatalogAdmin: {
+    baseUrl: modelCatalogBaseUrl,
+    token: modelCatalogAdminToken,
+  },
   provisionerMode: parsed.PROVISIONER_MODE ?? "stub",
   workerProvisioningReconcileIntervalMs: Number(parsed.WORKER_PROVISIONING_RECONCILE_INTERVAL_MS ?? "60000"),
   workerProvisioningReconcileStaleMs: Number(parsed.WORKER_PROVISIONING_RECONCILE_STALE_MS ?? "1200000"),

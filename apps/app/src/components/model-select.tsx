@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ChevronDown, Settings2 } from "lucide-react";
 import { useNavigate } from "react-router";
+import { formatMultiplier, type RenWorkPublicModel } from "@openwork/rencredit-metering";
 
 import type { ModelOption, ModelRef } from "@/app/types";
 import { ProviderIcon } from "@/react-app/design-system/provider-icon";
@@ -51,6 +52,11 @@ import {
 } from "@/components/ui/command";
 import { openModelPickerEvent, openProviderAuthEvent } from "@/react-app/shell/new-providers-listener";
 import { newProvidersEvent } from "@/app/lib/provider-events";
+import {
+  catalogModelOptions,
+  renWorkTierLabel,
+  useRenWorkModelCatalog,
+} from "@/react-app/domains/models/renwork-model-catalog";
 
 /** Shown with their logos when no keys are connected yet. */
 const SUGGESTED_KEY_PROVIDERS = [
@@ -134,6 +140,7 @@ type ModelSelectModelItem = {
   kind: "model";
   id: string;
   option: ModelOption;
+  billing: RenWorkPublicModel | null;
 };
 
 type ModelSelectOpenWorkItem = {
@@ -160,6 +167,7 @@ function groupByProvider(modelOptions: ModelOption[]): ModelSelectGroup[] {
       kind: "model",
       id: `${option.providerID}:${option.modelID}`,
       option,
+      billing: null,
     };
     const existing = groups.get(providerLabel);
 
@@ -178,6 +186,26 @@ function groupByProvider(modelOptions: ModelOption[]): ModelSelectGroup[] {
       promo: false,
     }))
     .sort((a, b) => a.value.localeCompare(b.value));
+}
+
+function groupByRenWorkTier(catalog: ReturnType<typeof useRenWorkModelCatalog>): ModelSelectGroup[] | null {
+  if (!catalog) return null;
+  const groups = new Map<RenWorkPublicModel["tier"], ModelSelectModelItem[]>();
+  for (const item of catalogModelOptions(catalog)) {
+    const existing = groups.get(item.billing.tier) ?? [];
+    existing.push({
+      kind: "model",
+      id: `${item.option.providerID}:${item.option.modelID}`,
+      option: item.option,
+      billing: item.billing,
+    });
+    groups.set(item.billing.tier, existing);
+  }
+  return [...groups.entries()].map(([tier, items]) => ({
+    value: renWorkTierLabel(tier),
+    items,
+    promo: false,
+  }));
 }
 
 function openWorkModelsGroup(): ModelSelectGroup {
@@ -206,9 +234,9 @@ interface ModelSelectProps {
   disabled?: boolean;
   /** When set, "All models" opens the full picker scoped to this session. */
   sessionId?: string;
-  /** Den/import includes OpenWork Models — never show Subscribe while true. */
+  /** Den/import includes RenWork Models — never show Subscribe while true. */
   openWorkModelsEntitled?: boolean;
-  /** The server is waiting to reload this workspace with OpenWork Models. */
+  /** The server is waiting to reload this workspace with RenWork Models. */
   openWorkModelsSyncing?: boolean;
   /** Member-scoped models available before a workspace OpenCode client exists. */
   fallbackOptions?: readonly ModelOption[];
@@ -231,6 +259,7 @@ export function ModelSelect({
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const denAuth = useDenAuth();
   const modelOptions = useModelOptions(open, fallbackOptions, denAuth.isSignedIn);
+  const renWorkCatalog = useRenWorkModelCatalog(open, denAuth.isSignedIn);
   const navigate = useNavigate();
   const platform = usePlatform();
   const openWorkModelsPromoEligible = useOpenWorkModelsPromoEligibility();
@@ -270,6 +299,9 @@ export function ModelSelect({
       modelID: option.modelID,
     }),
   );
+  const selectedCatalogModel = renWorkCatalog?.models.find((model) =>
+    isSameModel(value, { providerID: model.providerID, modelID: model.modelID }),
+  );
 
   const openWorkModelsAvailable = React.useMemo(
     () => hasOpenWorkModelsProvider(modelOptions.map((option) => option.providerID)),
@@ -278,18 +310,21 @@ export function ModelSelect({
   const showOpenWorkModelsPromo = React.useMemo(
     () =>
       openWorkModelsPromoEligible &&
+      !renWorkCatalog &&
       !promoHidden &&
       !openWorkModelsAvailable &&
       !openWorkModelsEntitled,
-    [openWorkModelsAvailable, openWorkModelsEntitled, openWorkModelsPromoEligible, promoHidden],
+    [openWorkModelsAvailable, openWorkModelsEntitled, openWorkModelsPromoEligible, promoHidden, renWorkCatalog],
   );
 
   const groups = React.useMemo(() => {
+    const catalogGroups = groupByRenWorkTier(renWorkCatalog);
+    if (catalogGroups) return catalogGroups;
     const providerGroups = groupByProvider(modelOptions);
     return showOpenWorkModelsPromo
       ? [openWorkModelsGroup(), ...providerGroups]
       : providerGroups;
-  }, [modelOptions, showOpenWorkModelsPromo]);
+  }, [modelOptions, renWorkCatalog, showOpenWorkModelsPromo]);
 
   const handleSelect = (option: ModelOption) => {
     onChange({ providerID: option.providerID, modelID: option.modelID });
@@ -314,12 +349,12 @@ export function ModelSelect({
   }, []);
 
   // Providers the user connected with their own key — OpenCode Zen and
-  // OpenWork Models are managed for them, so they never count as "your keys".
+  // RenWork Models are managed for them, so they never count as "your keys".
   const keyProviders = React.useMemo(() => {
     const seen = new Map<string, string>();
     for (const option of modelOptions) {
       const id = option.providerID.trim().toLowerCase();
-      if (!id || id === "opencode" || id === OPENWORK_MODELS_PROVIDER_ID) continue;
+      if (!id || id === "opencode" || isCloudManagedProviderKey(id)) continue;
       if (seen.has(id)) continue;
       seen.set(id, option.description ?? getProviderDisplayName(option.providerID));
     }
@@ -363,7 +398,7 @@ export function ModelSelect({
           <span className="max-w-48 truncate">
             {hideValue || (!denAuth.isSignedIn && isCloudManagedProviderKey(value.providerID))
               ? "Select model"
-              : (selectedOption?.title ?? value.modelID ?? "Select model")}
+              : (selectedCatalogModel?.displayName ?? selectedOption?.title ?? value.modelID ?? "Select model")}
           </span>
           <ChevronDown className="h-3 w-3" />
         </TooltipTrigger>
@@ -372,7 +407,7 @@ export function ModelSelect({
         </TooltipContent>
       </Tooltip>
       <PopoverContent
-        className="h-80 max-h-(--available-height) w-72 gap-0 overflow-hidden p-px **:data-[slot=scroll-area-viewport]:data-has-overflow-y:pe-0.5"
+        className="h-96 max-h-(--available-height) w-80 gap-0 overflow-hidden p-px **:data-[slot=scroll-area-viewport]:data-has-overflow-y:pe-0.5"
         align="start"
         initialFocus={false}
       >
@@ -408,15 +443,15 @@ export function ModelSelect({
                 key={group.value}
                 items={group.items}
               >
-                <CommandGroupLabel className={group.promo ? "flex items-baseline justify-between gap-2" : undefined}>
+                <CommandGroupLabel className={group.promo || renWorkCatalog ? "flex items-baseline justify-between gap-2" : undefined}>
                   {group.promo ? (
                     <>
                       <span>{group.value}</span>
                       <span className="shrink-0 font-normal text-muted-foreground">hosted · no API keys</span>
                     </>
-                  ) : (
-                    group.value
-                  )}
+                  ) : renWorkCatalog ? (
+                    <><span>{group.value}</span><span className="font-normal text-muted-foreground">消耗</span></>
+                  ) : group.value}
                 </CommandGroupLabel>
                 <CommandCollection>
                   {(item: ModelSelectItem) => {
@@ -463,10 +498,30 @@ export function ModelSelect({
                             {option.title}
                           </span>
                           <span className="block truncate text-xs text-muted-foreground">
-                            {option.description ??
-                              getProviderDisplayName(option.providerID)}
+                            {item.billing?.description ?? option.description ?? getProviderDisplayName(option.providerID)}
                           </span>
                         </span>
+                        {item.billing ? (
+                          <span className="flex shrink-0 items-center gap-1 text-xs">
+                            {item.billing.promotionLabel ? (
+                              <span className="rounded border border-emerald-6 px-1 py-0.5 text-[10px] text-emerald-11">
+                                {item.billing.promotionLabel}
+                              </span>
+                            ) : null}
+                            {item.billing.billingMode === "free" ? (
+                              <span className="font-medium text-emerald-11">免费</span>
+                            ) : item.billing.effectiveDisplayMultiplierBps !== item.billing.displayMultiplierBps ? (
+                              <span className="text-muted-foreground line-through">
+                                {formatMultiplier(item.billing.displayMultiplierBps)}
+                              </span>
+                            ) : null}
+                            {item.billing.billingMode === "token_metered" ? (
+                              <span className="font-medium text-foreground">
+                                {formatMultiplier(item.billing.effectiveDisplayMultiplierBps)}
+                              </span>
+                            ) : null}
+                          </span>
+                        ) : null}
                       </CommandItem>
                     );
                   }}
@@ -490,7 +545,7 @@ export function ModelSelect({
           </CommandList>
           {/* Your API keys → provider configuration. One slot, one action: the
               label reflects whether any keys are connected yet. */}
-          {canAddProviders ? (
+          {canAddProviders && !renWorkCatalog ? (
             <div className="border-t border-border p-1">
               <div className="flex items-baseline px-2 pb-0.5 pt-1 text-xs text-muted-foreground">
                 Your API keys
@@ -522,7 +577,11 @@ export function ModelSelect({
             </div>
           ) : null}
           {/* Link to full model picker */}
-          <div className="border-t border-border px-2 py-1.5">
+          {renWorkCatalog ? (
+            <div className="border-t border-border px-3 py-2 text-center text-[11px] text-muted-foreground">
+              计费以模型标签为准；收费模型按实际输入、输出、推理与缓存 Token 结算 RenCredit
+            </div>
+          ) : <div className="border-t border-border px-2 py-1.5">
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -546,7 +605,7 @@ export function ModelSelect({
                 </button>
               ) : null}
             </div>
-          </div>
+          </div>}
         </Command>
       </PopoverContent>
     </Popover>

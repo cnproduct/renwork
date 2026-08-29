@@ -34,10 +34,10 @@ describe("Automation execution thread UI", () => {
     })
   })
 
-  test("labels a Web-created run as OpenWork Cloud on Desktop", () => {
+  test("labels a Web-created run as RenWork Cloud on Desktop", () => {
     expect(automationExecutionIdentity(cloudThread())).toEqual({
       icon: "cloud",
-      label: "OpenWork Cloud",
+      label: "RenWork Cloud",
     })
   })
 })

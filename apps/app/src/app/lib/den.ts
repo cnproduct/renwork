@@ -6,6 +6,10 @@ import {
   AUTOMATION_MODEL_ATTENTION_CAPABILITY,
   AUTOMATION_MODEL_ATTENTION_CAPABILITY_HEADER,
 } from "@openwork/types/automations";
+import {
+  parsePublicModelCatalog,
+  type RenWorkPublicModelCatalog,
+} from "@openwork/rencredit-metering";
 import type {
   AutomationDetail,
   AutomationDesktopRunnerRegistration,
@@ -16,6 +20,10 @@ import type {
   CreateAutomation,
   UpdateAutomation,
 } from "@openwork/types/automations";
+import {
+  renworkPlanCatalogSchema,
+  type RenworkPlanCatalog,
+} from "@openwork/types/renwork-commerce";
 
 // Re-export the shared schema under the local alias so React consumers
 // (e.g. the cloud domain's desktop-config provider) can import it alongside
@@ -70,11 +78,40 @@ export const CLOUD_MCP_SYNC_MARKER_STORAGE_KEY = "openwork.den.mcp.sync";
 const ORG_PROXY_HEADER = "x-openwork-legacy-org-id";
 const DEFAULT_DEN_TIMEOUT_MS = 12_000;
 
-export const DEFAULT_DEN_AUTH_NAME = "OpenWork User";
+export const DEFAULT_DEN_AUTH_NAME = "RenWork User";
+const RENWORK_HOSTED_DEN_BASE_URL = "https://www.rrenn.com";
+const LEGACY_HOSTED_DEN_ORIGINS = new Set([
+  "https://app.openworklabs.com",
+  "https://api.openworklabs.com",
+]);
+
+function migrateLegacyHostedDenUrl(input: string): string {
+  try {
+    const url = new URL(input);
+    if (!LEGACY_HOSTED_DEN_ORIGINS.has(url.origin)) return input;
+    const legacyOrigin = url.origin;
+    const replacement = new URL(RENWORK_HOSTED_DEN_BASE_URL);
+    replacement.pathname = url.pathname;
+    replacement.search = url.search;
+    replacement.hash = url.hash;
+    if (legacyOrigin === "https://api.openworklabs.com") {
+      const path = replacement.pathname.replace(/\/+$/, "");
+      if (!path || path === "/") {
+        replacement.pathname = "/api/den";
+      } else if (path !== "/api/den" && !path.startsWith("/api/den/")) {
+        replacement.pathname = `/api/den${replacement.pathname.startsWith("/") ? "" : "/"}${replacement.pathname}`;
+      }
+    }
+    return replacement.toString();
+  } catch {
+    return input;
+  }
+}
+
 const BUILD_DEN_BASE_URL =
-  (typeof import.meta !== "undefined" && typeof import.meta.env?.VITE_DEN_BASE_URL === "string"
+  migrateLegacyHostedDenUrl((typeof import.meta !== "undefined" && typeof import.meta.env?.VITE_DEN_BASE_URL === "string"
     ? import.meta.env.VITE_DEN_BASE_URL
-    : "").trim() || "https://app.openworklabs.com";
+    : "").trim() || RENWORK_HOSTED_DEN_BASE_URL);
 const BUILD_DEN_REQUIRE_SIGNIN =
   (typeof import.meta !== "undefined" && typeof import.meta.env?.VITE_DEN_REQUIRE_SIGNIN === "string"
     ? /^(1|true|yes|on)$/i.test(import.meta.env.VITE_DEN_REQUIRE_SIGNIN.trim())
@@ -98,7 +135,7 @@ function readForceEnvDenSettings(): boolean {
     : false);
 }
 
-export const HOSTED_DEFAULT_DEN_BASE_URL = "https://app.openworklabs.com";
+export const HOSTED_DEFAULT_DEN_BASE_URL = RENWORK_HOSTED_DEN_BASE_URL;
 export const DEFAULT_DEN_BASE_URL = BUILD_DEN_BASE_URL;
 export const DEN_INFERENCE_PATH = "/dashboard/inference";
 
@@ -179,6 +216,51 @@ export type DenBootstrapConfig = DenBaseUrls & {
 };
 
 export type DenDesktopConfig = SharedDesktopConfig;
+
+export type DenRenCreditWallet = {
+  organizationId: string;
+  availableMicroCredits: number;
+  reservedMicroCredits: number;
+  status: "active" | "suspended";
+  version: number;
+};
+
+export type DenRenCreditTokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+};
+
+export type DenRenCreditTaskReceipt = {
+  id: string;
+  runId: string;
+  modelSku: string;
+  billingMode: "token_metered" | "free";
+  status: "reserved" | "captured" | "released";
+  reservedMicroCredits: number;
+  capturedMicroCredits: number;
+  releasedMicroCredits: number;
+  actualUsage: DenRenCreditTokenUsage | null;
+  hasResult: boolean;
+  createdAt: string;
+  settledAt: string | null;
+};
+
+export type DenRenCreditLedgerEntry = {
+  id: string;
+  reservationId: string | null;
+  entryType: "grant" | "reserve" | "capture" | "release" | "refund" | "adjustment";
+  amountMicroCredits: number;
+  availableDeltaMicroCredits: number;
+  reservedDeltaMicroCredits: number;
+  availableBalanceAfter: number;
+  reservedBalanceAfter: number;
+  walletVersionAfter: number;
+  reasonCode: string;
+  createdAt: string;
+};
 
 export type DenCanonicalOrgRole = "super-admin" | "owner" | "admin" | "member";
 export type DenOrgRole = string;
@@ -497,6 +579,146 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function getRenCreditWallet(payload: unknown): DenRenCreditWallet | null {
+  if (!isRecord(payload) || !isRecord(payload.wallet)) return null;
+  const wallet = payload.wallet;
+  const organizationId = typeof wallet.organization_id === "string" ? wallet.organization_id : "";
+  const availableMicroCredits = wallet.available_microcredits;
+  const reservedMicroCredits = wallet.reserved_microcredits;
+  const status = wallet.status;
+  const version = wallet.version;
+  if (
+    !organizationId
+    || typeof availableMicroCredits !== "number"
+    || !Number.isSafeInteger(availableMicroCredits)
+    || typeof reservedMicroCredits !== "number"
+    || !Number.isSafeInteger(reservedMicroCredits)
+    || reservedMicroCredits < 0
+    || (status !== "active" && status !== "suspended")
+    || typeof version !== "number"
+    || !Number.isSafeInteger(version)
+    || version < 0
+  ) {
+    return null;
+  }
+  return {
+    organizationId,
+    availableMicroCredits,
+    reservedMicroCredits,
+    status,
+    version,
+  };
+}
+
+function readSafeInteger(record: Record<string, unknown>, key: string): number | null {
+  const value = record[key];
+  return typeof value === "number" && Number.isSafeInteger(value) ? value : null;
+}
+
+function readRenCreditTokenUsage(value: unknown): DenRenCreditTokenUsage | null {
+  if (!isRecord(value)) return null;
+  const inputTokens = readSafeInteger(value, "inputTokens");
+  const outputTokens = readSafeInteger(value, "outputTokens");
+  const reasoningTokens = readSafeInteger(value, "reasoningTokens");
+  const cacheReadTokens = readSafeInteger(value, "cacheReadTokens");
+  const cacheWriteTokens = readSafeInteger(value, "cacheWriteTokens");
+  if ([inputTokens, outputTokens, reasoningTokens, cacheReadTokens, cacheWriteTokens].some((entry) => entry === null || entry < 0)) {
+    return null;
+  }
+  return {
+    inputTokens: inputTokens!,
+    outputTokens: outputTokens!,
+    reasoningTokens: reasoningTokens!,
+    cacheReadTokens: cacheReadTokens!,
+    cacheWriteTokens: cacheWriteTokens!,
+  };
+}
+
+function getRenCreditTaskReceipts(payload: unknown): DenRenCreditTaskReceipt[] | null {
+  if (!isRecord(payload) || !Array.isArray(payload.receipts)) return null;
+  const receipts: DenRenCreditTaskReceipt[] = [];
+  for (const value of payload.receipts) {
+    if (!isRecord(value)) return null;
+    const id = typeof value.id === "string" ? value.id : "";
+    const runId = typeof value.run_id === "string" ? value.run_id : "";
+    const modelSku = typeof value.model_sku === "string" ? value.model_sku : "";
+    const billingMode = value.billing_mode;
+    const status = value.status;
+    const reservedMicroCredits = readSafeInteger(value, "reserved_microcredits");
+    const capturedMicroCredits = readSafeInteger(value, "captured_microcredits");
+    const releasedMicroCredits = readSafeInteger(value, "released_microcredits");
+    const createdAt = typeof value.created_at === "string" ? value.created_at : "";
+    const settledAt = value.settled_at === null || typeof value.settled_at === "string" ? value.settled_at : undefined;
+    if (
+      !id || !runId || !modelSku || !createdAt
+      || (billingMode !== "token_metered" && billingMode !== "free")
+      || (status !== "reserved" && status !== "captured" && status !== "released")
+      || reservedMicroCredits === null || reservedMicroCredits < 0
+      || capturedMicroCredits === null || capturedMicroCredits < 0
+      || releasedMicroCredits === null || releasedMicroCredits < 0
+      || typeof value.has_result !== "boolean"
+      || settledAt === undefined
+    ) return null;
+    const actualUsage = value.actual_usage === null ? null : readRenCreditTokenUsage(value.actual_usage);
+    if (value.actual_usage !== null && !actualUsage) return null;
+    receipts.push({
+      id,
+      runId,
+      modelSku,
+      billingMode,
+      status,
+      reservedMicroCredits,
+      capturedMicroCredits,
+      releasedMicroCredits,
+      actualUsage,
+      hasResult: value.has_result,
+      createdAt,
+      settledAt,
+    });
+  }
+  return receipts;
+}
+
+function getRenCreditLedgerEntries(payload: unknown): DenRenCreditLedgerEntry[] | null {
+  if (!isRecord(payload) || !Array.isArray(payload.entries)) return null;
+  const entries: DenRenCreditLedgerEntry[] = [];
+  for (const value of payload.entries) {
+    if (!isRecord(value)) return null;
+    const id = typeof value.id === "string" ? value.id : "";
+    const reservationId = value.reservation_id === null || typeof value.reservation_id === "string" ? value.reservation_id : undefined;
+    const entryType = value.entry_type;
+    const amountMicroCredits = readSafeInteger(value, "amount_microcredits");
+    const availableDeltaMicroCredits = readSafeInteger(value, "available_delta_microcredits");
+    const reservedDeltaMicroCredits = readSafeInteger(value, "reserved_delta_microcredits");
+    const availableBalanceAfter = readSafeInteger(value, "available_balance_after");
+    const reservedBalanceAfter = readSafeInteger(value, "reserved_balance_after");
+    const walletVersionAfter = readSafeInteger(value, "wallet_version_after");
+    const reasonCode = typeof value.reason_code === "string" ? value.reason_code : "";
+    const createdAt = typeof value.created_at === "string" ? value.created_at : "";
+    if (
+      !id || reservationId === undefined || !reasonCode || !createdAt
+      || !["grant", "reserve", "capture", "release", "refund", "adjustment"].includes(String(entryType))
+      || amountMicroCredits === null || availableDeltaMicroCredits === null || reservedDeltaMicroCredits === null
+      || availableBalanceAfter === null || reservedBalanceAfter === null || reservedBalanceAfter < 0
+      || walletVersionAfter === null || walletVersionAfter < 0
+    ) return null;
+    entries.push({
+      id,
+      reservationId,
+      entryType: entryType as DenRenCreditLedgerEntry["entryType"],
+      amountMicroCredits,
+      availableDeltaMicroCredits,
+      reservedDeltaMicroCredits,
+      availableBalanceAfter,
+      reservedBalanceAfter,
+      walletVersionAfter,
+      reasonCode,
+      createdAt,
+    });
+  }
+  return entries;
+}
+
 function readStringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
@@ -606,7 +828,7 @@ export function normalizeDenBaseUrl(input: string | null | undefined): string | 
   const value = (input ?? "").trim();
   if (!value) return null;
   try {
-    const url = new URL(value);
+    const url = new URL(migrateLegacyHostedDenUrl(value));
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       return null;
     }
@@ -637,10 +859,10 @@ export function denOriginComparisonKey(input: string | null | undefined): string
 }
 
 /**
- * True when the effective Den control plane is not the hosted OpenWork Cloud
- * (app.openworklabs.com). Self-hosted deployments point the app at their own
+ * True when the effective Den control plane is not the hosted RenWork Cloud
+ * (www.rrenn.com). Self-hosted deployments point the app at their own
  * control plane via VITE_DEN_BASE_URL or the desktop bootstrap config, so
- * hosted-only surfaces (e.g. OpenWork Models upsells) should stay hidden.
+ * hosted-only surfaces (e.g. RenWork Models upsells) should stay hidden.
  */
 export function isSelfHostedControlPlane(): boolean {
   return (
@@ -732,6 +954,10 @@ export function resolveDenBaseUrls(input: { baseUrl?: string | null; apiBaseUrl?
   };
 }
 
+export function buildDenDashboardUrl(baseUrl: string): string {
+  return new URL("/dashboard", resolveDenBaseUrls(baseUrl).baseUrl).toString();
+}
+
 /** The MCP endpoint served through the Den web proxy from the single base URL. */
 export function getDenMcpUrl(): string {
   const { apiBaseUrl } = resolveDenBaseUrls(readDenBootstrapConfig());
@@ -765,9 +991,10 @@ export function resolveCloudMcpResourceUrl(resource: string | null | undefined):
   const trimmed = resource?.trim() ?? "";
   if (!trimmed) return null;
   try {
-    const url = new URL(trimmed);
+    const legacyWebMcp = isLegacyWebAppMcpUrl(trimmed);
+    const url = new URL(migrateLegacyHostedDenUrl(trimmed));
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    if (isLegacyWebAppMcpUrl(trimmed)) {
+    if (legacyWebMcp) {
       url.pathname = "/api/den/mcp";
     }
     return url.toString().replace(/\/+$/, "");
@@ -1028,9 +1255,9 @@ export function buildDenAuthUrl(baseUrl: string, mode: "sign-in" | "sign-up"): s
     || (webReturnOrigin !== null && !canUseCloudWebAuthReturn(webReturnOrigin))
   ) {
     // Desktop app, or local/dev web that cannot receive an approved webAuth
-    // redirect: Den shows the copyable openwork:// / grant handoff instead.
+    // redirect: Den shows the copyable renwork:// / grant handoff instead.
     target.searchParams.set("desktopAuth", "1");
-    target.searchParams.set("desktopScheme", "openwork");
+    target.searchParams.set("desktopScheme", "renwork");
   } else if (webReturnOrigin !== null) {
     target.searchParams.set("webAuth", "1");
     target.searchParams.set("webAuthReturn", webReturnOrigin);
@@ -2476,6 +2703,55 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
       return appVersionMetadata;
     },
 
+    async getRenworkPlanCatalog(): Promise<RenworkPlanCatalog> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/renwork/commerce/catalog", {
+        method: "GET",
+      });
+      return renworkPlanCatalogSchema.parse(payload);
+    },
+
+    async getRenCreditWallet(orgId: string): Promise<DenRenCreditWallet> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/rencredit/wallet", {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      const wallet = getRenCreditWallet(payload);
+      if (!wallet) {
+        throw new DenApiError(500, "invalid_rencredit_wallet_payload", "RenCredit wallet response was invalid.");
+      }
+      if (wallet.organizationId !== orgId) {
+        throw new DenApiError(409, "rencredit_wallet_scope_mismatch", "RenCredit wallet did not match the active organization.");
+      }
+      return wallet;
+    },
+
+    async getRenCreditTaskReceipts(orgId: string, limit = 20): Promise<DenRenCreditTaskReceipt[]> {
+      const payload = await requestJson<unknown>(baseUrls, `/v1/rencredit/receipts?limit=${encodeURIComponent(String(limit))}`, {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      const receipts = getRenCreditTaskReceipts(payload);
+      if (!receipts) {
+        throw new DenApiError(500, "invalid_rencredit_receipts_payload", "RenCredit task receipt response was invalid.");
+      }
+      return receipts;
+    },
+
+    async getRenCreditLedger(orgId: string, limit = 50): Promise<DenRenCreditLedgerEntry[]> {
+      const payload = await requestJson<unknown>(baseUrls, `/v1/rencredit/ledger?limit=${encodeURIComponent(String(limit))}`, {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      const entries = getRenCreditLedgerEntries(payload);
+      if (!entries) {
+        throw new DenApiError(500, "invalid_rencredit_ledger_payload", "RenCredit ledger response was invalid.");
+      }
+      return entries;
+    },
+
     async getDesktopConfig(orgId?: string | null): Promise<DenDesktopConfig> {
       const payload = await requestJson<unknown>(baseUrls, "/v1/me/desktop-config", {
         method: "GET",
@@ -2483,6 +2759,19 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
         organizationId: orgId,
       });
       return normalizeDenDesktopConfig(payload);
+    },
+
+    async getRenWorkModelCatalog(orgId: string): Promise<RenWorkPublicModelCatalog> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/models/catalog", {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      const catalog = parsePublicModelCatalog(payload);
+      if (!catalog) {
+        throw new DenApiError(500, "invalid_model_catalog_payload", "RenWork model catalog response was invalid.");
+      }
+      return catalog;
     },
 
     async getResourceSnapshot(orgId?: string | null): Promise<DenResourceSnapshot> {

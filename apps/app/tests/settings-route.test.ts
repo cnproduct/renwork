@@ -47,6 +47,18 @@ describe("settings route parsing", () => {
     });
   });
 
+  test("keeps Work memory as a first-class settings route", () => {
+    expect(parseSettingsPath("/settings/computer-history")).toEqual({
+      tab: "computer-history",
+      redirectPath: null,
+    });
+    expect(parseSettingsPath("/workspace/workspace_1/settings/computer-history")).toEqual({
+      tab: "computer-history",
+      redirectPath: null,
+    });
+    expect(getSettingsTabLabel("computer-history")).toBe("工作记忆");
+  });
+
   test("preserves extension section deep links", () => {
     expect(parseSettingsPath("/settings/extensions/apps")).toEqual({ tab: "extensions", redirectPath: null, extensionsSection: "apps" });
     expect(parseSettingsPath("/settings/extensions/connections")).toEqual({ tab: "extensions", redirectPath: null, extensionsSection: "connections" });
@@ -101,6 +113,6 @@ describe("settings route parsing", () => {
 describe("settings navigation", () => {
   test("includes Library in workspace settings", () => {
     expect(getWorkspaceSettingsTabs()).toEqual(["preferences", "permissions", "extensions", "advanced"]);
-    expect(getSettingsTabLabel("extensions")).toBe("Library");
+    expect(getSettingsTabLabel("extensions")).toBe("资料库");
   });
 });

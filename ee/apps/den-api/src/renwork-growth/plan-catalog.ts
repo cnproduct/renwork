@@ -1,0 +1,160 @@
+import { renworkPlanCatalogSchema, type RenworkPlanCatalog } from "@openwork/types/renwork-commerce"
+
+export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSchema.parse({
+  schemaVersion: 1,
+  catalogVersion: "renwork-pilot-2026-08-26.1",
+  status: "pilot",
+  effectiveAt: "2026-08-26T00:00:00.000Z",
+  plans: [
+    {
+      id: "personal-free",
+      audience: "personal",
+      displayName: "个人免费版",
+      summary: "保留本地免费核心，并体验企业与买家证据预览。",
+      seatLimit: 1,
+      features: {
+        localFreeCore: true,
+        managedCloud: false,
+        officialPlugins: false,
+        buyerGrowth: true,
+        sharedWorkspace: false,
+        sharedRenCreditPool: false,
+        roleManagement: false,
+        adminAudit: false,
+        privateDeployment: false,
+      },
+      offers: [
+        {
+          id: "personal-free-current",
+          purchaseMode: "free",
+          billingInterval: null,
+          currency: "CNY",
+          priceMinor: 0,
+          includedRenCredits: 0,
+          cta: "current",
+        },
+      ],
+    },
+    {
+      id: "personal-pro-pilot",
+      audience: "personal",
+      displayName: "个人专业版",
+      summary: "提供 RenWork 云端、官方能力与周期内 RenCredit 权益。",
+      seatLimit: 1,
+      features: {
+        localFreeCore: true,
+        managedCloud: true,
+        officialPlugins: true,
+        buyerGrowth: true,
+        sharedWorkspace: false,
+        sharedRenCreditPool: false,
+        roleManagement: false,
+        adminAudit: false,
+        privateDeployment: false,
+      },
+      offers: [
+        {
+          id: "personal-pro-monthly-pilot",
+          purchaseMode: "request_trial",
+          billingInterval: "monthly",
+          currency: null,
+          priceMinor: null,
+          includedRenCredits: null,
+          cta: "request_trial",
+        },
+        {
+          id: "personal-pro-annual-pilot",
+          purchaseMode: "request_trial",
+          billingInterval: "annual",
+          currency: null,
+          priceMinor: null,
+          includedRenCredits: null,
+          cta: "request_trial",
+        },
+      ],
+    },
+    {
+      id: "enterprise-pilot",
+      audience: "enterprise",
+      displayName: "企业版",
+      summary: "提供共享工作区、成员治理、共享 RenCredit 池与管理员审计。",
+      seatLimit: null,
+      features: {
+        localFreeCore: true,
+        managedCloud: true,
+        officialPlugins: true,
+        buyerGrowth: true,
+        sharedWorkspace: true,
+        sharedRenCreditPool: true,
+        roleManagement: true,
+        adminAudit: true,
+        privateDeployment: true,
+      },
+      offers: [
+        {
+          id: "enterprise-contact-sales",
+          purchaseMode: "contact_sales",
+          billingInterval: null,
+          currency: null,
+          priceMinor: null,
+          includedRenCredits: null,
+          cta: "contact_sales",
+        },
+      ],
+    },
+  ],
+  creditPolicies: [
+    {
+      event: "buyer_company_preview",
+      operationCode: "BUYER_COMPANY_PREVIEW",
+      chargeTrigger: "free",
+      priceSource: "authoritative_catalog",
+    },
+    {
+      event: "buyer_company_enrichment",
+      operationCode: "BUYER_COMPANY_ENRICHMENT",
+      chargeTrigger: "successful_delivery",
+      priceSource: "authoritative_catalog",
+    },
+    {
+      event: "buyer_email_unlock",
+      operationCode: "BUYER_EMAIL_UNLOCK",
+      chargeTrigger: "successful_delivery",
+      priceSource: "authoritative_catalog",
+    },
+    {
+      event: "buyer_email_verification",
+      operationCode: "BUYER_EMAIL_VERIFICATION",
+      chargeTrigger: "successful_delivery",
+      priceSource: "authoritative_catalog",
+    },
+    {
+      event: "buyer_phone_unlock",
+      operationCode: "BUYER_PHONE_UNLOCK",
+      chargeTrigger: "successful_delivery",
+      priceSource: "authoritative_catalog",
+    },
+    {
+      event: "buyer_decision_maker_profile",
+      operationCode: "BUYER_DECISION_MAKER_PROFILE",
+      chargeTrigger: "successful_delivery",
+      priceSource: "authoritative_catalog",
+    },
+    {
+      event: "buyer_research_bundle",
+      operationCode: "BUYER_RESEARCH_BUNDLE",
+      chargeTrigger: "successful_delivery",
+      priceSource: "authoritative_catalog",
+    },
+    {
+      event: "workflow_productization",
+      operationCode: "WORKFLOW_PRODUCTIZATION",
+      chargeTrigger: "successful_delivery",
+      priceSource: "authoritative_catalog",
+    },
+  ],
+})
+
+export function getRenworkPlanCatalog(): RenworkPlanCatalog {
+  return renworkPilotPlanCatalog
+}

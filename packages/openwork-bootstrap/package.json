@@ -1,7 +1,7 @@
 {
   "name": "openwork-bootstrap",
-  "version": "0.1.0",
-  "description": "Script-installable OpenWork bootstrap CLI for agents",
+  "version": "0.18.50",
+  "description": "Script-installable RenWork bootstrap CLI for agents",
   "private": true,
   "type": "module",
   "bin": {

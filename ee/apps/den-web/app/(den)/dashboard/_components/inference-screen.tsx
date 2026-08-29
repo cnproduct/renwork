@@ -161,6 +161,10 @@ function UsageLimitsCard({ buckets }: { buckets: InferenceUsageBucket[] }) {
  * unmapped models still render with sane defaults.
  */
 const MODEL_DETAILS: Record<string, { bestFor: string; monogram: string } | undefined> = {
+  "renwork-auto": { bestFor: "Automatic task routing", monogram: "RW" },
+  "renwork-standard": { bestFor: "Efficient everyday work", monogram: "RW" },
+  "renwork-professional": { bestFor: "Complex business workflows", monogram: "RW" },
+  "renwork-ultimate": { bestFor: "Highest-quality reasoning", monogram: "RW" },
   "moonshotai/kimi-k3": { bestFor: "Research & synthesis", monogram: "MS" },
   "z-ai/glm-5.2": { bestFor: "Multi-step tasks", monogram: "ZA" },
   "moonshotai/kimi-k2.7-code": { bestFor: "Spreadsheets & scripts", monogram: "MS" },
@@ -185,7 +189,7 @@ const MODEL_LINEUP: LineupModel[] = Object.entries(INFERENCE_MODEL_ALIASES)
     const detail = MODEL_DETAILS[id];
     return {
       id,
-      name: model.displayName.replace(/^OpenWork:\s*/, ""),
+      name: model.displayName.replace(/^RenWork:\s*/, ""),
       bestFor: detail?.bestFor ?? "General knowledge work",
       monogram: detail?.monogram ?? id.split("/")[0].slice(0, 2).toUpperCase(),
     };
@@ -224,7 +228,7 @@ const MODEL_COLUMNS: readonly DenTableColumn<LineupModel>[] = [
 const PILLARS = [
   {
     label: "You or your whole team",
-    body: "One subscription activates OpenWork Models across your organization and lets everyone use battle-tested LLMs without setting anything up.",
+    body: "One subscription activates RenWork Models across your organization and lets everyone use battle-tested LLMs without setting anything up.",
   },
   {
     label: "Nothing to set up",
@@ -240,8 +244,8 @@ const STEPS: ReactNode[] = [
   "Subscribe — one plan covers the whole workspace",
   "Every member is provisioned automatically — nothing to send",
   <>
-    Open OpenWork and pick any model from the{" "}
-    <code className="rounded-md bg-gray-100 px-2 py-1 font-mono text-[12px] text-gray-700">OpenWork</code> group
+    Open RenWork and pick any model from the{" "}
+    <code className="rounded-md bg-gray-100 px-2 py-1 font-mono text-[12px] text-gray-700">RenWork</code> group
   </>,
   "Start working — usage limits are shared and scale with active members",
 ];
@@ -303,7 +307,7 @@ export function InferenceScreen() {
     orgContext?.roles,
   );
   const canManageModels = access.isAdmin;
-  // OpenWork Models are a hosted OpenWork Cloud offering; self-hosted
+  // RenWork Models are a hosted RenWork Cloud offering; self-hosted
   // (single-org) deployments manage their own LLM providers instead.
   const isSelfHosted = runtimeConfigLoaded && runtimeConfig.orgMode === "single_org";
   const activeOrgSlug = activeOrg?.slug ?? null;
@@ -342,7 +346,7 @@ export function InferenceScreen() {
   // status/portal view.
   async function startSubscribeCheckout() {
     if (!canManageModels) {
-      setError("Only workspace admins can start OpenWork Models checkout.");
+      setError("Only workspace admins can start RenWork Models checkout.");
       return;
     }
 
@@ -372,7 +376,7 @@ export function InferenceScreen() {
 
   async function toggleEnabled() {
     if (!canManageModels) {
-      setError("Only workspace admins can manage OpenWork Models.");
+      setError("Only workspace admins can manage RenWork Models.");
       return;
     }
     if (!status) return;
@@ -427,7 +431,7 @@ export function InferenceScreen() {
   return (
     <div className="mx-auto grid max-w-[860px] gap-6 px-8 pb-16 pt-8">
       <DenPageHeader
-        title="OpenWork Models"
+        title="RenWork Models"
         description="Reliable, hand-picked models for knowledge work. No API keys to manage."
         action={
           <DenButton
@@ -448,7 +452,7 @@ export function InferenceScreen() {
       {canManageModels ? null : (
         <DenNotice
           tone="info"
-          message="Only workspace admins can subscribe or enable OpenWork Models. Ask an owner, super-admin, or admin for this workspace."
+          message="Only workspace admins can subscribe or enable RenWork Models. Ask an owner, super-admin, or admin for this workspace."
         />
       )}
 

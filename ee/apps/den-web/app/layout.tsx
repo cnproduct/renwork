@@ -43,20 +43,20 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase: metadataBaseFromOrigin(metadataOrigin),
-    title: "OpenWork Cloud",
+    title: "RenWork Cloud",
     description:
-      "Share your OpenWork setup with your team, manage billing, and use OpenWork Cloud from app.openworklabs.com.",
+      "一个账号，连接企业增长全链路。配置团队、模型、计费与 RenWork 云端能力。",
     openGraph: {
-      title: "OpenWork Cloud",
+      title: "RenWork Cloud",
       description:
-        "Share your OpenWork setup with your team and keep selected workflows available in OpenWork Cloud.",
+        "一个账号，连接企业增长全链路。",
       images: ["/opengraph-image"]
     },
     twitter: {
       card: "summary_large_image",
-      title: "OpenWork Cloud",
+      title: "RenWork Cloud",
       description:
-        "Share your OpenWork setup with your team and manage OpenWork Cloud from app.openworklabs.com.",
+        "一个账号，连接企业增长全链路。",
       images: ["/opengraph-image"]
     },
     icons: {

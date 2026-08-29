@@ -34,7 +34,7 @@ automatic retries because an agent may already have produced external side
 effects; the user can inspect the native run and choose Run now explicitly.
 
 Before prompt admission, Den probes and repairs the worker's persisted
-`openwork-cloud` MCP registration for the selected model. A missing Connect
+`renwork-cloud` MCP registration for the selected model. A missing Connect
 configuration or model projection becomes durable needs-attention rather than
 a headless run that silently lacks the user's connected services.
 

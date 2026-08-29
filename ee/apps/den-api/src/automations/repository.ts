@@ -41,7 +41,14 @@ type RunRow = typeof AutomationRunTable.$inferSelect
 type EventRow = typeof AutomationRunEventTable.$inferSelect
 type DesktopClaim = { automation: Automation; revision: AutomationRevision; run: AutomationRun }
 
-const emptyUsage: AutomationUsage = { inputTokens: null, outputTokens: null, costMicros: null }
+const emptyUsage: AutomationUsage = {
+  inputTokens: null,
+  outputTokens: null,
+  reasoningTokens: null,
+  cacheReadTokens: null,
+  cacheWriteTokens: null,
+  costMicros: null,
+}
 
 const normalizeAutomationId = (value: string) => normalizeDenTypeId("automation", value)
 const normalizeRevisionId = (value: string) => normalizeDenTypeId("automationRevision", value)
@@ -51,6 +58,12 @@ const normalizeMemberId = (value: string) => normalizeDenTypeId("member", value)
 
 const ms = (value: Date | null): number | null => value?.getTime() ?? null
 const date = (value: number | null): Date | null => value === null ? null : new Date(value)
+
+function normalizeCloudEngineKind(value: string): string {
+  if (value === "openwork-cloud-agent-v1") return "renwork-cloud-agent-v1"
+  if (value === "openwork-cloud-codemode-v1") return "renwork-cloud-codemode-v1"
+  return value
+}
 
 function mapAutomation(row: AutomationRow): Automation {
   return {
@@ -85,6 +98,11 @@ function mapRevision(row: RevisionRow): AutomationRevision {
     schedule: row.schedule_config,
     model: { providerId: row.provider_id, modelId: row.model_id, variant: row.model_variant ?? null },
     action,
+    workspaceId: row.workspace_id,
+    connectors: row.connectors,
+    effectiveStartAt: ms(row.effective_start_at),
+    effectiveEndAt: ms(row.effective_end_at),
+    notifyMiniProgram: row.notify_mini_program,
     executionTarget: row.execution_target,
     maximumRuntimeMs: row.maximum_runtime_ms,
     digest: row.digest,
@@ -117,7 +135,7 @@ function mapRun(row: RunRow): AutomationRun {
       executionLocation: row.execution_target,
       automationId: row.automation_id,
       automationRunId: row.id,
-      engineKind: row.engine_kind,
+      engineKind: normalizeCloudEngineKind(row.engine_kind),
       ...(nativeThreadId ? { nativeThreadId } : {}),
       ...(workspaceId ? { workspaceId } : {}),
     } : null,
@@ -148,6 +166,11 @@ function normalizedDefinition(definition: Parameters<AutomationRepository["creat
       executionTarget: definition.executionTarget,
       instructions: definition.action.kind === "agent" ? definition.action.instructions : "Execute the pinned saved Code Mode script.",
       model,
+      workspaceId: definition.workspaceId ?? null,
+      connectors: definition.connectors ?? [],
+      effectiveStartAt: definition.effectiveStartAt ?? null,
+      effectiveEndAt: definition.effectiveEndAt ?? null,
+      notifyMiniProgram: definition.notifyMiniProgram ?? false,
     }
   }
   return {
@@ -157,7 +180,21 @@ function normalizedDefinition(definition: Parameters<AutomationRepository["creat
     executionTarget: "desktop" as const,
     instructions: definition.instructions,
     model: definition.model,
+    workspaceId: definition.workspaceId ?? null,
+    connectors: definition.connectors ?? [],
+    effectiveStartAt: definition.effectiveStartAt ?? null,
+    effectiveEndAt: definition.effectiveEndAt ?? null,
+    notifyMiniProgram: definition.notifyMiniProgram ?? false,
   }
+}
+
+function persistedScheduleKind(
+  schedule: AutomationRevision["schedule"],
+): "once" | "daily" | "weekly" {
+  if (schedule.kind === "once" || schedule.kind === "daily" || schedule.kind === "weekly") {
+    return schedule.kind
+  }
+  throw new Error("automation_schedule_not_supported_by_den")
 }
 
 function mapEvent(row: EventRow): AutomationRunEvent {
@@ -202,6 +239,11 @@ export class DenAutomationRepository implements AutomationRepository {
       schedule: definition.schedule,
       model: definition.model,
       action: definition.action,
+      workspaceId: definition.workspaceId,
+      connectors: definition.connectors,
+      effectiveStartAt: definition.effectiveStartAt,
+      effectiveEndAt: definition.effectiveEndAt,
+      notifyMiniProgram: definition.notifyMiniProgram,
       executionTarget: definition.executionTarget,
       maximumRuntimeMs,
     })
@@ -212,13 +254,18 @@ export class DenAutomationRepository implements AutomationRepository {
         automation_id: newAutomationId,
         version: 1,
         instructions: definition.instructions,
-        schedule_kind: definition.schedule.kind,
+        schedule_kind: persistedScheduleKind(definition.schedule),
         schedule_config: definition.schedule,
-        timezone: definition.schedule.timezone,
+        timezone: definition.schedule.timezone ?? "UTC",
         provider_id: definition.model.providerId,
         model_id: definition.model.modelId,
         model_variant: definition.model.variant ?? null,
         action: definition.action,
+        workspace_id: definition.workspaceId,
+        connectors: definition.connectors,
+        effective_start_at: date(definition.effectiveStartAt),
+        effective_end_at: date(definition.effectiveEndAt),
+        notify_mini_program: definition.notifyMiniProgram,
         execution_target: definition.executionTarget,
         maximum_runtime_ms: maximumRuntimeMs,
         digest,
@@ -275,6 +322,15 @@ export class DenAutomationRepository implements AutomationRepository {
       const executionTarget = current.execution_target
       const instructions = action.kind === "agent" ? action.instructions : "Execute the pinned saved Code Mode script."
       const schedule = input.changes.schedule ?? current.schedule_config
+      const workspaceId = input.changes.workspaceId === undefined ? current.workspace_id : input.changes.workspaceId
+      const connectors = input.changes.connectors ?? current.connectors
+      const effectiveStartAt = input.changes.effectiveStartAt === undefined
+        ? ms(current.effective_start_at)
+        : input.changes.effectiveStartAt
+      const effectiveEndAt = input.changes.effectiveEndAt === undefined
+        ? ms(current.effective_end_at)
+        : input.changes.effectiveEndAt
+      const notifyMiniProgram = input.changes.notifyMiniProgram ?? current.notify_mini_program
       const model = action.kind === "agent"
         ? action.model
         : { providerId: AUTOMATION_FREE_MODEL.providerId, modelId: AUTOMATION_FREE_MODEL.modelId, variant: null }
@@ -284,6 +340,11 @@ export class DenAutomationRepository implements AutomationRepository {
         schedule,
         model,
         action,
+        workspaceId,
+        connectors,
+        effectiveStartAt,
+        effectiveEndAt,
+        notifyMiniProgram,
         executionTarget,
         maximumRuntimeMs: current.maximum_runtime_ms,
       })
@@ -299,13 +360,18 @@ export class DenAutomationRepository implements AutomationRepository {
         automation_id: automation.id,
         version: current.version + 1,
         instructions,
-        schedule_kind: schedule.kind,
+        schedule_kind: persistedScheduleKind(schedule),
         schedule_config: schedule,
-        timezone: schedule.timezone,
+        timezone: schedule.timezone ?? "UTC",
         provider_id: model.providerId,
         model_id: model.modelId,
         model_variant: model.variant ?? null,
         action,
+        workspace_id: workspaceId,
+        connectors,
+        effective_start_at: date(effectiveStartAt),
+        effective_end_at: date(effectiveEndAt),
+        notify_mini_program: notifyMiniProgram,
         execution_target: executionTarget,
         maximum_runtime_ms: current.maximum_runtime_ms,
         digest,
@@ -557,8 +623,8 @@ export class DenAutomationRepository implements AutomationRepository {
       const revision = revisions[0]
       if (!revision) return null
       const engineKind = revision.action?.kind === "saved_script"
-        ? "openwork-cloud-codemode-v1"
-        : "openwork-cloud-agent-v1"
+        ? "renwork-cloud-codemode-v1"
+        : "renwork-cloud-agent-v1"
       await tx.update(AutomationRunTable).set({
         status: "running",
         lease_owner: input.leaseOwner,

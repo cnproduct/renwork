@@ -260,7 +260,7 @@ function ExecutionDetails(props: { execution: OpencodeExecutionSnapshot }) {
       <div className="mb-2 flex items-center justify-between gap-3">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-11">OpenCode execution</div>
-          <div className="text-[11px] text-dls-secondary">Command, working directory, and OpenWork-injected environment.</div>
+          <div className="text-[11px] text-dls-secondary">Command, working directory, and RenWork-injected environment.</div>
         </div>
         <div className="shrink-0 rounded-full border border-blue-7/30 bg-blue-7/10 px-2 py-1 text-[10px] font-medium text-blue-11">
           redacted
@@ -516,7 +516,7 @@ export function DebugView(props: DebugViewProps) {
             {t("settings.debug_opencode_version", { version: props.runtimeSummary.opencodeVersionLabel })}
           </div>
           <div>
-            {t("settings.debug_openwork_server_version", {
+            {t("settings.debug_renwork_server_version", {
               version: props.runtimeSummary.openworkServerVersionLabel,
             })}
           </div>
@@ -551,8 +551,8 @@ export function DebugView(props: DebugViewProps) {
 
         <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
           <ServiceCard
-            title={t("settings.openwork_server_label")}
-            description={t("settings.openwork_config_sidecar_desc")}
+            title={t("settings.renwork_server_label")}
+            description={t("settings.renwork_config_sidecar_desc")}
             pill={props.openworkCard}
             lines={props.openworkCard.lines}
             stdout={props.openworkCard.stdout ?? null}
@@ -560,7 +560,7 @@ export function DebugView(props: DebugViewProps) {
             execution={props.openworkCard.execution ?? null}
             error={props.openworkCard.error ?? null}
             restarting={props.openworkServerRestarting}
-            restartLabel={t("settings.restart_openwork_server")}
+            restartLabel={t("settings.restart_renwork_server")}
             onRestart={props.onRestartOpenworkServer}
             serviceStatus={props.openworkServiceStatus}
             logStatus={props.openworkLogStatus}
@@ -629,7 +629,7 @@ export function DebugView(props: DebugViewProps) {
           <div className={sectionHeaderClass}>
             <div className={sectionTitleClass}>Agent access</div>
             <div className={sectionDescClass}>
-              Test and repair OpenWork Cloud MCP access for this workspace.
+              Test and repair RenWork Cloud MCP access for this workspace.
             </div>
           </div>
           <AgentAccessCard
@@ -644,7 +644,7 @@ export function DebugView(props: DebugViewProps) {
       {/* Section: Diagnostics */}
       <div className={cardClass}>
         <div className={sectionHeaderClass}>
-          <div className={sectionTitleClass}>{t("settings.openwork_diagnostics_title")}</div>
+          <div className={sectionTitleClass}>{t("settings.renwork_diagnostics_title")}</div>
           <div className={sectionDescClass}>
             <span className="font-mono text-[11px] text-dls-secondary">
               {props.openworkServerDiagnostics?.version ?? "—"}
@@ -1048,7 +1048,7 @@ export function DebugView(props: DebugViewProps) {
           <div className="rounded-xl border border-green-7/25 bg-green-3/10 px-3 py-2 text-[12px] leading-relaxed text-green-11">
             Safe default: use <strong>Prepare migration data</strong> first. It writes the Electron snapshot only and does
             not replace, quit, or delete the Tauri app. The install handoff keeps rollback backup at{" "}
-            <code className="font-mono">OpenWork.app.migrate-bak</code>.
+            <code className="font-mono">RenWork.app.migrate-bak</code>.
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -1119,7 +1119,7 @@ export function DebugView(props: DebugViewProps) {
               size="sm"
               onClick={() => void props.onInstallElectronPreviewFromTauri()}
               disabled={props.electronMigrationBusy || !props.electronMigrationUrl.trim()}
-              title="Requires a trusted artifact URL. macOS keeps OpenWork.app.migrate-bak for rollback."
+              title="Requires a trusted artifact URL. macOS keeps RenWork.app.migrate-bak for rollback."
             >
               Start install handoff…
             </Button>
@@ -1208,12 +1208,12 @@ export function DebugView(props: DebugViewProps) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-sm font-semibold tracking-[-0.1px] text-dls-text">
-                {t("settings.reset_openwork_title")}
+                {t("settings.reset_renwork_title")}
               </div>
               <div className="text-[12px] text-dls-secondary">
                 {props.opencodeDevModeEnabled
-                  ? t("settings.reset_openwork_desc_dev")
-                  : t("settings.reset_openwork_desc_prod")}
+                  ? t("settings.reset_renwork_desc_dev")
+                  : t("settings.reset_renwork_desc_prod")}
               </div>
             </div>
             <div

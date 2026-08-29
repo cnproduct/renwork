@@ -21,7 +21,7 @@ export const CLOUD_DESKTOP_DISTRIBUTION = Object.freeze({
   appName: "RenWork Cloud",
   appIdentifier: "com.renrenyi.renwork",
   protocolScheme: "renwork",
-  requireSignin: false,
+  requireSignin: true,
   requireActivation: false,
 });
 
@@ -30,13 +30,14 @@ export const ENTERPRISE_DESKTOP_DISTRIBUTION = Object.freeze({
   appName: "RenWork Enterprise",
   appIdentifier: "com.renrenyi.renwork",
   protocolScheme: "renwork",
-  requireSignin: false,
-  requireActivation: false,
+  requireSignin: true,
+  requireActivation: true,
 });
 
 function normalizeFlavor(value) {
   const flavor = value?.trim().toLowerCase();
   if (flavor === "standalone") return "standalone";
+  if (flavor === "public") return "public";
   if (flavor === "cloud") return "cloud";
   if (flavor === "enterprise") return "enterprise";
   return "standalone";

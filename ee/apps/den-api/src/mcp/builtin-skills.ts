@@ -29,7 +29,7 @@ Create exactly one new Cloud skill. It is immediately usable by its creator. Do 
 
 ## Fast path (prefer these exact MCP names)
 
-Call \`openwork-cloud_execute_capability\` with these names. Skip broad search unless a call returns \`unknown_capability\`.
+Call \`renwork-cloud_execute_capability\` with these names. Skip broad search unless a call returns \`unknown_capability\`.
 
 | Step | Capability | Call |
 | --- | --- | --- |
@@ -84,7 +84,7 @@ Attach one existing plugin to one marketplace. Do not create a new skill or plug
 
 ## Fast path (prefer these exact MCP names)
 
-Call \`openwork-cloud_execute_capability\` with these names. Skip broad search unless a call returns \`unknown_capability\`.
+Call \`renwork-cloud_execute_capability\` with these names. Skip broad search unless a call returns \`unknown_capability\`.
 
 | Step | Capability | Call |
 | --- | --- | --- |
@@ -130,7 +130,7 @@ Grant marketplace access to one member. Do not create plugins or attach plugins 
 
 ## Fast path (prefer these exact MCP names)
 
-Call \`openwork-cloud_execute_capability\` with these names. Skip broad search unless a call returns \`unknown_capability\`.
+Call \`renwork-cloud_execute_capability\` with these names. Skip broad search unless a call returns \`unknown_capability\`.
 
 | Step | Capability | Call |
 | --- | --- | --- |
@@ -176,7 +176,7 @@ Grant access to the plugin that owns a skill. Skills live inside plugins, so acc
 
 ## Fast path (prefer these exact MCP names)
 
-Call \`openwork-cloud_execute_capability\` with these names. Skip broad search unless a call returns \`unknown_capability\`.
+Call \`renwork-cloud_execute_capability\` with these names. Skip broad search unless a call returns \`unknown_capability\`.
 
 | Step | Capability | Call |
 | --- | --- | --- |

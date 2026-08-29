@@ -139,13 +139,13 @@ async function fetchOpenworkWorkspaceList(hostUrl: string, token: string, hostTo
       throw new ApiError(
         502,
         "openwork_workspace_discovery_failed",
-        `OpenWork workspace discovery failed (${response.status} ${response.statusText || "HTTP error"})`,
+        `RenWork workspace discovery failed (${response.status} ${response.statusText || "HTTP error"})`,
       );
     }
     return await response.json();
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    throw new ApiError(502, "openwork_workspace_discovery_failed", "OpenWork workspace discovery failed", {
+    throw new ApiError(502, "openwork_workspace_discovery_failed", "RenWork workspace discovery failed", {
       error: String(error),
     });
   } finally {
@@ -365,8 +365,8 @@ export function registerWorkspaceRoutes(options: RegisterWorkspaceRoutesOptions)
           400,
           "openwork_workspace_not_found",
           directory
-            ? `OpenWork server has no workspace matching ${directory}.`
-            : "OpenWork server returned no workspaces.",
+            ? `RenWork server has no workspace matching ${directory}.`
+            : "RenWork server returned no workspaces.",
         );
       }
     }
@@ -502,7 +502,7 @@ export function registerWorkspaceRoutes(options: RegisterWorkspaceRoutesOptions)
       actor: ctx.actor ?? { type: "host" },
       action: "workspace.delete",
       target: "workspace",
-      summary: "Deleted workspace from OpenWork server",
+      summary: "Deleted workspace from RenWork server",
       timestamp: Date.now(),
     });
 

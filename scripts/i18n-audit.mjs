@@ -26,6 +26,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "..");
 const LOCALES_DIR = join(REPO_ROOT, "apps/app/src/i18n/locales");
 const APP_SRC = join(REPO_ROOT, "apps/app/src");
+const CI_DANGLING_BASELINE_FILE = join(__dirname, "i18n-dangling-baseline.txt");
 
 const LOCALES = ["ja", "zh", "vi", "pt-BR", "th", "fr", "ca", "es", "ru"];
 const EN_FILE = join(LOCALES_DIR, "en.ts");
@@ -131,6 +132,20 @@ function groupByPrefix(keys) {
     groups.set(prefix, (groups.get(prefix) ?? 0) + 1);
   }
   return [...groups.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+function readCiDanglingBaseline() {
+  if (!existsSync(CI_DANGLING_BASELINE_FILE)) return new Set();
+  return new Set(
+    readFileSync(CI_DANGLING_BASELINE_FILE, "utf-8")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#")),
+  );
+}
+
+function danglingBaselineKey({ key, file }) {
+  return `${file}\t${key}`;
 }
 
 /** Find duplicate keys in a file (must use regex — JSON.parse dedupes silently). */
@@ -334,6 +349,22 @@ if (shouldRun("--dangling")) {
 
   if (dangling.length === 0) {
     console.log("  ✓ all t() keys exist in en.ts");
+  } else if (isCi) {
+    const baseline = readCiDanglingBaseline();
+    const newDangling = dangling.filter((entry) => !baseline.has(danglingBaselineKey(entry)));
+    const knownDangling = dangling.length - newDangling.length;
+    if (knownDangling > 0) {
+      console.log(`  ⚠ ${knownDangling} known dangling references remain in the CI baseline`);
+    }
+    if (newDangling.length === 0) {
+      console.log("  ✓ no new dangling references");
+    } else {
+      console.log(`  ✗ ${newDangling.length} new dangling references`);
+      exitCode = 1;
+      for (const { key, file, line } of newDangling) {
+        console.log(`    ${file}:${line} → "${key}"`);
+      }
+    }
   } else {
     console.log(`  ✗ ${dangling.length} dangling references`);
     exitCode = 1;

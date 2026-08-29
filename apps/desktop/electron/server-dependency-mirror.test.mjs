@@ -12,6 +12,10 @@ const serverPackage = JSON.parse(
 const mcpSdkPackage = JSON.parse(
   readFileSync(new URL("../node_modules/@modelcontextprotocol/sdk/package.json", import.meta.url), "utf8"),
 );
+const electronBuildScript = readFileSync(
+  new URL("../scripts/electron-build.mjs", import.meta.url),
+  "utf8",
+);
 
 describe("server dependency mirror", () => {
   it("mirrors every server runtime dependency in the desktop package", () => {
@@ -32,5 +36,18 @@ describe("server dependency mirror", () => {
         `MCP SDK runtime dependency "${name}" must be declared directly in apps/desktop/package.json so it is available from app.asar.`,
       );
     }
+  });
+
+  it("vendors the compiled RenWork semantic tools module for packaged Node", () => {
+    assert.match(electronBuildScript, /@openwork\/types.*build/);
+    assert.match(electronBuildScript, /renwork-semantic-tools\.js/);
+    assert.match(electronBuildScript, /from \"\.\/renwork-semantic-tools\.js\"/);
+  });
+
+  it("builds the RenCredit workspace package before compiling the renderer", () => {
+    const rencreditBuild = electronBuildScript.indexOf('"@openwork/rencredit-metering", "build"');
+    const rendererBuild = electronBuildScript.indexOf('"--filter", "@openwork/app", "build"');
+    assert.ok(rencreditBuild >= 0, "expected an explicit RenCredit package build");
+    assert.ok(rendererBuild > rencreditBuild, "RenCredit must build before the renderer");
   });
 });

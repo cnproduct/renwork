@@ -28,6 +28,10 @@ import {
   InferenceOrgUsageBucketTable,
   InferenceUsageLedgerBucketChargeTable,
   InferenceUsageLedgerEntryTable,
+  RenCreditLedgerEntryTable,
+  RenCreditReservationTable,
+  RenCreditUsageEventTable,
+  RenCreditWalletTable,
   InstallLinkTable,
   InvitationTable,
   LlmProviderAccessTable,
@@ -501,6 +505,10 @@ export function registerDeleteOrganizationRoutes<T extends { Variables: OrgRoute
         await tx.delete(ScimGroupTable).where(eq(ScimGroupTable.organizationId, organizationId))
 
         await tx.delete(InferenceUsageLedgerEntryTable).where(eq(InferenceUsageLedgerEntryTable.organization_id, organizationId))
+        await tx.delete(RenCreditUsageEventTable).where(eq(RenCreditUsageEventTable.organization_id, organizationId))
+        await tx.delete(RenCreditLedgerEntryTable).where(eq(RenCreditLedgerEntryTable.organization_id, organizationId))
+        await tx.delete(RenCreditReservationTable).where(eq(RenCreditReservationTable.organization_id, organizationId))
+        await tx.delete(RenCreditWalletTable).where(eq(RenCreditWalletTable.organization_id, organizationId))
         await tx.delete(InferenceKeyTable).where(eq(InferenceKeyTable.organization_id, organizationId))
         await tx.delete(InferenceOrgLimitPolicyTable).where(eq(InferenceOrgLimitPolicyTable.organization_id, organizationId))
         await tx.delete(InferenceOrgUsageBucketTable).where(eq(InferenceOrgUsageBucketTable.organization_id, organizationId))

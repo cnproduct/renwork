@@ -42,6 +42,7 @@ import type {
 import { getWorkspaceTaskLoadErrorDisplay } from "@/app/utils";
 import { currentLocale, t, setLocale, type Language } from "@/i18n";
 import { useModelPicker } from "@/react-app/domains/session/modals/use-model-picker";
+import { saveSessionDraft } from "@/react-app/domains/session/sync/draft-store";
 import {
   type RouteWorkspace,
   type RouteSession,
@@ -80,6 +81,7 @@ import { SettingsStack } from "@/react-app/domains/settings/settings-section";
 import { AdvancedView } from "@/react-app/domains/settings/pages/advanced-view";
 import { AppearanceView } from "@/react-app/domains/settings/pages/appearance-view";
 import { CloudAccountView } from "@/react-app/domains/settings/pages/cloud-account-view";
+import { RenworkCommerceView } from "@/react-app/domains/settings/pages/renwork-commerce-view";
 import {
   EMPTY_CONNECT_CAPABILITY_INVENTORY,
   type ConnectCapabilityInventory,
@@ -91,6 +93,7 @@ import {
 import { createOpaqueDiagnosticsScopeKey } from "@/react-app/domains/settings/pages/agent-context-diagnostics-section";
 import { CloudProvidersView } from "@/react-app/domains/settings/pages/cloud-providers-view";
 import { MemoryView } from "@/react-app/domains/settings/pages/memory-view";
+import { ComputerHistoryView } from "@/react-app/domains/settings/pages/computer-history-view";
 import { useFeatureFlagsPreferences } from "@/react-app/domains/settings/state/feature-flags-preferences";
 import { DebugView } from "@/react-app/domains/settings/pages/debug-view";
 import { EnvironmentView } from "@/react-app/domains/settings/pages/environment-view";
@@ -285,12 +288,14 @@ export function parseSettingsPath(pathname: string): {
     case "permissions":
     case "advanced":
     case "appearance":
+    case "computer-history":
     case "environment":
     case "updates":
     case "recovery":
     case "debug":
       return { tab: head, redirectPath: null };
     case "cloud-account":
+    case "commerce":
     case "cloud-providers":
     case "memory":
       return { tab: head, redirectPath: null };
@@ -863,7 +868,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
   );
   const [openWorkModelsPromoHidden, setOpenWorkModelsPromoHidden] = useState(isOpenWorkModelsPromoHidden);
   const openWorkModelsPromoEligible = useOpenWorkModelsPromoEligibility();
-  // Entitled = Den/import says OpenWork Models is included. Available = local
+  // Entitled = Den/import says RenWork Models is included. Available = local
   // engine actually exposes selectable openwork models.
   const openWorkModelsEntitled = cloudSession.isSignedIn && hasOpenWorkCloudProvider;
   const openWorkModelsAvailable = hasOpenWorkModelsAvailable({
@@ -1060,6 +1065,21 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
       toast.error(describeRouteError(error));
     }
   }, [navigate, opencodeClient, selectedWorkspaceId, selectedWorkspaceRoot]);
+  const openComputerHistoryPrompt = useCallback(async (prompt: string) => {
+    if (!opencodeClient || !selectedWorkspaceId) {
+      toast.error(t("computer_history.ask_session_unavailable"));
+      return;
+    }
+    try {
+      const session = unwrap(
+        await opencodeClient.session.create({ directory: selectedWorkspaceRoot || undefined }),
+      );
+      saveSessionDraft(selectedWorkspaceId, session.id, { text: prompt, mode: "prompt" });
+      navigate(workspaceSessionRoute(selectedWorkspaceId, session.id));
+    } catch (error) {
+      toast.error(describeRouteError(error));
+    }
+  }, [navigate, opencodeClient, selectedWorkspaceId, selectedWorkspaceRoot]);
   // Settings refreshes provider auth whenever the picker opens (the session
   // route does not need this; its provider state is kept fresh elsewhere).
   useEffect(() => {
@@ -1107,7 +1127,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
   const installOpenAiImageExtension = useCallback(async (apiKey: string) => {
     const resolvedApiKey = apiKey.trim();
     if (!openworkClient) {
-      setImageExtensionError("OpenWork server is not connected.");
+      setImageExtensionError("RenWork server is not connected.");
       return;
     }
     if (!resolvedApiKey) {
@@ -1121,7 +1141,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     try {
       await openworkClient.upsertUserEnv([{ key: "OPENAI_API_KEY", value: resolvedApiKey }]);
       setUserEnvKeys((current) => Array.from(new Set([...current, "OPENAI_API_KEY"])));
-      setImageExtensionStatus("Saved OPENAI_API_KEY. Agents can use OpenWork extension actions for image generation.");
+      setImageExtensionStatus("Saved OPENAI_API_KEY. Agents can use RenWork extension actions for image generation.");
     } catch (error) {
       setImageExtensionError(describeRouteError(error));
     } finally {
@@ -1135,7 +1155,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     const apiKey = input.apiKey.trim();
     const prompt = input.prompt.trim();
     if (!client || !workspaceId) {
-      setImageGenerationError("OpenWork server is not connected for this workspace.");
+      setImageGenerationError("RenWork server is not connected for this workspace.");
       return;
     }
     if (!apiKey) {
@@ -1199,7 +1219,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
 
   const testVoiceSession = useCallback(async () => {
     if (!openworkClient) {
-      setVoiceError("OpenWork server is not connected.");
+      setVoiceError("RenWork server is not connected.");
       return;
     }
     setVoiceBusy(true);
@@ -1207,7 +1227,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     setVoiceError(null);
     try {
       const session = await openworkClient.createVoiceRealtimeSession();
-      setVoiceStatus(`Realtime ready with ${session.model} (${session.tools.length} OpenWork tools).`);
+      setVoiceStatus(`Realtime ready with ${session.model} (${session.tools.length} RenWork tools).`);
     } catch (error) {
       setVoiceError(describeRouteError(error));
     } finally {
@@ -1220,7 +1240,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     const workspaceId = runtimeWorkspaceId?.trim() ?? "";
     const modelId = input.modelId.trim();
     if (!client || !workspaceId) {
-      setLocalProviderError("OpenWork server is not connected for this workspace.");
+      setLocalProviderError("RenWork server is not connected for this workspace.");
       return;
     }
     if (!modelId) {
@@ -1826,7 +1846,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
       : [],
   );
   const openworkCloudMcpUrl = connectionsSnapshot.mcpServers.find(
-    (server) => server.name === "openwork-cloud",
+    (server) => server.name === "renwork-cloud" || server.name === "openwork-cloud",
   )?.config.url ?? null;
 
   // Build enablement context from all available runtime state.
@@ -2093,7 +2113,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     setRenameWorkspaceBusy(true);
     try {
       if (!openworkClient) {
-        toast.error("OpenWork server is unavailable. Reconnect the server before renaming workspaces.");
+        toast.error("RenWork server is unavailable. Reconnect the server before renaming workspaces.");
         return;
       }
       await openworkClient.updateWorkspaceDisplayName(renameWorkspaceId, trimmed);
@@ -2130,7 +2150,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
       }
       return;
     }
-    throw new Error("OpenWork server is unavailable. Reconnect the server before exporting workspace config.");
+    throw new Error("RenWork server is unavailable. Reconnect the server before exporting workspace config.");
   }, [workspaceServerClientResolver, workspaces]);
 
   const handleForgetWorkspace = useCallback(async (workspaceId: string) => {
@@ -2403,8 +2423,12 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             session={denSession}
           />
         );
+      case "commerce":
+        return <RenworkCommerceView />;
       case "memory":
         return <MemoryView onOpenAccount={openCloudAccountSettings} />;
+      case "computer-history":
+        return <ComputerHistoryView onOpenPrompt={openComputerHistoryPrompt} />;
       case "cloud-providers":
         return (
           <CloudProvidersView

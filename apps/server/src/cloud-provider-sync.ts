@@ -349,11 +349,11 @@ function hashString(value: string): string {
 }
 
 function runtimeProviderId(provider: DenProvider): string {
-  return provider.source === "openwork" ? "openwork" : provider.id;
+  return provider.source === "openwork" ? provider.providerId : provider.id;
 }
 
 function isCloudManagedProviderKey(providerId: string): boolean {
-  return /^lpr_/i.test(providerId) || providerId.trim() === "openwork";
+  return /^lpr_/i.test(providerId) || ["renwork", "openwork"].includes(providerId.trim());
 }
 
 function readProviderEnvNames(providerConfig: JsonRecord): string[] {
@@ -396,9 +396,14 @@ function providerEnvEntries(provider: DenProviderConnection): EnvEntry[] {
 
   const primaryCredential = provider.apiKey?.trim() || entries[0]?.value || "";
   if (provider.source === "openwork" && primaryCredential) {
+    upsertEnvEntry(entries, "RENWORK_API_KEY", primaryCredential);
+    // Hidden compatibility variable for previously materialized provider configs.
     upsertEnvEntry(entries, "OPENWORK_API_KEY", primaryCredential);
     const baseUrl = readOpenWorkInferenceBaseUrl(provider.providerConfig);
-    if (baseUrl) upsertEnvEntry(entries, "OPENWORK_INFERENCE_BASE_URL", baseUrl);
+    if (baseUrl) {
+      upsertEnvEntry(entries, "RENWORK_INFERENCE_BASE_URL", baseUrl);
+      upsertEnvEntry(entries, "OPENWORK_INFERENCE_BASE_URL", baseUrl);
+    }
   }
   return entries;
 }
