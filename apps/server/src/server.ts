@@ -98,6 +98,11 @@ import { registerWorkspaceRoutes } from "./routes/workspaces.js";
 import { registerCloudMcpRoutes } from "./routes/cloud-mcp.js";
 import { registerCustomProviderRoutes } from "./routes/custom-providers.js";
 import { registerLocalAutomationRoutes } from "./routes/local-automations.js";
+import {
+  assertRenWorkMeteredCommand,
+  assertRenWorkMeteredPrompt,
+  assertRenWorkMeteredSummarize,
+} from "./renwork-metered-runtime-gate.js";
 import { startLocalAutomationsScheduler } from "./local-automations-scheduler.js";
 import { captureServerException } from "./telemetry.js";
 import {
@@ -864,6 +869,10 @@ function isPromptAsyncProxyRequest(method: string, proxyPath: string) {
   return method === "POST" && /^\/session\/[^/]+\/prompt_async$/.test(normalizeOpencodeProxyPath(proxyPath));
 }
 
+function isSessionSummarizeProxyRequest(method: string, proxyPath: string) {
+  return method === "POST" && /^\/session\/[^/]+\/summarize$/.test(normalizeOpencodeProxyPath(proxyPath));
+}
+
 export async function startServer(config: ServerConfig): Promise<ServeResult> {
   const approvals = new ApprovalService(config.approval);
   const reloadEvents = new ReloadEventStore();
@@ -1235,6 +1244,15 @@ export async function proxyOpencodeRequest(input: {
   const body = method === "GET" || method === "HEAD"
     ? undefined
     : await input.request.arrayBuffer().then((buf) => (buf.byteLength > 0 ? buf : undefined));
+  if (input.config.meteredRuntimeRequired && isPromptAsyncProxyRequest(method, proxyPath)) {
+    assertRenWorkMeteredPrompt(body);
+  }
+  if (input.config.meteredRuntimeRequired && isSessionCommandProxyRequest(method, proxyPath)) {
+    assertRenWorkMeteredCommand(body);
+  }
+  if (input.config.meteredRuntimeRequired && isSessionSummarizeProxyRequest(method, proxyPath)) {
+    assertRenWorkMeteredSummarize(body);
+  }
   if (pool && method === "GET" && isEngineEventPath(proxyPath)) {
     return proxyEngineEventStreams({
       pool,

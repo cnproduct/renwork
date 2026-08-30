@@ -1,6 +1,8 @@
 extends: ./electron-builder.base.yml
 appId: com.renrenyi.renwork
 productName: RenWork
+extraMetadata:
+  openworkDistribution: public
 protocols:
   - name: RenWork
     schemes:

@@ -131,6 +131,7 @@ function toPublicPreview(catalog: RenWorkAdminModelCatalog, now = new Date()): R
         promotionLabel: promotionActive ? model.promotion?.label ?? null : null,
         promotionEndsAt: promotionActive ? model.promotion?.endsAt ?? null : null,
         billingMode: catalog.billingPolicy[activeRoute.source],
+        executionLocation: activeRoute.source === "local" ? "local" as const : "cloud" as const,
         sortOrder: model.sortOrder,
       }];
     })

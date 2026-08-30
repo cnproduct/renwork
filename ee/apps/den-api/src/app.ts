@@ -41,6 +41,7 @@ import { registerMeRoutes } from "./routes/me/index.js"
 import { registerOrgRoutes } from "./routes/org/index.js"
 import { registerTelemetryRoutes } from "./routes/telemetry/index.js"
 import { registerInferenceGatewayRoutes } from "./routes/inference-gateway.js"
+import { registerMeteredRuntimeRoutes } from "./routes/metered-runtime.js"
 import { registerVersionRoutes } from "./routes/version/index.js"
 import { registerRenworkCommerceRoutes } from "./routes/renwork-commerce/index.js"
 import { registerWebhookRoutes } from "./routes/webhooks/index.js"
@@ -229,6 +230,7 @@ registerExternalConnectionProxyRoutes(app)
 registerAdminMcpRoutes(app)
 registerTelemetryRoutes(app)
 registerInferenceGatewayRoutes(app)
+registerMeteredRuntimeRoutes(app)
 
 configureCloudAgentExecutor({ execute: executeCloudAgent, runtimeAvailable: cloudAgentRuntimeAvailable })
 

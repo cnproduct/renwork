@@ -477,6 +477,13 @@
       "when": 1787966727651,
       "tag": "0068_adorable_leper_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "5",
+      "when": 1788062400000,
+      "tag": "0069_rencredit_runtime_devices",
+      "breakpoints": true
     }
   ]
 }

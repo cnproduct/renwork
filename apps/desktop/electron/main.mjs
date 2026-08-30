@@ -1242,6 +1242,7 @@ const runtimeManager = createRuntimeManager({
     filePath: path.join(app.getPath("userData"), "local-managed-mcp-vault-key.bin"),
     loadSafeStorage: () => require("electron").safeStorage,
   }),
+  meteredRuntimeRequired: DESKTOP_DISTRIBUTION.flavor !== "standalone",
 });
 const initialRunnerBootstrap = workspaceStore.readDesktopBootstrapConfigSync();
 const legacyRunnerBaseUrls = [

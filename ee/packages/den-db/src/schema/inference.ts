@@ -20,6 +20,7 @@ export const InferenceOrgUpstreamProviderKeyStatus = ["active", "revoked"] as co
 export const RenCreditWalletStatus = ["active", "suspended"] as const
 export const RenCreditReservationStatus = ["reserved", "captured", "released"] as const
 export const RenCreditLedgerEntryTypes = ["grant", "reserve", "capture", "release", "refund", "adjustment"] as const
+export const RenCreditRuntimeDeviceStatus = ["pending", "active", "revoked"] as const
 
 export const InferenceKeyTable = mysqlTable(
   "inference_keys",
@@ -253,7 +254,7 @@ export const RenCreditUsageEventTable = mysqlTable(
     reasoning_tokens: int("reasoning_tokens").notNull().default(0),
     cache_read_tokens: int("cache_read_tokens").notNull().default(0),
     cache_write_tokens: int("cache_write_tokens").notNull().default(0),
-    accuracy: mysqlEnum("accuracy", ["reported", "estimated"]).notNull(),
+    accuracy: mysqlEnum("accuracy", ["reported", "estimated", "tokenizer"]).notNull(),
     occurred_at: timestamp("occurred_at", { fsp: 3 }).notNull(),
     created_at: timestamps.created_at,
   },
@@ -261,6 +262,33 @@ export const RenCreditUsageEventTable = mysqlTable(
     uniqueIndex("rencredit_usage_org_provider_response").on(table.organization_id, table.provider_response_id),
     index("rencredit_usage_reservation").on(table.reservation_id),
     index("rencredit_usage_org_created").on(table.organization_id, table.created_at),
+  ],
+)
+
+/** Approved device keys for content-free local runtime metering receipts. */
+export const RenCreditRuntimeDeviceTable = mysqlTable(
+  "rencredit_runtime_devices",
+  {
+    id: varchar("id", { length: 64 }).notNull().primaryKey(),
+    organization_id: denTypeIdColumn("organization", "organization_id").notNull(),
+    org_membership_id: denTypeIdColumn("member", "org_membership_id").notNull(),
+    inference_key_id: denTypeIdColumn("inferenceKey", "inference_key_id").notNull(),
+    device_id: varchar("device_id", { length: 255 }).notNull(),
+    public_key_pem: varchar("public_key_pem", { length: 1024 }).notNull(),
+    public_key_fingerprint: varchar("public_key_fingerprint", { length: 64 }).notNull(),
+    status: mysqlEnum("status", RenCreditRuntimeDeviceStatus).notNull().default("pending"),
+    revoked_at: timestamp("revoked_at", { fsp: 3 }),
+    last_seen_at: timestamp("last_seen_at", { fsp: 3 }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("rencredit_runtime_devices_org_member_device").on(
+      table.organization_id,
+      table.org_membership_id,
+      table.device_id,
+    ),
+    index("rencredit_runtime_devices_inference_key").on(table.inference_key_id),
+    index("rencredit_runtime_devices_status").on(table.status),
   ],
 )
 
@@ -355,3 +383,4 @@ export const renCreditWallet = RenCreditWalletTable
 export const renCreditReservation = RenCreditReservationTable
 export const renCreditLedgerEntry = RenCreditLedgerEntryTable
 export const renCreditUsageEvent = RenCreditUsageEventTable
+export const renCreditRuntimeDevice = RenCreditRuntimeDeviceTable

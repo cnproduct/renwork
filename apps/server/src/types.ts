@@ -109,6 +109,8 @@ export interface ServerConfig {
    * old one is closed once its runs finish. Off by default (alpha).
    */
   engineRollover?: boolean;
+  /** Reject model runs that do not use the RenWork metered provider. */
+  meteredRuntimeRequired?: boolean;
   /** In-memory secure key custody supplied by an embedding host such as OpenWork Desktop. */
   localManagedMcpVaultKey?: LocalManagedMcpVaultKeyProvider;
 }

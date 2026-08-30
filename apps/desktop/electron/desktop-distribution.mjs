@@ -12,7 +12,7 @@ export const PUBLIC_DESKTOP_DISTRIBUTION = Object.freeze({
   appName: "RenWork",
   appIdentifier: "com.renrenyi.renwork",
   protocolScheme: "renwork",
-  requireSignin: false,
+  requireSignin: true,
   requireActivation: false,
 });
 

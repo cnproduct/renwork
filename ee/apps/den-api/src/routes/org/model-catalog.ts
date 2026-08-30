@@ -31,6 +31,7 @@ const publicModelSchema = z.object({
   promotionLabel: z.string().nullable(),
   promotionEndsAt: z.string().datetime().nullable(),
   billingMode: z.enum(RENWORK_BILLING_MODES),
+  executionLocation: z.enum(["cloud", "local"]),
 })
 
 const publicModelCatalogSchema = z.object({

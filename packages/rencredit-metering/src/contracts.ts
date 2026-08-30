@@ -20,6 +20,9 @@ export type RenWorkProviderProtocol = (typeof RENWORK_PROVIDER_PROTOCOLS)[number
 export const RENWORK_ROUTE_SOURCES = ["official", "byok", "local"] as const;
 export type RenWorkRouteSource = (typeof RENWORK_ROUTE_SOURCES)[number];
 
+export const RENWORK_EXECUTION_LOCATIONS = ["cloud", "local"] as const;
+export type RenWorkExecutionLocation = (typeof RENWORK_EXECUTION_LOCATIONS)[number];
+
 export const RENWORK_BILLING_MODES = ["token_metered", "free"] as const;
 export type RenWorkBillingMode = (typeof RENWORK_BILLING_MODES)[number];
 
@@ -115,6 +118,7 @@ export interface RenWorkPublicModel {
   promotionLabel: string | null;
   promotionEndsAt: string | null;
   billingMode: RenWorkBillingMode;
+  executionLocation: RenWorkExecutionLocation;
 }
 
 export interface RenWorkPublicModelCatalog {
@@ -153,7 +157,31 @@ export interface RenWorkTokenUsageEvent {
   providerResponseId: string;
   usage: RenWorkTokenUsage;
   measuredAt: string;
-  accuracy: "reported" | "estimated";
+  accuracy: "reported" | "estimated" | "tokenizer";
+}
+
+/**
+ * Content-free metering evidence emitted by an approved local runtime.
+ * Prompts, completions, tool arguments, file paths and file contents are
+ * deliberately absent: Den only needs token counters and binding metadata.
+ */
+export interface RenWorkLocalRuntimeReceiptPayload {
+  version: 1;
+  deviceId: string;
+  reservationId: string;
+  runId: string;
+  modelSku: string;
+  providerResponseId: string;
+  usage: RenWorkTokenUsage;
+  accuracy: "reported" | "tokenizer";
+  hasResult: boolean;
+  measuredAt: string;
+  nonce: string;
+}
+
+export interface RenWorkSignedLocalRuntimeReceipt {
+  payload: RenWorkLocalRuntimeReceiptPayload;
+  signature: string;
 }
 
 export interface RenWorkTokenReceipt {

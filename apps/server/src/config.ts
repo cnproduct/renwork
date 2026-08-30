@@ -23,6 +23,7 @@ export interface CliArgs {
   logFormat?: LogFormat;
   logRequests?: boolean;
   engineRollover?: boolean;
+  meteredRuntimeRequired?: boolean;
   version?: boolean;
   help?: boolean;
 }
@@ -44,6 +45,7 @@ interface FileConfig {
   logFormat?: LogFormat;
   logRequests?: boolean;
   engineRollover?: boolean;
+  meteredRuntimeRequired?: boolean;
 }
 
 const DEFAULT_PORT = 8787;
@@ -308,6 +310,8 @@ export async function resolveServerConfig(cli: CliArgs): Promise<ServerConfig> {
 
   const envEngineRollover = parseBoolean(process.env.OPENWORK_ENGINE_ROLLOVER);
   const engineRollover = cli.engineRollover ?? envEngineRollover ?? fileConfig.engineRollover ?? false;
+  const envMeteredRuntime = parseBoolean(process.env.RENWORK_REQUIRE_METERED_RUNTIME);
+  const meteredRuntimeRequired = cli.meteredRuntimeRequired ?? envMeteredRuntime ?? fileConfig.meteredRuntimeRequired ?? false;
 
   const authorizedRoots =
     fileConfig.authorizedRoots?.length
@@ -338,5 +342,6 @@ export async function resolveServerConfig(cli: CliArgs): Promise<ServerConfig> {
     logFormat,
     logRequests,
     engineRollover,
+    meteredRuntimeRequired,
   };
 }

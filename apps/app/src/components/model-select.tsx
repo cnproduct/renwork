@@ -503,6 +503,9 @@ export function ModelSelect({
                         </span>
                         {item.billing ? (
                           <span className="flex shrink-0 items-center gap-1 text-xs">
+                            <span className="rounded border border-border px-1 py-0.5 text-[10px] text-muted-foreground">
+                              {item.billing.executionLocation === "local" ? "本地" : "云端"}
+                            </span>
                             {item.billing.promotionLabel ? (
                               <span className="rounded border border-emerald-6 px-1 py-0.5 text-[10px] text-emerald-11">
                                 {item.billing.promotionLabel}

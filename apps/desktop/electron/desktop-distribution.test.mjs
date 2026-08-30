@@ -48,14 +48,13 @@ describe("resolveDesktopDistribution", () => {
   });
 
   it("does not let an environment variable turn a packaged public build into enterprise", () => {
-    assert.equal(
-      resolveDesktopDistribution({
+    const distribution = resolveDesktopDistribution({
         isPackaged: true,
         packageFlavor: "public",
         environmentFlavor: "enterprise",
-      }).flavor,
-      "public",
-    );
+      });
+    assert.equal(distribution.flavor, "public");
+    assert.equal(distribution.requireSignin, true);
   });
 
   it("allows development runs to exercise the enterprise flavor", () => {
