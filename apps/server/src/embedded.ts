@@ -35,7 +35,7 @@ import { keepOpenworkRuntimeConfigFileFresh, writeOpenworkRuntimeConfigFile } fr
 import { sweepLegacyOpenCodeConfig } from "./legacy-config-sweep.js";
 import { resolveOpencodeModelsUrl } from "./opencode-models-url.js";
 import type { ServeResult } from "./serve-node.js";
-import type { LocalManagedMcpVaultKeyProvider, ServerConfig } from "./types.js";
+import type { LocalManagedMcpVaultKeyProvider, LocalRuntimeMeteringSignerProvider, ServerConfig } from "./types.js";
 
 export type EmbeddedServerOptions = CliArgs & {
   /** When true, spawn a managed OpenCode child process. */
@@ -46,6 +46,8 @@ export type EmbeddedServerOptions = CliArgs & {
   opencodeCwd?: string;
   /** Secure key custody for the local managed MCP credential vault. */
   localManagedMcpVaultKey?: LocalManagedMcpVaultKeyProvider;
+  /** Secure device signer supplied by the desktop main process. */
+  localRuntimeMeteringSigner?: LocalRuntimeMeteringSignerProvider;
 };
 
 export type EmbeddedServerHandle = {
@@ -68,6 +70,7 @@ export type EmbeddedServerHandle = {
 export async function startEmbeddedServer(options: EmbeddedServerOptions): Promise<EmbeddedServerHandle> {
   const config = await resolveServerConfig(options);
   config.localManagedMcpVaultKey = options.localManagedMcpVaultKey;
+  config.localRuntimeMeteringSigner = options.localRuntimeMeteringSigner;
 
   // Spawn managed OpenCode if requested and no explicit base URL was provided.
   let managedOpencode: ManagedOpencodeServer | null = null;

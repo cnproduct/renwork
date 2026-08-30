@@ -1125,7 +1125,7 @@ export function mergeSystemCaChildEnv(baseEnv = {}, caEnv = {}, extra = {}) {
   };
 }
 
-export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths, localManagedMcpVaultKey, meteredRuntimeRequired = false }) {
+export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths, localManagedMcpVaultKey, localRuntimeMeteringSigner, meteredRuntimeRequired = false }) {
   const inheritedProcessEnv = { ...process.env };
   let injectedUserEnvKeys = new Set();
   const engineState = createEngineState();
@@ -1738,6 +1738,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       opencodeBin: managedOpencode?.path ?? undefined,
       opencodeCwd: managedOpencodeWorkdir(),
       localManagedMcpVaultKey,
+      localRuntimeMeteringSigner,
       engineRollover: options.engineRollover === true,
       meteredRuntimeRequired: meteredRuntimeRequired === true,
     });

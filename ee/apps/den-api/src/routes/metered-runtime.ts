@@ -246,6 +246,10 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
         modelSku: reserved.reservation.model_sku,
         reservedMicroCredits: reserved.reservation.reserved_microcredits,
         expiresAt: reserved.reservation.expires_at,
+        execution: {
+          providerID: route.providerId,
+          modelID: route.upstreamModelId,
+        },
       }, 201)
     } catch (error) {
       const code = error instanceof Error ? error.message.split(":", 1)[0]! : "RENCREDIT_RESERVATION_FAILED"

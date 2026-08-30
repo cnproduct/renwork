@@ -18,11 +18,14 @@ const approvedVoiceoverV8 = [
 ] as const;
 
 test("Voiceover V8 closes direct-model bypass and adds signed local settlement", async ({ evidence }) => {
-  const [contracts, receipt, gateway, runtime, ledger, schema, migration, picker, commerce] = await Promise.all([
+  const [contracts, receipt, gateway, runtime, adapter, proxy, desktopSigner, ledger, schema, migration, picker, commerce] = await Promise.all([
     readFile("../packages/rencredit-metering/src/contracts.ts", "utf8"),
     readFile("../packages/rencredit-metering/src/local-runtime-receipt.ts", "utf8"),
     readFile("../ee/apps/den-api/src/routes/metered-runtime.ts", "utf8"),
     readFile("../apps/server/src/renwork-metered-runtime-gate.ts", "utf8"),
+    readFile("../apps/server/src/rencredit-local-runtime.ts", "utf8"),
+    readFile("../apps/server/src/server.ts", "utf8"),
+    readFile("../apps/desktop/electron/secure-metering-signer.mjs", "utf8"),
     readFile("../ee/apps/den-api/src/rencredit-ledger.ts", "utf8"),
     readFile("../ee/packages/den-db/src/schema/inference.ts", "utf8"),
     readFile("../ee/packages/den-db/drizzle/0069_unusual_randall_flagg.sql", "utf8"),
@@ -42,9 +45,17 @@ test("Voiceover V8 closes direct-model bypass and adds signed local settlement",
   expect(gateway).toContain("reserveInferenceCredits");
   expect(gateway).toContain("settleInferenceCredits");
   expect(gateway).toContain("releaseInferenceCredits");
+  expect(gateway).toContain("execution:");
   expect(runtime).toContain('payload.model.providerID !== "renwork"');
   expect(runtime).toContain('payload.model.startsWith("renwork/")');
   expect(runtime).toContain('payload.providerID !== "renwork"');
+  expect(adapter).toContain("/api/v1/metered-runtime/reservations");
+  expect(adapter).toContain("canonicalLocalRuntimeReceiptPayload");
+  expect(adapter).toContain("aggregateReportedUsage");
+  expect(proxy).toContain("rewriteMeteredModel");
+  expect(proxy).toContain("settleMeteredOpenCodeRun");
+  expect(desktopSigner).toContain('generateKeyPairSync("ed25519"');
+  expect(desktopSigner).toContain("safeStorage");
   expect(ledger).toContain("getInferenceReservationForPrincipal");
   expect(schema).toContain("RenCreditRuntimeDeviceTable");
   expect(migration).toContain("rencredit_runtime_devices");
