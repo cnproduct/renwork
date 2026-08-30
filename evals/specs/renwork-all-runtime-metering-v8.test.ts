@@ -25,7 +25,7 @@ test("Voiceover V8 closes direct-model bypass and adds signed local settlement",
     readFile("../apps/server/src/renwork-metered-runtime-gate.ts", "utf8"),
     readFile("../ee/apps/den-api/src/rencredit-ledger.ts", "utf8"),
     readFile("../ee/packages/den-db/src/schema/inference.ts", "utf8"),
-    readFile("../ee/packages/den-db/drizzle/0069_rencredit_runtime_devices.sql", "utf8"),
+    readFile("../ee/packages/den-db/drizzle/0069_unusual_randall_flagg.sql", "utf8"),
     readFile("../apps/app/src/components/model-select.tsx", "utf8"),
     readFile("../apps/app/src/react-app/domains/settings/pages/renwork-commerce-view.tsx", "utf8"),
   ]);
