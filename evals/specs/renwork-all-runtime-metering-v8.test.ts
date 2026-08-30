@@ -11,8 +11,8 @@ const approvedVoiceoverV8 = [
   "界面同时显示上下文容量和 RenCredit 实时结算。",
   "成功按实际量结算，失败、取消、崩溃和无结果释放冻结。",
   "本地执行必须在线鉴权，不能离线绕过。",
-  "OAuth、BYOK、Ollama 与自定义端点不能绕过计量。",
-  "超级管理员管理供应商、模型、tokenizer、费率、倍率、位置和特批。",
+  "平台批准且逐成员授权的 OAuth 必须计量；共享消费账号和用户自接 OAuth 不能绕过。",
+  "超级管理员管理供应商、OAuth 席位、合规证据、tokenizer、费率、倍率、位置和特批。",
   "持久化多租户账本是唯一 RenCredit 事实源。",
   "双租户验证余额隔离、重复请求、失败释放和并发扣费。",
 ] as const;
@@ -55,7 +55,7 @@ test("Voiceover V8 closes direct-model bypass and adds signed local settlement",
 
   evidence.fact(
     "Direct provider bypass is rejected before execution",
-    "Cloud and Enterprise desktop prompts must name the RenWork provider; OAuth, BYOK, Ollama and custom provider IDs fail closed in the local proxy.",
+    "Every prompt still names the synthetic RenWork provider. Approved per-member OAuth executes behind that route and must settle a signed receipt; raw OAuth, BYOK, Ollama and custom provider IDs fail closed in the local proxy.",
     true,
   );
   evidence.fact(

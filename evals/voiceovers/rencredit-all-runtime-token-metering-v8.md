@@ -25,17 +25,21 @@ every permitted model call enters the same cloud-authoritative RenCredit ledger.
 4. Every model invocation created by the task passes through the RenWork Metered
    Runtime. This includes the visible answer, planning and reasoning, tool-result
    continuation, agent and subagent calls, automatic retries, title generation,
-   context summarization and compaction, and background automation. Plugins,
-   OpenCode, old sessions, and direct provider configuration cannot open an
-   unmetered model route.
+   context summarization and compaction, and background automation. Platform-
+   approved OAuth seats use an internal RenWork route as well; Plugins, OpenCode,
+   old sessions, and direct provider configuration cannot open an unmetered model
+   route.
 
 5. For a cloud model, RenWork settles from provider-reported input, output,
-   reasoning, cache-read, and cache-write usage. For a permitted local model,
-   the controlled local runtime uses the catalog-approved tokenizer and produces
-   a device-signed usage receipt. Workspace text, files, prompts, and generated
-   content stay local; only identity scope, model SKU, token categories, task and
-   idempotency identifiers, timestamps, and the signed settlement receipt are
-   sent to the RenCredit service.
+   reasoning, cache-read, and cache-write usage. For a permitted local model or
+   platform-approved OAuth seat, the controlled local runtime uses provider-
+   reported counters when available and otherwise uses the catalog-approved,
+   version-locked tokenizer. It marks the receipt as `reported` or `tokenizer`
+   instead of pretending an estimate is an upstream bill. Workspace text, files,
+   prompts, OAuth credentials, and generated content stay local; only identity
+   scope, model SKU, token categories, metering accuracy, task and idempotency
+   identifiers, timestamps, and the device-signed settlement receipt are sent to
+   the RenCredit service.
 
 6. During execution, the ZCode-style usage panel has two layers. Context Capacity
    explains how much of the model context is occupied and which categories use
@@ -55,18 +59,23 @@ every permitted model call enters the same cloud-authoritative RenCredit ledger.
    silently provide an offline or direct-account bypass; a future signed offline
    credit lease must be specified and accepted separately.
 
-9. Consumer account login, a user-supplied API key, Ollama, a custom endpoint, or
-   a third-party model connection never becomes an unmetered shortcut. If an
-   upstream authorization cannot provide auditable usage or cannot be routed
-   through the controlled runtime, RenWork marks it unavailable for normal model
-   execution instead of estimating a charge after the fact.
+9. A platform super administrator may enable a direct OAuth seat only after the
+   organization has a valid per-user business/enterprise entitlement or written
+   provider permission. The binding is limited to an organization, member,
+   device, provider and validity period; the member cannot add, export or reuse
+   the credential. One consumer login is never silently shared across multiple
+   people. A user-supplied OAuth login, API key, Ollama, custom endpoint or third-
+   party connection remains unavailable unless an equally explicit, audited
+   exception exists. If RenWork cannot reserve before the call and settle a
+   reported or tokenizer receipt afterwards, the model does not start.
 
-10. A platform super administrator manages provider credentials, model SKUs,
-    tokenizer versions, pricing snapshots, multipliers, execution locations, and
-    exception grants. An organization Owner manages only the published-model
-    whitelist, default model, organization budget, warnings, and member quotas.
-    Members can select permitted models and inspect their own task receipts, but
-    cannot change providers or metering policy.
+10. A platform super administrator manages provider credentials, licensed OAuth
+    seat bindings, compliance evidence, model SKUs, tokenizer versions, pricing
+    snapshots, multipliers, execution locations, and exception grants. An
+    organization Owner manages only the published-model whitelist, default model,
+    organization budget, warnings, and member quotas. Members can select permitted
+    models and inspect their own task receipts, but cannot change providers,
+    connect OAuth accounts, or change metering policy.
 
 11. The account center uses the persistent multi-tenant RenCredit ledger as its
     only balance source. It shows wallet balance, reservations, immutable ledger
@@ -75,9 +84,11 @@ every permitted model call enters the same cloud-authoritative RenCredit ledger.
     overwrite, or restore spendable balance.
 
 12. Acceptance is complete only when two isolated test tenants prove cloud-model
-    capture, permitted local-model capture, multi-call coding-agent accounting,
-    retry accounting, cancellation and no-result release, crash reconciliation,
-    idempotent receipt replay, concurrent reservations, member quotas, tenant
-    isolation, direct-route rejection, and exact agreement between the desktop
-    panel, task receipt, wallet, and persistent ledger. A healthy service, a UI
-    screenshot, or a locally passing unit test alone is not production proof.
+    capture, permitted local-model capture, approved OAuth-seat capture using both
+    reported and tokenizer accuracy, rejection of unapproved or expired OAuth
+    bindings, multi-call coding-agent accounting, retry accounting, cancellation
+    and no-result release, crash reconciliation, idempotent receipt replay,
+    concurrent reservations, member quotas, tenant isolation, direct-route
+    rejection, and exact agreement between the desktop panel, task receipt,
+    wallet, and persistent ledger. A healthy service, a UI screenshot, or a
+    locally passing unit test alone is not production proof.
