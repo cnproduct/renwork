@@ -374,7 +374,7 @@ export async function settleInferenceCredits(input: {
   reservationId: ReservationId
   usage: RenWorkTokenUsage
   providerResponseId: string
-  accuracy: "reported" | "estimated"
+  accuracy: "reported" | "estimated" | "tokenizer"
   hasResult: boolean
 }) {
   return db.transaction(async (tx) => {
@@ -449,6 +449,16 @@ export async function settleInferenceCredits(input: {
     })
     return { ...reservation, status: nextStatus, captured_microcredits: captured, released_microcredits: released }
   })
+}
+
+export async function getInferenceReservationForPrincipal(input: InferencePrincipal & { reservationId: string }) {
+  const [reservation] = await db.select().from(RenCreditReservationTable).where(and(
+    eq(RenCreditReservationTable.id, input.reservationId as ReservationId),
+    eq(RenCreditReservationTable.organization_id, input.organizationId),
+    eq(RenCreditReservationTable.org_membership_id, input.memberId),
+    eq(RenCreditReservationTable.inference_key_id, input.inferenceKeyId),
+  )).limit(1)
+  return reservation ?? null
 }
 
 export async function releaseInferenceCredits(input: { reservationId: ReservationId; failureCode: string }) {

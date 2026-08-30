@@ -137,6 +137,7 @@ export function toPublicModelCatalog(catalog: RenWorkAdminModelCatalog, now = ne
         promotionLabel: promotionActive ? model.promotion?.label ?? null : null,
         promotionEndsAt: promotionActive ? model.promotion?.endsAt ?? null : null,
         billingMode: activeRoute ? catalog.billingPolicy[activeRoute.source] : "token_metered",
+        executionLocation: activeRoute?.source === "local" ? "local" as const : "cloud" as const,
       };
     });
 
@@ -194,6 +195,7 @@ function parsePublicModel(value: unknown): RenWorkPublicModel | null {
     || !(value.promotionLabel === null || typeof value.promotionLabel === "string")
     || !(value.promotionEndsAt === null || typeof value.promotionEndsAt === "string")
     || !(value.billingMode === "token_metered" || value.billingMode === "free")
+    || !(value.executionLocation === "cloud" || value.executionLocation === "local")
   ) return null;
   return {
     sku: value.sku,
@@ -210,6 +212,7 @@ function parsePublicModel(value: unknown): RenWorkPublicModel | null {
     promotionLabel: value.promotionLabel,
     promotionEndsAt: value.promotionEndsAt,
     billingMode: value.billingMode,
+    executionLocation: value.executionLocation,
   };
 }
 

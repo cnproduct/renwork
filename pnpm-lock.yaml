@@ -336,6 +336,9 @@ importers:
       '@openwork/paths':
         specifier: workspace:*
         version: link:../../packages/paths
+      '@openwork/rencredit-metering':
+        specifier: workspace:*
+        version: link:../../packages/rencredit-metering
       '@sentry/electron':
         specifier: ^7.16.0
         version: 7.16.0(@opentelemetry/core@2.9.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.220.0(@opentelemetry/api@1.9.1))
@@ -403,6 +406,9 @@ importers:
       '@openwork/enterprise-mcp-client':
         specifier: workspace:*
         version: link:../../packages/enterprise-mcp-client
+      '@openwork/rencredit-metering':
+        specifier: workspace:*
+        version: link:../../packages/rencredit-metering
       better-sqlite3:
         specifier: ^13.0.2
         version: 13.0.2

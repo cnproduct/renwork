@@ -98,6 +98,18 @@ import { registerWorkspaceRoutes } from "./routes/workspaces.js";
 import { registerCloudMcpRoutes } from "./routes/cloud-mcp.js";
 import { registerCustomProviderRoutes } from "./routes/custom-providers.js";
 import { registerLocalAutomationRoutes } from "./routes/local-automations.js";
+import {
+  assertRenWorkMeteredCommand,
+  assertRenWorkMeteredPrompt,
+  assertRenWorkMeteredSummarize,
+} from "./renwork-metered-runtime-gate.js";
+import {
+  aggregateReportedUsage,
+  RenCreditLocalRuntimeClient,
+  type RenCreditLocalRuntimePort,
+  type LocalRuntimeReservation,
+  type OpenCodeMessageEnvelope,
+} from "./rencredit-local-runtime.js";
 import { startLocalAutomationsScheduler } from "./local-automations-scheduler.js";
 import { captureServerException } from "./telemetry.js";
 import {
@@ -864,6 +876,10 @@ function isPromptAsyncProxyRequest(method: string, proxyPath: string) {
   return method === "POST" && /^\/session\/[^/]+\/prompt_async$/.test(normalizeOpencodeProxyPath(proxyPath));
 }
 
+function isSessionSummarizeProxyRequest(method: string, proxyPath: string) {
+  return method === "POST" && /^\/session\/[^/]+\/summarize$/.test(normalizeOpencodeProxyPath(proxyPath));
+}
+
 export async function startServer(config: ServerConfig): Promise<ServeResult> {
   const approvals = new ApprovalService(config.approval);
   const reloadEvents = new ReloadEventStore();
@@ -894,6 +910,10 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
       ? Promise.resolve(false)
       : engineHasActiveSessions(config, resolveEngineRuntimeWorkspace(config)),
     logger: toManagedProviderAuthLogger(logger),
+  });
+  const localRuntimeMetering = new RenCreditLocalRuntimeClient({
+    credentials: () => cloudProviderSync.meteringCredentials(),
+    signer: config.localRuntimeMeteringSigner,
   });
   const routes = createRoutes(
     config,
@@ -952,7 +972,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
           const workspace = await resolveWorkspace(config, mount.workspaceId);
           proxyService = "opencode";
           proxyBaseUrl = workspace.baseUrl?.trim() || undefined;
-          const response = await proxyOpencodeRequest({ config, request, url, workspace, proxyPath: mount.restPath });
+          const response = await proxyOpencodeRequest({ config, request, url, workspace, proxyPath: mount.restPath, localRuntimeMetering });
           return finalize(response);
         } catch (error) {
           if (!(error instanceof ApiError)) {
@@ -1004,7 +1024,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
           const actor = await requireClient(request, config, tokens);
           assertOpencodeProxyAllowed(actor, request.method, url.pathname);
           proxyService = "opencode";
-          const response = await proxyOpencodeRequest({ config, request, url, workspace: config.workspaces[0] });
+          const response = await proxyOpencodeRequest({ config, request, url, workspace: config.workspaces[0], localRuntimeMetering });
           return finalize(response);
         } catch (error) {
           if (!(error instanceof ApiError)) {
@@ -1192,12 +1212,102 @@ function unwrapOpencodeResult<T, E>(result: OpencodeClientResult<T, E>, path: st
   });
 }
 
+type MeteredProxyKind = "prompt" | "command" | "summarize";
+
+function meteredProxyKind(method: string, proxyPath: string): MeteredProxyKind | null {
+  if (isPromptAsyncProxyRequest(method, proxyPath)) return "prompt";
+  if (isSessionCommandProxyRequest(method, proxyPath)) return "command";
+  if (isSessionSummarizeProxyRequest(method, proxyPath)) return "summarize";
+  return null;
+}
+
+function meteredModelSku(kind: MeteredProxyKind, body: ArrayBuffer): string {
+  const payload = JSON.parse(new TextDecoder().decode(body)) as Record<string, unknown>;
+  if (kind === "prompt") return ((payload.model as Record<string, unknown>).modelID as string).trim();
+  if (kind === "command") return (payload.model as string).slice("renwork/".length).trim();
+  return (payload.modelID as string).trim();
+}
+
+function rewriteMeteredModel(
+  kind: MeteredProxyKind,
+  body: ArrayBuffer,
+  reservation: LocalRuntimeReservation,
+): ArrayBuffer {
+  const payload = JSON.parse(new TextDecoder().decode(body)) as Record<string, unknown>;
+  if (kind === "prompt") payload.model = { providerID: reservation.providerID, modelID: reservation.modelID };
+  if (kind === "command") payload.model = `${reservation.providerID}/${reservation.modelID}`;
+  if (kind === "summarize") {
+    payload.providerID = reservation.providerID;
+    payload.modelID = reservation.modelID;
+  }
+  return new TextEncoder().encode(JSON.stringify(payload)).buffer as ArrayBuffer;
+}
+
+function sessionIdFromProxyPath(proxyPath: string): string | null {
+  const match = normalizeOpencodeProxyPath(proxyPath).match(/^\/session\/([^/]+)\//);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+async function readOpenCodeMessages(input: { baseUrl: string; sessionId: string; headers: Headers }): Promise<OpenCodeMessageEnvelope[]> {
+  const response = await loopbackFetch(
+    buildOpencodeProxyUrl(input.baseUrl, `/session/${encodeURIComponent(input.sessionId)}/message`, ""),
+    { method: "GET", headers: input.headers },
+  );
+  if (!response.ok) throw new Error(`opencode_messages_${response.status}`);
+  const value: unknown = await response.json();
+  return Array.isArray(value) ? value as OpenCodeMessageEnvelope[] : [];
+}
+
+async function sessionIsBusy(input: { baseUrl: string; sessionId: string; headers: Headers }): Promise<boolean> {
+  const response = await loopbackFetch(buildOpencodeProxyUrl(input.baseUrl, "/session/status", ""), {
+    method: "GET",
+    headers: input.headers,
+  });
+  if (!response.ok) return true;
+  const value: unknown = await response.json();
+  if (!isRecord(value)) return true;
+  const status = value[input.sessionId];
+  return isRecord(status) && status.type !== "idle";
+}
+
+async function settleMeteredOpenCodeRun(input: {
+  metering: RenCreditLocalRuntimePort;
+  reservation: LocalRuntimeReservation;
+  baseUrl: string;
+  sessionId: string;
+  headers: Headers;
+  beforeAssistantIds: Set<string>;
+}): Promise<void> {
+  const deadline = Date.now() + 29 * 60_000;
+  try {
+    while (Date.now() < deadline) {
+      if (!(await sessionIsBusy(input))) {
+        const messages = await readOpenCodeMessages(input);
+        const current = messages.filter((message) => {
+          const info = message.info;
+          return info?.role === "assistant" && typeof info.id === "string" && !input.beforeAssistantIds.has(info.id);
+        });
+        await input.metering.settle(input.reservation, aggregateReportedUsage(current));
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 750));
+    }
+    await input.metering.release(input.reservation, "LOCAL_RUNTIME_SETTLEMENT_TIMEOUT");
+  } catch (error) {
+    await input.metering.release(
+      input.reservation,
+      error instanceof Error ? `LOCAL_RUNTIME_FAILED:${error.message}`.slice(0, 128) : "LOCAL_RUNTIME_FAILED",
+    ).catch(() => undefined);
+  }
+}
+
 export async function proxyOpencodeRequest(input: {
   config: ServerConfig;
   request: Request;
   url: URL;
   workspace?: WorkspaceInfo;
   proxyPath?: string;
+  localRuntimeMetering?: RenCreditLocalRuntimePort;
 }) {
   const workspace = input.workspace;
   const proxyPath = input.proxyPath ?? input.url.pathname;
@@ -1232,9 +1342,40 @@ export async function proxyOpencodeRequest(input: {
   // Buffer the request body so it can be forwarded reliably across Node.js
   // stream boundaries (Readable.toWeb streams from the HTTP adapter aren't
   // always accepted directly by Node's global fetch as a body).
-  const body = method === "GET" || method === "HEAD"
+  let body = method === "GET" || method === "HEAD"
     ? undefined
     : await input.request.arrayBuffer().then((buf) => (buf.byteLength > 0 ? buf : undefined));
+  if (input.config.meteredRuntimeRequired && isPromptAsyncProxyRequest(method, proxyPath)) {
+    assertRenWorkMeteredPrompt(body);
+  }
+  if (input.config.meteredRuntimeRequired && isSessionCommandProxyRequest(method, proxyPath)) {
+    assertRenWorkMeteredCommand(body);
+  }
+  if (input.config.meteredRuntimeRequired && isSessionSummarizeProxyRequest(method, proxyPath)) {
+    assertRenWorkMeteredSummarize(body);
+  }
+  const kind = input.config.meteredRuntimeRequired ? meteredProxyKind(method, proxyPath) : null;
+  let meteredRun: {
+    reservation: LocalRuntimeReservation;
+    sessionId: string;
+    beforeAssistantIds: Set<string>;
+  } | null = null;
+  if (kind) {
+    if (!body || !input.localRuntimeMetering) {
+      throw new ApiError(503, "rencredit_runtime_unavailable", "The RenWork metered runtime is unavailable.");
+    }
+    const sessionId = sessionIdFromProxyPath(proxyPath);
+    if (!sessionId) throw new ApiError(400, "invalid_session_path", "The OpenCode session path is invalid.");
+    const existing = await readOpenCodeMessages({ baseUrl, sessionId, headers });
+    const beforeAssistantIds = new Set(existing.flatMap((message) =>
+      message.info?.role === "assistant" && typeof message.info.id === "string" ? [message.info.id] : []));
+    const reservation = await input.localRuntimeMetering.reserve({
+      modelSku: meteredModelSku(kind, body),
+      body,
+    });
+    body = rewriteMeteredModel(kind, body, reservation);
+    meteredRun = { reservation, sessionId, beforeAssistantIds };
+  }
   if (pool && method === "GET" && isEngineEventPath(proxyPath)) {
     return proxyEngineEventStreams({
       pool,
@@ -1257,6 +1398,27 @@ export async function proxyOpencodeRequest(input: {
   const targetUrl = buildOpencodeProxyUrl(baseUrl, proxyPath, input.url.search);
   // Managed OpenCode proxy traffic is loopback/engine I/O; keep streaming on Node fetch.
   if (isSessionCommandProxyRequest(method, proxyPath)) {
+    if (meteredRun && input.localRuntimeMetering) {
+      try {
+        const response = await loopbackFetch(targetUrl, { method, headers, body });
+        if (!response.ok) {
+          await input.localRuntimeMetering.release(meteredRun.reservation, `OPENCODE_COMMAND_${response.status}`);
+          return sanitizeProxyResponse(response);
+        }
+        void settleMeteredOpenCodeRun({
+          metering: input.localRuntimeMetering,
+          reservation: meteredRun.reservation,
+          baseUrl,
+          sessionId: meteredRun.sessionId,
+          headers,
+          beforeAssistantIds: meteredRun.beforeAssistantIds,
+        });
+        return jsonResponse({ ok: true, accepted: true });
+      } catch (error) {
+        await input.localRuntimeMetering.release(meteredRun.reservation, "OPENCODE_COMMAND_REJECTED").catch(() => undefined);
+        throw error;
+      }
+    }
     void loopbackFetch(targetUrl, {
       method,
       headers,
@@ -1267,11 +1429,15 @@ export async function proxyOpencodeRequest(input: {
     return jsonResponse({ ok: true, accepted: true });
   }
   const forward = async () => {
-    const response = await loopbackFetch(targetUrl, {
-      method,
-      headers,
-      body,
-    });
+    let response: Response;
+    try {
+      response = await loopbackFetch(targetUrl, { method, headers, body });
+    } catch (error) {
+      if (meteredRun && input.localRuntimeMetering) {
+        await input.localRuntimeMetering.release(meteredRun.reservation, "OPENCODE_REQUEST_REJECTED").catch(() => undefined);
+      }
+      throw error;
+    }
 
     if (response.status === 404 && route?.fallback) {
       const fallbackHeaders = headersForEngineConnection(headers, route.fallback);
@@ -1279,7 +1445,36 @@ export async function proxyOpencodeRequest(input: {
         buildOpencodeProxyUrl(route.fallback.baseUrl, proxyPath, input.url.search),
         { method, headers: fallbackHeaders, body },
       );
+      if (meteredRun && input.localRuntimeMetering) {
+        if (!fallbackResponse.ok) {
+          await input.localRuntimeMetering.release(meteredRun.reservation, `OPENCODE_FALLBACK_${fallbackResponse.status}`).catch(() => undefined);
+        } else {
+          void settleMeteredOpenCodeRun({
+            metering: input.localRuntimeMetering,
+            reservation: meteredRun.reservation,
+            baseUrl: route.fallback.baseUrl,
+            sessionId: meteredRun.sessionId,
+            headers: fallbackHeaders,
+            beforeAssistantIds: meteredRun.beforeAssistantIds,
+          });
+        }
+      }
       return sanitizeProxyResponse(fallbackResponse);
+    }
+
+    if (meteredRun && input.localRuntimeMetering) {
+      if (!response.ok) {
+        await input.localRuntimeMetering.release(meteredRun.reservation, `OPENCODE_REQUEST_${response.status}`).catch(() => undefined);
+      } else {
+        void settleMeteredOpenCodeRun({
+          metering: input.localRuntimeMetering,
+          reservation: meteredRun.reservation,
+          baseUrl,
+          sessionId: meteredRun.sessionId,
+          headers,
+          beforeAssistantIds: meteredRun.beforeAssistantIds,
+        });
+      }
     }
 
     return sanitizeProxyResponse(response);

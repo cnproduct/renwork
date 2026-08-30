@@ -15,9 +15,9 @@ const workspaceStorePath = fileURLToPath(
 const mainPath = fileURLToPath(new URL("../../apps/desktop/electron/main.mjs", import.meta.url));
 
 test("the three desktop builds own sign-in policy; no installer bundle rewrites it", async ({ evidence }) => {
-  // Build contract: public is open, cloud forces sign-in, enterprise forces
-  // sign-in plus activation against a self-hosted control plane.
-  expect(PUBLIC_DESKTOP_DISTRIBUTION).toMatchObject({ flavor: "public", requireSignin: false, requireActivation: false });
+  // Build contract: public and cloud force account-first sign-in; enterprise
+  // also requires activation against a self-hosted control plane.
+  expect(PUBLIC_DESKTOP_DISTRIBUTION).toMatchObject({ flavor: "public", requireSignin: true, requireActivation: false });
   expect(CLOUD_DESKTOP_DISTRIBUTION).toMatchObject({ flavor: "cloud", requireSignin: true, requireActivation: false });
   expect(ENTERPRISE_DESKTOP_DISTRIBUTION).toMatchObject({ flavor: "enterprise", requireSignin: true, requireActivation: true });
 
@@ -28,7 +28,7 @@ test("the three desktop builds own sign-in policy; no installer bundle rewrites 
 
   evidence.fact(
     "Sign-in policy is fixed per build flavor",
-    "public !requireSignin; cloud requireSignin; enterprise requireSignin+requireActivation; packaged builds ignore the environment flavor override",
+    "public and cloud require sign-in; enterprise requires sign-in plus activation; packaged builds ignore the environment flavor override",
     true,
   );
 

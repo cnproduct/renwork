@@ -43,6 +43,7 @@ describe("RenWork model catalog", () => {
       promotionLabel: "限时 5 折",
       promotionEndsAt: "2026-09-01T00:00:00.000Z",
       billingMode: "token_metered",
+      executionLocation: "cloud",
     });
     expect(JSON.stringify(publicCatalog)).not.toContain("openrouter");
     expect(JSON.stringify(publicCatalog)).not.toContain("credentialRef");

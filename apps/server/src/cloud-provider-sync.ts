@@ -92,6 +92,12 @@ export type CloudProviderSyncStatus = {
   skippedProviders: CloudProviderSyncSkippedProvider[];
 };
 
+export type CloudProviderMeteringCredentials = {
+  baseUrl: string;
+  apiKey: string;
+  orgId: string;
+};
+
 type DenProviderModel = {
   id: string;
   name: string;
@@ -541,6 +547,7 @@ export class CloudProviderSync {
   private readonly logger?: CloudProviderSyncLogger;
   private readonly intervalMs: number;
   private session: CloudProviderDenSession | null = null;
+  private meteringApiKey: string | null = null;
   private lastRun: CloudProviderSyncStatus["lastRun"] = null;
   private providers: CloudProviderSyncStatusProvider[] = [];
   private skippedProviders: CloudProviderSyncSkippedProvider[] = [];
@@ -573,6 +580,7 @@ export class CloudProviderSync {
 
   async clearSession(): Promise<void> {
     this.session = null;
+    this.meteringApiKey = null;
     this.stopInterval();
     await this.enqueue(async () => {
       try {
@@ -606,6 +614,17 @@ export class CloudProviderSync {
       reloadPending: this.reloadPending,
       skippedProviders: this.skippedProviders.map((provider) => ({ ...provider })),
     };
+  }
+
+  /**
+   * Private server-side credentials for the content-free RenCredit runtime
+   * protocol. The inference key is never returned by an HTTP status route or
+   * exposed to the renderer.
+   */
+  meteringCredentials(): CloudProviderMeteringCredentials | null {
+    const session = this.session;
+    const apiKey = this.meteringApiKey;
+    return session && apiKey ? { baseUrl: session.baseUrl, apiKey, orgId: session.orgId } : null;
   }
 
   stop(): void {
@@ -713,6 +732,8 @@ export class CloudProviderSync {
     if (!session) return { status: "no_session" };
     try {
       const prepared = prepareMaterialization(await fetchProviders(this.fetchImpl, session));
+      this.meteringApiKey = prepared.providers.find((entry) => entry.provider.providerId === "renwork")
+        ?.provider.apiKey?.trim() || null;
       const { changed, detail, reloadError } = await this.apply(prepared);
       // The materialization itself succeeded (config + env writes landed), so
       // record it even when the engine reload failed: hiding the providers
@@ -730,6 +751,7 @@ export class CloudProviderSync {
       this.lastRun = { at: new Date().toISOString(), status, detail };
       return { status };
     } catch (error) {
+      this.meteringApiKey = null;
       const message = error instanceof Error ? error.message : "cloud_provider_sync_failed";
       this.lastRun = { at: new Date().toISOString(), status: "failed", message };
       this.logger?.warn("cloud provider sync failed", { reason, message });

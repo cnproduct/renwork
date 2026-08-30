@@ -74,6 +74,7 @@ import {
 } from "./brand-icon-windows.mjs";
 import { resetMacDockIcon } from "./brand-icon-darwin.mjs";
 import { createDesktopVaultKeyProvider } from "./secure-vault-key.mjs";
+import { createDesktopMeteringSignerProvider } from "./secure-metering-signer.mjs";
 import { createComputerHistory } from "./computer-history.mjs";
 import {
   clearOpenworkSentrySession,
@@ -1242,6 +1243,11 @@ const runtimeManager = createRuntimeManager({
     filePath: path.join(app.getPath("userData"), "local-managed-mcp-vault-key.bin"),
     loadSafeStorage: () => require("electron").safeStorage,
   }),
+  localRuntimeMeteringSigner: createDesktopMeteringSignerProvider({
+    filePath: path.join(app.getPath("userData"), "rencredit-metering-identity.bin"),
+    loadSafeStorage: () => require("electron").safeStorage,
+  }),
+  meteredRuntimeRequired: DESKTOP_DISTRIBUTION.flavor !== "standalone",
 });
 const initialRunnerBootstrap = workspaceStore.readDesktopBootstrapConfigSync();
 const legacyRunnerBaseUrls = [

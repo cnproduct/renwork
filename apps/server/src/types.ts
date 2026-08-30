@@ -83,6 +83,12 @@ export interface ApprovalConfig {
 
 export type LocalManagedMcpVaultKeyProvider = () => Promise<Uint8Array>;
 
+export type LocalRuntimeMeteringSignerProvider = () => Promise<{
+  deviceId: string;
+  publicKeyPem: string;
+  sign: (payload: string) => Promise<string>;
+}>;
+
 export interface ServerConfig {
   host: string;
   port: number;
@@ -109,8 +115,12 @@ export interface ServerConfig {
    * old one is closed once its runs finish. Off by default (alpha).
    */
   engineRollover?: boolean;
+  /** Reject model runs that do not use the RenWork metered provider. */
+  meteredRuntimeRequired?: boolean;
   /** In-memory secure key custody supplied by an embedding host such as OpenWork Desktop. */
   localManagedMcpVaultKey?: LocalManagedMcpVaultKeyProvider;
+  /** OS-protected desktop identity used to sign content-free RenCredit receipts. */
+  localRuntimeMeteringSigner?: LocalRuntimeMeteringSignerProvider;
 }
 
 export interface Capabilities {
