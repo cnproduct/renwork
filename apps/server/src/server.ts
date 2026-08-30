@@ -1279,16 +1279,29 @@ async function settleMeteredOpenCodeRun(input: {
   beforeAssistantIds: Set<string>;
 }): Promise<void> {
   const deadline = Date.now() + 29 * 60_000;
+  let idleWithoutAssistantSince: number | null = null;
   try {
     while (Date.now() < deadline) {
-      if (!(await sessionIsBusy(input))) {
-        const messages = await readOpenCodeMessages(input);
-        const current = messages.filter((message) => {
-          const info = message.info;
-          return info?.role === "assistant" && typeof info.id === "string" && !input.beforeAssistantIds.has(info.id);
-        });
+      const messages = await readOpenCodeMessages(input);
+      const current = messages.filter((message) => {
+        const info = message.info;
+        return info?.role === "assistant" && typeof info.id === "string" && !input.beforeAssistantIds.has(info.id);
+      });
+      const busy = await sessionIsBusy(input);
+      const hasTerminalAssistant = current.some((message) =>
+        typeof message.info?.time?.completed === "number" || message.info?.error !== undefined);
+      if (!busy && hasTerminalAssistant) {
         await input.metering.settle(input.reservation, aggregateReportedUsage(current));
         return;
+      }
+      if (busy || current.length > 0) {
+        idleWithoutAssistantSince = null;
+      } else {
+        idleWithoutAssistantSince ??= Date.now();
+        if (Date.now() - idleWithoutAssistantSince >= 10_000) {
+          await input.metering.settle(input.reservation, aggregateReportedUsage(current));
+          return;
+        }
       }
       await new Promise((resolve) => setTimeout(resolve, 750));
     }
@@ -1326,6 +1339,10 @@ export async function proxyOpencodeRequest(input: {
   headers.delete("x-openwork-client-id");
   headers.delete("host");
   headers.delete("origin");
+  // The metered runtime may rewrite the synthetic RenWork model to the
+  // approved OAuth provider/model below. Let fetch recalculate the body length
+  // after that rewrite instead of forwarding the renderer's stale value.
+  headers.delete("content-length");
 
   const directory = workspace ? resolveOpencodeDirectory(workspace) : null;
   if (directory && !headers.has("x-opencode-directory")) {

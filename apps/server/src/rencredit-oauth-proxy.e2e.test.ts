@@ -5,13 +5,16 @@ import type { ServerConfig, WorkspaceInfo } from "./types.js";
 
 test("desktop OAuth prompt freezes RenCredit, rewrites only inside the host, and settles all reported calls", async () => {
   let promptBody: unknown = null;
+  const promptHeaders: { contentLength: string | null } = { contentLength: null };
   let prompted = false;
+  let postPromptMessageReads = 0;
   const engine = Bun.serve({
     port: 0,
     async fetch(request) {
       const url = new URL(request.url);
       if (url.pathname === "/session/ses_1/message") {
-        return Response.json(prompted ? [
+        if (prompted) postPromptMessageReads += 1;
+        return Response.json(prompted && postPromptMessageReads > 1 ? [
           { info: { id: "old", role: "assistant", time: { created: 1, completed: 2 }, tokens: { input: 1, output: 1, reasoning: 0, cache: { read: 0, write: 0 } } } },
           { info: { id: "new-1", role: "assistant", time: { created: 3, completed: 4 }, tokens: { input: 20, output: 5, reasoning: 2, cache: { read: 3, write: 4 } } } },
           { info: { id: "new-2", role: "assistant", time: { created: 5, completed: 6 }, tokens: { input: 7, output: 3, reasoning: 1, cache: { read: 2, write: 1 } } } },
@@ -21,6 +24,7 @@ test("desktop OAuth prompt freezes RenCredit, rewrites only inside the host, and
       }
       if (url.pathname === "/session/status") return Response.json({});
       if (url.pathname === "/session/ses_1/prompt_async" && request.method === "POST") {
+        promptHeaders.contentLength = request.headers.get("content-length");
         promptBody = await request.json();
         prompted = true;
         return new Response(null, { status: 204 });
@@ -92,9 +96,11 @@ test("desktop OAuth prompt freezes RenCredit, rewrites only inside the host, and
       parts: [{ type: "text", text: "hello" }],
       model: { providerID: "lpr_openai-seat", modelID: "gpt-5" },
     });
-    for (let index = 0; index < 50 && !settlement; index += 1) {
+    expect(promptHeaders.contentLength).toBe(String(Buffer.byteLength(JSON.stringify(promptBody))));
+    for (let index = 0; index < 200 && !settlement; index += 1) {
       await Bun.sleep(10);
     }
+    expect(postPromptMessageReads).toBeGreaterThan(1);
     expect(settlement).toEqual({
       usage: { inputTokens: 27, outputTokens: 8, reasoningTokens: 3, cacheReadTokens: 5, cacheWriteTokens: 5 },
       hasResult: true,

@@ -53,6 +53,8 @@ test("Voiceover V8 closes direct-model bypass and adds signed local settlement",
   expect(adapter).toContain("canonicalLocalRuntimeReceiptPayload");
   expect(adapter).toContain("aggregateReportedUsage");
   expect(proxy).toContain("rewriteMeteredModel");
+  expect(proxy).toContain('headers.delete("content-length")');
+  expect(proxy).toContain("hasTerminalAssistant");
   expect(proxy).toContain("settleMeteredOpenCodeRun");
   expect(desktopSigner).toContain('generateKeyPairSync("ed25519"');
   expect(desktopSigner).toContain("safeStorage");
@@ -72,6 +74,11 @@ test("Voiceover V8 closes direct-model bypass and adds signed local settlement",
   evidence.fact(
     "Local metering is content-free and device signed",
     "Den accepts only exact token-count receipt fields, verifies an approved Ed25519 device key, and settles the same durable tenant reservation ledger.",
+    true,
+  );
+  evidence.fact(
+    "OAuth model rewrites recalculate the request length",
+    "The local proxy removes the renderer content length before forwarding a rewritten RenWork model, so the runtime computes the exact OAuth request size.",
     true,
   );
 });
