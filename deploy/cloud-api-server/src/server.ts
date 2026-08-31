@@ -145,6 +145,47 @@ function providerModelsUrl(baseUrl: string): string {
   return `${baseUrl.replace(/\/+$/, "")}/models`;
 }
 
+function openRouterCreditsUrl(baseUrl: string): string | null {
+  try {
+    const url = new URL(baseUrl);
+    if (url.hostname !== "openrouter.ai" && !url.hostname.endsWith(".openrouter.ai")) return null;
+    return `${url.origin}/api/v1/credits`;
+  } catch {
+    return null;
+  }
+}
+
+type OpenRouterCredits = {
+  totalCredits: number;
+  totalUsage: number;
+  remainingCredits: number;
+};
+
+export async function readOpenRouterCredits(input: {
+  baseUrl: string;
+  credential: string;
+  fetchImpl?: typeof fetch;
+}): Promise<OpenRouterCredits | null> {
+  const creditsUrl = openRouterCreditsUrl(input.baseUrl);
+  if (!creditsUrl) return null;
+  const response = await (input.fetchImpl ?? fetch)(creditsUrl, {
+    headers: { Authorization: `Bearer ${input.credential}`, Accept: "application/json" },
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!response.ok) throw new Error(`OpenRouter credits endpoint returned HTTP ${response.status}.`);
+  const payload = await response.json() as { data?: { total_credits?: unknown; total_usage?: unknown } };
+  const totalCredits = Number(payload.data?.total_credits);
+  const totalUsage = Number(payload.data?.total_usage);
+  if (!Number.isFinite(totalCredits) || !Number.isFinite(totalUsage)) {
+    throw new Error("OpenRouter credits endpoint returned an invalid balance.");
+  }
+  return {
+    totalCredits,
+    totalUsage,
+    remainingCredits: totalCredits - totalUsage,
+  };
+}
+
 async function testProvider(providerId: string) {
   const catalog = modelCatalogService.getAdminCatalog("super_admin");
   const provider = catalog.providers.find((candidate) => candidate.id === providerId);
@@ -210,6 +251,22 @@ async function testProvider(providerId: string) {
       headers,
       signal: AbortSignal.timeout(8_000),
     });
+    if (response.ok && credential) {
+      const credits = await readOpenRouterCredits({ baseUrl: provider.baseUrl, credential });
+      if (credits && credits.remainingCredits <= 0) {
+        return {
+          found: true as const,
+          result: {
+            ok: false,
+            providerId,
+            health: "degraded" as const,
+            statusCode: 402,
+            latencyMs: Date.now() - startedAt,
+            message: "OpenRouter 模型目录可访问，但账户可用余额不足，实际推理会失败。请充值或切换到有余额的服务端密钥。",
+          },
+        };
+      }
+    }
     const ok = response.ok;
     return {
       found: true as const,
