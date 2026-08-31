@@ -380,6 +380,10 @@ function parseAdminPayload(payload: unknown): AdminPayload | null {
         const tier = plan.tier === "team" || plan.tier === "enterprise" ? plan.tier : "free";
         const capabilities = isRecord(value.capabilities) ? value.capabilities : {};
         const accessGrant = isRecord(value.renworkAccessGrant) ? value.renworkAccessGrant : null;
+        const accessGrantExpiresAt = typeof accessGrant?.expiresAt === "string"
+          ? Date.parse(accessGrant.expiresAt)
+          : Number.NaN;
+        const accessGrantIsActive = Number.isFinite(accessGrantExpiresAt) && accessGrantExpiresAt > Date.now();
         const subscriptionRequest = isRecord(value.renworkSubscriptionRequest) ? value.renworkSubscriptionRequest : null;
 
         return {
@@ -403,7 +407,7 @@ function parseAdminPayload(payload: unknown): AdminPayload | null {
             codemodeScripts: capabilities.codemodeScripts === true,
             cloud: capabilities.cloud === true
           },
-          renworkAccessGrant: accessGrant && (accessGrant.source === "campaign" || accessGrant.source === "super_admin") && typeof accessGrant.expiresAt === "string"
+          renworkAccessGrant: accessGrantIsActive && accessGrant && (accessGrant.source === "campaign" || accessGrant.source === "super_admin") && typeof accessGrant.expiresAt === "string"
             ? { source: accessGrant.source, expiresAt: accessGrant.expiresAt }
             : null,
           renworkSubscriptionRequest: subscriptionRequest

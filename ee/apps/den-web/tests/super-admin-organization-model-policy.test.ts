@@ -27,4 +27,9 @@ describe("RenWork platform super-admin organization model policy", () => {
     expect(dialog).not.toContain("credentialRef");
     expect(dialog).not.toContain("apiKey");
   });
+
+  test("treats an expired temporary grant as renewable instead of active", () => {
+    expect(panel).toContain("accessGrantExpiresAt > Date.now()");
+    expect(panel).toContain("accessGrantIsActive && accessGrant");
+  });
 });

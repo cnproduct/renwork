@@ -2,13 +2,14 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import type { Hono } from "hono";
 
 let app: Hono;
+let readOpenRouterCredits: typeof import("./server.js").readOpenRouterCredits;
 
 beforeAll(async () => {
   process.env.NODE_ENV = "test";
   process.env.RENWORK_SUPER_ADMIN_TOKEN = "renwork-super-admin-test-token";
   delete process.env.OPENROUTER_API_KEY;
   process.env.DATA_PATH = `/private/tmp/renwork-cloud-api-test-${process.pid}.json`;
-  ({ app } = await import("./server.js"));
+  ({ app, readOpenRouterCredits } = await import("./server.js"));
 });
 
 describe("RenWork model catalog API", () => {
@@ -91,5 +92,25 @@ describe("RenWork model catalog API", () => {
     expect(payload.ok).toBe(true);
     expect(payload.message).toContain("设备 OAuth 策略有效");
     expect(JSON.stringify(await save.json())).not.toContain("oauth_token");
+  });
+
+  test("reads OpenRouter purchased credits without exposing the provider key", async () => {
+    const calls: Array<{ url: string; authorization: string | null }> = [];
+    const credits = await readOpenRouterCredits({
+      baseUrl: "https://openrouter.ai/api/v1",
+      credential: "secret-provider-key",
+      fetchImpl: (async (input, init) => {
+        const headers = new Headers(init?.headers);
+        calls.push({ url: String(input), authorization: headers.get("authorization") });
+        return Response.json({ data: { total_credits: 12.5, total_usage: 2.25 } });
+      }) as typeof fetch,
+    });
+
+    expect(credits).toEqual({ totalCredits: 12.5, totalUsage: 2.25, remainingCredits: 10.25 });
+    expect(calls).toEqual([{
+      url: "https://openrouter.ai/api/v1/credits",
+      authorization: "Bearer secret-provider-key",
+    }]);
+    expect(JSON.stringify(credits)).not.toContain("secret-provider-key");
   });
 });
