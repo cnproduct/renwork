@@ -272,6 +272,9 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     method.label || (method.type === "oauth" ? "OAuth" : "API key");
 
   const actionDisabled = props.loading || props.submitting;
+  const oauthCredentialLocationCopy = isRemoteWorker
+    ? "This connects only this remote RenWork runtime. The OAuth credential stays in its protected runtime storage and is never copied into the RenWork Cloud catalog. Metered runs still reserve and settle RenCredit."
+    : "This connects only this computer. The OAuth credential stays in OS-protected storage and is never uploaded to RenWork Cloud. Connect each of your computers separately; metered runs still reserve and settle RenCredit.";
 
   const resetState = () => {
     if (oauthCodeCopiedResetRef.current !== null && typeof window !== "undefined") {
@@ -682,7 +685,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
         : "Use OpenAI's device flow when the local browser callback is unreliable.";
     }
     if (method.type === "oauth") {
-      return "Continue in the browser and let RenWork finish the connection automatically.";
+      return "Connect this RenWork device in the browser. Your personal OAuth credential stays in protected storage on this computer and is not synced to RenWork Cloud.";
     }
     if (method.type === "cloud") {
       return "Subscribe to RenWork Models.";
@@ -704,7 +707,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
         <DialogHeader>
           <DialogTitle>Connect providers</DialogTitle>
           <DialogDescription>
-            Sign in to services or use providers managed by your organization.
+            Connect personal accounts to this device, or use providers managed by your organization.
           </DialogDescription>
         </DialogHeader>
 
@@ -783,7 +786,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                                   </div>
                                 ) : (
                                   <div className="text-[12px] font-medium text-gray-9 group-hover:text-gray-12 transition-colors flex items-center gap-0.5 opacity-80 group-hover:opacity-100">
-                                    Connect
+                                    Connect this device
                                     <ChevronRight size={14} className="opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all duration-200" />
                                   </div>
                                 )}
@@ -950,6 +953,9 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                   <div className="text-xs text-gray-9">
                     Complete sign-in in your browser, then paste the code here.
                   </div>
+                  <div className="rounded-lg border border-indigo-5/30 bg-indigo-3/15 px-3 py-2.5 text-xs leading-5 text-indigo-12" data-testid="personal-device-oauth-notice">
+                    {oauthCredentialLocationCopy}
+                  </div>
                   {oauthInstructions ? (
                     <div className="rounded-lg border border-gray-6/60 bg-gray-1/60 px-3 py-2 text-[11px] text-gray-9 font-mono break-all">
                       {oauthInstructions}
@@ -987,7 +993,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                       onClick={() => void handleOauthCodeSubmit()}
                       disabled={actionDisabled || !oauthCodeInput.trim()}
                     >
-                      {props.submitting ? "Verifying..." : "Complete connection"}
+                      {props.submitting ? "Verifying..." : "Connect this device"}
                     </Button>
                   </div>
                 </div>
@@ -1016,6 +1022,9 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                       Sign in in the browser tab we just opened. We will complete the connection automatically.
                     </div>
                   )}
+                  <div className="rounded-lg border border-indigo-5/30 bg-indigo-3/15 px-3 py-2.5 text-xs leading-5 text-indigo-12" data-testid="personal-device-oauth-notice">
+                    {oauthCredentialLocationCopy}
+                  </div>
                   {oauthDisplayCode ? (
                     <div className="rounded-xl border border-gray-6/70 bg-gray-2/40 p-3 flex items-center gap-3">
                       <div className="flex-1 min-w-0">

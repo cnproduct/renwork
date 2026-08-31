@@ -17,6 +17,18 @@ export const RENWORK_PROVIDER_PROTOCOLS = [
 ] as const;
 export type RenWorkProviderProtocol = (typeof RENWORK_PROVIDER_PROTOCOLS)[number];
 
+export const RENWORK_PROVIDER_AUTH_MODES = ["service_secret", "device_oauth", "none"] as const;
+export type RenWorkProviderAuthMode = (typeof RENWORK_PROVIDER_AUTH_MODES)[number];
+
+export const RENWORK_PROVIDER_CREDENTIAL_STORES = ["server_secret", "device_vault", "none"] as const;
+export type RenWorkProviderCredentialStore = (typeof RENWORK_PROVIDER_CREDENTIAL_STORES)[number];
+
+export const RENWORK_PROVIDER_EXECUTION_SCOPES = ["cloud_gateway", "personal_device"] as const;
+export type RenWorkProviderExecutionScope = (typeof RENWORK_PROVIDER_EXECUTION_SCOPES)[number];
+
+export const RENWORK_PROVIDER_SHARING_SCOPES = ["organization", "user_private"] as const;
+export type RenWorkProviderSharingScope = (typeof RENWORK_PROVIDER_SHARING_SCOPES)[number];
+
 export const RENWORK_ROUTE_SOURCES = ["official", "byok", "local"] as const;
 export type RenWorkRouteSource = (typeof RENWORK_ROUTE_SOURCES)[number];
 
@@ -55,6 +67,14 @@ export interface RenWorkAdminProvider {
   protocol: RenWorkProviderProtocol;
   baseUrl: string | null;
   credentialRef: string | null;
+  authMode: RenWorkProviderAuthMode;
+  credentialStore: RenWorkProviderCredentialStore;
+  executionScope: RenWorkProviderExecutionScope;
+  sharingScope: RenWorkProviderSharingScope;
+  deviceOAuthPolicy: {
+    maxDevicesPerUser: number;
+    maxConcurrentRunsPerUser: number;
+  } | null;
   enabled: boolean;
   health: "unknown" | "healthy" | "degraded" | "offline";
 }

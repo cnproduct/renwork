@@ -3,6 +3,10 @@ import {
   RENWORK_MODEL_TIERS,
   RENWORK_PROVIDER_KINDS,
   RENWORK_PROVIDER_PROTOCOLS,
+  RENWORK_PROVIDER_AUTH_MODES,
+  RENWORK_PROVIDER_CREDENTIAL_STORES,
+  RENWORK_PROVIDER_EXECUTION_SCOPES,
+  RENWORK_PROVIDER_SHARING_SCOPES,
   RENWORK_ROUTE_SOURCES,
 } from "@openwork/rencredit-metering"
 import { z } from "zod"
@@ -23,8 +27,27 @@ const providerSchema = z.object({
   protocol: z.enum(RENWORK_PROVIDER_PROTOCOLS),
   baseUrl: z.string().url().nullable(),
   credentialRef: z.string().regex(/^(secret|env):\/\/[A-Za-z0-9_./-]+$/).nullable(),
+  authMode: z.enum(RENWORK_PROVIDER_AUTH_MODES).optional(),
+  credentialStore: z.enum(RENWORK_PROVIDER_CREDENTIAL_STORES).optional(),
+  executionScope: z.enum(RENWORK_PROVIDER_EXECUTION_SCOPES).optional(),
+  sharingScope: z.enum(RENWORK_PROVIDER_SHARING_SCOPES).optional(),
+  deviceOAuthPolicy: z.object({
+    maxDevicesPerUser: z.number().int().positive(),
+    maxConcurrentRunsPerUser: z.number().int().positive(),
+  }).nullable().optional(),
   enabled: z.boolean(),
   health: z.enum(["unknown", "healthy", "degraded", "offline"]),
+}).transform((provider) => {
+  const authMode = provider.authMode ?? (provider.credentialRef ? "service_secret" : "none")
+  const personalRuntime = provider.kind === "runtime" || provider.kind === "local"
+  return {
+    ...provider,
+    authMode,
+    credentialStore: provider.credentialStore ?? (authMode === "service_secret" ? "server_secret" : authMode === "device_oauth" ? "device_vault" : "none"),
+    executionScope: provider.executionScope ?? (personalRuntime ? "personal_device" : "cloud_gateway"),
+    sharingScope: provider.sharingScope ?? (personalRuntime ? "user_private" : "organization"),
+    deviceOAuthPolicy: provider.deviceOAuthPolicy ?? (authMode === "device_oauth" ? { maxDevicesPerUser: 3, maxConcurrentRunsPerUser: 1 } : null),
+  }
 })
 
 const routeSchema = z.object({

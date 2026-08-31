@@ -7,6 +7,7 @@ import fs from "node:fs";
 import {
   createDefaultRenWorkModelCatalog,
   createRenWorkModelCatalogService,
+  normalizeAdminModelCatalog,
   validateAdminModelCatalog,
   type RenWorkAdminModelCatalog,
 } from "@openwork/rencredit-metering";
@@ -89,8 +90,9 @@ function loadState() {
       if (parsed.ledgerEntries) ledgerEntries = parsed.ledgerEntries;
       if (parsed.jobs) jobs = new Map(Object.entries(parsed.jobs));
       if (parsed.modelCatalog) {
-        validateAdminModelCatalog(parsed.modelCatalog);
-        modelCatalog = parsed.modelCatalog;
+        const normalizedCatalog = normalizeAdminModelCatalog(parsed.modelCatalog);
+        validateAdminModelCatalog(normalizedCatalog);
+        modelCatalog = normalizedCatalog;
       }
     }
   } catch (e) {
@@ -148,6 +150,20 @@ async function testProvider(providerId: string) {
   const provider = catalog.providers.find((candidate) => candidate.id === providerId);
   if (!provider) return { found: false as const };
   const startedAt = Date.now();
+
+  if (provider.authMode === "device_oauth") {
+    return {
+      found: true as const,
+      result: {
+        ok: true,
+        providerId,
+        health: "healthy" as const,
+        statusCode: null,
+        latencyMs: Date.now() - startedAt,
+        message: "设备 OAuth 策略有效。账号授权与令牌健康状态将在每台已批准的 RenWork 设备上独立检查。",
+      },
+    };
+  }
 
   if (!provider.baseUrl) {
     const runtimeOnly = provider.kind === "runtime" || provider.kind === "local";
@@ -270,11 +286,12 @@ app.put("/v1/admin/models/catalog", async (c) => {
   }
 
   try {
-    validateAdminModelCatalog(body.catalog as RenWorkAdminModelCatalog);
+    const normalizedCatalog = normalizeAdminModelCatalog(body.catalog as RenWorkAdminModelCatalog);
+    validateAdminModelCatalog(normalizedCatalog);
     modelCatalog = modelCatalogService.replaceAdminCatalog({
       role: "super_admin",
       expectedVersion: body.expectedVersion,
-      catalog: body.catalog as RenWorkAdminModelCatalog,
+      catalog: normalizedCatalog,
     });
     saveState();
     return c.json(modelCatalog);

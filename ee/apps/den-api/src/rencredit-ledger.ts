@@ -69,6 +69,7 @@ export type ReserveInferenceInput = InferencePrincipal & {
     organizationMonthlyMicroCredits: number | null
     memberMonthlyMicroCredits: number | null
   }
+  maxConcurrentRunsPerUser?: number
 }
 
 function hashInferenceKey(value: string) {
@@ -266,6 +267,23 @@ export async function reserveInferenceCredits(input: ReserveInferenceInput) {
     if (wallet.available_microcredits < input.reservedMicroCredits) throw new Error("INSUFFICIENT_RENCREDIT")
 
     const now = new Date()
+    if (input.maxConcurrentRunsPerUser !== undefined) {
+      if (!Number.isSafeInteger(input.maxConcurrentRunsPerUser) || input.maxConcurrentRunsPerUser <= 0) {
+        throw new Error("DEVICE_OAUTH_CONCURRENCY_INVALID")
+      }
+      const activeRuns = await tx.select({ id: RenCreditReservationTable.id })
+        .from(RenCreditReservationTable)
+        .where(and(
+          eq(RenCreditReservationTable.organization_id, input.organizationId),
+          eq(RenCreditReservationTable.org_membership_id, input.memberId),
+          eq(RenCreditReservationTable.provider_id, input.providerId),
+          eq(RenCreditReservationTable.status, "reserved"),
+          gte(RenCreditReservationTable.expires_at, now),
+        )).for("update")
+      if (activeRuns.length >= input.maxConcurrentRunsPerUser) {
+        throw new Error("DEVICE_OAUTH_CONCURRENCY_EXCEEDED")
+      }
+    }
     const dayStart = new Date(now)
     dayStart.setUTCHours(0, 0, 0, 0)
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))

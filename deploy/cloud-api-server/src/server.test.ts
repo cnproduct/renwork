@@ -54,4 +54,42 @@ describe("RenWork model catalog API", () => {
     expect(payload.health).toBe("degraded");
     expect(payload.message).toContain("environment secret is missing");
   });
+
+  test("self-checks device OAuth policy without accepting a cloud token", async () => {
+    const current = await app.request("/v1/admin/models/catalog", {
+      headers: { Authorization: "Bearer renwork-super-admin-test-token" },
+    }).then((response) => response.json());
+    const deviceProvider = {
+      id: "openai-personal-oauth",
+      displayName: "OpenAI Personal OAuth",
+      kind: "runtime",
+      protocol: "opencode",
+      baseUrl: null,
+      credentialRef: null,
+      authMode: "device_oauth",
+      credentialStore: "device_vault",
+      executionScope: "personal_device",
+      sharingScope: "user_private",
+      deviceOAuthPolicy: { maxDevicesPerUser: 3, maxConcurrentRunsPerUser: 1 },
+      enabled: true,
+      health: "unknown",
+    };
+    const updated = { ...current, version: `${current.version}-device-oauth`, providers: [...current.providers, deviceProvider] };
+    const save = await app.request("/v1/admin/models/catalog", {
+      method: "PUT",
+      headers: { Authorization: "Bearer renwork-super-admin-test-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ expectedVersion: current.version, catalog: updated }),
+    });
+    expect(save.status).toBe(200);
+
+    const checked = await app.request("/v1/admin/models/providers/openai-personal-oauth/test", {
+      method: "POST",
+      headers: { Authorization: "Bearer renwork-super-admin-test-token" },
+    });
+    expect(checked.status).toBe(200);
+    const payload = await checked.json();
+    expect(payload.ok).toBe(true);
+    expect(payload.message).toContain("设备 OAuth 策略有效");
+    expect(JSON.stringify(await save.json())).not.toContain("oauth_token");
+  });
 });

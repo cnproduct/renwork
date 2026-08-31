@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { modelAllowedForPlan, requireSuperAdmin, toPublicModelCatalog, toPublicModelCatalogForPlan, validateAdminModelCatalog } from "./catalog.js";
+import { modelAllowedForPlan, normalizeAdminModelCatalog, requireSuperAdmin, toPublicModelCatalog, toPublicModelCatalogForPlan, validateAdminModelCatalog } from "./catalog.js";
 import { createDefaultRenWorkModelCatalog } from "./default-catalog.js";
 import { createTestCatalog } from "./test-fixtures.js";
 
@@ -86,5 +86,39 @@ describe("RenWork model catalog", () => {
     const publicCatalog = toPublicModelCatalog(catalog, new Date("2026-08-28T12:00:00.000Z"));
     expect(publicCatalog.models[0]?.billingMode).toBe("free");
     expect(JSON.stringify(publicCatalog)).not.toContain('"source"');
+  });
+
+  test("accepts only user-private device-vault OAuth without cloud credentials", () => {
+    const catalog = createTestCatalog();
+    catalog.providers[1] = {
+      ...catalog.providers[1]!,
+      displayName: "OpenAI Personal OAuth",
+      authMode: "device_oauth",
+      credentialStore: "device_vault",
+      executionScope: "personal_device",
+      sharingScope: "user_private",
+      deviceOAuthPolicy: { maxDevicesPerUser: 3, maxConcurrentRunsPerUser: 1 },
+    };
+    expect(() => validateAdminModelCatalog(catalog)).not.toThrow();
+    catalog.providers[1]!.credentialRef = "env://OPENAI_OAUTH_TOKEN";
+    expect(() => validateAdminModelCatalog(catalog)).toThrow("cannot contain a server credential");
+  });
+
+  test("normalizes persisted providers from the pre-V9 catalog", () => {
+    const legacy = createTestCatalog() as unknown as ReturnType<typeof createTestCatalog>;
+    const provider = legacy.providers[0]! as unknown as Record<string, unknown>;
+    delete provider.authMode;
+    delete provider.credentialStore;
+    delete provider.executionScope;
+    delete provider.sharingScope;
+    delete provider.deviceOAuthPolicy;
+    const normalized = normalizeAdminModelCatalog(legacy);
+    expect(normalized.providers[0]).toMatchObject({
+      authMode: "service_secret",
+      credentialStore: "server_secret",
+      executionScope: "cloud_gateway",
+      sharingScope: "organization",
+      deviceOAuthPolicy: null,
+    });
   });
 });

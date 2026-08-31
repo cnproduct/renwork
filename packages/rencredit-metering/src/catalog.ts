@@ -6,6 +6,7 @@ import {
   type RenWorkActorRole,
   type RenWorkAdminModel,
   type RenWorkAdminModelCatalog,
+  type RenWorkAdminProvider,
   type RenWorkModelPromotion,
   type RenWorkModelTier,
   type RenWorkPublicModel,
@@ -20,6 +21,29 @@ function requireNonEmpty(value: string, field: string): void {
 
 function requireNonNegativeInteger(value: number, field: string): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${field} must be a non-negative safe integer.`);
+}
+
+function requirePositiveInteger(value: number, field: string): void {
+  if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`${field} must be a positive safe integer.`);
+}
+
+export function normalizeAdminProvider(
+  provider: RenWorkAdminProvider | (Omit<RenWorkAdminProvider, "authMode" | "credentialStore" | "executionScope" | "sharingScope" | "deviceOAuthPolicy"> & Partial<Pick<RenWorkAdminProvider, "authMode" | "credentialStore" | "executionScope" | "sharingScope" | "deviceOAuthPolicy">>),
+): RenWorkAdminProvider {
+  const legacyPersonalRuntime = provider.kind === "runtime" || provider.kind === "local";
+  const authMode = provider.authMode ?? (provider.credentialRef ? "service_secret" : "none");
+  return {
+    ...provider,
+    authMode,
+    credentialStore: provider.credentialStore ?? (authMode === "service_secret" ? "server_secret" : authMode === "device_oauth" ? "device_vault" : "none"),
+    executionScope: provider.executionScope ?? (legacyPersonalRuntime ? "personal_device" : "cloud_gateway"),
+    sharingScope: provider.sharingScope ?? (legacyPersonalRuntime ? "user_private" : "organization"),
+    deviceOAuthPolicy: provider.deviceOAuthPolicy ?? (authMode === "device_oauth" ? { maxDevicesPerUser: 3, maxConcurrentRunsPerUser: 1 } : null),
+  };
+}
+
+export function normalizeAdminModelCatalog(catalog: RenWorkAdminModelCatalog): RenWorkAdminModelCatalog {
+  return { ...catalog, providers: catalog.providers.map((provider) => normalizeAdminProvider(provider)) };
 }
 
 function promotionIsActive(promotion: RenWorkModelPromotion | null, now: Date): boolean {
@@ -51,6 +75,27 @@ export function validateAdminModelCatalog(catalog: RenWorkAdminModelCatalog): vo
     providerIds.add(provider.id);
     if (provider.credentialRef && !/^(secret|env):\/\/[A-Za-z0-9_./-]+$/.test(provider.credentialRef)) {
       throw new Error(`Provider ${provider.id} credentialRef must use a secret:// or env:// reference.`);
+    }
+    if (provider.authMode === "device_oauth") {
+      if (provider.credentialStore !== "device_vault" || provider.executionScope !== "personal_device" || provider.sharingScope !== "user_private") {
+        throw new Error(`Provider ${provider.id} device OAuth must use device_vault, personal_device and user_private.`);
+      }
+      if (provider.credentialRef !== null || provider.baseUrl !== null) {
+        throw new Error(`Provider ${provider.id} device OAuth cannot contain a server credential or Base URL.`);
+      }
+      if (!provider.deviceOAuthPolicy) throw new Error(`Provider ${provider.id} device OAuth policy is required.`);
+      requirePositiveInteger(provider.deviceOAuthPolicy.maxDevicesPerUser, `${provider.id}.deviceOAuthPolicy.maxDevicesPerUser`);
+      requirePositiveInteger(provider.deviceOAuthPolicy.maxConcurrentRunsPerUser, `${provider.id}.deviceOAuthPolicy.maxConcurrentRunsPerUser`);
+    } else if (provider.deviceOAuthPolicy !== null) {
+      throw new Error(`Provider ${provider.id} device OAuth policy is only allowed for device_oauth.`);
+    }
+    if (provider.credentialStore === "device_vault" && provider.authMode !== "device_oauth") {
+      throw new Error(`Provider ${provider.id} device_vault requires device_oauth.`);
+    }
+    if (provider.authMode === "service_secret") {
+      if (provider.credentialStore !== "server_secret" || provider.executionScope !== "cloud_gateway" || provider.sharingScope !== "organization" || !provider.credentialRef) {
+        throw new Error(`Provider ${provider.id} service secret must stay in the cloud gateway and be organization-scoped.`);
+      }
     }
   }
 
