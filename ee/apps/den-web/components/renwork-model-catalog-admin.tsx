@@ -9,8 +9,10 @@ import type {
   RenWorkPublicModelCatalog,
   RenWorkProviderKind,
   RenWorkProviderProtocol,
+  RenWorkProviderAuthMode,
   RenWorkRouteSource,
 } from "@openwork/rencredit-metering";
+import { normalizeAdminModelCatalog } from "@openwork/rencredit-metering";
 import { CheckCircle2, CircleAlert, Plus, RefreshCw, Save, ServerCog, ShieldCheck, Trash2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -24,6 +26,17 @@ type ProviderTestResult = {
   statusCode: number | null;
   latencyMs: number;
   message: string;
+};
+
+type MeteredRuntimeDevice = {
+  id: string;
+  organizationId: string;
+  memberId: string;
+  deviceId: string;
+  publicKeyFingerprint: string;
+  status: "pending" | "active" | "revoked";
+  lastSeenAt: string;
+  createdAt: string;
 };
 
 const fieldClass = "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-50 disabled:text-slate-400";
@@ -51,7 +64,7 @@ function parseCatalogPayload(value: unknown): RenWorkAdminModelCatalog | null {
     || !Array.isArray(catalog.providers)
     || !Array.isArray(catalog.models)
   ) return null;
-  return structuredClone(catalog) as unknown as RenWorkAdminModelCatalog;
+  return normalizeAdminModelCatalog(structuredClone(catalog) as unknown as RenWorkAdminModelCatalog);
 }
 
 function formatMultiplier(multiplierBps: number) {
@@ -76,6 +89,12 @@ function validateDraftCatalog(catalog: RenWorkAdminModelCatalog) {
     if (providerIds.has(provider.id)) throw new Error(`供应商 ID 重复：${provider.id}`);
     if (provider.credentialRef && !/^(secret|env):\/\/[A-Za-z0-9_./-]+$/.test(provider.credentialRef)) {
       throw new Error(`${provider.displayName} 的密钥必须使用 env:// 或 secret:// 引用。`);
+    }
+    if (provider.authMode === "device_oauth") {
+      if (provider.baseUrl || provider.credentialRef) throw new Error(`${provider.displayName} 的设备 OAuth 不能填写 Base URL 或服务端密钥。`);
+      if (!provider.deviceOAuthPolicy || !Number.isSafeInteger(provider.deviceOAuthPolicy.maxDevicesPerUser) || provider.deviceOAuthPolicy.maxDevicesPerUser <= 0 || !Number.isSafeInteger(provider.deviceOAuthPolicy.maxConcurrentRunsPerUser) || provider.deviceOAuthPolicy.maxConcurrentRunsPerUser <= 0) {
+        throw new Error(`${provider.displayName} 的设备数和并发限制必须是正整数。`);
+      }
     }
     providerIds.add(provider.id);
   }
@@ -197,8 +216,49 @@ function newProvider(count: number): RenWorkAdminProvider {
     protocol: "openai_compatible",
     baseUrl: "https://api.example.com/v1",
     credentialRef: null,
+    authMode: "service_secret",
+    credentialStore: "server_secret",
+    executionScope: "cloud_gateway",
+    sharingScope: "organization",
+    deviceOAuthPolicy: null,
     enabled: false,
     health: "unknown",
+  };
+}
+
+function withProviderAuthMode(provider: RenWorkAdminProvider, authMode: RenWorkProviderAuthMode): RenWorkAdminProvider {
+  if (authMode === "device_oauth") {
+    return {
+      ...provider,
+      kind: "runtime",
+      protocol: "opencode",
+      baseUrl: null,
+      credentialRef: null,
+      authMode,
+      credentialStore: "device_vault",
+      executionScope: "personal_device",
+      sharingScope: "user_private",
+      deviceOAuthPolicy: provider.deviceOAuthPolicy ?? { maxDevicesPerUser: 3, maxConcurrentRunsPerUser: 1 },
+    };
+  }
+  if (authMode === "service_secret") {
+    return {
+      ...provider,
+      authMode,
+      credentialStore: "server_secret",
+      executionScope: "cloud_gateway",
+      sharingScope: "organization",
+      deviceOAuthPolicy: null,
+    };
+  }
+  return {
+    ...provider,
+    authMode,
+    credentialStore: "none",
+    executionScope: provider.kind === "runtime" || provider.kind === "local" ? "personal_device" : "cloud_gateway",
+    sharingScope: provider.kind === "runtime" || provider.kind === "local" ? "user_private" : "organization",
+    credentialRef: null,
+    deviceOAuthPolicy: null,
   };
 }
 
@@ -279,6 +339,8 @@ export function RenWorkModelCatalogAdmin() {
   const [saving, setSaving] = useState(false);
   const [testingProviderId, setTestingProviderId] = useState<string | null>(null);
   const [providerResults, setProviderResults] = useState<Record<string, ProviderTestResult>>({});
+  const [devices, setDevices] = useState<MeteredRuntimeDevice[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
 
   const publicPreview = useMemo(() => {
     if (!catalog) return null;
@@ -325,6 +387,39 @@ export function RenWorkModelCatalogAdmin() {
   useEffect(() => {
     void loadCatalog();
   }, []);
+
+  const loadDevices = async () => {
+    setDevicesLoading(true);
+    try {
+      const { response, payload } = await requestJson("/v1/admin/metered-runtime/devices");
+      if (!response.ok || !isRecord(payload) || !Array.isArray(payload.devices)) {
+        throw new Error(errorMessage(payload, `设备列表加载失败（${response.status}）。`));
+      }
+      setDevices(payload.devices as MeteredRuntimeDevice[]);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "设备列表加载失败。");
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (accessState === "ready" && activeTab === "providers") void loadDevices();
+  }, [accessState, activeTab]);
+
+  const updateDeviceStatus = async (device: MeteredRuntimeDevice, status: "active" | "revoked") => {
+    setPageError(null);
+    const { response, payload } = await requestJson(`/v1/admin/metered-runtime/devices/${encodeURIComponent(device.id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    if (!response.ok) {
+      setPageError(errorMessage(payload, `设备状态更新失败（${response.status}）。`));
+      return;
+    }
+    setDevices((current) => current.map((candidate) => candidate.id === device.id ? { ...candidate, status } : candidate));
+    setNotice(status === "active" ? `设备 ${device.deviceId} 已批准。` : `设备 ${device.deviceId} 已撤销。`);
+  };
 
   const replaceProvider = (index: number, next: RenWorkAdminProvider) => {
     setCatalog((current) => current ? { ...current, providers: current.providers.map((provider, providerIndex) => providerIndex === index ? next : provider) } : current);
@@ -548,7 +643,34 @@ export function RenWorkModelCatalogAdmin() {
       {activeTab === "providers" ? (
         <div className="mt-5 space-y-4">
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-            密钥只填写 <code className="rounded bg-white/70 px-1.5 py-0.5">env://变量名</code> 或 <code className="rounded bg-white/70 px-1.5 py-0.5">secret://路径</code> 引用。真实 Key 必须注入服务端，浏览器不会读取或回显。
+            服务端供应商只填写 <code className="rounded bg-white/70 px-1.5 py-0.5">env://变量名</code> 或 <code className="rounded bg-white/70 px-1.5 py-0.5">secret://路径</code> 引用；真实 Key 必须注入服务端，浏览器不会读取或回显。个人账号选择“设备 OAuth”：每台电脑独立授权，原始 OAuth 凭据只保存在该设备的系统安全存储中，不上传云端、不在团队成员之间共享。
+          </div>
+          <div className="rounded-3xl border border-orange-100 bg-white p-6" data-testid="metered-runtime-devices">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">个人 OAuth 设备审批</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">只批准设备公钥和执行资格；云端不会接收、保存或转发 OpenAI / Google 的个人 OAuth 凭据。</p>
+              </div>
+              <button type="button" onClick={() => void loadDevices()} disabled={devicesLoading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">
+                <RefreshCw className={`size-3.5 ${devicesLoading ? "animate-spin" : ""}`} />刷新设备
+              </button>
+            </div>
+            <div className="mt-4 space-y-2">
+              {devices.map((device) => (
+                <div key={device.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 p-4" data-device-status={device.status}>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-950">{device.deviceId}</p>
+                    <p className="mt-1 truncate font-mono text-[11px] text-slate-500">{device.organizationId} · {device.memberId} · {device.publicKeyFingerprint.slice(0, 16)}…</p>
+                    <p className="mt-1 text-xs text-slate-500">状态：{device.status} · 最近在线：{new Date(device.lastSeenAt).toLocaleString()}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {device.status !== "active" ? <button type="button" onClick={() => void updateDeviceStatus(device, "active")} className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">批准</button> : null}
+                    {device.status !== "revoked" ? <button type="button" onClick={() => void updateDeviceStatus(device, "revoked")} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700">撤销</button> : null}
+                  </div>
+                </div>
+              ))}
+              {!devicesLoading && devices.length === 0 ? <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">暂无待审批或已注册的个人设备。</p> : null}
+            </div>
           </div>
           {catalog.providers.map((provider, index) => {
             const testResult = providerResults[provider.id];
@@ -561,7 +683,7 @@ export function RenWorkModelCatalogAdmin() {
                   </div>
                   <div className="flex gap-2">
                     <button type="button" disabled={testingProviderId === provider.id} onClick={() => void testProviderConnection(provider)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">
-                      <RefreshCw className={`size-3.5 ${testingProviderId === provider.id ? "animate-spin" : ""}`} />连接测试
+                      <RefreshCw className={`size-3.5 ${testingProviderId === provider.id ? "animate-spin" : ""}`} />{provider.authMode === "device_oauth" ? "适配器自检" : "连接测试"}
                     </button>
                     <button type="button" onClick={() => removeProvider(index)} className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700"><Trash2 className="size-3.5" />删除</button>
                   </div>
@@ -584,8 +706,28 @@ export function RenWorkModelCatalogAdmin() {
                       {(["openai_compatible", "anthropic_compatible", "gemini", "opencode", "local"] as const).map((protocol) => <option key={protocol} value={protocol}>{protocol}</option>)}
                     </select>
                   </Field>
-                  <Field label="Base URL"><input value={provider.baseUrl ?? ""} onChange={(event) => replaceProvider(index, { ...provider, baseUrl: event.target.value.trim() || null })} placeholder="https://api.example.com/v1" className={fieldClass} /></Field>
-                  <Field label="服务端密钥引用" hint="不填写真实 API Key。"><input value={provider.credentialRef ?? ""} onChange={(event) => replaceProvider(index, { ...provider, credentialRef: event.target.value.trim() || null })} placeholder="env://OPENROUTER_API_KEY" className={fieldClass} /></Field>
+                  <Field label="认证方式">
+                    <select value={provider.authMode} onChange={(event) => replaceProvider(index, withProviderAuthMode(provider, event.target.value as RenWorkProviderAuthMode))} className={fieldClass} data-testid="provider-auth-mode">
+                      <option value="service_secret">服务端密钥</option>
+                      <option value="device_oauth">设备 OAuth（个人账号）</option>
+                      <option value="none">无需认证</option>
+                    </select>
+                  </Field>
+                  {provider.authMode === "service_secret" ? (
+                    <>
+                      <Field label="Base URL"><input value={provider.baseUrl ?? ""} onChange={(event) => replaceProvider(index, { ...provider, baseUrl: event.target.value.trim() || null })} placeholder="https://api.example.com/v1" className={fieldClass} /></Field>
+                      <Field label="服务端密钥引用" hint="不填写真实 API Key。"><input value={provider.credentialRef ?? ""} onChange={(event) => replaceProvider(index, { ...provider, credentialRef: event.target.value.trim() || null })} placeholder="env://OPENROUTER_API_KEY" className={fieldClass} /></Field>
+                    </>
+                  ) : null}
+                  {provider.authMode === "device_oauth" && provider.deviceOAuthPolicy ? (
+                    <>
+                      <Field label="每用户最多设备数" hint="同一用户的每台电脑都要单独授权。"><input type="number" min="1" value={provider.deviceOAuthPolicy.maxDevicesPerUser} onChange={(event) => replaceProvider(index, { ...provider, deviceOAuthPolicy: { ...provider.deviceOAuthPolicy!, maxDevicesPerUser: Number(event.target.value) } })} className={fieldClass} /></Field>
+                      <Field label="每用户最大并发" hint="并发任务仍统一预占并扣除 RenCredit。"><input type="number" min="1" value={provider.deviceOAuthPolicy.maxConcurrentRunsPerUser} onChange={(event) => replaceProvider(index, { ...provider, deviceOAuthPolicy: { ...provider.deviceOAuthPolicy!, maxConcurrentRunsPerUser: Number(event.target.value) } })} className={fieldClass} /></Field>
+                      <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900 lg:col-span-2" data-testid="device-oauth-policy-note">
+                        凭据存储：系统安全存储 · 执行位置：个人设备 · 共享范围：仅当前用户。云端只保存设备状态、策略和不含内容的 RenCredit 用量收据。
+                      </div>
+                    </>
+                  ) : null}
                   <Field label="健康状态">
                     <select value={provider.health} onChange={(event) => replaceProvider(index, { ...provider, health: event.target.value as RenWorkAdminProvider["health"] })} className={fieldClass}>
                       <option value="unknown">unknown</option><option value="healthy">healthy</option><option value="degraded">degraded</option><option value="offline">offline</option>

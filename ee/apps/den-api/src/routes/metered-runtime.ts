@@ -8,6 +8,7 @@ import {
   canonicalLocalRuntimeReceiptPayload,
   findPublishedAdminModel,
   modelAllowedForPlan,
+  normalizeAdminModelCatalog,
   parseSignedLocalRuntimeReceipt,
   validateAdminModelCatalog,
   type RenWorkAdminModelCatalog,
@@ -70,7 +71,7 @@ async function loadProductionCatalog() {
     signal: AbortSignal.timeout(8_000),
   })
   if (!response.ok) throw new Error(`MODEL_CATALOG_UNAVAILABLE:${response.status}`)
-  const catalog = await response.json() as RenWorkAdminModelCatalog
+  const catalog = normalizeAdminModelCatalog(await response.json() as RenWorkAdminModelCatalog)
   validateAdminModelCatalog(catalog)
   if (catalog.status !== "active") throw new Error("MODEL_CATALOG_NOT_ACTIVE")
   return catalog
@@ -145,6 +146,27 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     const [device] = await db.select().from(RenCreditRuntimeDeviceTable)
       .where(eq(RenCreditRuntimeDeviceTable.id, registrationId)).limit(1)
     if (!device) return c.json({ error: { code: "LOCAL_RUNTIME_DEVICE_NOT_FOUND" } }, 404)
+    if (body.status === "active" && device.status !== "active") {
+      try {
+        const catalog = await loadProductionCatalog()
+        const limits = catalog.providers
+          .filter((provider) => provider.enabled && provider.authMode === "device_oauth")
+          .flatMap((provider) => provider.deviceOAuthPolicy ? [provider.deviceOAuthPolicy.maxDevicesPerUser] : [])
+        if (limits.length > 0) {
+          const maxDevices = Math.min(...limits)
+          const activeDevices = await db.select({ id: RenCreditRuntimeDeviceTable.id }).from(RenCreditRuntimeDeviceTable).where(and(
+            eq(RenCreditRuntimeDeviceTable.organization_id, device.organization_id),
+            eq(RenCreditRuntimeDeviceTable.org_membership_id, device.org_membership_id),
+            eq(RenCreditRuntimeDeviceTable.status, "active"),
+          ))
+          if (activeDevices.length >= maxDevices) {
+            return c.json({ error: { code: "DEVICE_OAUTH_DEVICE_LIMIT_EXCEEDED", maxDevices } }, 409)
+          }
+        }
+      } catch (error) {
+        return c.json({ error: { code: error instanceof Error ? error.message.split(":", 1)[0] : "MODEL_CATALOG_UNAVAILABLE" } }, 503)
+      }
+    }
     await db.update(RenCreditRuntimeDeviceTable).set({
       status: body.status,
       revoked_at: body.status === "revoked" ? new Date() : null,
@@ -220,6 +242,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
       if (!device) throw new Error("LOCAL_RUNTIME_DEVICE_NOT_APPROVED")
       const { catalog, model, route, policy } = await localMeteringAccess(principal, body.modelSku)
       const billingMode = catalog.billingPolicy[route.source]
+      const provider = catalog.providers.find((candidate) => candidate.id === route.providerId)
       const reservedMicroCredits = billingMode === "free" ? 0 : calculateRenCreditMicroCharge(body.estimatedUsage, model)
       const reserved = await reserveInferenceCredits({
         ...principal,
@@ -237,6 +260,9 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
           organizationMonthlyMicroCredits: policy.monthlyBudgetMicroCredits,
           memberMonthlyMicroCredits: resolveMemberMonthlyBudget(policy, principal.memberId),
         },
+        maxConcurrentRunsPerUser: provider?.authMode === "device_oauth"
+          ? provider.deviceOAuthPolicy?.maxConcurrentRunsPerUser
+          : undefined,
         expiresAt: new Date(Date.now() + 30 * 60_000),
       })
       if (reserved.replayed) return c.json({ error: { code: "IDEMPOTENT_REQUEST_REPLAYED" } }, 409)

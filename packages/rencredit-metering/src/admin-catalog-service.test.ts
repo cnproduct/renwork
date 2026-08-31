@@ -13,6 +13,11 @@ describe("RenWork super-admin model catalog", () => {
       protocol: "openai_compatible",
       baseUrl: "https://custom.example/v1",
       credentialRef: "secret://renwork/custom-compatible",
+      authMode: "service_secret",
+      credentialStore: "server_secret",
+      executionScope: "cloud_gateway",
+      sharingScope: "organization",
+      deviceOAuthPolicy: null,
       enabled: true,
       health: "healthy",
     });
