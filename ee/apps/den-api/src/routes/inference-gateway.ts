@@ -106,13 +106,30 @@ function extractStreamEvent(event: string) {
   }
 }
 
+function normalizeOpenAiStreamPayload(payload: JsonRecord) {
+  if (!Array.isArray(payload.choices)) return payload
+  return {
+    ...payload,
+    choices: payload.choices.map((choice) => {
+      if (!isRecord(choice) || !isRecord(choice.delta)) return choice
+      return {
+        ...choice,
+        // Some OpenAI-compatible relays emit nullable delta fields. The
+        // OpenAI stream contract represents these as absent fields; forwarding
+        // null makes strict desktop SDKs reject an otherwise valid response.
+        delta: Object.fromEntries(Object.entries(choice.delta).filter(([, value]) => value !== null)),
+      }
+    }),
+  }
+}
+
 function sanitizeStreamEvent(event: string, modelSku: string) {
   const trimmed = event.trim()
   if (!trimmed) return ""
   if (streamEventData(event) === "[DONE]") return ""
   const parsed = extractStreamEvent(event)
   if (!parsed) return `${event}\n\n`
-  return `data: ${JSON.stringify({ ...parsed, model: modelSku })}\n\n`
+  return `data: ${JSON.stringify({ ...normalizeOpenAiStreamPayload(parsed), model: modelSku })}\n\n`
 }
 
 function responseHasResult(payload: JsonRecord) {
