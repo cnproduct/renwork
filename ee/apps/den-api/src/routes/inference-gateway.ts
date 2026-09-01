@@ -90,9 +90,13 @@ async function loadProductionCatalog() {
   return catalog
 }
 
-function extractStreamEvent(event: string) {
-  const data = event.split("\n").filter((line) => line.startsWith("data:"))
+function streamEventData(event: string) {
+  return event.split("\n").filter((line) => line.startsWith("data:"))
     .map((line) => line.slice(5).trim()).join("")
+}
+
+function extractStreamEvent(event: string) {
+  const data = streamEventData(event)
   if (!data || data === "[DONE]") return null
   try {
     const parsed = JSON.parse(data) as unknown
@@ -105,6 +109,7 @@ function extractStreamEvent(event: string) {
 function sanitizeStreamEvent(event: string, modelSku: string) {
   const trimmed = event.trim()
   if (!trimmed) return ""
+  if (streamEventData(event) === "[DONE]") return ""
   const parsed = extractStreamEvent(event)
   if (!parsed) return `${event}\n\n`
   return `data: ${JSON.stringify({ ...parsed, model: modelSku })}\n\n`
@@ -391,9 +396,12 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
               const next = await reader.read()
               if (next.done) {
                 buffer += decoder.decode()
-                for (const event of buffer.split(/\n\n/)) observeEvent(event)
+                const finalEvents = buffer.split(/\n\n/)
+                for (const event of finalEvents) observeEvent(event)
+                const sanitized = finalEvents.map((event) => sanitizeStreamEvent(event, model.sku)).join("")
+                if (sanitized) controller.enqueue(new TextEncoder().encode(sanitized))
                 await settleOnce()
-                if (buffer) controller.enqueue(new TextEncoder().encode(sanitizeStreamEvent(buffer, model.sku)))
+                controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"))
                 controller.close()
                 return
               }

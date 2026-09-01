@@ -35,6 +35,8 @@ describe("RenWork production inference gateway", () => {
     expect(gateway).toContain("sanitizeStreamEvent(event, model.sku)")
     expect(gateway).toContain("JSON.stringify({ ...payload, model: model.sku })")
     expect(gateway).toContain("while (true)")
+    expect(gateway).toContain('streamEventData(event) === "[DONE]"')
+    expect(gateway).toContain('controller.enqueue(new TextEncoder().encode("data: [DONE]\\n\\n"))')
     expect(gateway).toContain('releaseOnce("CLIENT_ABORTED")')
     expect(gateway).not.toContain("async pull(controller)")
   })
