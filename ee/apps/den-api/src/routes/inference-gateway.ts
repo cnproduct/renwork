@@ -17,6 +17,7 @@ import { db } from "../db.js"
 import { parseOrganizationPlan } from "../entitlements.js"
 import { env } from "../env.js"
 import { publicRoute } from "../middleware/index.js"
+import { appLogger } from "../observability/logger.js"
 import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
 import { accessAllowsModel, resolveRenworkModelAccess } from "../renwork-access.js"
 import {
@@ -27,6 +28,8 @@ import {
 } from "../rencredit-ledger.js"
 
 type JsonRecord = Record<string, unknown>
+
+const logger = appLogger.child({ component: "inference_gateway" })
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -128,6 +131,39 @@ function copySafeUpstreamHeaders(upstream: Response) {
   const requestId = upstream.headers.get("x-request-id")
   if (requestId) headers.set("x-renwork-provider-request-id", requestId)
   return headers
+}
+
+function safeUpstreamErrorDetails(raw: string) {
+  const fallback = raw.trim().slice(0, 1_000)
+  if (!fallback) return { providerErrorCode: null, providerErrorMessage: null }
+  try {
+    const parsed = JSON.parse(fallback) as unknown
+    if (!isRecord(parsed)) return { providerErrorCode: null, providerErrorMessage: fallback }
+    const error = isRecord(parsed.error) ? parsed.error : parsed
+    return {
+      providerErrorCode: typeof error.code === "string" ? error.code.slice(0, 160) : null,
+      providerErrorMessage: typeof error.message === "string" ? error.message.slice(0, 1_000) : fallback,
+    }
+  } catch {
+    return { providerErrorCode: null, providerErrorMessage: fallback }
+  }
+}
+
+function summarizeToolSchemas(body: JsonRecord) {
+  const tools = Array.isArray(body.tools) ? body.tools : []
+  return tools.map((tool) => {
+    if (!isRecord(tool)) return { name: null, parametersType: typeof tool, suspiciousKeys: [] as string[] }
+    const definition = isRecord(tool.function) ? tool.function : null
+    const parameters = definition && isRecord(definition.parameters) ? definition.parameters : null
+    const suspiciousKeys = parameters
+      ? Object.keys(parameters).filter((key) => key.startsWith("_") || ["def", "shape", "parse", "safeParse"].includes(key)).slice(0, 8)
+      : []
+    return {
+      name: definition && typeof definition.name === "string" ? definition.name.slice(0, 160) : null,
+      parametersType: parameters && typeof parameters.type === "string" ? parameters.type : parameters ? "object" : "missing",
+      suspiciousKeys,
+    }
+  })
 }
 
 export function registerInferenceGatewayRoutes<T extends { Variables: Record<string, unknown> }>(app: Hono<T>) {
@@ -267,6 +303,19 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
       return c.json({ error: { code: "UPSTREAM_UNAVAILABLE", message: "The RenWork model route is temporarily unavailable." } }, 502)
     }
     if (!upstream.ok) {
+      const upstreamError = await upstream.text().catch(() => "")
+      logger.warn("RenWork upstream inference rejected request", {
+        organization_id: principal.organizationId,
+        member_id: principal.memberId,
+        provider_id: provider.id,
+        route_id: route.id,
+        model_sku: model.sku,
+        upstream_model_id: route.upstreamModelId,
+        upstream_status: upstream.status,
+        request_keys: Object.keys(upstreamBody).sort(),
+        tools: summarizeToolSchemas(upstreamBody),
+        ...safeUpstreamErrorDetails(upstreamError),
+      })
       await releaseInferenceCredits({ reservationId: reservation.id, failureCode: `UPSTREAM_HTTP_${upstream.status}` })
       return c.json({ error: { code: "UPSTREAM_ERROR", message: "The RenWork model route could not complete the request." } }, upstream.status >= 500 ? 502 : 400)
     }

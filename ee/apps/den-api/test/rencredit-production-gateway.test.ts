@@ -34,6 +34,16 @@ describe("RenWork production inference gateway", () => {
     expect(gateway).toContain("sanitizeStreamEvent(event, model.sku)")
     expect(gateway).toContain("JSON.stringify({ ...payload, model: model.sku })")
   })
+
+  test("logs only sanitized upstream rejection structure before releasing credits", () => {
+    expect(gateway).toContain("safeUpstreamErrorDetails(upstreamError)")
+    expect(gateway).toContain("summarizeToolSchemas(upstreamBody)")
+    expect(gateway).toContain('request_keys: Object.keys(upstreamBody).sort()')
+    expect(gateway.indexOf('logger.warn("RenWork upstream inference rejected request"')).toBeLessThan(
+      gateway.indexOf('releaseInferenceCredits({ reservationId: reservation.id, failureCode: `UPSTREAM_HTTP_${upstream.status}` })'),
+    )
+    expect(gateway).not.toContain("upstreamBody.messages")
+  })
 })
 
 describe("RenCredit persistent multi-tenant ledger", () => {
