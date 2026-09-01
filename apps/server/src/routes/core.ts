@@ -419,18 +419,15 @@ export function registerCoreRoutes(options: RegisterCoreRoutesOptions): void {
 
   // User-level env vars (see apps/app/pr/environment-variables.md). All routes
   // require the desktop host token (not owner bearer tokens). List callers can
-  // request metadata-only results so renderer settings panes do not receive
-  // every raw secret value up front. Reload semantics are driven from the UI
-  // after a write; this surface is user-scoped, not workspace-scoped, so no audit.
-  addRoute(routes, "GET", "/env", "host-token", async (ctx) => {
-    const includeValues = parseOptionalBoolean(ctx.url.searchParams.get("includeValues"), "includeValues") ?? true;
+  // Lists are metadata-only so renderer settings panes never receive raw
+  // secret values. Reload semantics are driven from the UI after a write.
+  addRoute(routes, "GET", "/env", "host-token", async () => {
     const items = await env.list().catch(rethrowEnvStoreReadError);
     return jsonResponse({
       items: items.map((item) => ({
         key: item.key,
         updatedAt: item.updatedAt,
         hasValue: item.value.length > 0,
-        ...(includeValues ? { value: item.value } : {}),
       })),
     });
   });
@@ -463,23 +460,15 @@ export function registerCoreRoutes(options: RegisterCoreRoutesOptions): void {
     return jsonResponse({ runtimeKey, pendingChanges });
   });
 
-  addRoute(routes, "GET", "/env/:key", "host-token", async (ctx) => {
-    const key = ctx.params.key;
-    if (!isValidEnvKey(key)) {
-      throw new ApiError(400, "invalid_env_key", "Invalid environment variable name");
-    }
-    const item = (await env.list().catch(rethrowEnvStoreReadError)).find((entry) => entry.key === key);
-    if (!item) {
-      throw new ApiError(404, "env_not_found", "Environment variable not found");
-    }
-    return jsonResponse({
-      item: {
-        key: item.key,
-        updatedAt: item.updatedAt,
-        hasValue: item.value.length > 0,
-        value: item.value,
-      },
-    });
+  // Voiceover V9: credentials are write-only from the renderer. The desktop
+  // runtime may inject decrypted values into child processes, but the local
+  // HTTP API must never export a saved secret to a browser or renderer.
+  addRoute(routes, "GET", "/env/:key", "host-token", async () => {
+    throw new ApiError(
+      403,
+      "env_value_export_disabled",
+      "Saved secret values cannot be revealed. Replace or remove the value instead.",
+    );
   });
 
   addRoute(routes, "PUT", "/env", "host-token", async (ctx) => {

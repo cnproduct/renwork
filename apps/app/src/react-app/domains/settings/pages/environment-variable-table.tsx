@@ -1,9 +1,8 @@
 /** @jsxImportSource react */
 import type { ReactNode } from "react";
-import { Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { LockKeyhole, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Empty,
@@ -77,36 +76,6 @@ export function EnvironmentVariableTableBody({ children }: EnvironmentVariableTa
   return <TableBody>{children}</TableBody>;
 }
 
-export type EnvironmentVariableTableRevealButtonProps = {
-  isRevealed: boolean;
-  disabled?: boolean;
-  onToggleReveal: () => void;
-};
-
-export function EnvironmentVariableTableRevealButton(props: EnvironmentVariableTableRevealButtonProps) {
-  const label = props.isRevealed ? t("settings.environment.hide") : t("settings.environment.reveal");
-
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={(
-          <Toggle
-            variant="ghost"
-            size="icon-sm"
-            pressed={props.isRevealed}
-            disabled={props.disabled}
-            onPressedChange={() => props.onToggleReveal()}
-            aria-label={label}
-          >
-            {props.isRevealed ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
-          </Toggle>
-        )}
-      />
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 export type EnvironmentVariableTableEditButtonProps = {
   onEdit: () => void;
 };
@@ -161,12 +130,9 @@ export function EnvironmentVariableTableDeleteButton(props: EnvironmentVariableT
 
 export type EnvironmentVariableTableItemProps = {
   item: EnvironmentVariableItem;
-  isRevealed: boolean;
   canEdit: boolean;
   deleting: boolean;
-  revealing: boolean;
   onEdit: (item: EnvironmentVariableItem) => void;
-  onToggleReveal: (key: string) => void;
   onDelete: (item: EnvironmentVariableItem) => void;
 };
 
@@ -197,19 +163,12 @@ export function EnvironmentVariableTableItem(props: EnvironmentVariableTableItem
       </TableCell>
       <TableCell>
         <div className="h-full flex items-center justify-start">
-          <div className="flex h-lh shrink-0 items-center justify-center">
-            <EnvironmentVariableTableRevealButton
-              isRevealed={props.isRevealed}
-              disabled={props.revealing}
-              onToggleReveal={() => props.onToggleReveal(props.item.key)}
-            />
-          </div>
-          {props.isRevealed ? (
-            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-              {props.item.value || t("settings.environment.empty_value")}
-            </code>
-          ) : props.item.hasValue ? (
-            <span className="font-mono text-xs text-muted-foreground">{MASKED_VALUE_DISPLAY}</span>
+          {props.item.hasValue ? (
+            <span className="inline-flex items-center gap-2 font-mono text-xs text-muted-foreground">
+              <LockKeyhole className="size-3.5" aria-hidden="true" />
+              {MASKED_VALUE_DISPLAY}
+              <span className="font-sans">{t("settings.environment.secure_value")}</span>
+            </span>
           ) : (
             <span className="text-xs text-muted-foreground">{t("settings.environment.empty_value")}</span>
           )}

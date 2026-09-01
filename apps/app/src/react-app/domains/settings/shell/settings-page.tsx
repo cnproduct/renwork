@@ -63,6 +63,8 @@ import {
 } from "./panel";
 import { useFeatureFlagsPreferences } from "../state/feature-flags-preferences";
 import { SidebarDestination } from "../../session/sidebar/sidebar-destination";
+import { useCloudSession } from "../cloud/cloud-session-provider";
+import { isDenOrgAdminRole } from "../../../../app/lib/den";
 
 export function getSettingsTabIcon(tab: SettingsTab) {
   switch (tab) {
@@ -283,9 +285,14 @@ type SettingsSidebarProps = Pick<SettingsPageProps, "activeTab" | "onSelectTab" 
 
 export function SettingsSidebar(props: SettingsSidebarProps) {
   const platform = usePlatform();
+  const cloudSession = useCloudSession();
   const { memoryEnabled } = useFeatureFlagsPreferences();
   const workspaceTabs = getWorkspaceSettingsTabs();
-  const globalTabs = getGlobalSettingsTabs(props.developerMode, platform.capabilities);
+  const globalTabs = getGlobalSettingsTabs(props.developerMode, platform.capabilities).filter(
+    (tab) => tab !== "environment"
+      || !cloudSession.isSignedIn
+      || isDenOrgAdminRole(cloudSession.activeOrganization?.role),
+  );
   const cloudTabs = getCloudSettingsTabs(memoryEnabled);
 
   return (

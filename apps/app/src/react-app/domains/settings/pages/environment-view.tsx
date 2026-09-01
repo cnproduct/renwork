@@ -1,6 +1,5 @@
 /** @jsxImportSource react */
-import { useEffect, useId, useState, type SetStateAction } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useId, useRef, useState, type SetStateAction } from "react";
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
@@ -27,7 +26,6 @@ import type { OpenworkServerClient } from "@/app/lib/openwork-server";
 import { t } from "@/i18n";
 import {
   EnvironmentVariableProvider,
-  environmentUserEnvQueryKey,
   type ApplyEnvironmentChangesResult,
   type EnvironmentEditorDraft,
   useEnvironmentVariableApplyChanges,
@@ -55,6 +53,8 @@ import {
   LayoutStack,
 } from "@/react-app/domains/settings/settings-layout";
 import { ConfirmModal } from "@/react-app/design-system/modals/confirm-modal";
+import { useCloudSession } from "../cloud/cloud-session-provider";
+import { isDenOrgAdminRole } from "../../../../app/lib/den";
 
 type EnvItem = EnvironmentVariableItem;
 type EnvironmentEditorState = EnvironmentEditorDraft | null;
@@ -81,7 +81,10 @@ export function EnvironmentView(props: EnvironmentViewProps) {
 }
 
 function EnvironmentViewContent(props: EnvironmentViewProps) {
+  const cloudSession = useCloudSession();
   const { client, isRemoteWorkspace } = props;
+  const canViewEnvironment = !cloudSession.isSignedIn
+    || isDenOrgAdminRole(cloudSession.activeOrganization?.role);
   const canEdit = !isRemoteWorkspace && client !== null;
   const applyBlockedReason = props.applyBlocked
     ? props.applyBlockedReason ?? t("settings.environment.apply_blocked_active_tasks")
@@ -95,6 +98,14 @@ function EnvironmentViewContent(props: EnvironmentViewProps) {
     }
     setEditor(null);
   }, [canEdit]);
+
+  if (!canViewEnvironment) {
+    return (
+      <LayoutStack>
+        <SettingsNotice>{t("settings.environment.admin_only")}</SettingsNotice>
+      </LayoutStack>
+    );
+  }
 
   return (
     <LayoutStack>
@@ -127,69 +138,44 @@ type EnvironmentSettingsPanelProps = {
 
 function EnvironmentSettingsPanel(props: EnvironmentSettingsPanelProps) {
   const isPendingChanges = useIsEnvironmentVariableChangesPending();
-  const queryClient = useQueryClient();
   const { data, error, isLoading } = useEnvironmentVariableList({
     client: props.client,
     isRemoteWorkspace: props.isRemoteWorkspace,
     runtimeKey: props.runtimeKey,
   });
+  const [vaultAuthReason, setVaultAuthReason] = useState<"add" | "replace" | "delete" | null>(null);
+  const vaultAuthResolver = useRef<((authorized: boolean) => void) | null>(null);
 
-  const readEnvironmentValue = async (item: EnvItem) => {
-    if (typeof item.value === "string") return item.value;
-    if (!item.hasValue) {
-      queryClient.setQueryData<{ items: EnvItem[] }>(
-        environmentUserEnvQueryKey(props.runtimeKey),
-        (current) => {
-          if (!current) return current;
-          return {
-            items: current.items.map((entry) =>
-              entry.key === item.key ? { ...entry, value: "" } : entry,
-            ),
-          };
-        },
-      );
-      return "";
-    }
-    if (!props.client) throw new Error(t("app.unknown_error"));
+  const authorizeSecretMutation = (reason: "add" | "replace" | "delete") => {
+    return new Promise<boolean>((resolve) => {
+      vaultAuthResolver.current?.(false);
+      vaultAuthResolver.current = resolve;
+      setVaultAuthReason(reason);
+    });
+  };
 
-    const response = await props.client.getUserEnv(item.key);
-    queryClient.setQueryData<{ items: EnvItem[] }>(
-      environmentUserEnvQueryKey(props.runtimeKey),
-      (current) => {
-        if (!current) return current;
-        return {
-          items: current.items.map((entry) =>
-            entry.key === item.key
-              ? {
-                  ...entry,
-                  value: response.item.value,
-                  hasValue: response.item.hasValue,
-                  updatedAt: response.item.updatedAt,
-                }
-              : entry,
-          ),
-        };
-      },
-    );
-    return response.item.value;
+  const finishVaultAuthorization = (authorized: boolean) => {
+    vaultAuthResolver.current?.(authorized);
+    vaultAuthResolver.current = null;
+    setVaultAuthReason(null);
   };
 
   const openAdd = () => {
     if (!props.canEdit) {
       return;
     }
-    props.onEditorChange({ mode: "add", key: "", value: "" });
+    void authorizeSecretMutation("add").then((authorized) => {
+      if (authorized) props.onEditorChange({ mode: "add", key: "", value: "" });
+    });
   };
 
   const openEdit = (item: EnvItem) => {
     if (!props.canEdit) {
       return;
     }
-    void readEnvironmentValue(item)
-      .then((value) => props.onEditorChange({ mode: "edit", key: item.key, value }))
-      .catch((readError) => {
-        toast.error(readError instanceof Error ? readError.message : t("app.unknown_error"));
-      });
+    void authorizeSecretMutation("replace").then((authorized) => {
+      if (authorized) props.onEditorChange({ mode: "edit", key: item.key, value: "" });
+    });
   };
 
   return (
@@ -232,7 +218,7 @@ function EnvironmentSettingsPanel(props: EnvironmentSettingsPanelProps) {
           canEdit={props.canEdit}
           onAdd={openAdd}
           onEdit={openEdit}
-          onRevealValue={readEnvironmentValue}
+          onAuthorizeDelete={() => authorizeSecretMutation("delete")}
         />
       ) : null}
 
@@ -250,7 +236,144 @@ function EnvironmentSettingsPanel(props: EnvironmentSettingsPanelProps) {
           onChange={props.onEditorChange}
         />
       ) : null}
+
+      {vaultAuthReason ? (
+        <SecretVaultAuthModal
+          reason={vaultAuthReason}
+          onResult={finishVaultAuthorization}
+        />
+      ) : null}
     </LayoutSection>
+  );
+}
+
+type SecretVaultAuthStatus = {
+  method: "touch-id" | "master-password";
+  configured: boolean;
+};
+
+function SecretVaultAuthModal(props: {
+  reason: "add" | "replace" | "delete";
+  onResult: (authorized: boolean) => void;
+}) {
+  const [status, setStatus] = useState<SecretVaultAuthStatus | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const invokeDesktop = window.__OPENWORK_ELECTRON__?.invokeDesktop;
+    if (!invokeDesktop) {
+      setError(t("settings.environment.system_auth_required"));
+      return;
+    }
+    void invokeDesktop("secretVaultAuthStatus")
+      .then(setStatus)
+      .catch((statusError) => {
+        setError(statusError instanceof Error ? statusError.message : t("app.unknown_error"));
+      });
+  }, []);
+
+  const submit = async () => {
+    const invokeDesktop = window.__OPENWORK_ELECTRON__?.invokeDesktop;
+    if (!invokeDesktop || !status || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      let passwordForAuthorization: string | undefined;
+      if (status.method === "master-password") {
+        if (!status.configured) {
+          if (password.length < 10) {
+            throw new Error(t("settings.environment.password_too_short"));
+          }
+          if (password !== confirmation) {
+            throw new Error(t("settings.environment.password_mismatch"));
+          }
+          await invokeDesktop("secretVaultConfigurePassword", password);
+        }
+        passwordForAuthorization = password;
+      }
+      const result = await invokeDesktop(
+        "secretVaultAuthorize",
+        props.reason,
+        passwordForAuthorization,
+      );
+      if (!result.authorized) {
+        throw new Error(t("settings.environment.system_auth_required"));
+      }
+      props.onResult(true);
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : t("app.unknown_error"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const needsPassword = status?.method === "master-password";
+  const needsConfirmation = needsPassword && status?.configured === false;
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && !busy && props.onResult(false)}>
+      <DialogContent className="w-full max-w-md sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("settings.environment.vault_auth_title")}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          {status?.method === "touch-id"
+            ? t("settings.environment.touch_id_hint")
+            : status?.configured === false
+              ? t("settings.environment.create_vault_password")
+              : t("settings.environment.enter_vault_password")}
+        </p>
+        {needsPassword ? (
+          <FieldGroup>
+            <Field data-invalid={error ? true : undefined}>
+              <FieldLabel htmlFor="renwork-vault-password">
+                {t("settings.environment.vault_password_label")}
+              </FieldLabel>
+              <Input
+                id="renwork-vault-password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete={status?.configured ? "current-password" : "new-password"}
+                disabled={busy}
+                autoFocus
+              />
+            </Field>
+            {needsConfirmation ? (
+              <Field data-invalid={error ? true : undefined}>
+                <FieldLabel htmlFor="renwork-vault-password-confirmation">
+                  {t("settings.environment.confirm_vault_password")}
+                </FieldLabel>
+                <Input
+                  id="renwork-vault-password-confirmation"
+                  type="password"
+                  value={confirmation}
+                  onChange={(event) => setConfirmation(event.target.value)}
+                  autoComplete="new-password"
+                  disabled={busy}
+                />
+              </Field>
+            ) : null}
+          </FieldGroup>
+        ) : null}
+        {error ? <SettingsNotice tone="error">{error}</SettingsNotice> : null}
+        <DialogFooter>
+          <DialogClose
+            disabled={busy}
+            render={<Button variant="outline" size="sm" disabled={busy} />}
+          >
+            {t("settings.environment.cancel")}
+          </DialogClose>
+          <Button size="sm" onClick={() => void submit()} disabled={busy || status === null}>
+            <Spinner spinning={busy} />
+            {t("settings.environment.authorize")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -315,32 +438,12 @@ type EnvironmentItemsTableProps = {
   canEdit: boolean;
   onAdd: () => void;
   onEdit: (item: EnvItem) => void;
-  onRevealValue: (item: EnvItem) => Promise<string>;
+  onAuthorizeDelete: () => Promise<boolean>;
 };
 
 function EnvironmentItemsTable(props: EnvironmentItemsTableProps) {
-  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-  const [revealing, setRevealing] = useState<Record<string, boolean>>({});
   const [deleteCandidate, setDeleteCandidate] = useState<EnvItem | null>(null);
   const { isRemoving } = useEnvironmentVariableRemove();
-
-  const toggleReveal = async (key: string) => {
-    const item = props.items.find((entry) => entry.key === key);
-    if (revealed[key] && typeof item?.value === "string") {
-      setRevealed((current) => ({ ...current, [key]: false }));
-      return;
-    }
-    if (!item) return;
-    setRevealing((current) => ({ ...current, [key]: true }));
-    try {
-      await props.onRevealValue(item);
-      setRevealed((current) => ({ ...current, [key]: true }));
-    } catch (readError) {
-      toast.error(readError instanceof Error ? readError.message : t("app.unknown_error"));
-    } finally {
-      setRevealing((current) => ({ ...current, [key]: false }));
-    }
-  };
 
   if (props.loading && props.items.length === 0) {
     return <EnvironmentVariableTableLoading />;
@@ -357,13 +460,14 @@ function EnvironmentItemsTable(props: EnvironmentItemsTableProps) {
             <EnvironmentVariableTableItem
               key={item.key}
               item={item}
-              isRevealed={Boolean(revealed[item.key]) && typeof item.value === "string"}
               canEdit={props.canEdit}
               deleting={isRemoving && deleteCandidate?.key === item.key}
-              revealing={Boolean(revealing[item.key])}
               onEdit={props.onEdit}
-              onToggleReveal={(key) => void toggleReveal(key)}
-              onDelete={setDeleteCandidate}
+              onDelete={(candidate) => {
+                void props.onAuthorizeDelete().then((authorized) => {
+                  if (authorized) setDeleteCandidate(candidate);
+                });
+              }}
             />
           ))}
         </EnvironmentVariableTableBody>
@@ -485,6 +589,11 @@ function EnvironmentEditorModal(props: EnvironmentEditorModalProps) {
           }}
           disabled={isModifying}
           error={error}
+          valuePlaceholder={
+            props.editor.mode === "edit"
+              ? t("settings.environment.replace_value_placeholder")
+              : undefined
+          }
         />
 
         <DialogFooter>

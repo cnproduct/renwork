@@ -470,6 +470,18 @@ export type DesktopCommandMap = {
   getOpenworkUiMcpCommand: { args: []; result: string[] };
   getComputerUseMcpCommand: { args: []; result: string[] };
   getOpenworkUiMcpEnvironment: { args: []; result: Record<string, string> };
+  secretVaultAuthorize: {
+    args: [reason: "add" | "replace" | "delete", password?: string];
+    result: { authorized: boolean; method: "touch-id" | "master-password" | "unavailable" };
+  };
+  secretVaultAuthStatus: {
+    args: [];
+    result: { method: "touch-id" | "master-password"; configured: boolean };
+  };
+  secretVaultConfigurePassword: {
+    args: [password: string];
+    result: { configured: true };
+  };
 
   // Computer use
   checkComputerUsePermissions: { args: []; result: ComputerUsePermissions };

@@ -2384,13 +2384,6 @@ export function createOpenworkServerClient(options: { baseUrl: string; token?: s
         { token, hostToken, timeoutMs: timeouts.config },
       ),
 
-    getUserEnv: (key: string) =>
-      requestJson<{ item: OpenworkUserEnvItem & { value: string } }>(
-        baseUrl,
-        `/env/${encodeURIComponent(key)}`,
-        { token, hostToken, timeoutMs: timeouts.config },
-      ),
-
     upsertUserEnv: (entries: Array<{ key: string; value: string }>) =>
       requestJson<{ ok: true; count: number }>(baseUrl, "/env", {
         token,
