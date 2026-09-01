@@ -17,6 +17,14 @@ export type LocalRuntimeReservation = {
   modelSku: string;
   providerID: string;
   modelID: string;
+  adapter: string | null;
+};
+
+export type LocalRuntimeSettlement = {
+  reservationId: string;
+  status: string;
+  capturedMicroCredits: number;
+  releasedMicroCredits: number;
 };
 
 export type OpenCodeMessageEnvelope = {
@@ -37,8 +45,8 @@ export type OpenCodeMessageEnvelope = {
 
 export interface RenCreditLocalRuntimePort {
   reserve(input: { modelSku: string; body: ArrayBuffer; runId?: string }): Promise<LocalRuntimeReservation>;
-  settle(reservation: LocalRuntimeReservation, measured: ReturnType<typeof aggregateReportedUsage>): Promise<void>;
-  release(reservation: LocalRuntimeReservation, failureCode: string): Promise<void>;
+  settle(reservation: LocalRuntimeReservation, measured: ReturnType<typeof aggregateReportedUsage>): Promise<LocalRuntimeSettlement>;
+  release(reservation: LocalRuntimeReservation, failureCode: string): Promise<LocalRuntimeSettlement>;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -159,6 +167,7 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
       || typeof reserved.payload.modelSku !== "string"
       || typeof execution?.providerID !== "string"
       || typeof execution.modelID !== "string"
+      || !(execution.adapter === undefined || execution.adapter === null || typeof execution.adapter === "string")
     ) {
       throw new ApiError(502, "rencredit_execution_grant_invalid", "RenWork returned an invalid local execution grant.");
     }
@@ -168,10 +177,11 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
       modelSku: reserved.payload.modelSku,
       providerID: execution.providerID,
       modelID: execution.modelID,
+      adapter: typeof execution.adapter === "string" ? execution.adapter : null,
     };
   }
 
-  async settle(reservation: LocalRuntimeReservation, measured: ReturnType<typeof aggregateReportedUsage>): Promise<void> {
+  async settle(reservation: LocalRuntimeReservation, measured: ReturnType<typeof aggregateReportedUsage>): Promise<LocalRuntimeSettlement> {
     const credentials = this.requireCredentials();
     const signer = await this.options.signer!();
     const payload = {
@@ -195,16 +205,40 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
       method: "POST",
       body: JSON.stringify(signed),
     });
-    if (!result.response.ok) throw new Error(errorCode(result.payload));
+    if (!result.response.ok || !isRecord(result.payload)) throw new Error(errorCode(result.payload));
+    return parseSettlement(result.payload);
   }
 
-  async release(reservation: LocalRuntimeReservation, failureCode: string): Promise<void> {
+  async release(reservation: LocalRuntimeReservation, failureCode: string): Promise<LocalRuntimeSettlement> {
     const credentials = this.requireCredentials();
     const result = await requestJson(
       credentials,
       `/api/v1/metered-runtime/reservations/${encodeURIComponent(reservation.reservationId)}/release`,
       { method: "POST", body: JSON.stringify({ failureCode }) },
     );
-    if (!result.response.ok) throw new Error(errorCode(result.payload));
+    if (!result.response.ok || !isRecord(result.payload)) throw new Error(errorCode(result.payload));
+    return parseSettlement(result.payload);
   }
+}
+
+function parseSettlement(payload: JsonRecord): LocalRuntimeSettlement {
+  const capturedMicroCredits = Number.isSafeInteger(payload.capturedMicroCredits)
+    ? payload.capturedMicroCredits as number
+    : payload.status === "released"
+      ? 0
+      : null;
+  if (
+    typeof payload.reservationId !== "string"
+    || typeof payload.status !== "string"
+    || capturedMicroCredits === null
+    || !Number.isSafeInteger(payload.releasedMicroCredits)
+  ) {
+    throw new Error("RENCREDIT_SETTLEMENT_RESPONSE_INVALID");
+  }
+  return {
+    reservationId: payload.reservationId,
+    status: payload.status,
+    capturedMicroCredits,
+    releasedMicroCredits: payload.releasedMicroCredits as number,
+  };
 }

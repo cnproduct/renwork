@@ -21,8 +21,12 @@ describe("RenCredit local OAuth runtime", () => {
             execution: { providerID: "lpr_openai-seat", modelID: "gpt-5" },
           }, { status: 201 });
         }
-        if (url.pathname.endsWith("/settlements")) return Response.json({ status: "captured" });
-        if (url.pathname.endsWith("/release")) return Response.json({ status: "released" });
+        if (url.pathname.endsWith("/settlements")) {
+          return Response.json({ reservationId: "rsv_1", status: "captured", capturedMicroCredits: 21, releasedMicroCredits: 0 });
+        }
+        if (url.pathname.endsWith("/release")) {
+          return Response.json({ reservationId: "rsv_1", status: "released", releasedMicroCredits: 21 });
+        }
         return new Response(null, { status: 404 });
       },
     });

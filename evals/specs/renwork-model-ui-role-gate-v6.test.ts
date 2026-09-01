@@ -16,7 +16,7 @@ test("V7 keeps desktop model management read-only for every user profile", async
   expect(session).toContain("localProviderManagementAllowed && sessionProviderAuthSnapshot.providerAuthModalOpen");
   expect(settings).toContain("canAddProviders={localProviderManagementAllowed");
   expect(settings).toContain("open={customProvidersOpen && localProviderManagementAllowed}");
-  expect(settings).toContain("open={localProviderManagementAllowed && providerAuthSnapshot.providerAuthModalOpen}");
+  expect(settings).toContain("localProviderManagementAllowed || providerAuthSnapshot.providerAuthScope === \"personal_subscription_oauth\"");
   expect(aiView).toContain("props.canAddProviders && !managedByCloud");
   expect(providerRoutes.match(/adminRoute\(\)/g)?.length ?? 0).toBeGreaterThanOrEqual(7);
 

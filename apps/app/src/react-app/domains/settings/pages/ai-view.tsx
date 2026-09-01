@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
-import { ArrowRight, CheckCircle2, KeyRound, Sparkles, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, KeyRound, Laptop2, Sparkles, X } from "lucide-react";
 
 import { t } from "@/i18n";
 import { isCloudManagedProviderKey } from "@/react-app/domains/connections/provider-auth/cloud-provider-config";
@@ -42,6 +42,9 @@ export type AiSettingsViewProps = {
   onDisconnectProvider: (providerId: string) => void | Promise<void>;
   canDisconnectProvider: (provider: ConnectedProvider) => boolean;
   canAddProviders: boolean;
+  canConnectPersonalSubscriptions?: boolean;
+  onOpenPersonalSubscriptionAuth?: () => void | Promise<void>;
+  personalSubscriptionProviderIds?: Set<string>;
   organizationName?: string;
   /** Set of local provider IDs that were imported from cloud. */
   cloudProviderIds?: Set<string>;
@@ -53,6 +56,7 @@ export type AiSettingsViewProps = {
   onSubscribeOpenWorkModels?: () => void | Promise<void>;
   onDismissOpenWorkModels?: () => void | Promise<void>;
   cloudProvidersView?: ReactNode;
+  cliRuntimesView?: ReactNode;
 };
 
 function providerSourceLabel(source?: ConnectedProvider["source"]) {
@@ -283,6 +287,81 @@ export function AiSettingsView(props: AiSettingsViewProps) {
             : t("settings.renwork_provider_admin_only")}
         </LayoutSectionItemFootnote>
       </LayoutSection>
+
+      {props.canConnectPersonalSubscriptions ? (
+        <LayoutSection>
+          <LayoutSectionHeader>
+            <LayoutSectionTitle>本机订阅账号</LayoutSectionTitle>
+            <LayoutSectionDescription>
+              在当前电脑连接个人订阅，不上传 OAuth 凭据，也不向普通用户开放 API Key。
+            </LayoutSectionDescription>
+          </LayoutSectionHeader>
+
+          <LayoutSectionItem className="gap-4 rounded-2xl border border-indigo-5/40 bg-indigo-2/20 px-4 py-4">
+            <LayoutSectionItemHeader>
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-indigo-5/40 bg-indigo-3/30 text-indigo-11">
+                  <Laptop2 className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <LayoutSectionItemTitle>OpenAI Codex 与 Google Antigravity</LayoutSectionItemTitle>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    支持 ChatGPT Plus/Pro 与 Gemini/Antigravity 的本机 OAuth。登录只建立本机执行凭据；模型白名单、预算和价格仍由 RenWork 平台控制。
+                  </p>
+                </div>
+              </div>
+              <LayoutSectionItemHeaderActions>
+                <Button
+                  variant="outline"
+                  onClick={() => void props.onOpenPersonalSubscriptionAuth?.()}
+                  disabled={props.busy || props.providerAuthBusy}
+                >
+                  {props.providerAuthBusy ? "正在读取…" : "连接订阅账号"}
+                </Button>
+              </LayoutSectionItemHeaderActions>
+            </LayoutSectionItemHeader>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              {[
+                { id: "openai", name: "OpenAI Codex", plan: "ChatGPT Plus / Pro" },
+                { id: "google", name: "Google Antigravity", plan: "Gemini subscription" },
+              ].map((provider) => {
+                const connected = props.personalSubscriptionProviderIds?.has(provider.id) === true;
+                return (
+                  <div key={provider.id} className="flex items-center justify-between gap-3 rounded-xl border border-dls-border bg-dls-surface px-3 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <ProviderIcon providerId={provider.id} size={20} className="shrink-0 text-dls-text" />
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium text-dls-text">{provider.name}</div>
+                        <div className="truncate text-xs text-muted-foreground">{provider.plan}</div>
+                      </div>
+                    </div>
+                    {connected ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void props.onDisconnectProvider(provider.id)}
+                        disabled={props.busy || props.providerAuthBusy}
+                      >
+                        断开
+                      </Button>
+                    ) : (
+                      <span className="shrink-0 rounded-full border border-dls-border px-2 py-0.5 text-[10px] text-muted-foreground">未连接</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <SettingsNotice>
+              RenWork 内的每次调用仍先冻结 RenCredit，完成后按实际输入、输出、推理与缓存 Token 结算；失败或取消会释放冻结额度。
+              直接在 Codex CLI、Antigravity CLI 或其他应用中发起的调用不会经过 RenWork，因此不会计入 RenCredit。
+            </SettingsNotice>
+          </LayoutSectionItem>
+        </LayoutSection>
+      ) : null}
+
+      {props.cliRuntimesView}
 
       {props.cloudProvidersView}
 

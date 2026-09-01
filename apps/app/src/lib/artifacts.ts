@@ -136,7 +136,7 @@ export function getArtifactTypeLabel(type: ArtifactType) {
 }
 
 export function canPreviewArtifact(artifact: ArtifactItem) {
-  return isCollectibleArtifactTarget(artifact.legacy_target) || isPreviewSupported(getFileExtension(artifact.path));
+  return isCollectibleArtifactTarget(artifact.legacy_target) || isPreviewSupported(getFileExtension(artifact.path) ?? "");
 }
 
 export function canOpenArtifact(artifact: ArtifactItem) {

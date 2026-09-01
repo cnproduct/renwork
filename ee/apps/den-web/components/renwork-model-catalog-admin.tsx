@@ -703,7 +703,7 @@ export function RenWorkModelCatalogAdmin() {
                   </Field>
                   <Field label="兼容协议">
                     <select value={provider.protocol} onChange={(event) => replaceProvider(index, { ...provider, protocol: event.target.value as RenWorkProviderProtocol })} className={fieldClass}>
-                      {(["openai_compatible", "anthropic_compatible", "gemini", "opencode", "local"] as const).map((protocol) => <option key={protocol} value={protocol}>{protocol}</option>)}
+                      {(["openai_compatible", "anthropic_compatible", "gemini", "opencode", "codex_cli", "antigravity_cli", "local"] as const).map((protocol) => <option key={protocol} value={protocol}>{protocol}</option>)}
                     </select>
                   </Field>
                   <Field label="认证方式">

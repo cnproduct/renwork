@@ -97,6 +97,13 @@ import {
 import { DEFAULT_MODEL } from "../../../../app/constants";
 
 type ProviderReturnFocusTarget = "none" | "composer";
+export type ProviderAuthScope = "all" | "personal_subscription_oauth";
+
+const PERSONAL_SUBSCRIPTION_OAUTH_PROVIDER_IDS = new Set(["openai", "google"]);
+
+export function isPersonalSubscriptionOAuthProvider(providerId: string): boolean {
+  return PERSONAL_SUBSCRIPTION_OAUTH_PROVIDER_IDS.has(providerId.trim().toLowerCase());
+}
 type CloudProviderSyncReason =
   | "sign_in"
   | "app_launch"
@@ -203,6 +210,7 @@ export type ProviderAuthStoreSnapshot = {
   providerAuthError: string | null;
   providerAuthMethods: Record<string, ProviderAuthMethod[]>;
   providerAuthPreferredProviderId: string | null;
+  providerAuthScope: ProviderAuthScope;
   providerAuthWorkerType: "local" | "remote";
   providerAuthProviders: ProviderAuthProvider[];
   cloudOrgProviders: DenOrgLlmProvider[];
@@ -238,6 +246,7 @@ type MutableState = {
   providerAuthError: string | null;
   providerAuthMethods: Record<string, ProviderAuthMethod[]>;
   providerAuthPreferredProviderId: string | null;
+  providerAuthScope: ProviderAuthScope;
   providerAuthReturnFocusTarget: ProviderReturnFocusTarget;
   cloudOrgProviders: DenOrgLlmProvider[];
   importedCloudProviders: Record<string, CloudImportedProvider>;
@@ -277,6 +286,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     providerAuthError: null,
     providerAuthMethods: {},
     providerAuthPreferredProviderId: null,
+    providerAuthScope: "all",
     providerAuthReturnFocusTarget: "none",
     cloudOrgProviders: [],
     importedCloudProviders: {},
@@ -309,11 +319,21 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       const id = provider.id?.trim();
       if (!id) continue;
       if (
+        state.providerAuthScope !== "personal_subscription_oauth" &&
         !isProviderAllowedByDesktopPolicy({
           providerId: id,
           restrictToCloud,
           checkRestriction: options.checkDesktopAppRestriction,
         })
+      ) {
+        continue;
+      }
+      if (
+        state.providerAuthScope === "personal_subscription_oauth" &&
+        (!isPersonalSubscriptionOAuthProvider(id) || isDesktopProviderBlocked({
+          providerId: id,
+          checkRestriction: options.checkDesktopAppRestriction,
+        }))
       ) {
         continue;
       }
@@ -410,6 +430,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       providerAuthError: state.providerAuthError,
       providerAuthMethods: state.providerAuthMethods,
       providerAuthPreferredProviderId: state.providerAuthPreferredProviderId,
+      providerAuthScope: state.providerAuthScope,
       providerAuthWorkerType: getProviderAuthWorkerType(),
       providerAuthProviders: getProviderAuthProviders(),
       cloudOrgProviders: state.cloudOrgProviders,
@@ -861,7 +882,10 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     return true;
   };
 
-  const assertProviderAllowedByDesktopPolicy = (providerId: string) => {
+  const assertProviderAllowedByDesktopPolicy = (
+    providerId: string,
+    scope: ProviderAuthScope = state.providerAuthScope,
+  ) => {
     const restrictToCloud = options.checkDesktopAppRestriction({ restriction: "allowCustomProviders" });
     if (
       isDesktopProviderBlocked({
@@ -870,6 +894,12 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       })
     ) {
       throw new Error(`${providerId} is blocked by your organization desktop policy.`);
+    }
+    if (scope === "personal_subscription_oauth") {
+      if (!isPersonalSubscriptionOAuthProvider(providerId) || !isDesktopRuntime()) {
+        throw new Error("This provider is not available for local subscription OAuth.");
+      }
+      return;
     }
     if (
       !isProviderAllowedByDesktopPolicy({
@@ -1252,6 +1282,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     methods: Record<string, ProviderAuthMethod[]>,
     availableProviders: ProviderAuthProvider[],
     workerType: "local" | "remote",
+    scope: ProviderAuthScope,
   ) => {
     const restrictToCloud = options.checkDesktopAppRestriction({ restriction: "allowCustomProviders" });
     const merged = Object.fromEntries(
@@ -1264,10 +1295,28 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       ]),
     ) as Record<string, ProviderAuthMethod[]>;
 
-    for (const provider of availableProviders ?? []) {
+    if (scope === "personal_subscription_oauth") {
+      for (const [id, providerMethods] of Object.entries(merged)) {
+        if (
+          !isPersonalSubscriptionOAuthProvider(id) ||
+          isDesktopProviderBlocked({
+            providerId: id,
+            checkRestriction: options.checkDesktopAppRestriction,
+          })
+        ) {
+          delete merged[id];
+          continue;
+        }
+        merged[id] = providerMethods.filter((method) => method.type === "oauth");
+        if (merged[id]?.length === 0) delete merged[id];
+      }
+    }
+
+    for (const provider of scope === "all" ? availableProviders ?? [] : []) {
       const id = provider.id?.trim();
       if (!id) continue;
       if (
+        scope === "all" &&
         !isProviderAllowedByDesktopPolicy({
           providerId: id,
           restrictToCloud,
@@ -1285,6 +1334,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const availableProvidersById = new Map((availableProviders ?? []).map((provider) => [provider.id, provider]));
     for (const [id, providerMethods] of Object.entries(merged)) {
       if (
+        scope === "all" &&
         !isProviderAllowedByDesktopPolicy({
           providerId: id,
           restrictToCloud,
@@ -1313,7 +1363,10 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     return merged;
   };
 
-  const loadProviderAuthMethods = async (workerType: "local" | "remote") => {
+  const loadProviderAuthMethods = async (
+    workerType: "local" | "remote",
+    scope: ProviderAuthScope = state.providerAuthScope,
+  ) => {
     const c = options.client();
     if (!c) {
       throw new Error(t("providers.not_connected"));
@@ -1323,6 +1376,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       methods as Record<string, ProviderAuthMethod[]>,
       getProviderAuthProviders(),
       workerType,
+      scope,
     );
   };
 
@@ -2142,8 +2196,10 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
   async function openProviderAuthModal(optionsArg?: {
     returnFocusTarget?: ProviderReturnFocusTarget;
     preferredProviderId?: string;
+    scope?: ProviderAuthScope;
   }) {
-    if (isProviderAddRestricted(optionsArg?.preferredProviderId)) {
+    const scope = optionsArg?.scope ?? "all";
+    if (scope === "all" && isProviderAddRestricted(optionsArg?.preferredProviderId)) {
       const message = t("providers.custom_providers_disabled");
       mutateState((current) => ({
         ...current,
@@ -2160,12 +2216,13 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       ...current,
       providerAuthReturnFocusTarget: optionsArg?.returnFocusTarget ?? "none",
       providerAuthPreferredProviderId: optionsArg?.preferredProviderId?.trim() || null,
+      providerAuthScope: scope,
       providerAuthBusy: true,
       providerAuthError: null,
     }));
 
     try {
-      const methods = await loadProviderAuthMethods(getProviderAuthWorkerType());
+      const methods = await loadProviderAuthMethods(getProviderAuthWorkerType(), scope);
       mutateState((current) => ({
         ...current,
         providerAuthMethods: methods,
@@ -2193,6 +2250,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       providerAuthModalOpen: false,
       providerAuthError: null,
       providerAuthPreferredProviderId: null,
+      providerAuthScope: "all",
       providerAuthReturnFocusTarget: "none",
     }));
     if (shouldFocusPrompt) {
