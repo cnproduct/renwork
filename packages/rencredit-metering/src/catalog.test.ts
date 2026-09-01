@@ -120,5 +120,6 @@ describe("RenWork model catalog", () => {
       sharingScope: "organization",
       deviceOAuthPolicy: null,
     });
+    expect(() => validateAdminModelCatalog(legacy)).not.toThrow();
   });
 });
