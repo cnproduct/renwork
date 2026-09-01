@@ -55,7 +55,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   opencode: "OpenCode Zen",
   openai: "OpenAI",
   anthropic: "Anthropic",
-  google: "Google",
+  google: "Google Antigravity / Gemini",
   openrouter: "OpenRouter",
 };
 
@@ -81,6 +81,7 @@ export type ProviderAuthModalProps = {
   ) => Promise<{ connected: boolean; pending?: boolean; message?: string }>;
   onRefreshProviders?: () => Promise<unknown>;
   showOpenWorkModelsSubscribe?: boolean;
+  personalSubscriptionOnly?: boolean;
   onSubscribeOpenWorkModels?: () => void | Promise<void>;
   onClose: () => void;
 };
@@ -705,9 +706,11 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     >
       <DialogContent className="flex max-h-[calc(100vh-2rem)] min-h-0 w-full max-w-lg flex-col overflow-hidden sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Connect providers</DialogTitle>
+          <DialogTitle>{props.personalSubscriptionOnly ? "连接本机订阅账号" : "Connect providers"}</DialogTitle>
           <DialogDescription>
-            Connect personal accounts to this device, or use providers managed by your organization.
+            {props.personalSubscriptionOnly
+              ? "仅连接 OpenAI ChatGPT Plus/Pro 或 Google Antigravity/Gemini 订阅。此处不接受 API Key。"
+              : "Connect personal accounts to this device, or use providers managed by your organization."}
           </DialogDescription>
         </DialogHeader>
 
@@ -731,7 +734,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                     <input
                       ref={searchInputRef}
                       type="text"
-                      placeholder="Filter providers by name or ID"
+                      placeholder={props.personalSubscriptionOnly ? "搜索订阅账号" : "Filter providers by name or ID"}
                       value={searchQuery}
                       onChange={(event) => {
                         setSearchQuery(event.currentTarget.value);
@@ -818,11 +821,19 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                     ))
                   ) : (
                     <div className="text-sm text-gray-10 pt-2">
-                      {entries.length ? "No providers match your search." : "No providers available."}
+                      {entries.length
+                        ? "No providers match your search."
+                        : props.personalSubscriptionOnly
+                          ? "当前运行时未提供可用的订阅 OAuth 适配器。请更新 RenWork 运行时后重试。"
+                          : "No providers available."}
                     </div>
                   )}
 
-                  <div className="text-[11px] text-gray-9">Arrow keys to navigate, Enter to select.</div>
+                  <div className="text-[11px] text-gray-9">
+                    {props.personalSubscriptionOnly
+                      ? "凭据仅保存在当前设备；可用模型仍由组织目录授权，所有运行统一结算 RenCredit。"
+                      : "Arrow keys to navigate, Enter to select."}
+                  </div>
                 </div>
               ) : null}
 

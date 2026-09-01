@@ -63,7 +63,10 @@ import { useOrgMcpConnections } from "@/react-app/domains/connections/use-org-mc
 import { createOpenworkServerStore, useOpenworkServerStoreSnapshot } from "@/react-app/domains/connections/openwork-server-store";
 import { createProviderAuthStore, useProviderAuthStoreSnapshot } from "@/react-app/domains/connections/provider-auth/store";
 import ProviderAuthModal from "@/react-app/domains/connections/provider-auth/provider-auth-modal";
-import { canManageDesktopModelProviders } from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
+import {
+  canConnectPersonalSubscriptionOAuth,
+  canManageDesktopModelProviders,
+} from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
 import ConnectionsModals from "@/react-app/domains/connections/modals";
 import { AiSettingsView } from "@/react-app/domains/settings/pages/ai-view";
 import { CustomProvidersDialog } from "@/react-app/domains/settings/custom-providers-dialog";
@@ -819,6 +822,14 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     hasActiveOrganization: cloudSession.hasActiveOrg,
     workspaceType: selectedWorkspace?.workspaceType,
   });
+  const personalSubscriptionOAuthAllowed = canConnectPersonalSubscriptionOAuth({
+    desktopRuntime: isDesktopRuntime(),
+    signedIn: cloudSession.isSignedIn,
+    hasAuthToken: Boolean(cloudSession.authToken.trim()),
+    hasActiveOrganization: cloudSession.hasActiveOrg,
+    hasActiveRuntime: Boolean(activeClient && selectedWorkspaceId),
+    workspaceType: selectedWorkspace?.workspaceType,
+  });
   const connectScope = useMemo(
     () => ({
       baseUrl: cloudSession.baseUrl,
@@ -939,6 +950,17 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
 
     void providerAuthStore.openProviderAuthModal();
   }, [localProviderManagementAllowed, providerAuthStore, restrictionNotice]);
+
+  const handleOpenPersonalSubscriptionAuth = useCallback(() => {
+    if (!personalSubscriptionOAuthAllowed) {
+      restrictionNotice.show({
+        title: "本机订阅账号暂不可用",
+        message: "请先在 RenWork 桌面端登录、选择组织并启动本地工作区，再连接此电脑的订阅账号。",
+      });
+      return;
+    }
+    void providerAuthStore.openProviderAuthModal({ scope: "personal_subscription_oauth" });
+  }, [personalSubscriptionOAuthAllowed, providerAuthStore, restrictionNotice]);
 
   useEffect(() => {
     if (!activeClient || !selectedWorkspaceId) return;
@@ -2268,6 +2290,11 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
               provider.id.trim().toLowerCase() === "opencode" || provider.source !== "env"
             }
             canAddProviders={localProviderManagementAllowed && !providerAuthStore.isProviderAddRestricted()}
+            canConnectPersonalSubscriptions={personalSubscriptionOAuthAllowed}
+            onOpenPersonalSubscriptionAuth={handleOpenPersonalSubscriptionAuth}
+            personalSubscriptionProviderIds={new Set(
+              providerConnectedIds.map((providerId) => providerId.trim().toLowerCase()),
+            )}
             organizationName={cloudSession.activeOrgName}
             cloudProviderIds={new Set([
               ...Object.values(providerAuthSnapshot.importedCloudProviders ?? {}).map((p) => p.providerId),
@@ -2654,7 +2681,10 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
       />
 
       <ProviderAuthModal
-        open={localProviderManagementAllowed && providerAuthSnapshot.providerAuthModalOpen}
+        open={
+          providerAuthSnapshot.providerAuthModalOpen &&
+          (localProviderManagementAllowed || providerAuthSnapshot.providerAuthScope === "personal_subscription_oauth")
+        }
         loading={false}
         submitting={providerAuthSnapshot.providerAuthBusy}
         error={providerAuthSnapshot.providerAuthError}
@@ -2688,6 +2718,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
         onSubmitOAuth={providerAuthStore.completeProviderAuthOAuth}
         onRefreshProviders={providerAuthStore.refreshProviders}
         showOpenWorkModelsSubscribe={showOpenWorkModelsSubscribe}
+        personalSubscriptionOnly={providerAuthSnapshot.providerAuthScope === "personal_subscription_oauth"}
         onSubscribeOpenWorkModels={subscribeToOpenWorkModels}
         onClose={() => providerAuthStore.closeProviderAuthModal()}
       />

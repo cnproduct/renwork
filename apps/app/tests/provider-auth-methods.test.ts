@@ -51,6 +51,27 @@ function installProviderAuthFetch() {
   });
 }
 
+function installPersonalSubscriptionAuthFetch() {
+  Object.defineProperty(globalThis, "fetch", {
+    configurable: true,
+    value: async () =>
+      new Response(
+        JSON.stringify({
+          openai: [
+            { type: "oauth", label: "Sign in with ChatGPT" },
+            { type: "api", label: "API key" },
+          ],
+          google: [
+            { type: "oauth", label: "Sign in with Google" },
+            { type: "api", label: "API key" },
+          ],
+          openrouter: [{ type: "api", label: "API key" }],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+  });
+}
+
 function createTestStore(workerType: "local" | "remote") {
   const providers: ProviderListItem[] = [
     {
@@ -143,5 +164,22 @@ describe("OpenAI provider auth methods", () => {
     expect(store.getSnapshot().providerAuthMethods.openai).toEqual([
       { type: "api", label: "API密钥" },
     ]);
+  });
+
+  test("personal subscription mode exposes only approved OAuth methods", async () => {
+    installWindow({
+      origin: "http://localhost:3000",
+      electronInfo: { baseUrl: "http://localhost:8787", ownerToken: "owner-token" },
+    });
+    installPersonalSubscriptionAuthFetch();
+    const store = createTestStore("local");
+
+    await store.openProviderAuthModal({ scope: "personal_subscription_oauth" });
+
+    expect(store.getSnapshot().providerAuthScope).toBe("personal_subscription_oauth");
+    expect(store.getSnapshot().providerAuthMethods).toEqual({
+      openai: [{ type: "oauth", label: "Sign in with ChatGPT", methodIndex: 0 }],
+      google: [{ type: "oauth", label: "Sign in with Google", methodIndex: 0 }],
+    });
   });
 });
