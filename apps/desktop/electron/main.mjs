@@ -75,6 +75,7 @@ import {
 import { resetMacDockIcon } from "./brand-icon-darwin.mjs";
 import { createDesktopVaultKeyProvider } from "./secure-vault-key.mjs";
 import { createDesktopMeteringSignerProvider } from "./secure-metering-signer.mjs";
+import { createSecretVaultPasswordAuth } from "./secret-vault-auth.mjs";
 import { createComputerHistory } from "./computer-history.mjs";
 import {
   clearOpenworkSentrySession,
@@ -1249,6 +1250,9 @@ const runtimeManager = createRuntimeManager({
   }),
   meteredRuntimeRequired: DESKTOP_DISTRIBUTION.flavor !== "standalone",
 });
+const secretVaultPasswordAuth = createSecretVaultPasswordAuth({
+  filePath: path.join(app.getPath("userData"), "secret-vault-password.v1.json"),
+});
 const initialRunnerBootstrap = workspaceStore.readDesktopBootstrapConfigSync();
 const legacyRunnerBaseUrls = [
   initialRunnerBootstrap.apiBaseUrl,
@@ -1731,6 +1735,30 @@ const desktopCommandHandlers = {
   },
   "workspaceImportConfig": async (event, ...args) => {
       return workspaceStore.importConfig(args[0] ?? {});
+  },
+  "secretVaultAuthStatus": async () => {
+    if (process.platform === "darwin" && systemPreferences.canPromptTouchID()) {
+      return { method: "touch-id", configured: true };
+    }
+    return { method: "master-password", configured: await secretVaultPasswordAuth.isConfigured() };
+  },
+  "secretVaultConfigurePassword": async (event, ...args) => {
+    await secretVaultPasswordAuth.configure(String(args[0] ?? ""));
+    return { configured: true };
+  },
+  "secretVaultAuthorize": async (event, ...args) => {
+    const reason = ["add", "replace", "delete"].includes(args[0]) ? args[0] : "replace";
+    if (process.platform === "darwin" && systemPreferences.canPromptTouchID()) {
+      try {
+        await systemPreferences.promptTouchID(`Authorize RenWork to ${reason} a protected secret`);
+        return { authorized: true, method: "touch-id" };
+      } catch {
+        return { authorized: false, method: "touch-id" };
+      }
+    }
+
+    const authorized = await secretVaultPasswordAuth.verify(String(args[1] ?? ""));
+    return { authorized, method: "master-password" };
   },
   "opencodeCommandList": async (event, ...args) => {
       return listCommandNames(String(args[0]?.scope ?? "").trim(), String(args[0]?.projectDir ?? "").trim());

@@ -52,6 +52,38 @@ describe("env-file", () => {
     expect(items.find((e) => e.key === "ANTHROPIC_API_KEY")?.value).toBe("sk-ant-abc123");
   });
 
+  test("desktop vault encrypts values at rest and decrypts them after restart", async () => {
+    const key = Buffer.alloc(32, 7);
+    const first = new EnvService({ path, vaultKey: async () => key });
+    await first.upsertMany([{ key: "ANTHROPIC_API_KEY", value: "sk-ant-never-plaintext" }]);
+
+    const stored = readFileSync(path, "utf8");
+    expect(stored).not.toContain("sk-ant-never-plaintext");
+    expect(stored).toContain('"schemaVersion": 2');
+    expect(stored).toContain('"encryptedValue"');
+
+    const restarted = new EnvService({ path, vaultKey: async () => key });
+    expect((await restarted.list())[0]?.value).toBe("sk-ant-never-plaintext");
+    expect(await EnvService.readForInjection(path, async () => key)).toEqual({
+      ANTHROPIC_API_KEY: "sk-ant-never-plaintext",
+    });
+  });
+
+  test("desktop vault automatically migrates the legacy plaintext store", async () => {
+    writeFileSync(path, JSON.stringify({
+      schemaVersion: 1,
+      updatedAt: Date.now(),
+      variables: [{ key: "GOOGLE_API_KEY", value: "legacy-plaintext", updatedAt: Date.now() }],
+    }));
+    const key = Buffer.alloc(32, 9);
+    const svc = new EnvService({ path, vaultKey: async () => key });
+
+    expect((await svc.list())[0]?.value).toBe("legacy-plaintext");
+    const migrated = readFileSync(path, "utf8");
+    expect(migrated).not.toContain("legacy-plaintext");
+    expect(migrated).toContain('"schemaVersion": 2');
+  });
+
   test("upsertMany updates existing keys in place", async () => {
     const svc = new EnvService({ path });
     await svc.upsertMany([{ key: "FOO", value: "1" }]);

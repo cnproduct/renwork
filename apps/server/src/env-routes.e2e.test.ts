@@ -133,7 +133,7 @@ describe("env routes", () => {
     expect(response.headers.get("access-control-allow-methods")).toContain("PUT");
   });
 
-  test("PUT + GET round-trips a single entry and returns raw values", async () => {
+  test("PUT + GET round-trips a single entry as metadata only", async () => {
     const { base } = await boot();
     const put = await fetch(`${base}/env`, {
       method: "PUT",
@@ -145,9 +145,10 @@ describe("env routes", () => {
 
     const list = await fetch(`${base}/env`, { headers: hostAuth() });
     expect(list.status).toBe(200);
-    const body = (await list.json()) as { items: Array<{ key: string; value: string }> };
+    const body = (await list.json()) as { items: Array<{ key: string; hasValue: boolean; value?: string }> };
     expect(body.items).toHaveLength(1);
-    expect(body.items[0]).toMatchObject({ key: "ANTHROPIC_API_KEY", value: "sk-ant-abc" });
+    expect(body.items[0]).toMatchObject({ key: "ANTHROPIC_API_KEY", hasValue: true });
+    expect(Object.prototype.hasOwnProperty.call(body.items[0], "value")).toBe(false);
   });
 
   test("GET /env can return metadata without raw values", async () => {
@@ -168,7 +169,7 @@ describe("env routes", () => {
     expect(Object.prototype.hasOwnProperty.call(body.items[1], "value")).toBe(false);
   });
 
-  test("GET /env/:key reveals one raw value", async () => {
+  test("GET /env/:key refuses to export a raw value", async () => {
     const { base } = await boot();
     await fetch(`${base}/env`, {
       method: "PUT",
@@ -177,13 +178,13 @@ describe("env routes", () => {
     });
 
     const reveal = await fetch(`${base}/env/ANTHROPIC_API_KEY`, { headers: hostAuth() });
-    expect(reveal.status).toBe(200);
+    expect(reveal.status).toBe(403);
     expect(await reveal.json()).toMatchObject({
-      item: { key: "ANTHROPIC_API_KEY", value: "sk-ant-abc" },
+      code: "env_value_export_disabled",
     });
 
     const missing = await fetch(`${base}/env/MISSING`, { headers: hostAuth() });
-    expect(missing.status).toBe(404);
+    expect(missing.status).toBe(403);
   });
 
   test("GET and PUT /env/status track pending changes per runtime", async () => {
@@ -583,7 +584,7 @@ describe("env routes", () => {
     expect(body.code).toBe("openwork_models_voice_failed");
   });
 
-  test("values persist across server restart", async () => {
+  test("configured secret metadata persists across server restart", async () => {
     const first = await boot();
     await fetch(`${first.base}/env`, {
       method: "PUT",
@@ -595,8 +596,9 @@ describe("env routes", () => {
 
     const second = await boot();
     const body = (await (await fetch(`${second.base}/env`, { headers: hostAuth() })).json()) as {
-      items: Array<{ key: string; value: string }>;
+      items: Array<{ key: string; hasValue: boolean; value?: string }>;
     };
-    expect(body.items).toEqual([expect.objectContaining({ key: "PERSISTED", value: "yes" })]);
+    expect(body.items).toEqual([expect.objectContaining({ key: "PERSISTED", hasValue: true })]);
+    expect(Object.prototype.hasOwnProperty.call(body.items[0], "value")).toBe(false);
   });
 });

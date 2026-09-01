@@ -1,4 +1,4 @@
-import { randomUUID, X509Certificate } from "node:crypto";
+import { createDecipheriv, createHash, randomUUID, X509Certificate } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
@@ -496,17 +496,42 @@ export function resolveUserEnvFilePath(env = process.env) {
 const USER_ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const USER_ENV_RESERVED_PREFIXES = ["OPENWORK_", "OPENCODE_"];
 
-// Synchronous, best-effort; absent or malformed returns {}. Reserved prefixes
+// Best-effort; absent or malformed returns {}. Reserved prefixes
 // are stripped so a tampered file can never shadow OPENWORK_* / OPENCODE_*.
-function loadUserEnvFile(env = process.env) {
+const USER_ENV_VAULT_AAD = Buffer.from("renwork-user-env-v2", "utf8");
+
+function decryptUserEnvValue(envelope, key) {
+  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(envelope.iv, "base64"));
+  decipher.setAAD(USER_ENV_VAULT_AAD);
+  decipher.setAuthTag(Buffer.from(envelope.tag, "base64"));
+  return Buffer.concat([
+    decipher.update(Buffer.from(envelope.data, "base64")),
+    decipher.final(),
+  ]).toString("utf8");
+}
+
+async function loadUserEnvFile(env = process.env, vaultKeyProvider) {
   try {
     const raw = readFileSync(resolveUserEnvFilePath(env), "utf8");
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.variables)) return {};
+    let vaultKey = null;
+    if (parsed.variables.some((entry) => entry?.encryptedValue)) {
+      if (vaultKeyProvider) {
+        vaultKey = Buffer.from(await vaultKeyProvider());
+      } else if (env.OPENWORK_ENCRYPTION_KEY?.trim()) {
+        vaultKey = createHash("sha256").update(env.OPENWORK_ENCRYPTION_KEY.trim()).digest();
+      }
+      if (!vaultKey || vaultKey.byteLength !== 32) return {};
+    }
     const out = {};
     for (const entry of parsed.variables) {
       if (!entry || typeof entry !== "object") continue;
-      const { key, value } = entry;
+      const { key } = entry;
+      let value = typeof entry.value === "string" ? entry.value : null;
+      if (value === null && entry.encryptedValue && vaultKey) {
+        value = decryptUserEnvValue(entry.encryptedValue, vaultKey);
+      }
       if (typeof key !== "string" || typeof value !== "string") continue;
       if (!USER_ENV_KEY_PATTERN.test(key)) continue;
       if (USER_ENV_RESERVED_PREFIXES.some((p) => key.startsWith(p))) continue;
@@ -1318,7 +1343,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
           XDG_CONFIG_HOME: devPaths.xdgConfigHome,
         }
       : process.env;
-    const userEnv = loadUserEnvFile(userEnvPathEnv);
+    const userEnv = await loadUserEnvFile(userEnvPathEnv, localManagedMcpVaultKey);
     injectedUserEnvKeys = reconcileInjectedUserEnv({
       processEnv: process.env,
       inheritedEnv: inheritedProcessEnv,
