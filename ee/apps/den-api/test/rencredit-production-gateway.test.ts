@@ -31,6 +31,7 @@ describe("RenWork production inference gateway", () => {
 
   test("requests stream usage and hides the upstream model id", () => {
     expect(gateway).toContain("include_usage: true")
+    expect(gateway).toContain("delete upstreamBody.usage")
     expect(gateway).toContain("sanitizeStreamEvent(event, model.sku)")
     expect(gateway).toContain("JSON.stringify({ ...payload, model: model.sku })")
   })

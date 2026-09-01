@@ -166,6 +166,21 @@ function summarizeToolSchemas(body: JsonRecord) {
   })
 }
 
+function buildUpstreamBody(body: JsonRecord, upstreamModelId: string) {
+  const upstreamBody: JsonRecord = { ...body, model: upstreamModelId }
+  // OpenCode includes a local response-usage accumulator on requests. It is
+  // not part of the OpenAI Chat Completions request schema and strict relays
+  // such as OpenCode Go reject the whole request when it is forwarded.
+  delete upstreamBody.usage
+  if (body.stream === true) {
+    upstreamBody.stream_options = {
+      ...(isRecord(body.stream_options) ? body.stream_options : {}),
+      include_usage: true,
+    }
+  }
+  return upstreamBody
+}
+
 export function registerInferenceGatewayRoutes<T extends { Variables: Record<string, unknown> }>(app: Hono<T>) {
   app.post("/api/v1/chat/completions", publicRoute, async (c) => {
     const apiKey = bearerToken(c.req.header("Authorization"))
@@ -285,8 +300,7 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
       return c.json({ error: { code, message } }, status)
     }
 
-    const upstreamBody: JsonRecord = { ...body, model: route.upstreamModelId }
-    if (body.stream === true) upstreamBody.stream_options = { ...(isRecord(body.stream_options) ? body.stream_options : {}), include_usage: true }
+    const upstreamBody = buildUpstreamBody(body, route.upstreamModelId)
     const headers = new Headers({ "content-type": "application/json", accept: body.stream === true ? "text/event-stream" : "application/json" })
     if (credential) headers.set("authorization", `Bearer ${credential}`)
 
