@@ -34,6 +34,9 @@ describe("RenWork production inference gateway", () => {
     expect(gateway).toContain("delete upstreamBody.usage")
     expect(gateway).toContain("sanitizeStreamEvent(event, model.sku)")
     expect(gateway).toContain("JSON.stringify({ ...payload, model: model.sku })")
+    expect(gateway).toContain("while (true)")
+    expect(gateway).toContain('releaseOnce("CLIENT_ABORTED")')
+    expect(gateway).not.toContain("async pull(controller)")
   })
 
   test("logs only sanitized upstream rejection structure before releasing credits", () => {

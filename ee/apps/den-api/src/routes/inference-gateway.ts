@@ -364,46 +364,55 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     let usageReported = false
     let providerResponseId = `run:${runId}`
     let hasResult = false
+    let finalized = false
+    const observeEvent = (event: string) => {
+      const parsed = extractStreamEvent(event)
+      if (!parsed) return
+      if (typeof parsed.id === "string") providerResponseId = parsed.id
+      if (isRecord(parsed.usage)) { usage = normalizeOpenAiUsage(parsed.usage); usageReported = true }
+      hasResult ||= responseHasResult(parsed)
+    }
+    const settleOnce = async () => {
+      if (finalized) return
+      finalized = true
+      const finalUsage = usageReported ? usage : estimatedUsage
+      await settleInferenceCredits({ reservationId: reservation.id, usage: finalUsage, providerResponseId, accuracy: usageReported ? "reported" : "estimated", hasResult })
+    }
+    const releaseOnce = async (failureCode: string) => {
+      if (finalized) return
+      finalized = true
+      await releaseInferenceCredits({ reservationId: reservation.id, failureCode })
+    }
     const stream = new ReadableStream<Uint8Array>({
-      async pull(controller) {
-        try {
-          const next = await reader.read()
-          if (next.done) {
-            buffer += decoder.decode()
-            for (const event of buffer.split(/\n\n/)) {
-              const parsed = extractStreamEvent(event)
-              if (!parsed) continue
-              if (typeof parsed.id === "string") providerResponseId = parsed.id
-              if (isRecord(parsed.usage)) { usage = normalizeOpenAiUsage(parsed.usage); usageReported = true }
-              hasResult ||= responseHasResult(parsed)
+      start(controller) {
+        void (async () => {
+          try {
+            while (true) {
+              const next = await reader.read()
+              if (next.done) {
+                buffer += decoder.decode()
+                for (const event of buffer.split(/\n\n/)) observeEvent(event)
+                await settleOnce()
+                if (buffer) controller.enqueue(new TextEncoder().encode(sanitizeStreamEvent(buffer, model.sku)))
+                controller.close()
+                return
+              }
+              buffer += decoder.decode(next.value, { stream: true })
+              const events = buffer.split(/\n\n/)
+              buffer = events.pop() ?? ""
+              for (const event of events) observeEvent(event)
+              const sanitized = events.map((event) => sanitizeStreamEvent(event, model.sku)).join("")
+              if (sanitized) controller.enqueue(new TextEncoder().encode(sanitized))
             }
-            const finalUsage = usageReported ? usage : estimatedUsage
-            await settleInferenceCredits({ reservationId: reservation.id, usage: finalUsage, providerResponseId, accuracy: usageReported ? "reported" : "estimated", hasResult })
-            if (buffer) controller.enqueue(new TextEncoder().encode(sanitizeStreamEvent(buffer, model.sku)))
-            controller.close()
-            return
+          } catch (error) {
+            await releaseOnce("STREAM_ABORTED").catch(() => undefined)
+            controller.error(error)
           }
-          const text = decoder.decode(next.value, { stream: true })
-          buffer += text
-          const events = buffer.split(/\n\n/)
-          buffer = events.pop() ?? ""
-          for (const event of events) {
-            const parsed = extractStreamEvent(event)
-            if (!parsed) continue
-            if (typeof parsed.id === "string") providerResponseId = parsed.id
-            if (isRecord(parsed.usage)) { usage = normalizeOpenAiUsage(parsed.usage); usageReported = true }
-            hasResult ||= responseHasResult(parsed)
-          }
-          const sanitized = events.map((event) => sanitizeStreamEvent(event, model.sku)).join("")
-          if (sanitized) controller.enqueue(new TextEncoder().encode(sanitized))
-        } catch (error) {
-          await releaseInferenceCredits({ reservationId: reservation.id, failureCode: "STREAM_ABORTED" }).catch(() => undefined)
-          controller.error(error)
-        }
+        })()
       },
       async cancel() {
         await reader.cancel().catch(() => undefined)
-        await releaseInferenceCredits({ reservationId: reservation.id, failureCode: "CLIENT_ABORTED" }).catch(() => undefined)
+        await releaseOnce("CLIENT_ABORTED").catch(() => undefined)
       },
     })
     return new Response(stream, { status: 200, headers: copySafeUpstreamHeaders(upstream) })
