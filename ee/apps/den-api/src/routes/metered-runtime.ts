@@ -275,6 +275,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
         execution: {
           providerID: route.providerId,
           modelID: route.upstreamModelId,
+          adapter: provider?.protocol ?? null,
         },
       }, 201)
     } catch (error) {
@@ -341,6 +342,11 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     const body = await c.req.json().catch(() => null)
     const failureCode = isRecord(body) && validText(body.failureCode, 128) ? body.failureCode : "LOCAL_RUNTIME_ABORTED"
     const released = await releaseInferenceCredits({ reservationId: reservation.id, failureCode })
-    return c.json({ reservationId: released.id, status: released.status, releasedMicroCredits: released.released_microcredits })
+    return c.json({
+      reservationId: released.id,
+      status: released.status,
+      capturedMicroCredits: released.captured_microcredits,
+      releasedMicroCredits: released.released_microcredits,
+    })
   })
 }

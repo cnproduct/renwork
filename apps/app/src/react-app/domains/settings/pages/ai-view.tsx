@@ -56,6 +56,7 @@ export type AiSettingsViewProps = {
   onSubscribeOpenWorkModels?: () => void | Promise<void>;
   onDismissOpenWorkModels?: () => void | Promise<void>;
   cloudProvidersView?: ReactNode;
+  cliRuntimesView?: ReactNode;
 };
 
 function providerSourceLabel(source?: ConnectedProvider["source"]) {
@@ -359,6 +360,8 @@ export function AiSettingsView(props: AiSettingsViewProps) {
           </LayoutSectionItem>
         </LayoutSection>
       ) : null}
+
+      {props.cliRuntimesView}
 
       {props.cloudProvidersView}
 

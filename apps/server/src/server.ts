@@ -98,6 +98,7 @@ import { registerWorkspaceRoutes } from "./routes/workspaces.js";
 import { registerCloudMcpRoutes } from "./routes/cloud-mcp.js";
 import { registerCustomProviderRoutes } from "./routes/custom-providers.js";
 import { registerLocalAutomationRoutes } from "./routes/local-automations.js";
+import { registerCliRuntimeRoutes } from "./routes/cli-runtimes.js";
 import {
   assertRenWorkMeteredCommand,
   assertRenWorkMeteredPrompt,
@@ -111,6 +112,7 @@ import {
   type OpenCodeMessageEnvelope,
 } from "./rencredit-local-runtime.js";
 import { startLocalAutomationsScheduler } from "./local-automations-scheduler.js";
+import { RenWorkCliRuntimeManager } from "./renwork-cli-runtime.js";
 import { captureServerException } from "./telemetry.js";
 import {
   completeLocalManagedMcpAuthorization,
@@ -915,6 +917,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
     credentials: () => cloudProviderSync.meteringCredentials(),
     signer: config.localRuntimeMeteringSigner,
   });
+  const cliRuntimeManager = new RenWorkCliRuntimeManager({ metering: localRuntimeMetering });
   const routes = createRoutes(
     config,
     approvals,
@@ -924,6 +927,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
     engineMcpServerState,
     logger,
     cloudProviderSync,
+    cliRuntimeManager,
   );
 
   startLocalAutomationsScheduler({
@@ -2069,6 +2073,7 @@ function createRoutes(
   engineMcpServerState: EngineMcpServerState,
   logger: ServerLogger,
   cloudProviderSync: CloudProviderSync,
+  cliRuntimeManager: RenWorkCliRuntimeManager,
 ): Route[] {
   const routes: Route[] = [];
   registerCoreRoutes({
@@ -2170,6 +2175,16 @@ function createRoutes(
     jsonResponse,
     readJsonBody,
     ensureWritable,
+    requireClientScope,
+    resolveWorkspace,
+  });
+
+  registerCliRuntimeRoutes({
+    routes,
+    config,
+    manager: cliRuntimeManager,
+    jsonResponse,
+    readJsonBody,
     requireClientScope,
     resolveWorkspace,
   });

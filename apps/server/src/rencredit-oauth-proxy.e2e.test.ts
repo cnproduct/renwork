@@ -38,6 +38,7 @@ test("desktop OAuth prompt freezes RenCredit, rewrites only inside the host, and
     modelSku: "renwork-oauth-pro",
     providerID: "lpr_openai-seat",
     modelID: "gpt-5",
+    adapter: "opencode",
   };
   const observed: { reservedSku: string | null } = { reservedSku: null };
   let settlement: unknown = null;
@@ -46,7 +47,10 @@ test("desktop OAuth prompt freezes RenCredit, rewrites only inside the host, and
       observed.reservedSku = input.modelSku;
       return reservation;
     },
-    settle: async (_reservation, measured) => { settlement = measured; },
+    settle: async (_reservation, measured) => {
+      settlement = measured;
+      return { reservationId: "rsv_1", status: "settled", capturedMicroCredits: 1, releasedMicroCredits: 0 };
+    },
     release: async () => { throw new Error("unexpected release"); },
   };
   const workspace: WorkspaceInfo = {

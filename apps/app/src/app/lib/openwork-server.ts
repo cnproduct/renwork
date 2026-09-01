@@ -1494,6 +1494,7 @@ export function createOpenworkServerClient(options: { baseUrl: string; token?: s
     cloudMcpHealth: 12_000,
     cloudMcpProbeHealth: 30_000,
     cloudMcpReconcile: 60_000,
+    cliRuntime: 30_000,
     workspaceExport: 30_000,
     workspaceImport: 30_000,
     binary: 60_000,
@@ -1532,6 +1533,33 @@ export function createOpenworkServerClient(options: { baseUrl: string; token?: s
         token,
         timeoutMs: timeouts.config,
       })),
+    listCliRuntimes: () =>
+      requestJson<RenWorkCliRuntimeList>(baseUrl, "/cli-runtimes", {
+        token,
+        hostToken,
+        timeoutMs: timeouts.cliRuntime,
+      }),
+    startCliRuntimeRun: (workspaceId: string, runtime: RenWorkCliRuntimeId, body: { modelSku: string; prompt: string }) =>
+      requestJson<RenWorkCliRun>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/cli-runtimes/${encodeURIComponent(runtime)}/runs`, {
+        token,
+        hostToken,
+        method: "POST",
+        body,
+        timeoutMs: timeouts.cliRuntime,
+      }),
+    getCliRuntimeRun: (workspaceId: string, runId: string) =>
+      requestJson<RenWorkCliRun>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/cli-runtimes/runs/${encodeURIComponent(runId)}`, {
+        token,
+        hostToken,
+        timeoutMs: timeouts.cliRuntime,
+      }),
+    cancelCliRuntimeRun: (workspaceId: string, runId: string) =>
+      requestJson<RenWorkCliRun>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/cli-runtimes/runs/${encodeURIComponent(runId)}`, {
+        token,
+        hostToken,
+        method: "DELETE",
+        timeoutMs: timeouts.cliRuntime,
+      }),
     setConnectState: (connectEnabled: boolean) => requestJson<OpenworkConnectState>(baseUrl, "/experimental/connect/state", { token, hostToken, method: "PUT", body: { connectEnabled }, timeoutMs: timeouts.config }),
     callExtensionAction: (payload: OpenworkExtensionActionCall) =>
       requestJson<OpenworkExtensionActionResult>(baseUrl, "/experimental/extensions/call", {
@@ -2613,3 +2641,44 @@ export interface LocalAutomationRunLog {
 }
 
 export type OpenworkServerClient = ReturnType<typeof createOpenworkServerClient>;
+
+export type RenWorkCliRuntimeId = "codex" | "antigravity";
+
+export interface RenWorkCliRuntimeStatus {
+  runtime: RenWorkCliRuntimeId;
+  installed: boolean;
+  authenticated: boolean | null;
+  version: string | null;
+  meteredExecutionReady: boolean;
+  message: string;
+}
+
+export interface RenWorkCliRuntimeList {
+  runtimes: RenWorkCliRuntimeStatus[];
+}
+
+export interface RenWorkCliRun {
+  runId: string;
+  runtime: RenWorkCliRuntimeId;
+  workspaceId: string;
+  modelSku: string;
+  state: "running" | "settling" | "succeeded" | "failed" | "cancelled";
+  output: string;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    reasoningTokens: number;
+    cacheReadTokens: number;
+    cacheWriteTokens: number;
+  } | null;
+  reservationId: string;
+  settlement: {
+    reservationId: string;
+    status: string;
+    capturedMicroCredits: number;
+    releasedMicroCredits: number;
+  } | null;
+  errorCode: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

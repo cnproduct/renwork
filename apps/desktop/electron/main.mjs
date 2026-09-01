@@ -75,6 +75,7 @@ import {
 import { resetMacDockIcon } from "./brand-icon-darwin.mjs";
 import { createDesktopVaultKeyProvider } from "./secure-vault-key.mjs";
 import { createDesktopMeteringSignerProvider } from "./secure-metering-signer.mjs";
+import { ensureRenworkCliWrapper } from "./renwork-cli-wrapper.mjs";
 import { createComputerHistory } from "./computer-history.mjs";
 import {
   clearOpenworkSentrySession,
@@ -2583,6 +2584,28 @@ ipcMain.handle("openwork:terminal:create", async (event, options = {}) => {
   const rows = Number.isFinite(options?.rows) ? Math.max(5, Math.floor(options.rows)) : 24;
   const terminalId = `term_${nextTerminalId++}`;
   const shellPath = defaultTerminalShell();
+  const workspaceState = await workspaceStore.readWorkspaceState();
+  const localWorkspaces = workspaceState.workspaces.filter((workspace) => workspace?.workspaceType !== "remote");
+  const selectedWorkspace = localWorkspaces
+    .filter((workspace) => {
+      const root = String(workspace?.path ?? "").trim();
+      return root && (cwd === root || cwd.startsWith(`${root}${path.sep}`));
+    })
+    .sort((left, right) => String(right.path ?? "").length - String(left.path ?? "").length)[0]
+    ?? localWorkspaces.find((workspace) => workspace?.id === (workspaceState.selectedId || workspaceState.activeId))
+    ?? localWorkspaces[0];
+  const serverInfo = await runtimeManager.openworkServerInfo();
+  const cliDirectory = await ensureRenworkCliWrapper({
+    userDataPath: app.getPath("userData"),
+    executablePath: process.execPath,
+  });
+  const cliRuntimeEnv = serverInfo?.running && serverInfo.baseUrl && serverInfo.clientToken && selectedWorkspace?.id
+    ? {
+        RENWORK_SERVER_URL: serverInfo.baseUrl,
+        RENWORK_SERVER_TOKEN: serverInfo.clientToken,
+        RENWORK_WORKSPACE_ID: String(selectedWorkspace.id),
+      }
+    : {};
   const child = pty.spawn(shellPath, [], {
     name: "xterm-256color",
     cols,
@@ -2593,6 +2616,8 @@ ipcMain.handle("openwork:terminal:create", async (event, options = {}) => {
       TERM: "xterm-256color",
       COLORTERM: "truecolor",
       OPENWORK_TERMINAL: "1",
+      PATH: `${cliDirectory}${path.delimiter}${process.env.PATH ?? ""}`,
+      ...cliRuntimeEnv,
     },
   });
 

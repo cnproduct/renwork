@@ -69,6 +69,7 @@ import {
 } from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
 import ConnectionsModals from "@/react-app/domains/connections/modals";
 import { AiSettingsView } from "@/react-app/domains/settings/pages/ai-view";
+import { CliRuntimeSettings } from "@/react-app/domains/settings/cli-runtime-settings";
 import { CustomProvidersDialog } from "@/react-app/domains/settings/custom-providers-dialog";
 // Side-effect imports: register extension config components into the registry.
 import "@/react-app/domains/settings/ollama-config";
@@ -2305,6 +2306,12 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             showOpenWorkModelsSyncing={showOpenWorkModelsSyncing}
             onSubscribeOpenWorkModels={subscribeToOpenWorkModels}
             onDismissOpenWorkModels={dismissOpenWorkModelsPromo}
+            cliRuntimesView={personalSubscriptionOAuthAllowed ? (
+              <CliRuntimeSettings
+                client={openworkServerSnapshot.openworkServerClient}
+                workspaceId={selectedWorkspaceId}
+              />
+            ) : null}
             cloudProvidersView={
               <CloudProvidersView
                 embedded

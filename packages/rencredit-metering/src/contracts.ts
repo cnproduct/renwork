@@ -13,6 +13,8 @@ export const RENWORK_PROVIDER_PROTOCOLS = [
   "anthropic_compatible",
   "gemini",
   "opencode",
+  "codex_cli",
+  "antigravity_cli",
   "local",
 ] as const;
 export type RenWorkProviderProtocol = (typeof RENWORK_PROVIDER_PROTOCOLS)[number];
