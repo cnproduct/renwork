@@ -247,7 +247,22 @@ async function memberHasRenWorkInferenceAccess(input: { organizationId: OrgId; m
     ))
     .limit(1)
 
-  return Boolean(provider && key)
+  if (!provider || !key) {
+    return false
+  }
+
+  const enabledModelIds = Object.entries(RENWORK_MODEL_CATALOG)
+    .filter(([, model]) => model.enabled)
+    .map(([modelId]) => modelId)
+    .sort()
+  const storedModels = await db
+    .select({ modelId: LlmProviderModelTable.modelId })
+    .from(LlmProviderModelTable)
+    .where(eq(LlmProviderModelTable.llmProviderId, provider.id))
+  const storedModelIds = storedModels.map((model) => model.modelId).sort()
+
+  return storedModelIds.length === enabledModelIds.length
+    && storedModelIds.every((modelId, index) => modelId === enabledModelIds[index])
 }
 
 /**
