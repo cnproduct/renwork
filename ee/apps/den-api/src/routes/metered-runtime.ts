@@ -94,11 +94,15 @@ async function localMeteringAccess(principal: InferencePrincipal, modelSku: stri
     throw new Error("MODEL_NOT_ALLOWED_BY_ORGANIZATION")
   }
   const providers = new Map(catalog.providers.map((provider) => [provider.id, provider]))
-  const route = model.routes.filter((candidate) => candidate.enabled && ["local", "byok"].includes(candidate.source))
+  const healthyRoutes = model.routes.filter((candidate) => candidate.enabled)
     .filter((candidate) => {
       const provider = providers.get(candidate.providerId)
       return provider?.enabled && provider.health !== "offline"
-    }).sort((left, right) => left.priority - right.priority)[0]
+    }).sort((left, right) => left.priority - right.priority)
+  const route = healthyRoutes.find((candidate) => ["local", "byok"].includes(candidate.source))
+  if (!route && healthyRoutes.some((candidate) => !["local", "byok"].includes(candidate.source))) {
+    throw new Error("CLOUD_GATEWAY_REQUIRED")
+  }
   if (!route) throw new Error("LOCAL_MODEL_ROUTE_NOT_GRANTED")
   return { catalog, model, route, policy }
 }
@@ -192,7 +196,10 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
       eq(RenCreditRuntimeDeviceTable.device_id, deviceId),
     )).limit(1)
     if (existing?.public_key_fingerprint === publicKey.fingerprint) {
-      await db.update(RenCreditRuntimeDeviceTable).set({ last_seen_at: new Date() })
+      await db.update(RenCreditRuntimeDeviceTable).set({
+        inference_key_id: principal.inferenceKeyId,
+        last_seen_at: new Date(),
+      })
         .where(eq(RenCreditRuntimeDeviceTable.id, existing.id))
       return c.json({ deviceId, publicKeyFingerprint: publicKey.fingerprint, status: existing.status })
     }
@@ -232,6 +239,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
       return c.json({ error: { code: "VALIDATION_FAILED" } }, 400)
     }
     try {
+      const { catalog, model, route, policy } = await localMeteringAccess(principal, body.modelSku)
       const [device] = await db.select({ id: RenCreditRuntimeDeviceTable.id }).from(RenCreditRuntimeDeviceTable).where(and(
         eq(RenCreditRuntimeDeviceTable.organization_id, principal.organizationId),
         eq(RenCreditRuntimeDeviceTable.org_membership_id, principal.memberId),
@@ -240,7 +248,6 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
         eq(RenCreditRuntimeDeviceTable.status, "active"),
       )).limit(1)
       if (!device) throw new Error("LOCAL_RUNTIME_DEVICE_NOT_APPROVED")
-      const { catalog, model, route, policy } = await localMeteringAccess(principal, body.modelSku)
       const billingMode = catalog.billingPolicy[route.source]
       const provider = catalog.providers.find((candidate) => candidate.id === route.providerId)
       const reservedMicroCredits = billingMode === "free" ? 0 : calculateRenCreditMicroCharge(body.estimatedUsage, model)

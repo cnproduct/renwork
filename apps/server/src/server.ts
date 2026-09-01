@@ -1386,12 +1386,21 @@ export async function proxyOpencodeRequest(input: {
     const existing = await readOpenCodeMessages({ baseUrl, sessionId, headers });
     const beforeAssistantIds = new Set(existing.flatMap((message) =>
       message.info?.role === "assistant" && typeof message.info.id === "string" ? [message.info.id] : []));
-    const reservation = await input.localRuntimeMetering.reserve({
-      modelSku: meteredModelSku(kind, body),
-      body,
-    });
-    body = rewriteMeteredModel(kind, body, reservation);
-    meteredRun = { reservation, sessionId, beforeAssistantIds };
+    try {
+      const reservation = await input.localRuntimeMetering.reserve({
+        modelSku: meteredModelSku(kind, body),
+        body,
+      });
+      body = rewriteMeteredModel(kind, body, reservation);
+      meteredRun = { reservation, sessionId, beforeAssistantIds };
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.code !== "CLOUD_GATEWAY_REQUIRED") {
+        throw error;
+      }
+      // Official RenWork models stay on the synthetic `renwork` provider and
+      // are reserved/captured once by Den's inference gateway. Only local
+      // OAuth/BYOK grants are rewritten and settled by the signed desktop path.
+    }
   }
   if (pool && method === "GET" && isEngineEventPath(proxyPath)) {
     return proxyEngineEventStreams({

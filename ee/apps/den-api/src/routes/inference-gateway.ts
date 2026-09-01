@@ -141,7 +141,12 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     if (!isRecord(body) || typeof body.model !== "string") {
       return c.json({ error: { code: "VALIDATION_FAILED", message: "model and a valid JSON request body are required." } }, 400)
     }
-    const idempotencyKey = c.req.header("Idempotency-Key")?.trim()
+    const explicitIdempotencyKey = c.req.header("Idempotency-Key")?.trim()
+    const desktopClient = c.req.header("X-RenWork-Client")?.trim().toLowerCase() === "desktop"
+    const runId = c.req.header("X-RenWork-Run-Id")?.trim() || randomUUID()
+    const idempotencyKey = explicitIdempotencyKey || (desktopClient
+      ? `desktop:${principal.inferenceKeyId}:${runId}`
+      : null)
     if (!idempotencyKey) {
       return c.json({ error: { code: "IDEMPOTENCY_KEY_REQUIRED", message: "Idempotency-Key is required for metered inference." } }, 400)
     }
@@ -202,7 +207,6 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     const estimatedUsage = estimateOpenAiRequestUsage(body)
     const billingMode = catalog.billingPolicy[route.source]
     const reservedMicroCredits = billingMode === "free" ? 0 : calculateRenCreditMicroCharge(estimatedUsage, model)
-    const runId = c.req.header("X-RenWork-Run-Id")?.trim() || randomUUID()
     let reservation
     try {
       const reserved = await reserveInferenceCredits({

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { ApiError } from "./errors.js";
 import { proxyOpencodeRequest } from "./server.js";
 import type { LocalRuntimeReservation, RenCreditLocalRuntimePort } from "./rencredit-local-runtime.js";
 import type { ServerConfig, WorkspaceInfo } from "./types.js";
@@ -106,6 +107,80 @@ test("desktop OAuth prompt freezes RenCredit, rewrites only inside the host, and
       hasResult: true,
       providerResponseId: "new-1,new-2",
     });
+  } finally {
+    engine.stop(true);
+  }
+});
+
+test("official RenWork models remain on the cloud gateway and are not double metered locally", async () => {
+  let promptBody: unknown = null;
+  const engine = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const url = new URL(request.url);
+      if (url.pathname === "/session/ses_cloud/message") return Response.json([]);
+      if (url.pathname === "/session/ses_cloud/prompt_async" && request.method === "POST") {
+        promptBody = await request.json();
+        return new Response(null, { status: 204 });
+      }
+      return new Response(null, { status: 404 });
+    },
+  });
+  let settlementCalled = false;
+  const metering: RenCreditLocalRuntimePort = {
+    reserve: async () => {
+      throw new ApiError(409, "CLOUD_GATEWAY_REQUIRED", "Use the RenWork cloud gateway.");
+    },
+    settle: async () => { settlementCalled = true; },
+    release: async () => { settlementCalled = true; },
+  };
+  const workspace: WorkspaceInfo = {
+    id: "ws_cloud",
+    name: "Remote",
+    path: "/tmp/remote",
+    preset: "remote",
+    workspaceType: "remote",
+    baseUrl: `http://127.0.0.1:${engine.port}`,
+  };
+  const config: ServerConfig = {
+    host: "127.0.0.1",
+    port: 0,
+    token: "token",
+    hostToken: "host",
+    approval: { mode: "auto", timeoutMs: 1_000 },
+    corsOrigins: ["*"],
+    workspaces: [workspace],
+    authorizedRoots: [],
+    readOnly: false,
+    startedAt: Date.now(),
+    tokenSource: "cli",
+    hostTokenSource: "cli",
+    logFormat: "pretty",
+    logRequests: false,
+    meteredRuntimeRequired: true,
+  };
+  try {
+    const response = await proxyOpencodeRequest({
+      config,
+      workspace,
+      localRuntimeMetering: metering,
+      proxyPath: "/session/ses_cloud/prompt_async",
+      url: new URL("http://localhost/workspace/ws_cloud/opencode/session/ses_cloud/prompt_async"),
+      request: new Request("http://localhost/workspace/ws_cloud/opencode/session/ses_cloud/prompt_async", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          parts: [{ type: "text", text: "hello" }],
+          model: { providerID: "renwork", modelID: "renwork-code-kimi-k3" },
+        }),
+      }),
+    });
+    expect(response.status).toBe(204);
+    expect(promptBody).toEqual({
+      parts: [{ type: "text", text: "hello" }],
+      model: { providerID: "renwork", modelID: "renwork-code-kimi-k3" },
+    });
+    expect(settlementCalled).toBe(false);
   } finally {
     engine.stop(true);
   }

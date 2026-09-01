@@ -106,6 +106,9 @@ function buildRenWorkProviderConfig() {
     api: `${env.inferenceProxyBaseUrl.replace(/\/+$/, "")}/api/v1`,
     options: {
       baseURL: `${env.inferenceProxyBaseUrl.replace(/\/+$/, "")}/api/v1`,
+      headers: {
+        "X-RenWork-Client": "desktop",
+      },
     },
   }
 }
@@ -228,7 +231,7 @@ async function ensureMemberInferenceAccess(input: { organizationId: OrgId; membe
 
 async function memberHasRenWorkInferenceAccess(input: { organizationId: OrgId; memberId: MemberId }) {
   const [provider] = await db
-    .select({ id: LlmProviderTable.id })
+    .select({ id: LlmProviderTable.id, providerConfig: LlmProviderTable.providerConfig })
     .from(LlmProviderTable)
     .where(and(
       eq(LlmProviderTable.organizationId, input.organizationId),
@@ -248,6 +251,12 @@ async function memberHasRenWorkInferenceAccess(input: { organizationId: OrgId; m
     .limit(1)
 
   if (!provider || !key) {
+    return false
+  }
+
+  const providerOptions = isRecord(provider.providerConfig?.options) ? provider.providerConfig.options : null
+  const providerHeaders = isRecord(providerOptions?.headers) ? providerOptions.headers : null
+  if (providerHeaders?.["X-RenWork-Client"] !== "desktop") {
     return false
   }
 

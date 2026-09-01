@@ -17,6 +17,11 @@ describe("RenWork production inference gateway", () => {
     expect(gateway).not.toContain('c.req.header("X-Organization-Id")')
   })
 
+  test("lets the signed desktop provider supply an automatic per-run idempotency key", () => {
+    expect(gateway).toContain('c.req.header("X-RenWork-Client")')
+    expect(gateway).toContain('`desktop:${principal.inferenceKeyId}:${runId}`')
+  })
+
   test("reserves before egress and releases every failed or empty result", () => {
     expect(gateway.indexOf("reserveInferenceCredits({")).toBeLessThan(gateway.indexOf("await fetch(chatCompletionsUrl"))
     expect(gateway).toContain("UPSTREAM_NETWORK_ERROR")
