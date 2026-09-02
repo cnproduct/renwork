@@ -8,8 +8,10 @@ import {
   createDefaultRenWorkModelCatalog,
   createRenWorkModelCatalogService,
   mergeMissingDefaultCatalogEntries,
+  migrateLegacyOpenAIOAuthProvider,
   normalizeAdminModelCatalog,
   OPENAI_OAUTH_CATALOG_MIGRATION,
+  OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION,
   validateAdminModelCatalog,
   type RenWorkAdminModelCatalog,
 } from "@openwork/rencredit-metering";
@@ -25,25 +27,37 @@ app.use("*", logger());
 const STATE_FILE = process.env.DATA_PATH || "/tmp/renwork_cloud_state.json";
 
 let modelCatalog = createDefaultRenWorkModelCatalog();
-let appliedCatalogMigrations = [OPENAI_OAUTH_CATALOG_MIGRATION];
+let appliedCatalogMigrations = [OPENAI_OAUTH_CATALOG_MIGRATION, OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION];
 
 function loadState() {
   try {
     if (fs.existsSync(STATE_FILE)) {
       const parsed = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
       if (parsed.modelCatalog) {
-        const normalizedCatalog = normalizeAdminModelCatalog(parsed.modelCatalog);
+        const rawCatalog = parsed.modelCatalog;
+        const normalizedCatalog = normalizeAdminModelCatalog(rawCatalog);
         validateAdminModelCatalog(normalizedCatalog);
         appliedCatalogMigrations = Array.isArray(parsed.appliedCatalogMigrations)
           ? parsed.appliedCatalogMigrations.filter((value: unknown): value is string => typeof value === "string")
           : [];
-        if (appliedCatalogMigrations.includes(OPENAI_OAUTH_CATALOG_MIGRATION)) {
-          modelCatalog = normalizedCatalog;
-        } else {
-          const merged = mergeMissingDefaultCatalogEntries(normalizedCatalog, createDefaultRenWorkModelCatalog());
-          validateAdminModelCatalog(merged.catalog);
-          modelCatalog = merged.catalog;
+        const defaults = createDefaultRenWorkModelCatalog();
+        let nextCatalog = normalizedCatalog;
+        let shouldSave = false;
+        if (!appliedCatalogMigrations.includes(OPENAI_OAUTH_CATALOG_MIGRATION)) {
+          const merged = mergeMissingDefaultCatalogEntries(nextCatalog, defaults);
+          nextCatalog = merged.catalog;
           appliedCatalogMigrations.push(OPENAI_OAUTH_CATALOG_MIGRATION);
+          shouldSave = true;
+        }
+        if (!appliedCatalogMigrations.includes(OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION)) {
+          const migrated = migrateLegacyOpenAIOAuthProvider(nextCatalog, rawCatalog, defaults);
+          nextCatalog = migrated.catalog;
+          appliedCatalogMigrations.push(OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION);
+          shouldSave = true;
+        }
+        validateAdminModelCatalog(nextCatalog);
+        modelCatalog = nextCatalog;
+        if (shouldSave) {
           saveState();
         }
       }

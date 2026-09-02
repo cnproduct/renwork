@@ -13,6 +13,7 @@ const DEFAULT_RATES = {
 } as const;
 
 export const OPENAI_OAUTH_CATALOG_MIGRATION = "v13-openai-oauth-chat-models";
+export const OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION = "v13-openai-oauth-provider-policy";
 
 function defaultModel(input: {
   sku: string;
@@ -301,6 +302,75 @@ export function mergeMissingDefaultCatalogEntries(
       updatedAt: defaults.updatedAt,
       providers: [...persisted.providers, ...missingProviders],
       models: [...persisted.models, ...missingModels],
+    },
+  };
+}
+
+/**
+ * Catalogs written before the provider-governance fields existed can already
+ * contain OpenCode's built-in `openai` runtime row. Normalization must remain
+ * conservative, so it projects that row as unauthenticated. Upgrade only the
+ * exact legacy shape whose governance fields were all absent; an explicit
+ * administrator choice, including `authMode: "none"`, is never overwritten.
+ */
+export function migrateLegacyOpenAIOAuthProvider(
+  persisted: RenWorkAdminModelCatalog,
+  rawPersisted: unknown,
+  defaults: RenWorkAdminModelCatalog,
+): { catalog: RenWorkAdminModelCatalog; changed: boolean } {
+  if (!rawPersisted || typeof rawPersisted !== "object") return { catalog: persisted, changed: false };
+  const rawProviders = (rawPersisted as { providers?: unknown }).providers;
+  if (!Array.isArray(rawProviders)) return { catalog: persisted, changed: false };
+
+  const rawOpenAI = rawProviders.find((provider): provider is Record<string, unknown> => (
+    Boolean(provider) && typeof provider === "object" && (provider as { id?: unknown }).id === "openai"
+  ));
+  if (!rawOpenAI) return { catalog: persisted, changed: false };
+
+  const governanceFields = [
+    "authMode",
+    "credentialStore",
+    "executionScope",
+    "sharingScope",
+    "deviceOAuthPolicy",
+  ] as const;
+  if (governanceFields.some((field) => Object.prototype.hasOwnProperty.call(rawOpenAI, field))) {
+    return { catalog: persisted, changed: false };
+  }
+
+  const currentIndex = persisted.providers.findIndex((provider) => provider.id === "openai");
+  const oauthDefault = defaults.providers.find((provider) => provider.id === "openai");
+  const current = persisted.providers[currentIndex];
+  if (
+    currentIndex < 0
+    || !current
+    || !oauthDefault
+    || current.kind !== "runtime"
+    || current.protocol !== "opencode"
+    || current.baseUrl !== null
+    || current.credentialRef !== null
+  ) {
+    return { catalog: persisted, changed: false };
+  }
+
+  const providers = [...persisted.providers];
+  providers[currentIndex] = {
+    ...current,
+    authMode: oauthDefault.authMode,
+    credentialStore: oauthDefault.credentialStore,
+    executionScope: oauthDefault.executionScope,
+    sharingScope: oauthDefault.sharingScope,
+    deviceOAuthPolicy: oauthDefault.deviceOAuthPolicy
+      ? { ...oauthDefault.deviceOAuthPolicy }
+      : null,
+  };
+  return {
+    changed: true,
+    catalog: {
+      ...persisted,
+      version: `${persisted.version}-${OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION}`,
+      updatedAt: defaults.updatedAt,
+      providers,
     },
   };
 }
