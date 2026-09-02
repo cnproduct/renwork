@@ -15,14 +15,14 @@ import { db } from "./db.js"
 
 type OrganizationId = typeof RenCreditWalletTable.$inferSelect.organization_id
 type MemberId = typeof InferenceKeyTable.$inferSelect.org_membership_id
-type InferenceKeyId = typeof InferenceKeyTable.$inferSelect.id
+type InferenceKeyId = NonNullable<typeof InferenceKeyTable.$inferSelect.id>
 type ReservationId = typeof RenCreditReservationTable.$inferSelect.id
 
 export type RenCreditTaskReceipt = {
   id: string
   run_id: string
   model_sku: string
-  billing_mode: "token_metered" | "free"
+  billing_mode: "token_metered" | "outcome_metered" | "free"
   status: "reserved" | "captured" | "released"
   reserved_microcredits: number
   captured_microcredits: number
@@ -70,6 +70,20 @@ export type ReserveInferenceInput = InferencePrincipal & {
     memberMonthlyMicroCredits: number | null
   }
   maxConcurrentRunsPerUser?: number
+}
+
+export type ReserveProductCreditsInput = {
+  organizationId: OrganizationId
+  memberId: MemberId
+  runId: string
+  idempotencyKey: string
+  productSku: string
+  priceVersion: string
+  providerId: string
+  reservedMicroCredits: number
+  expiresAt: Date
+  pricingSnapshot: Record<string, unknown>
+  maxConcurrentRunsPerUser: number
 }
 
 function hashInferenceKey(value: string) {
@@ -195,7 +209,11 @@ export async function listMemberRenCreditTaskReceipts(input: {
 
   return rows.map((row) => ({
     ...row,
-    billing_mode: row.billing_mode === "free" ? "free" : "token_metered",
+    billing_mode: row.billing_mode === "free"
+      ? "free"
+      : row.billing_mode === "outcome_metered"
+        ? "outcome_metered"
+        : "token_metered",
     actual_usage: safeTokenUsage(row.actual_usage),
     created_at: safeDate(row.created_at)!,
     settled_at: safeDate(row.settled_at),
@@ -265,7 +283,6 @@ export async function reserveInferenceCredits(input: ReserveInferenceInput) {
 
     if (!wallet || wallet.status !== "active") throw new Error("RENCREDIT_WALLET_UNAVAILABLE")
     if (wallet.available_microcredits < input.reservedMicroCredits) throw new Error("INSUFFICIENT_RENCREDIT")
-
     const now = new Date()
     if (input.maxConcurrentRunsPerUser !== undefined) {
       if (!Number.isSafeInteger(input.maxConcurrentRunsPerUser) || input.maxConcurrentRunsPerUser <= 0) {
@@ -388,6 +405,174 @@ export async function reserveInferenceCredits(input: ReserveInferenceInput) {
   })
 }
 
+/**
+ * Reserves a fixed, quoted product outcome. This deliberately does not invent
+ * token usage: the immutable quote is the pricing snapshot and a valid result
+ * is the only condition that can capture the reserved amount.
+ */
+export async function reserveProductCredits(input: ReserveProductCreditsInput) {
+  assertMicroCredits(input.reservedMicroCredits, "reservedMicroCredits")
+  if (input.reservedMicroCredits === 0) throw new Error("PRODUCT_PRICE_INVALID")
+
+  return db.transaction(async (tx) => {
+    const [wallet] = await tx.select().from(RenCreditWalletTable)
+      .where(eq(RenCreditWalletTable.organization_id, input.organizationId)).for("update").limit(1)
+    const [existing] = await tx.select().from(RenCreditReservationTable).where(and(
+      eq(RenCreditReservationTable.organization_id, input.organizationId),
+      eq(RenCreditReservationTable.idempotency_key, input.idempotencyKey),
+    )).for("update").limit(1)
+    if (existing) return { reservation: existing, replayed: true as const }
+
+    if (!wallet || wallet.status !== "active") throw new Error("RENCREDIT_WALLET_UNAVAILABLE")
+    if (wallet.available_microcredits < input.reservedMicroCredits) throw new Error("INSUFFICIENT_RENCREDIT")
+    if (!Number.isSafeInteger(input.maxConcurrentRunsPerUser) || input.maxConcurrentRunsPerUser <= 0) {
+      throw new Error("PRODUCT_CONCURRENCY_INVALID")
+    }
+    const activeRuns = await tx.select({ id: RenCreditReservationTable.id })
+      .from(RenCreditReservationTable)
+      .where(and(
+        eq(RenCreditReservationTable.organization_id, input.organizationId),
+        eq(RenCreditReservationTable.org_membership_id, input.memberId),
+        eq(RenCreditReservationTable.provider_id, input.providerId),
+        eq(RenCreditReservationTable.model_sku, input.productSku),
+        eq(RenCreditReservationTable.status, "reserved"),
+        gte(RenCreditReservationTable.expires_at, new Date()),
+      )).for("update")
+    if (activeRuns.length >= input.maxConcurrentRunsPerUser) {
+      throw new Error("PRODUCT_CONCURRENCY_EXCEEDED")
+    }
+
+    const reservationId = createDenTypeId("renCreditReservation")
+    const available = wallet.available_microcredits - input.reservedMicroCredits
+    const reserved = wallet.reserved_microcredits + input.reservedMicroCredits
+    const version = wallet.version + 1
+    await tx.update(RenCreditWalletTable).set({
+      available_microcredits: available,
+      reserved_microcredits: reserved,
+      version,
+    }).where(eq(RenCreditWalletTable.organization_id, input.organizationId))
+    await tx.insert(RenCreditReservationTable).values({
+      id: reservationId,
+      organization_id: input.organizationId,
+      org_membership_id: input.memberId,
+      inference_key_id: null,
+      run_id: input.runId,
+      idempotency_key: input.idempotencyKey,
+      model_sku: input.productSku,
+      catalog_version: input.priceVersion,
+      route_id: input.productSku,
+      provider_id: input.providerId,
+      upstream_model_id: input.productSku,
+      billing_mode: "outcome_metered",
+      reserved_microcredits: input.reservedMicroCredits,
+      estimated_usage: { kind: "product_outcome", units: 1 },
+      pricing_snapshot: input.pricingSnapshot,
+      expires_at: input.expiresAt,
+    })
+    await tx.insert(RenCreditLedgerEntryTable).values({
+      id: createDenTypeId("renCreditLedgerEntry"),
+      organization_id: input.organizationId,
+      reservation_id: reservationId,
+      entry_type: "reserve",
+      idempotency_key: `${input.idempotencyKey}:reserve`,
+      amount_microcredits: input.reservedMicroCredits,
+      available_delta_microcredits: -input.reservedMicroCredits,
+      reserved_delta_microcredits: input.reservedMicroCredits,
+      available_balance_after: available,
+      reserved_balance_after: reserved,
+      wallet_version_after: version,
+      reason_code: "PRODUCT_OUTCOME_RESERVE",
+      metadata: { runId: input.runId, productSku: input.productSku, priceVersion: input.priceVersion },
+    })
+    const [created] = await tx.select().from(RenCreditReservationTable)
+      .where(eq(RenCreditReservationTable.id, reservationId)).limit(1)
+    if (!created) throw new Error("RENCREDIT_RESERVATION_CREATE_FAILED")
+    return { reservation: created, replayed: false as const }
+  })
+}
+
+async function settleProductCredits(input: {
+  reservationId: ReservationId
+  capture: boolean
+  providerResponseId: string
+  resultHash?: string
+  failureCode?: string
+}) {
+  return db.transaction(async (tx) => {
+    const [reservation] = await tx.select().from(RenCreditReservationTable)
+      .where(eq(RenCreditReservationTable.id, input.reservationId)).for("update").limit(1)
+    if (!reservation) throw new Error("RENCREDIT_RESERVATION_NOT_FOUND")
+    if (reservation.billing_mode !== "outcome_metered") throw new Error("RENCREDIT_RESERVATION_KIND_MISMATCH")
+    const targetStatus = input.capture ? "captured" : "released"
+    if (reservation.status === targetStatus) return reservation
+    if (reservation.status !== "reserved") throw new Error("RENCREDIT_SETTLEMENT_CONFLICT")
+
+    const [wallet] = await tx.select().from(RenCreditWalletTable)
+      .where(eq(RenCreditWalletTable.organization_id, reservation.organization_id)).for("update").limit(1)
+    if (!wallet) throw new Error("RENCREDIT_WALLET_UNAVAILABLE")
+
+    const captured = input.capture ? reservation.reserved_microcredits : 0
+    const released = input.capture ? 0 : reservation.reserved_microcredits
+    const available = wallet.available_microcredits + released
+    const reserved = wallet.reserved_microcredits - reservation.reserved_microcredits
+    const version = wallet.version + 1
+    const status = input.capture ? "captured" as const : "released" as const
+
+    await tx.update(RenCreditWalletTable).set({
+      available_microcredits: available,
+      reserved_microcredits: reserved,
+      version,
+    }).where(eq(RenCreditWalletTable.organization_id, reservation.organization_id))
+    await tx.update(RenCreditReservationTable).set({
+      status,
+      captured_microcredits: captured,
+      released_microcredits: released,
+      provider_response_id: input.providerResponseId,
+      failure_code: input.failureCode,
+      has_result: input.capture,
+      settled_at: new Date(),
+    }).where(eq(RenCreditReservationTable.id, reservation.id))
+    await tx.insert(RenCreditLedgerEntryTable).values({
+      id: createDenTypeId("renCreditLedgerEntry"),
+      organization_id: reservation.organization_id,
+      reservation_id: reservation.id,
+      entry_type: input.capture ? "capture" : "release",
+      idempotency_key: `${reservation.id}:product-settle`,
+      amount_microcredits: captured,
+      available_delta_microcredits: released,
+      reserved_delta_microcredits: -reservation.reserved_microcredits,
+      available_balance_after: available,
+      reserved_balance_after: reserved,
+      wallet_version_after: version,
+      reason_code: input.capture ? "PRODUCT_OUTCOME_CAPTURE" : "PRODUCT_NO_RESULT_RELEASE",
+      metadata: {
+        providerResponseId: input.providerResponseId,
+        ...(input.resultHash ? { resultHash: input.resultHash } : {}),
+        ...(input.failureCode ? { failureCode: input.failureCode } : {}),
+      },
+    })
+    return { ...reservation, status, captured_microcredits: captured, released_microcredits: released }
+  })
+}
+
+export async function captureProductCredits(input: {
+  reservationId: ReservationId
+  providerResponseId: string
+  resultHash: string
+}) {
+  if (!/^[a-f0-9]{64}$/.test(input.resultHash)) throw new Error("PRODUCT_RESULT_HASH_INVALID")
+  return settleProductCredits({ ...input, capture: true })
+}
+
+export async function releaseProductCredits(input: { reservationId: ReservationId; failureCode: string }) {
+  return settleProductCredits({
+    reservationId: input.reservationId,
+    capture: false,
+    providerResponseId: `failed:${input.reservationId}`,
+    failureCode: input.failureCode,
+  })
+}
+
 export async function settleInferenceCredits(input: {
   reservationId: ReservationId
   usage: RenWorkTokenUsage
@@ -495,14 +680,16 @@ export async function releaseInferenceCredits(input: { reservationId: Reservatio
 }
 
 export async function releaseExpiredInferenceReservations(limit = 100, now = new Date()) {
-  const expired = await db.select({ id: RenCreditReservationTable.id }).from(RenCreditReservationTable).where(and(
+  const expired = await db.select({
+    id: RenCreditReservationTable.id,
+    billingMode: RenCreditReservationTable.billing_mode,
+  }).from(RenCreditReservationTable).where(and(
     eq(RenCreditReservationTable.status, "reserved"),
     lt(RenCreditReservationTable.expires_at, now),
   )).limit(Math.max(1, Math.min(500, limit)))
-  const results = await Promise.allSettled(expired.map((reservation) => releaseInferenceCredits({
-    reservationId: reservation.id,
-    failureCode: "RESERVATION_EXPIRED",
-  })))
+  const results = await Promise.allSettled(expired.map((reservation) => reservation.billingMode === "outcome_metered"
+    ? releaseProductCredits({ reservationId: reservation.id, failureCode: "RESERVATION_EXPIRED" })
+    : releaseInferenceCredits({ reservationId: reservation.id, failureCode: "RESERVATION_EXPIRED" })))
   return {
     scanned: expired.length,
     released: results.filter((result) => result.status === "fulfilled").length,

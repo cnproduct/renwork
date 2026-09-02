@@ -182,7 +182,7 @@ export const RenCreditReservationTable = mysqlTable(
     id: denTypeIdColumn("renCreditReservation", "id").notNull().primaryKey(),
     organization_id: denTypeIdColumn("organization", "organization_id").notNull(),
     org_membership_id: denTypeIdColumn("member", "org_membership_id").notNull(),
-    inference_key_id: denTypeIdColumn("inferenceKey", "inference_key_id").notNull(),
+    inference_key_id: denTypeIdColumn("inferenceKey", "inference_key_id"),
     run_id: varchar("run_id", { length: 255 }).notNull(),
     idempotency_key: varchar("idempotency_key", { length: 255 }).notNull(),
     model_sku: varchar("model_sku", { length: 255 }).notNull(),

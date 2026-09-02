@@ -93,6 +93,7 @@ const updateOrganizationCapabilitiesSchema = z.object({
     mcpConnections: z.boolean().nullable().optional(),
     codemodeScripts: z.boolean().nullable().optional(),
     cloud: z.boolean().nullable().optional(),
+    minimaxH3Video: z.boolean().nullable().optional(),
   }),
 })
 
@@ -290,6 +291,7 @@ function readAdminVisibleOrganizationCapabilities(metadata: Record<string, unkno
     mcpConnections: memberFacingMcpConnectionsEnabled(metadata, { gatingEnabled: false }),
     codemodeScripts: codemodeScriptsEnabled(metadata),
     cloud: organizationCloudEnabled(metadata, { orgMode: env.orgMode }),
+    minimaxH3Video: normalizeOrganizationCapabilities(metadata).minimaxH3Video,
   }
 }
 
@@ -298,7 +300,7 @@ function readUnmanagedCapabilityMetadata(metadata: Record<string, unknown>): Rec
   const capabilities: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(raw)) {
-    if (key !== "installLinks" && key !== "mcpConnections" && key !== "codemodeScripts" && key !== "cloud") {
+    if (key !== "installLinks" && key !== "mcpConnections" && key !== "codemodeScripts" && key !== "cloud" && key !== "minimaxH3Video") {
       capabilities[key] = value
     }
   }
@@ -1488,6 +1490,14 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
           delete capabilities.cloud
         } else {
           capabilities.cloud = cloud
+        }
+      }
+      const minimaxH3Video = body.data.capabilities.minimaxH3Video
+      if (minimaxH3Video !== undefined) {
+        if (minimaxH3Video === null) {
+          delete capabilities.minimaxH3Video
+        } else {
+          capabilities.minimaxH3Video = minimaxH3Video
         }
       }
 

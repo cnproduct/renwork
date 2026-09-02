@@ -90,7 +90,12 @@ async function replaceOrganizationMetadata(metadata: Record<string, unknown>) {
     .where(drizzle.eq(schema.OrganizationTable.id, organizationId))
 }
 
-async function putCapabilities(capabilities: { installLinks?: boolean | null; mcpConnections?: boolean | null; cloud?: boolean | null }) {
+async function putCapabilities(capabilities: {
+  installLinks?: boolean | null
+  mcpConnections?: boolean | null
+  cloud?: boolean | null
+  minimaxH3Video?: boolean | null
+}) {
   return routeApp().request(`http://den.local/v1/admin/organizations/${organizationId}/capabilities`, {
     method: "PUT",
     headers: { "content-type": "application/json" },
@@ -220,6 +225,21 @@ test("admin capability routes show effective defaults while preserving raw overr
   expect(disableCloud.status).toBe(200)
   await expect(disableCloud.json()).resolves.toMatchObject({ capabilities: { cloud: false } })
   expect(readCapabilityMetadata(await readOrganizationMetadata())).toMatchObject({ installLinks: true, cloud: false })
+
+  const enableH3 = await putCapabilities({ minimaxH3Video: true })
+  expect(enableH3.status).toBe(200)
+  await expect(enableH3.json()).resolves.toMatchObject({ capabilities: { minimaxH3Video: true } })
+  expect(readCapabilityMetadata(await readOrganizationMetadata())).toMatchObject({ minimaxH3Video: true })
+
+  const disableH3 = await putCapabilities({ minimaxH3Video: false })
+  expect(disableH3.status).toBe(200)
+  await expect(disableH3.json()).resolves.toMatchObject({ capabilities: { minimaxH3Video: false } })
+  expect(readCapabilityMetadata(await readOrganizationMetadata())).toMatchObject({ minimaxH3Video: false })
+
+  const clearH3 = await putCapabilities({ minimaxH3Video: null })
+  expect(clearH3.status).toBe(200)
+  await expect(clearH3.json()).resolves.toMatchObject({ capabilities: { minimaxH3Video: false } })
+  expect("minimaxH3Video" in readCapabilityMetadata(await readOrganizationMetadata())).toBe(false)
 
   await replaceOrganizationMetadata({ connectEnabled: true, capabilities: { installLinks: true } })
   const disableFlatEnabledConnect = await putCapabilities({ mcpConnections: false })

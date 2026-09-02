@@ -11,7 +11,7 @@ import { z } from "zod"
  * Storage rides the existing organization metadata JSON column — the same
  * home as `limits`, `plan`, and `requireSso` — so no schema change is needed.
  */
-export const ORGANIZATION_CAPABILITY_KEYS = ["installLinks", "mcpConnections", "codemodeScripts", "cloud"] as const
+export const ORGANIZATION_CAPABILITY_KEYS = ["installLinks", "mcpConnections", "codemodeScripts", "cloud", "minimaxH3Video"] as const
 
 export const organizationCapabilityKeySchema = z.enum(ORGANIZATION_CAPABILITY_KEYS)
 
@@ -52,6 +52,7 @@ export function normalizeOrganizationCapabilities(metadata: MetadataInput): Orga
     mcpConnections: raw.mcpConnections === true,
     codemodeScripts: raw.codemodeScripts === true,
     cloud: raw.cloud === true,
+    minimaxH3Video: raw.minimaxH3Video === true,
   }
 }
 
@@ -72,6 +73,9 @@ export function readOrganizationCapabilityOverrides(metadata: MetadataInput): Pa
   }
   if (typeof raw.cloud === "boolean") {
     capabilities.cloud = raw.cloud
+  }
+  if (typeof raw.minimaxH3Video === "boolean") {
+    capabilities.minimaxH3Video = raw.minimaxH3Video
   }
 
   return capabilities
