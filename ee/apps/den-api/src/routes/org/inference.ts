@@ -63,7 +63,7 @@ const renCreditTaskReceiptSchema = z.object({
   id: z.string(),
   run_id: z.string(),
   model_sku: z.string(),
-  billing_mode: z.enum(["token_metered", "free"]),
+  billing_mode: z.enum(["token_metered", "outcome_metered", "free"]),
   status: z.enum(["reserved", "captured", "released"]),
   reserved_microcredits: z.number().int().nonnegative(),
   captured_microcredits: z.number().int().nonnegative(),

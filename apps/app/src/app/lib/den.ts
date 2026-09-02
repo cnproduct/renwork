@@ -237,7 +237,7 @@ export type DenRenCreditTaskReceipt = {
   id: string;
   runId: string;
   modelSku: string;
-  billingMode: "token_metered" | "free";
+  billingMode: "token_metered" | "outcome_metered" | "free";
   status: "reserved" | "captured" | "released";
   reservedMicroCredits: number;
   capturedMicroCredits: number;
@@ -260,6 +260,53 @@ export type DenRenCreditLedgerEntry = {
   walletVersionAfter: number;
   reasonCode: string;
   createdAt: string;
+};
+
+export type DenVideoGenerationCapability = {
+  visible: boolean;
+  enabled: boolean;
+  modes?: Array<"text_to_video" | "first_frame_to_video">;
+  resolution?: "768P";
+  minimumDurationSeconds?: 4;
+  maximumDurationSeconds?: 8;
+  maximumConcurrentJobs?: 1;
+};
+
+export type DenVideoGenerationInput = {
+  mode: "text_to_video" | "first_frame_to_video";
+  resolution: "768P";
+  durationSeconds: number;
+  aspectRatio: "16:9" | "9:16" | "1:1";
+  prompt: string;
+  firstFrameAssetId?: string;
+};
+
+export type DenVideoQuote = {
+  id: string;
+  amountMicroCredits: number;
+  priceVersion: string;
+  expiresAt: string;
+  direction: {
+    directedPrompt: string;
+    assetRoles: Array<{ role: "first_frame"; assetId: string }>;
+    acceptanceCriteria: string[];
+  };
+};
+
+export type DenVideoJob = {
+  id: string;
+  status: "submitted" | "running" | "succeeded" | "failed";
+  mode: "text_to_video" | "first_frame_to_video";
+  resolution: "768P";
+  durationSeconds: number;
+  reservedMicroCredits: number;
+  capturedMicroCredits: number;
+  assetUrl: string | null;
+  taskHash: string;
+  resultHash: string | null;
+  failureCode: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type DenCanonicalOrgRole = "super-admin" | "owner" | "admin" | "member";
@@ -651,7 +698,7 @@ function getRenCreditTaskReceipts(payload: unknown): DenRenCreditTaskReceipt[] |
     const settledAt = value.settled_at === null || typeof value.settled_at === "string" ? value.settled_at : undefined;
     if (
       !id || !runId || !modelSku || !createdAt
-      || (billingMode !== "token_metered" && billingMode !== "free")
+      || (billingMode !== "token_metered" && billingMode !== "outcome_metered" && billingMode !== "free")
       || (status !== "reserved" && status !== "captured" && status !== "released")
       || reservedMicroCredits === null || reservedMicroCredits < 0
       || capturedMicroCredits === null || capturedMicroCredits < 0
@@ -2523,6 +2570,7 @@ type DenRequestOptions = {
   timeoutMs?: number;
   organizationId?: string | null;
   automationModelAttentionCapable?: boolean;
+  idempotencyKey?: string;
 };
 
 async function fetchWithTimeout(fetchImpl: FetchLike, url: string, init: RequestInit, timeoutMs: number) {
@@ -2571,6 +2619,9 @@ async function requestJsonRaw<T>(
   }
   if (options.automationModelAttentionCapable) {
     headers[AUTOMATION_MODEL_ATTENTION_CAPABILITY_HEADER] = AUTOMATION_MODEL_ATTENTION_CAPABILITY;
+  }
+  if (options.idempotencyKey) {
+    headers["Idempotency-Key"] = options.idempotencyKey;
   }
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
@@ -2750,6 +2801,93 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
         throw new DenApiError(500, "invalid_rencredit_ledger_payload", "RenCredit ledger response was invalid.");
       }
       return entries;
+    },
+
+    async getVideoGenerationCapability(orgId: string): Promise<DenVideoGenerationCapability> {
+      return requestJson<DenVideoGenerationCapability>(baseUrls, "/v1/video-generation/capabilities", {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+    },
+
+    async uploadVideoFirstFrame(orgId: string, file: File): Promise<{ id: string; resultHash: string }> {
+      const url = `${resolveRequestBaseUrl(baseUrls, "/v1/video-generation/assets/first-frame")}/v1/video-generation/assets/first-frame`;
+      const headers: Record<string, string> = { Accept: "application/json", [ORG_PROXY_HEADER]: orgId };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const form = new FormData();
+      form.set("file", file);
+      const response = await fetchWithTimeout(resolveFetch(url), url, {
+        method: "POST",
+        headers,
+        body: form,
+        credentials: "include",
+      }, DEFAULT_DEN_TIMEOUT_MS);
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok || !isRecord(payload) || !isRecord(payload.asset)) {
+        throw new DenApiError(response.status, "video_asset_upload_failed", getErrorMessage(payload, "First-frame upload failed."));
+      }
+      const id = typeof payload.asset.id === "string" ? payload.asset.id : "";
+      const resultHash = typeof payload.asset.resultHash === "string" ? payload.asset.resultHash : "";
+      if (!id || !resultHash) throw new DenApiError(500, "invalid_video_asset_payload", "First-frame upload response was invalid.");
+      return { id, resultHash };
+    },
+
+    async createVideoGenerationQuote(orgId: string, input: DenVideoGenerationInput): Promise<DenVideoQuote> {
+      const payload = await requestJson<{ quote: DenVideoQuote }>(baseUrls, "/v1/video-generation/quotes", {
+        method: "POST",
+        token,
+        organizationId: orgId,
+        body: input,
+      });
+      return payload.quote;
+    },
+
+    async createVideoGenerationJob(orgId: string, quoteId: string, idempotencyKey: string): Promise<{ job: DenVideoJob; replayed: boolean }> {
+      return requestJson<{ job: DenVideoJob; replayed: boolean }>(baseUrls, "/v1/video-generation/jobs", {
+        method: "POST",
+        token,
+        organizationId: orgId,
+        idempotencyKey,
+        body: { quoteId, confirmed: true },
+        timeoutMs: 30_000,
+      });
+    },
+
+    async listVideoGenerationJobs(orgId: string): Promise<DenVideoJob[]> {
+      const payload = await requestJson<{ jobs: DenVideoJob[] }>(baseUrls, "/v1/video-generation/jobs", {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      return payload.jobs;
+    },
+
+    async getVideoGenerationJob(orgId: string, jobId: string): Promise<DenVideoJob> {
+      const payload = await requestJson<{ job: DenVideoJob }>(
+        baseUrls,
+        `/v1/video-generation/jobs/${encodeURIComponent(jobId)}`,
+        { method: "GET", token, organizationId: orgId, timeoutMs: 30_000 },
+      );
+      return payload.job;
+    },
+
+    async downloadVideoGenerationAsset(orgId: string, assetPath: string): Promise<Blob> {
+      if (!/^\/v1\/video-generation\/assets\/[A-Za-z0-9_-]+$/.test(assetPath)) {
+        throw new DenApiError(400, "invalid_video_asset_path", "Video asset path was invalid.");
+      }
+      const url = `${resolveRequestBaseUrl(baseUrls, assetPath)}${assetPath}`;
+      const headers: Record<string, string> = { Accept: "video/*", [ORG_PROXY_HEADER]: orgId };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const response = await fetchWithTimeout(resolveFetch(url), url, {
+        method: "GET",
+        headers,
+        credentials: "include",
+      }, 30_000);
+      if (!response.ok) {
+        throw new DenApiError(response.status, "video_asset_download_failed", `Video asset download failed with ${response.status}.`);
+      }
+      return response.blob();
     },
 
     async getDesktopConfig(orgId?: string | null): Promise<DenDesktopConfig> {

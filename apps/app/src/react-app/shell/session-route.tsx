@@ -482,6 +482,7 @@ export function SessionRoute() {
   const denSettings = readDenSettings();
   const [automationsSupported, setAutomationsSupported] = useState(true);
   const [automationsNeedAttention, setAutomationsNeedAttention] = useState(false);
+  const [videoGenerationVisible, setVideoGenerationVisible] = useState(false);
   useEffect(() => {
     if (!automationsRouteRequested || automationsEnabled) return;
     navigate("/", { replace: true });
@@ -525,6 +526,26 @@ export function SessionRoute() {
     denSettings.authToken,
     denSettings.baseUrl,
   ]);
+  useEffect(() => {
+    const authToken = denSettings.authToken?.trim();
+    const organizationId = denSettings.activeOrgId?.trim();
+    if (!denAuth.isSignedIn || !authToken || !organizationId) {
+      setVideoGenerationVisible(false);
+      return;
+    }
+    let cancelled = false;
+    const denClient = createDenClient({ baseUrl: denSettings.baseUrl, token: authToken });
+    void denClient.getVideoGenerationCapability(organizationId)
+      .then((capability) => {
+        if (!cancelled) setVideoGenerationVisible(capability.visible);
+      })
+      .catch(() => {
+        if (!cancelled) setVideoGenerationVisible(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [denAuth.isSignedIn, denSettings.activeOrgId, denSettings.authToken, denSettings.baseUrl]);
   const automationsNavigationAvailable = automationsEnabled;
   const reloadCoordinator = useReloadCoordinator();
   const checkDesktopRestriction = useCheckDesktopRestriction();
@@ -2694,6 +2715,10 @@ export function SessionRoute() {
           ? () => {
               navigate(automationsRoute());
             }
+          : undefined,
+        videoActive: false,
+        onOpenVideo: videoGenerationVisible
+          ? () => navigate(`/workspace/${encodeURIComponent(selectedWorkspaceId)}/video`)
           : undefined,
         onSelectWorkspace: async (workspaceId) => {
           if (workspaceId === selectedWorkspaceId) return true;

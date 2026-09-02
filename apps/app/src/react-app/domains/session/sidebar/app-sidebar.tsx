@@ -25,6 +25,7 @@ import {
   RotateCcw,
   Settings,
   FolderOpen,
+  Film,
   SquarePen,
   Tag,
   X,
@@ -894,6 +895,8 @@ export type AppSidebarProps = {
   automationsActive?: boolean;
   automationsNeedAttention?: boolean;
   onOpenAutomations?: () => void;
+  videoActive?: boolean;
+  onOpenVideo?: () => void;
   /** Opens the cross-session message search dialog (Cmd/Ctrl+Shift+F). */
   onOpenSessionSearch?: () => void;
   /** Back/forward across recently viewed conversations, rendered at the top of the sidebar. */
@@ -1207,6 +1210,14 @@ export function AppSidebar(props: AppSidebarProps) {
                   </span>
                 )}
                 onSelect={props.onOpenAutomations}
+              />
+            ) : null}
+            {props.onOpenVideo ? (
+              <SidebarDestination
+                active={props.videoActive === true}
+                icon={Film}
+                label="AI 生视频"
+                onSelect={props.onOpenVideo}
               />
             ) : null}
             <SidebarDestination

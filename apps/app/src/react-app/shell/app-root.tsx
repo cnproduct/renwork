@@ -48,6 +48,7 @@ import { WelcomeRoute } from "./welcome-route";
 import { readOrgSelectionPending } from "../../app/lib/den-sign-in-intent";
 import { UpdateNotifier } from "./update-notifier";
 import { signedInRoute } from "./den-signin-routing";
+import { VideoGenerationPage } from "../domains/video/video-generation-page";
 
 
 type DenSigninGateProps = {
@@ -459,6 +460,22 @@ export function AppRoot() {
                 element={
                   <DevProfiler id="SessionRoute">
                     <SessionRoute />
+                  </DevProfiler>
+                }
+              />
+              <Route
+                path="/workspace/:workspaceId/video"
+                element={
+                  <DevProfiler id="VideoGenerationRoute">
+                    <VideoGenerationPage />
+                  </DevProfiler>
+                }
+              />
+              <Route
+                path="/video"
+                element={
+                  <DevProfiler id="VideoGenerationRoute">
+                    <VideoGenerationPage />
                   </DevProfiler>
                 }
               />

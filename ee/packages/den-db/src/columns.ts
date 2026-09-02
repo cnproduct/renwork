@@ -151,6 +151,19 @@ export const mediumBlobColumn = (columnName: string) =>
     },
   })(columnName)
 
+export const longBlobColumn = (columnName: string) =>
+  customType<{ data: Uint8Array; driverData: Uint8Array }>({
+    dataType() {
+      return "longblob"
+    },
+    toDriver(value) {
+      return value
+    },
+    fromDriver(value) {
+      return Uint8Array.from(value)
+    },
+  })(columnName)
+
 export const denTypeIdColumn = <TName extends DenTypeIdName>(
   name: TName,
   columnName: string,

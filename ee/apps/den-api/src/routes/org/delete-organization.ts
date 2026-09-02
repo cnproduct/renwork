@@ -68,6 +68,9 @@ import {
   TelegramUpdateTable,
   TelemetryEventTable,
   TelemetrySessionDimensionTable,
+  VideoGenerationAssetTable,
+  VideoGenerationJobTable,
+  VideoGenerationQuoteTable,
   WorkerBundleTable,
   WorkerInstanceTable,
   WorkerTable,
@@ -505,6 +508,9 @@ export function registerDeleteOrganizationRoutes<T extends { Variables: OrgRoute
         await tx.delete(ScimGroupTable).where(eq(ScimGroupTable.organizationId, organizationId))
 
         await tx.delete(InferenceUsageLedgerEntryTable).where(eq(InferenceUsageLedgerEntryTable.organization_id, organizationId))
+        await tx.delete(VideoGenerationAssetTable).where(eq(VideoGenerationAssetTable.organization_id, organizationId))
+        await tx.delete(VideoGenerationJobTable).where(eq(VideoGenerationJobTable.organization_id, organizationId))
+        await tx.delete(VideoGenerationQuoteTable).where(eq(VideoGenerationQuoteTable.organization_id, organizationId))
         await tx.delete(RenCreditUsageEventTable).where(eq(RenCreditUsageEventTable.organization_id, organizationId))
         await tx.delete(RenCreditLedgerEntryTable).where(eq(RenCreditLedgerEntryTable.organization_id, organizationId))
         await tx.delete(RenCreditReservationTable).where(eq(RenCreditReservationTable.organization_id, organizationId))
