@@ -65,9 +65,13 @@ jobs:
           INPUT_PUSH: ${{ inputs.push }}
         run: |
           publish="false"
-          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+          # Branch pushes are validation builds. Publishing from every dev push
+          # couples CI health to the mutable GHCR package ACL and can overwrite
+          # deployable tags before acceptance. Only a release tag or an explicit
+          # workflow dispatch with push=true may publish artifacts.
+          if [[ "${GITHUB_REF_TYPE}" = "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
             publish="true"
-          elif [ "$INPUT_PUSH" = "true" ]; then
+          elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && [ "$INPUT_PUSH" = "true" ]; then
             publish="true"
           fi
 
@@ -243,7 +247,7 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           platforms: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/dev') && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
-          load: ${{ github.event_name == 'pull_request' }}
+          load: ${{ needs.artifact-version.outputs.publish != 'true' }}
           push: ${{ needs.artifact-version.outputs.publish == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

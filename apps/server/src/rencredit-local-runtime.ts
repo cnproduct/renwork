@@ -15,6 +15,7 @@ export type LocalRuntimeReservation = {
   reservationId: string;
   runId: string;
   modelSku: string;
+  reservedMicroCredits: number;
   providerID: string;
   modelID: string;
   adapter: string | null;
@@ -165,6 +166,8 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
       typeof reserved.payload.reservationId !== "string"
       || typeof reserved.payload.runId !== "string"
       || typeof reserved.payload.modelSku !== "string"
+      || !Number.isSafeInteger(reserved.payload.reservedMicroCredits)
+      || (reserved.payload.reservedMicroCredits as number) < 0
       || typeof execution?.providerID !== "string"
       || typeof execution.modelID !== "string"
       || !(execution.adapter === undefined || execution.adapter === null || typeof execution.adapter === "string")
@@ -175,6 +178,7 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
       reservationId: reserved.payload.reservationId,
       runId: reserved.payload.runId,
       modelSku: reserved.payload.modelSku,
+      reservedMicroCredits: reserved.payload.reservedMicroCredits as number,
       providerID: execution.providerID,
       modelID: execution.modelID,
       adapter: typeof execution.adapter === "string" ? execution.adapter : null,

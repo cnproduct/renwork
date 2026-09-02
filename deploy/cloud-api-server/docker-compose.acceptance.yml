@@ -1,0 +1,106 @@
+name: renwork-inference-v11
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    command:
+      - --performance_schema=OFF
+      - --innodb-buffer-pool-size=192M
+      - --innodb-log-buffer-size=16M
+      - --tmp-table-size=32M
+      - --max-heap-table-size=32M
+    environment:
+      MYSQL_ROOT_PASSWORD: ${ACCEPTANCE_MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: renwork_inference_v11
+      MYSQL_USER: renwork_v11
+      MYSQL_PASSWORD: ${ACCEPTANCE_MYSQL_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    volumes:
+      - mysql-v11-data:/var/lib/mysql
+
+  migrate:
+    image: ${RENWORK_ACCEPTANCE_IMAGE}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: "no"
+    command: ["node", "/app/ee/packages/den-db/dist/scripts/bootstrap.js"]
+    environment: &den-environment
+      NODE_ENV: production
+      NODE_OPTIONS: --conditions=production
+      PORT: "8792"
+      DB_MODE: mysql
+      DATABASE_URL: mysql://renwork_v11:${ACCEPTANCE_MYSQL_PASSWORD}@mysql:3306/renwork_inference_v11
+      BETTER_AUTH_SECRET: ${ACCEPTANCE_BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: http://127.0.0.1:8792
+      DEN_DB_ENCRYPTION_KEY: ${ACCEPTANCE_DEN_DB_ENCRYPTION_KEY}
+      DEN_ORG_MODE: multi_org
+      DEN_REQUIRE_EMAIL_VERIFICATION: "false"
+      DEN_API_PUBLIC_URL: http://127.0.0.1:8792
+      DEN_BETTER_AUTH_TRUSTED_ORIGINS: http://127.0.0.1:8792
+      CORS_ORIGINS: http://127.0.0.1:8792
+      PROVISIONER_MODE: stub
+      DEN_OBSERVABILITY_BACKEND: none
+      RENWORK_MODEL_CATALOG_BASE_URL: http://127.0.0.1:8089
+      RENWORK_MODEL_CATALOG_ADMIN_TOKEN: ${ACCEPTANCE_SUPER_ADMIN_TOKEN}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENCODE_GO_API_KEY: ${OPENCODE_GO_API_KEY}
+      AGNES_API_KEY: ${AGNES_API_KEY}
+      INFERENCE_PROXY_BASE_URL: http://127.0.0.1:8792
+      RENCREDIT_RESERVATION_SWEEP_INTERVAL_MS: "60000"
+
+  catalog:
+    image: ${RENWORK_ACCEPTANCE_IMAGE}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    command: ["node", "/app/ee/apps/den-api/catalog-runtime/dist/server.js"]
+    environment:
+      NODE_ENV: production
+      PORT: "8089"
+      RENWORK_SUPER_ADMIN_TOKEN: ${ACCEPTANCE_SUPER_ADMIN_TOKEN}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENCODE_GO_API_KEY: ${OPENCODE_GO_API_KEY}
+      AGNES_API_KEY: ${AGNES_API_KEY}
+      DATA_PATH: /data/catalog-state.json
+    volumes:
+      - ./catalog-runtime:/app/ee/apps/den-api/catalog-runtime:ro
+      - catalog-v11-data:/data
+    ports:
+      - "127.0.0.1:8892:8089"
+      - "127.0.0.1:8792:8792"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8089/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  den:
+    image: ${RENWORK_ACCEPTANCE_IMAGE}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      catalog:
+        condition: service_healthy
+    restart: unless-stopped
+    network_mode: service:catalog
+    command: ["node", "/app/ee/apps/den-api/dist/main.js"]
+    environment: *den-environment
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8792/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  mysql-v11-data:
+  catalog-v11-data:

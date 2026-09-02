@@ -47,6 +47,7 @@ function metering(options?: { adapter?: string; settleFails?: boolean }) {
         reservationId: "rsv_1",
         runId: runId ?? "run_1",
         modelSku,
+        reservedMicroCredits: 200,
         providerID: "codex-personal",
         modelID: "gpt-5-codex",
         adapter: options?.adapter ?? "codex_cli",
@@ -117,6 +118,7 @@ echo '{"type":"turn.completed","usage":{"input_tokens":10,"cached_input_tokens":
   const started = await manager.start({ runtime: "codex", workspaceId: "ws_1", workspacePath: directory, modelSku: "renwork-code", prompt: "do work" });
   expect(calls.reserved).toBe(1);
   expect(calls.settled).toBe(0);
+  expect(started.reservedMicroCredits).toBe(200);
   const completed = await terminalRun(manager, started.runId);
   expect(completed.state).toBe("succeeded");
   expect(completed.output).toBe("done");

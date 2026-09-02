@@ -61,16 +61,24 @@ describe("RenWork model catalog", () => {
     expect(() => requireSuperAdmin("super_admin")).not.toThrow();
   });
 
-  test("ships four executable RenWork product SKUs and keeps the default secret server-side", () => {
+  test("ships cloud and approved-device RenWork product SKUs without exposing credentials", () => {
     const catalog = createDefaultRenWorkModelCatalog(new Date("2026-08-28T12:00:00.000Z"));
     const publicCatalog = toPublicModelCatalog(catalog);
     expect(publicCatalog.models.map((model) => model.sku)).toEqual([
       "renwork-auto",
       "renwork-standard",
       "renwork-professional",
+      "renwork-codex",
       "renwork-ultimate",
     ]);
     expect(catalog.providers[0]?.credentialRef).toBe("env://OPENROUTER_API_KEY");
+    expect(catalog.providers[1]).toMatchObject({
+      protocol: "codex_cli",
+      authMode: "device_oauth",
+      credentialRef: null,
+      executionScope: "personal_device",
+      sharingScope: "user_private",
+    });
     expect(JSON.stringify(publicCatalog)).not.toContain("OPENROUTER_API_KEY");
   });
 

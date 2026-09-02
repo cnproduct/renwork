@@ -18,6 +18,7 @@ describe("RenCredit local OAuth runtime", () => {
             reservationId: "rsv_1",
             runId: "run_1",
             modelSku: "renwork-oauth-pro",
+            reservedMicroCredits: 21,
             execution: { providerID: "lpr_openai-seat", modelID: "gpt-5" },
           }, { status: 201 });
         }
@@ -45,7 +46,11 @@ describe("RenCredit local OAuth runtime", () => {
     try {
       const body = new TextEncoder().encode(JSON.stringify({ parts: [{ type: "text", text: "hello" }] })).buffer as ArrayBuffer;
       const reservation = await client.reserve({ modelSku: "renwork-oauth-pro", body, runId: "run_1" });
-      expect(reservation).toMatchObject({ providerID: "lpr_openai-seat", modelID: "gpt-5" });
+      expect(reservation).toMatchObject({
+        reservedMicroCredits: 21,
+        providerID: "lpr_openai-seat",
+        modelID: "gpt-5",
+      });
       expect(requests[1]?.idempotency).toBe("desktop:device_1:run_1");
 
       await client.settle(reservation, {

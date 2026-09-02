@@ -2672,6 +2672,7 @@ export interface RenWorkCliRun {
     cacheWriteTokens: number;
   } | null;
   reservationId: string;
+  reservedMicroCredits: number;
   settlement: {
     reservationId: string;
     status: string;
