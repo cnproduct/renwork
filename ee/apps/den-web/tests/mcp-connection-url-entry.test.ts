@@ -13,7 +13,7 @@ describe("MCP URL entry UI contract", () => {
     expect(screen).toContain('useState<"smart" | "advanced">(preset ? "advanced" : "smart")');
     expect(screen).toContain("Add an MCP server");
     expect(screen).toContain("Paste the MCP server URL");
-    expect(screen).toContain("Paste a server URL and we&apos;ll check it for you.");
+    expect(screen).toContain("Paste the MCP server URL and we&apos;ll find and check its authentication requirements.");
     expect(screen).toContain('placeholder="https://mcp.example.com/mcp"');
     expect(screen).toContain('if (kind !== "url" && kind !== "domain")');
     expect(screen).not.toContain('data-testid="select-custom-mcp"');

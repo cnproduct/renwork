@@ -14,7 +14,7 @@ const publicInstallers = read("_lib", "public-installers.ts");
 
 describe("Marketplace onboarding page", () => {
   test("reuses the landing download card and den choice cards", () => {
-    expect(screen).toContain("DownloadOpenWorkCard");
+    expect(screen).toContain("DownloadRenWorkCard");
     expect(screen).toContain("DenChoiceCard");
     expect(screen).toContain("DenSectionHeader");
     expect(screen).toContain("DenBadge");
@@ -29,7 +29,7 @@ describe("Marketplace onboarding page", () => {
     expect(screen).toContain("Turn on models");
     expect(screen).toContain("Bring your Own Keys");
     expect(screen).toContain("RenWork Models");
-    expect(screen).toContain("/openwork-mark.svg");
+    expect(screen).toContain("/renwork-mark.png");
   });
 
   test("keeps the installed flag and inference check", () => {

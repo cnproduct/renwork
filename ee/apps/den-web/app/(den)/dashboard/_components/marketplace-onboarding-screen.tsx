@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, KeyRound } from "lucide-react";
-import { DownloadOpenWorkCard, type DownloadCardInstallers } from "@openwork/ui/react";
+import {
+  DownloadOpenWorkCard as DownloadRenWorkCard,
+  type DownloadCardInstallers,
+} from "@openwork/ui/react";
 import { DenBadge } from "../../_components/ui/badge";
 import { DenChoiceCard } from "../../_components/ui/choice-card";
 import { DenSectionHeader } from "../../_components/ui/section-header";
@@ -60,10 +63,10 @@ function useInferenceEnabled() {
   });
 }
 
-function OpenWorkMark({ className = "h-5 w-5" }: { className?: string }) {
+function RenWorkMark({ className = "h-5 w-5" }: { className?: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src="/openwork-mark.svg" alt="" aria-hidden className={className} />
+    <img src="/renwork-mark.png" alt="" aria-hidden className={className} />
   );
 }
 
@@ -86,17 +89,17 @@ export function MarketplaceOnboardingScreen({
       <header className="mx-auto max-w-xl text-center">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-500">Get started</p>
         <h1 className="mt-3 text-[30px] font-semibold leading-[1.15] tracking-[-0.04em] text-gray-950 sm:text-[34px]">
-          {requiredDone ? `${orgName} is ready.` : `Get the OpenWork app`}
+          {requiredDone ? `${orgName} is ready.` : `Get the RenWork app`}
         </h1>
         <p className="mx-auto mt-3 max-w-lg text-[15px] leading-6 text-gray-500">
           {requiredDone
             ? "The desktop app is installed and models are available. Jump into your dashboard whenever you're ready."
-            : "OpenWork runs on the desktop app. Install it, sign in, and this workspace syncs automatically."}
+            : "RenWork runs on the desktop app. Install it, sign in, and this workspace syncs automatically."}
         </p>
       </header>
 
       <section className="mt-8 grid gap-4">
-        <DownloadOpenWorkCard installers={installers} releaseTag={releaseTag} />
+        <DownloadRenWorkCard installers={installers} releaseTag={releaseTag} />
         <div className="flex justify-center">
           {appInstalled ? (
             <DenBadge tone="success" icon={Check}>
@@ -137,7 +140,7 @@ export function MarketplaceOnboardingScreen({
         <div className="grid gap-4 lg:grid-cols-2">
           <DenChoiceCard
             testId="onboarding-choice-openwork-models"
-            icon={<OpenWorkMark />}
+            icon={<RenWorkMark />}
             title="RenWork Models"
             subtitle="No API keys, nothing to configure"
             badge={<DenBadge tone="info">Recommended</DenBadge>}

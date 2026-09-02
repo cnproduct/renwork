@@ -33,7 +33,7 @@ describe("mcpAuthorizationPendingDocument", () => {
     expect(document).toContain("Connect your account")
     expect(document).toContain("preparing the secure provider sign-in")
     expect(document).toContain("Keep this window open")
-    expect(document).toContain("OpenWork Connect")
+    expect(document).toContain("RenWork Connect")
     expect(document).toContain('role="status"')
     expect(document).toContain('aria-live="polite"')
     expect(document).toContain("Continue to your provider")

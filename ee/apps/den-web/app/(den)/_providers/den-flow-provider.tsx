@@ -526,12 +526,12 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     }
 
     if (desktopAuthRequested) {
-      setAuthInfo("Signed in. Returning to OpenWork...");
+      setAuthInfo("Signed in. Returning to RenWork...");
       return null;
     }
 
     if (webAuthRequested) {
-      setAuthInfo("Signed in. Returning to OpenWork...");
+      setAuthInfo("Signed in. Returning to RenWork...");
       return null;
     }
 
@@ -1060,7 +1060,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
       const openworkUrl = getDesktopHandoffOpenworkUrl(payload) ?? "";
       if (!openworkUrl) {
-        setAuthError("Desktop handoff succeeded, but no OpenWork redirect URL was returned.");
+        setAuthError("Desktop handoff succeeded, but no RenWork redirect URL was returned.");
         return;
       }
 
@@ -1068,7 +1068,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       setDesktopRedirectUrl(openworkUrl);
       window.location.assign(openworkUrl);
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Failed to open OpenWork.");
+      setAuthError(error instanceof Error ? error.message : "Failed to open RenWork.");
     } finally {
       setDesktopRedirectBusy(false);
     }
@@ -1125,7 +1125,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       redirectUrl.searchParams.set("grant", grant);
       window.location.replace(redirectUrl.toString());
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Failed to return to OpenWork Cloud.");
+      setAuthError(error instanceof Error ? error.message : "Failed to return to RenWork Cloud.");
     } finally {
       setWebRedirectBusy(false);
     }

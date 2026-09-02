@@ -87,8 +87,8 @@ describe("join organization invite clean layout contract", () => {
     expect(cardUsages.length).toBeGreaterThanOrEqual(8);
     expect(wideShellUsages.length).toBeGreaterThanOrEqual(8);
     expect(cardSource).toContain("rounded-[1.75rem] border border-slate-200/80 bg-white p-6 sm:p-8 md:p-10");
-    expect(cardSource).toContain("/openwork-mark.svg");
-    expect(cardSource).toContain("OpenWork Cloud");
+    expect(cardSource).toContain("/renwork-mark.png");
+    expect(cardSource).toContain("RenWork Cloud");
     expect(cardSource).toContain("OrganizationBrandIdentity");
     expect(source).toContain("text-[30px] font-semibold leading-[38px] tracking-[-0.03em]");
     expect(source).toContain('data-testid="join-org-invitation-details"');
@@ -227,7 +227,7 @@ describe("join organization invite clean layout contract", () => {
     });
 
     expect(legacyPreview?.organization.branding).toEqual({
-      appName: "OpenWork",
+      appName: "RenWork",
       logoUrl: null,
       iconUrl: null,
     });
@@ -239,26 +239,26 @@ describe("join organization invite clean layout contract", () => {
     const identitySource = readFileSync(brandIdentityPath, "utf8");
 
     expect(successSource).toContain("downloadCtaLabel");
-    expect(successSource).toContain("Already have OpenWork? Open it.");
+    expect(successSource).toContain("Already have RenWork? Open it.");
     expect(successSource).toContain("buildInstallDownloadHref");
     expect(successSource).toContain("startInstallerDownload");
     expect(successSource).not.toContain("window.location.assign(await createOrganizationInstallLink");
     expect(successSource).not.toContain("Get the desktop app");
-    expect(successSource).toContain("Return to OpenWork");
+    expect(successSource).toContain("Return to RenWork");
     expect(successSource).toContain("desktopAuthRequested");
     expect(successSource).toContain('data-testid="join-org-connected"');
     expect(successSource).toContain("Continue in the browser");
     expect(successSource).toContain("Email me the download link");
     expect(successSource).not.toContain("capabilities");
-    expect(successSource).not.toContain("Open OpenWork");
+    expect(successSource).not.toContain("Open RenWork");
     expect(successSource).toContain("<OnboardingCard organization={{ name: organizationName, brand }}>");
     expect(successSource).toContain("text-[30px] font-semibold leading-[38px] tracking-[-0.03em]");
     expect(successSource).toContain("den-button-primary min-h-12 w-full");
     expect(successSource).toContain("<span>You&apos;re in, welcome to</span>");
     expect(successSource).toContain('className="whitespace-nowrap">&apos;s {brand.appName}</span>');
     expect(installSource).toContain("DownloadPlatformGrid");
-    expect(installSource).toContain("<span>Download OpenWork Enterprise</span>");
-    expect(installSource).toContain("Download OpenWork");
+    expect(installSource).toContain("<span>Download RenWork Enterprise</span>");
+    expect(installSource).toContain("Download RenWork");
     expect(installSource).not.toContain('data-testid="install-cloud-download-primary"');
     expect(installSource).not.toContain("Other platforms");
     expect(installSource).toContain('config.distribution === "cloud"');

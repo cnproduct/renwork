@@ -29,6 +29,6 @@ describe("Dynamic Artifacts Phase 2 surfaces", () => {
     expect(screen).toContain("SavedScriptArtifactResult")
     expect(result).toContain('["preview", "data", "lineage"]')
     expect(result).toContain("Exact Script version")
-    expect(result).toContain("OpenWork Cloud")
+    expect(result).toContain("RenWork Cloud")
   });
 });

@@ -29,7 +29,7 @@ describe("member dashboard direct download contract", () => {
     expect(source).toContain('data-download-href={downloadHref ?? undefined}');
     expect(source).toContain('link.setAttribute("data-testid", "member-download-link")');
     expect(source).not.toContain("window.open(await mintInstallLink()");
-    expect(source).not.toContain(">Download OpenWork<");
+    expect(source).not.toContain(">Download RenWork<");
   });
 
   test("keeps the copy-install-link fallback for other machines", () => {

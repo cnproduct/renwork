@@ -59,7 +59,7 @@ describe("Web dashboard page", () => {
     expect(html).toContain(`href="${DEFAULT_OPENWORK_WEB_URL}"`);
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
-    expect(html).toContain("Open OpenWork Web");
+    expect(html).toContain("Open RenWork Web");
   });
 
   test("runtime config exposes the default Web URL and deployment override", async () => {

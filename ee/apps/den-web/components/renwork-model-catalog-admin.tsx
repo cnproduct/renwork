@@ -17,7 +17,7 @@ import { CheckCircle2, CircleAlert, Plus, RefreshCw, Save, ServerCog, ShieldChec
 import { useEffect, useMemo, useState } from "react";
 
 type AccessState = "loading" | "ready" | "signed-out" | "forbidden" | "error";
-type AdminTab = "policy" | "providers" | "models" | "preview";
+type AdminTab = "policy" | "providers" | "models" | "settlements" | "preview";
 
 type ProviderTestResult = {
   ok: boolean;
@@ -37,6 +37,48 @@ type MeteredRuntimeDevice = {
   status: "pending" | "active" | "revoked";
   lastSeenAt: string;
   createdAt: string;
+};
+
+type RenCreditSettlement = {
+  id: string;
+  organizationId: string;
+  organizationName: string | null;
+  modelSku: string;
+  routeId: string;
+  providerId: string;
+  upstreamModelId: string;
+  status: "reserved" | "captured" | "released";
+  reservedMicroCredits: number;
+  capturedMicroCredits: number;
+  releasedMicroCredits: number;
+  actualUsage: Record<string, number> | null;
+  failureCode: string | null;
+  createdAt: string | null;
+  settledAt: string | null;
+};
+
+type RenCreditAuditPayload = {
+  generatedAt: string;
+  wallets: Array<{
+    organizationId: string;
+    organizationName: string | null;
+    availableMicroCredits: number;
+    reservedMicroCredits: number;
+    status: string;
+  }>;
+  reservations: RenCreditSettlement[];
+  ledger: Array<{
+    id: string;
+    organizationId: string;
+    organizationName: string | null;
+    reservationId: string | null;
+    entryType: string;
+    amountMicroCredits: number;
+    availableDeltaMicroCredits: number;
+    reservedDeltaMicroCredits: number;
+    reasonCode: string;
+    createdAt: string | null;
+  }>;
 };
 
 const fieldClass = "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-50 disabled:text-slate-400";
@@ -70,6 +112,10 @@ function parseCatalogPayload(value: unknown): RenWorkAdminModelCatalog | null {
 function formatMultiplier(multiplierBps: number) {
   const value = multiplierBps / 10_000;
   return `×${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "")}`;
+}
+
+function formatMicroCredits(value: number) {
+  return `${(value / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 6 })} RenCredit`;
 }
 
 function promotionIsActive(model: RenWorkAdminModel, now: Date) {
@@ -341,6 +387,10 @@ export function RenWorkModelCatalogAdmin() {
   const [providerResults, setProviderResults] = useState<Record<string, ProviderTestResult>>({});
   const [devices, setDevices] = useState<MeteredRuntimeDevice[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(false);
+  const [settlementAudit, setSettlementAudit] = useState<RenCreditAuditPayload | null>(null);
+  const [settlementsLoading, setSettlementsLoading] = useState(false);
+  const [settlementOrganizationId, setSettlementOrganizationId] = useState("");
+  const [settlementStatus, setSettlementStatus] = useState("");
 
   const publicPreview = useMemo(() => {
     if (!catalog) return null;
@@ -405,6 +455,29 @@ export function RenWorkModelCatalogAdmin() {
 
   useEffect(() => {
     if (accessState === "ready" && activeTab === "providers") void loadDevices();
+  }, [accessState, activeTab]);
+
+  const loadSettlements = async () => {
+    setSettlementsLoading(true);
+    setPageError(null);
+    try {
+      const query = new URLSearchParams({ limit: "100" });
+      if (settlementOrganizationId.trim()) query.set("organizationId", settlementOrganizationId.trim());
+      if (settlementStatus) query.set("status", settlementStatus);
+      const { response, payload } = await requestJson(`/v1/admin/rencredit/settlements?${query.toString()}`);
+      if (!response.ok || !isRecord(payload) || !Array.isArray(payload.wallets) || !Array.isArray(payload.reservations) || !Array.isArray(payload.ledger)) {
+        throw new Error(errorMessage(payload, `RenCredit 结算审计加载失败（${response.status}）。`));
+      }
+      setSettlementAudit(payload as unknown as RenCreditAuditPayload);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "RenCredit 结算审计加载失败。");
+    } finally {
+      setSettlementsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (accessState === "ready" && activeTab === "settlements" && !settlementAudit) void loadSettlements();
   }, [accessState, activeTab]);
 
   const updateDeviceStatus = async (device: MeteredRuntimeDevice, status: "active" | "revoked") => {
@@ -561,6 +634,7 @@ export function RenWorkModelCatalogAdmin() {
           ["policy", "计费策略"],
           ["providers", "供应商网关"],
           ["models", "模型与路由"],
+          ["settlements", "结算审计"],
           ["preview", "用户预览"],
         ] as const).map(([value, label]) => (
           <button
@@ -840,6 +914,53 @@ export function RenWorkModelCatalogAdmin() {
             </article>
           ))}
           <button type="button" onClick={() => setCatalog({ ...catalog, models: [...catalog.models, newModel(catalog.models.length, catalog.providers[0]?.id ?? "")] })} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white"><Plus className="size-4" />新增模型</button>
+        </div>
+      ) : null}
+
+      {activeTab === "settlements" ? (
+        <div className="mt-5 space-y-5" data-testid="rencredit-settlement-audit">
+          <div className="rounded-3xl border border-orange-100 bg-white p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">RenCredit 实时结算审计</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">平台超级管理员可核对租户钱包、冻结、扣费、失败释放、模型 SKU 与实际私有路由。这里不显示密钥、提示词或模型回复内容。</p>
+              </div>
+              <button type="button" onClick={() => void loadSettlements()} disabled={settlementsLoading} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                <RefreshCw className={`size-4 ${settlementsLoading ? "animate-spin" : ""}`} />刷新审计
+              </button>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <Field label="组织 ID" hint="留空查看全部租户。"><input value={settlementOrganizationId} onChange={(event) => setSettlementOrganizationId(event.target.value)} placeholder="organization_…" className={fieldClass} /></Field>
+              <Field label="结算状态"><select value={settlementStatus} onChange={(event) => setSettlementStatus(event.target.value)} className={fieldClass}><option value="">全部</option><option value="reserved">冻结中</option><option value="captured">已扣费</option><option value="released">已释放</option></select></Field>
+              <div className="flex items-end"><button type="button" onClick={() => void loadSettlements()} disabled={settlementsLoading} className="h-10 w-full rounded-xl border border-orange-200 bg-orange-50 px-4 text-sm font-semibold text-orange-700 disabled:opacity-50">应用筛选</button></div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {(settlementAudit?.wallets ?? []).map((wallet) => (
+              <div key={wallet.organizationId} className="rounded-2xl border border-orange-100 bg-white p-5" data-testid="rencredit-wallet-card">
+                <p className="truncate text-sm font-semibold text-slate-950">{wallet.organizationName ?? wallet.organizationId}</p>
+                <p className="mt-1 truncate font-mono text-[11px] text-slate-500">{wallet.organizationId}</p>
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><dt className="text-slate-500">可用余额</dt><dd className="mt-1 font-semibold text-slate-950">{formatMicroCredits(wallet.availableMicroCredits)}</dd></div><div><dt className="text-slate-500">冻结余额</dt><dd className="mt-1 font-semibold text-amber-700">{formatMicroCredits(wallet.reservedMicroCredits)}</dd></div></dl>
+              </div>
+            ))}
+          </div>
+
+          <div className="overflow-hidden rounded-3xl border border-orange-100 bg-white">
+            <div className="border-b border-slate-100 px-6 py-4"><h3 className="font-semibold text-slate-950">任务结算收据</h3><p className="mt-1 text-xs text-slate-500">按最新 100 条展示冻结、扣费与释放结果。</p></div>
+            <div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-100 text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-4 py-3">租户 / 时间</th><th className="px-4 py-3">模型与路由</th><th className="px-4 py-3">状态</th><th className="px-4 py-3">冻结 / 扣费 / 释放</th><th className="px-4 py-3">Token 用量</th></tr></thead><tbody className="divide-y divide-slate-100">
+              {(settlementAudit?.reservations ?? []).map((reservation) => {
+                const usage = reservation.actualUsage ?? {};
+                const tokenTotal = Object.values(usage).reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
+                return <tr key={reservation.id} data-settlement-status={reservation.status}><td className="whitespace-nowrap px-4 py-3"><p className="font-medium text-slate-900">{reservation.organizationName ?? reservation.organizationId}</p><p className="mt-1 text-slate-500">{reservation.createdAt ? new Date(reservation.createdAt).toLocaleString() : "—"}</p></td><td className="px-4 py-3"><p className="font-medium text-slate-900">{reservation.modelSku}</p><p className="mt-1 font-mono text-[10px] text-slate-500">{reservation.providerId} · {reservation.routeId} · {reservation.upstreamModelId}</p></td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 font-semibold ${reservation.status === "captured" ? "bg-emerald-50 text-emerald-700" : reservation.status === "released" ? "bg-slate-100 text-slate-700" : "bg-amber-50 text-amber-700"}`}>{reservation.status === "captured" ? "已扣费" : reservation.status === "released" ? "已释放" : "冻结中"}</span>{reservation.failureCode ? <p className="mt-2 text-red-600">{reservation.failureCode}</p> : null}</td><td className="whitespace-nowrap px-4 py-3 text-slate-700">{formatMicroCredits(reservation.reservedMicroCredits)} / {formatMicroCredits(reservation.capturedMicroCredits)} / {formatMicroCredits(reservation.releasedMicroCredits)}</td><td className="px-4 py-3 text-slate-700">{tokenTotal.toLocaleString()}</td></tr>;
+              })}
+            </tbody></table></div>
+          </div>
+
+          <div className="overflow-hidden rounded-3xl border border-orange-100 bg-white">
+            <div className="border-b border-slate-100 px-6 py-4"><h3 className="font-semibold text-slate-950">不可变租户账本</h3><p className="mt-1 text-xs text-slate-500">每笔 reserve、capture、release、grant、refund 和 adjustment 均保留余额变化。</p></div>
+            <div className="divide-y divide-slate-100">{(settlementAudit?.ledger ?? []).map((entry) => <div key={entry.id} className="grid gap-2 px-6 py-4 text-xs md:grid-cols-5"><div className="md:col-span-2"><p className="font-medium text-slate-900">{entry.organizationName ?? entry.organizationId}</p><p className="mt-1 font-mono text-[10px] text-slate-500">{entry.id}</p></div><p className="font-semibold text-slate-800">{entry.entryType}</p><p className="text-slate-600">可用 {entry.availableDeltaMicroCredits >= 0 ? "+" : ""}{formatMicroCredits(entry.availableDeltaMicroCredits)}<br />冻结 {entry.reservedDeltaMicroCredits >= 0 ? "+" : ""}{formatMicroCredits(entry.reservedDeltaMicroCredits)}</p><p className="text-slate-500">{entry.reasonCode}<br />{entry.createdAt ? new Date(entry.createdAt).toLocaleString() : "—"}</p></div>)}</div>
+          </div>
         </div>
       ) : null}
 

@@ -63,7 +63,7 @@ import { buildDenFeedbackUrl } from "../../_lib/feedback";
 import { OrgSelectionScreen } from "./org-selection-screen";
 import { UserProfileDialog } from "./user-profile-dialog";
 
-const OPENWORK_DOCS_URL = "/docs";
+const RENWORK_DOCS_URL = "https://www.rrenn.com/";
 
 type DashboardNavChild = {
   href: string;
@@ -249,7 +249,7 @@ function getDashboardPageTitle(pathname: string, orgSlug: string | null) {
     return "RenWork Models";
   }
   if (pathname.startsWith(getWebRoute(orgSlug))) {
-    return "OpenWork Web";
+    return "RenWork Web";
   }
   if (pathname.startsWith(getLibraryRoute(orgSlug))) {
     return "My Library";
@@ -404,7 +404,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
     ...(showWeb
       ? [{
           href: activeOrg ? getWebRoute(activeOrg.slug) : "#",
-          label: "OpenWork Web",
+          label: "RenWork Web",
           icon: Globe,
           badge: "Alpha",
         }]
@@ -413,17 +413,17 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
   // RenWork Models are a hosted RenWork Cloud offering; self-hosted
   // (single-org) deployments only manage their own LLM providers. Default
   // hidden until the runtime config confirms a hosted (multi-org) deployment.
-  const showOpenWorkModels = runtimeConfigLoaded && runtimeConfig.orgMode === "multi_org";
+  const showRenWorkModels = runtimeConfigLoaded && runtimeConfig.orgMode === "multi_org";
   const modelsGroup: DashboardNavItem | null = access.isOwner && activeOrg
     ? {
-        href: showOpenWorkModels
+        href: showRenWorkModels
           ? getInferenceRoute(activeOrg.slug)
           : getCustomLlmProvidersRoute(activeOrg.slug),
         label: "Models",
         icon: Sparkles,
         badge: "Policy",
         children: [
-          ...(showOpenWorkModels
+          ...(showRenWorkModels
             ? [{ href: getInferenceRoute(activeOrg.slug), label: "RenWork Models" }]
             : []),
           { href: getCustomLlmProvidersRoute(activeOrg.slug), label: "Model policy" },
@@ -544,7 +544,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         aria-haspopup="dialog"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <OrgMark name={activeOrg?.name ?? "OpenWork"} />
+          <OrgMark name={activeOrg?.name ?? "RenWork"} />
           <div className="min-w-0">
             <p className="truncate text-[14px] font-medium text-gray-900">
               {activeOrg?.name ?? "Loading..."}
@@ -571,7 +571,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         >
           <div className="min-w-0 px-3 py-1.5">
             <p className="truncate text-[13px] font-medium text-gray-900">
-              {user?.email ?? "OpenWork user"}
+              {user?.email ?? "RenWork user"}
             </p>
           </div>
           
@@ -841,7 +841,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
               </a>
             ) : null}
             <a
-              href={OPENWORK_DOCS_URL}
+              href={RENWORK_DOCS_URL}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700"
