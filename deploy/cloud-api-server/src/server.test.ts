@@ -95,7 +95,7 @@ describe("RenWork model catalog API", () => {
     expect(JSON.stringify(await save.json())).not.toContain("oauth_token");
 
     const persisted = JSON.parse(await readFile(statePath, "utf8"));
-    expect(Object.keys(persisted)).toEqual(["modelCatalog"]);
+    expect(Object.keys(persisted).sort()).toEqual(["appliedCatalogMigrations", "modelCatalog"]);
     expect(JSON.stringify(persisted)).not.toContain("wallet");
   });
 

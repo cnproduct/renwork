@@ -7,7 +7,9 @@ import fs from "node:fs";
 import {
   createDefaultRenWorkModelCatalog,
   createRenWorkModelCatalogService,
+  mergeMissingDefaultCatalogEntries,
   normalizeAdminModelCatalog,
+  OPENAI_OAUTH_CATALOG_MIGRATION,
   validateAdminModelCatalog,
   type RenWorkAdminModelCatalog,
 } from "@openwork/rencredit-metering";
@@ -23,6 +25,7 @@ app.use("*", logger());
 const STATE_FILE = process.env.DATA_PATH || "/tmp/renwork_cloud_state.json";
 
 let modelCatalog = createDefaultRenWorkModelCatalog();
+let appliedCatalogMigrations = [OPENAI_OAUTH_CATALOG_MIGRATION];
 
 function loadState() {
   try {
@@ -31,7 +34,18 @@ function loadState() {
       if (parsed.modelCatalog) {
         const normalizedCatalog = normalizeAdminModelCatalog(parsed.modelCatalog);
         validateAdminModelCatalog(normalizedCatalog);
-        modelCatalog = normalizedCatalog;
+        appliedCatalogMigrations = Array.isArray(parsed.appliedCatalogMigrations)
+          ? parsed.appliedCatalogMigrations.filter((value: unknown): value is string => typeof value === "string")
+          : [];
+        if (appliedCatalogMigrations.includes(OPENAI_OAUTH_CATALOG_MIGRATION)) {
+          modelCatalog = normalizedCatalog;
+        } else {
+          const merged = mergeMissingDefaultCatalogEntries(normalizedCatalog, createDefaultRenWorkModelCatalog());
+          validateAdminModelCatalog(merged.catalog);
+          modelCatalog = merged.catalog;
+          appliedCatalogMigrations.push(OPENAI_OAUTH_CATALOG_MIGRATION);
+          saveState();
+        }
       }
     }
   } catch (e) {
@@ -41,7 +55,7 @@ function loadState() {
 
 function saveState() {
   try {
-    const data = { modelCatalog };
+    const data = { modelCatalog, appliedCatalogMigrations };
     fs.writeFileSync(STATE_FILE, JSON.stringify(data, null, 2));
   } catch (e) {
     console.error("Failed to save state", e);

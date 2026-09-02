@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { modelAllowedForPlan, normalizeAdminModelCatalog, requireSuperAdmin, toPublicModelCatalog, toPublicModelCatalogForPlan, validateAdminModelCatalog } from "./catalog.js";
-import { createDefaultRenWorkModelCatalog } from "./default-catalog.js";
+import { createDefaultRenWorkModelCatalog, mergeMissingDefaultCatalogEntries } from "./default-catalog.js";
 import { createTestCatalog } from "./test-fixtures.js";
 
 describe("RenWork model catalog", () => {
@@ -67,9 +67,15 @@ describe("RenWork model catalog", () => {
     expect(publicCatalog.models.map((model) => model.sku)).toEqual([
       "renwork-auto",
       "renwork-standard",
+      "renwork-openai-gpt-5-6-luna",
       "renwork-professional",
       "renwork-codex",
+      "renwork-openai-gpt-5-5",
+      "renwork-openai-gpt-5-6",
+      "renwork-openai-gpt-5-6-terra",
+      "renwork-openai-gpt-5-3-codex-spark",
       "renwork-ultimate",
+      "renwork-openai-gpt-5-6-sol",
     ]);
     expect(catalog.providers[0]?.credentialRef).toBe("env://OPENROUTER_API_KEY");
     expect(catalog.providers[1]).toMatchObject({
@@ -79,7 +85,46 @@ describe("RenWork model catalog", () => {
       executionScope: "personal_device",
       sharingScope: "user_private",
     });
+    expect(catalog.providers[2]).toMatchObject({
+      id: "openai",
+      protocol: "opencode",
+      authMode: "device_oauth",
+      credentialRef: null,
+      executionScope: "personal_device",
+      sharingScope: "user_private",
+    });
+    expect(catalog.models.find((model) => model.sku === "renwork-openai-gpt-5-6")?.routes[0]).toMatchObject({
+      providerId: "openai",
+      upstreamModelId: "gpt-5.6",
+      source: "local",
+    });
     expect(JSON.stringify(publicCatalog)).not.toContain("OPENROUTER_API_KEY");
+  });
+
+  test("migrates missing OAuth defaults without overwriting administrator catalog choices", () => {
+    const defaults = createDefaultRenWorkModelCatalog(new Date("2026-09-01T12:00:00.000Z"));
+    const persisted = createDefaultRenWorkModelCatalog(new Date("2026-08-28T12:00:00.000Z"));
+    persisted.version = "production-admin-catalog";
+    persisted.providers = persisted.providers.filter((provider) => provider.id !== "openai");
+    persisted.models = persisted.models.filter((model) => !model.sku.startsWith("renwork-openai-"));
+    persisted.models[0] = { ...persisted.models[0]!, displayName: "管理员自定义 Auto", priceMultiplierBps: 12_345 };
+    persisted.models.push({
+      ...persisted.models[0]!,
+      sku: "admin-custom-model",
+      displayName: "管理员自定义模型",
+      routes: persisted.models[0]!.routes.map((route) => ({ ...route, id: "route-admin-custom" })),
+    });
+
+    const migrated = mergeMissingDefaultCatalogEntries(persisted, defaults);
+    expect(migrated.changed).toBe(true);
+    expect(migrated.catalog.models.find((model) => model.sku === "renwork-auto")).toMatchObject({
+      displayName: "管理员自定义 Auto",
+      priceMultiplierBps: 12_345,
+    });
+    expect(migrated.catalog.models.some((model) => model.sku === "admin-custom-model")).toBe(true);
+    expect(migrated.catalog.models.some((model) => model.sku === "renwork-openai-gpt-5-6")).toBe(true);
+    expect(migrated.catalog.providers.some((provider) => provider.id === "openai")).toBe(true);
+    expect(() => validateAdminModelCatalog(migrated.catalog)).not.toThrow();
   });
 
   test("rejects raw provider credentials in administrator catalog payloads", () => {
