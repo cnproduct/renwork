@@ -33,6 +33,7 @@ export type RenWorkCliRunSnapshot = {
   output: string;
   usage: CodexReportedUsage | null;
   reservationId: string;
+  reservedMicroCredits: number;
   settlement: LocalRuntimeSettlement | null;
   errorCode: string | null;
   createdAt: string;
@@ -262,6 +263,7 @@ export class RenWorkCliRuntimeManager {
       output: "",
       usage: null,
       reservationId: reservation.reservationId,
+      reservedMicroCredits: reservation.reservedMicroCredits,
       settlement: null,
       errorCode: null,
       createdAt: now,

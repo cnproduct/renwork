@@ -36,6 +36,7 @@ test("desktop OAuth prompt freezes RenCredit, rewrites only inside the host, and
     reservationId: "rsv_1",
     runId: "run_1",
     modelSku: "renwork-oauth-pro",
+    reservedMicroCredits: 200,
     providerID: "lpr_openai-seat",
     modelID: "gpt-5",
     adapter: "opencode",
