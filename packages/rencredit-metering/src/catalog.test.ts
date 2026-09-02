@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { modelAllowedForPlan, normalizeAdminModelCatalog, requireSuperAdmin, toPublicModelCatalog, toPublicModelCatalogForPlan, validateAdminModelCatalog } from "./catalog.js";
-import { createDefaultRenWorkModelCatalog, mergeMissingDefaultCatalogEntries } from "./default-catalog.js";
+import { createDefaultRenWorkModelCatalog, mergeMissingDefaultCatalogEntries, migrateLegacyOpenAIOAuthProvider } from "./default-catalog.js";
 import { createTestCatalog } from "./test-fixtures.js";
 
 describe("RenWork model catalog", () => {
@@ -125,6 +125,43 @@ describe("RenWork model catalog", () => {
     expect(migrated.catalog.models.some((model) => model.sku === "renwork-openai-gpt-5-6")).toBe(true);
     expect(migrated.catalog.providers.some((provider) => provider.id === "openai")).toBe(true);
     expect(() => validateAdminModelCatalog(migrated.catalog)).not.toThrow();
+  });
+
+  test("upgrades only a legacy OpenAI runtime whose OAuth governance fields were absent", () => {
+    const defaults = createDefaultRenWorkModelCatalog(new Date("2026-09-01T12:00:00.000Z"));
+    const legacyRaw = createDefaultRenWorkModelCatalog(new Date("2026-08-28T12:00:00.000Z")) as unknown as Record<string, unknown>;
+    const rawProvider = (legacyRaw.providers as Array<Record<string, unknown>>).find((provider) => provider.id === "openai")!;
+    delete rawProvider.authMode;
+    delete rawProvider.credentialStore;
+    delete rawProvider.executionScope;
+    delete rawProvider.sharingScope;
+    delete rawProvider.deviceOAuthPolicy;
+
+    const normalized = normalizeAdminModelCatalog(legacyRaw as unknown as ReturnType<typeof createDefaultRenWorkModelCatalog>);
+    expect(normalized.providers.find((provider) => provider.id === "openai")?.authMode).toBe("none");
+    const migrated = migrateLegacyOpenAIOAuthProvider(normalized, legacyRaw, defaults);
+    expect(migrated.changed).toBe(true);
+    expect(migrated.catalog.providers.find((provider) => provider.id === "openai")).toMatchObject({
+      authMode: "device_oauth",
+      credentialStore: "device_vault",
+      executionScope: "personal_device",
+      sharingScope: "user_private",
+      deviceOAuthPolicy: { maxDevicesPerUser: 3, maxConcurrentRunsPerUser: 1 },
+    });
+    expect(() => validateAdminModelCatalog(migrated.catalog)).not.toThrow();
+  });
+
+  test("preserves an explicit administrator OpenAI auth policy", () => {
+    const defaults = createDefaultRenWorkModelCatalog(new Date("2026-09-01T12:00:00.000Z"));
+    const explicit = createDefaultRenWorkModelCatalog(new Date("2026-08-28T12:00:00.000Z"));
+    const provider = explicit.providers.find((candidate) => candidate.id === "openai")!;
+    provider.authMode = "none";
+    provider.credentialStore = "none";
+    provider.deviceOAuthPolicy = null;
+
+    const migrated = migrateLegacyOpenAIOAuthProvider(normalizeAdminModelCatalog(explicit), explicit, defaults);
+    expect(migrated.changed).toBe(false);
+    expect(migrated.catalog.providers.find((candidate) => candidate.id === "openai")?.authMode).toBe("none");
   });
 
   test("rejects raw provider credentials in administrator catalog payloads", () => {

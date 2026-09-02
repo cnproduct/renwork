@@ -19,6 +19,8 @@ test("Voiceover V13 publishes ChatGPT OAuth models into ordinary RenWork chat wi
   expect(catalog).toContain('source: "local"');
   expect(catalog).toContain('credentialRef: null');
   expect(catalogRuntime).toContain("mergeMissingDefaultCatalogEntries");
+  expect(catalogRuntime).toContain("migrateLegacyOpenAIOAuthProvider");
+  expect(catalogRuntime).toContain("OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION");
   expect(catalogRuntime).toContain("appliedCatalogMigrations");
   expect(desktopProxy).toContain("rewriteMeteredModel");
   expect(desktopProxy).toContain("input.metering.settle");
