@@ -14,8 +14,8 @@
 export RENWORK_SUPER_ADMIN_TOKEN='替换为独立生成的长随机令牌'
 export OPENROUTER_API_KEY='替换为供应商 API Key'
 export DATA_PATH='/var/lib/renwork/cloud-state.json'
-pnpm --filter renwork-cloud-api build
-pnpm --filter renwork-cloud-api start
+pnpm --filter renwork-model-catalog-runtime build
+pnpm --filter renwork-model-catalog-runtime start
 ```
 
 生产环境应把以上值放入腾讯云 Secret/服务进程环境，不写入 shell profile。更换供应商时新增独立的 Secret 名称，并在目录中保存 `env://SECRET_NAME` 引用。
@@ -38,6 +38,6 @@ export RENWORK_MODEL_CATALOG_ADMIN_TOKEN='与 RENWORK_SUPER_ADMIN_TOKEN 相同�
 4. 若返回 `409 MODEL_CATALOG_VERSION_CONFLICT`，重新读取后合并，禁止盲目覆盖。
 5. 用普通成员接口复查，确认响应中不存在 `providers`、`baseUrl`、`credentialRef` 或 `secret://`。
 
-目录更新只改变模型展示与路由配置；真实调用仍须由 RenWork 服务端供应商网关解析 Secret 并上报准确 Token 用量。
+目录运行时不提供钱包、冻结、结算或流水接口。目录更新只改变模型展示与路由配置；真实调用由 Den API 的持久化多租户账本冻结、结算和记录准确 Token 用量。
 
 连接测试只解析 `env://...` 引用；`secret://...` 需要生产 Secret 管理适配器向运行时挂载对应值。测试响应只返回健康状态、HTTP 状态与延迟，不返回凭据或上游响应正文。

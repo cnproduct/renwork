@@ -4,7 +4,7 @@
 
 - RenWork Den API 的 `POST /api/v1/chat/completions` 是用户推理入口，兼容 OpenAI Chat Completions。
 - 租户和成员身份只能由 `rw_inf_*` 推理密钥的哈希反查获得；请求体和自定义组织 Header 均不参与租户判定。
-- 8089 模型目录服务保存超级管理员发布的模型、费率和路由；普通用户响应不含供应商、Base URL 或 Secret 引用。
+- 8089 模型目录服务只保存超级管理员发布的模型、费率和路由；它不提供钱包或流水接口，普通用户响应不含供应商、Base URL 或 Secret 引用。
 - MySQL/PlanetScale 保存组织钱包、冻结单、供应商用量事件和不可变账本流水。金额统一使用 RenCredit 微单位，`1 RenCredit = 1,000,000 microcredits`。
 
 ## 上线前门禁
