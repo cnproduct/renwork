@@ -13,14 +13,22 @@ import {
 } from "@openwork-ee/den-db/schema"
 import { createDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
 import {
+  toPublicModelCatalog,
+  toPublicModelCatalogForPlan,
+  validateAdminModelCatalog,
+} from "@openwork/rencredit-metering"
+import {
   INFERENCE_RESET_STRATEGY_BY_WINDOW_TYPE,
   INFERENCE_TIER_LIMITS,
   INFERENCE_WINDOW_DURATIONS_MS,
-  RENWORK_MODEL_CATALOG,
 } from "@openwork/types/den/inference"
 import type { InferenceOrganizationMetadata, InferenceTier, InferenceWindowType } from "@openwork/types/den/inference"
 import { db } from "./db.js"
+import { parseOrganizationPlan } from "./entitlements.js"
 import { env } from "./env.js"
+import { modelCatalogSchema, requestModelCatalog } from "./model-catalog-service.js"
+import { readOrganizationModelPolicy } from "./organization-model-policy.js"
+import { resolveRenworkModelAccess } from "./renwork-access.js"
 
 type OrgId = typeof OrganizationTable.$inferSelect.id
 type MemberId = typeof MemberTable.$inferSelect.id
@@ -30,6 +38,12 @@ const LEGACY_MANAGED_PROVIDER_IDS = ["openwork"] as const
 const MANAGED_PROVIDER_SOURCE = "openwork"
 const OPENROUTER_PROVIDER = "openrouter"
 const OPENROUTER_KEYS_URL = "https://openrouter.ai/api/v1/keys"
+
+type ManagedRenWorkModel = {
+  modelId: string
+  name: string
+  modelConfig: Record<string, unknown>
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -106,8 +120,61 @@ function buildRenWorkProviderConfig() {
     api: `${env.inferenceProxyBaseUrl.replace(/\/+$/, "")}/api/v1`,
     options: {
       baseURL: `${env.inferenceProxyBaseUrl.replace(/\/+$/, "")}/api/v1`,
+      headers: {
+        "X-RenWork-Client": "desktop",
+      },
     },
   }
+}
+
+/**
+ * Materialize only member-safe stable SKUs from the cloud-authoritative model
+ * catalog. Provider routes, upstream model ids, and credentials never enter
+ * the desktop provider configuration.
+ */
+async function loadManagedRenWorkModels(organizationId: OrgId): Promise<ManagedRenWorkModel[]> {
+  const [organization] = await db
+    .select({ metadata: OrganizationTable.metadata })
+    .from(OrganizationTable)
+    .where(eq(OrganizationTable.id, organizationId))
+    .limit(1)
+  if (!organization) throw new Error("RENWORK_ORGANIZATION_NOT_FOUND")
+
+  const access = await resolveRenworkModelAccess({
+    organizationId,
+    metadata: organization.metadata,
+  })
+  if (!access.allowed) throw new Error("RENWORK_MODEL_ACCESS_REQUIRED")
+
+  const upstream = await requestModelCatalog("/v1/admin/models/catalog")
+  if (!upstream.configured || !upstream.response?.ok) throw new Error("MODEL_CATALOG_UNAVAILABLE")
+  const parsed = modelCatalogSchema.safeParse(upstream.payload)
+  if (!parsed.success || parsed.data.status !== "active") throw new Error("MODEL_CATALOG_UNAVAILABLE")
+  validateAdminModelCatalog(parsed.data)
+
+  const publicCatalog = access.source === "subscription"
+    ? toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier)
+    : toPublicModelCatalog(parsed.data)
+  const policy = readOrganizationModelPolicy(organization.metadata)
+  const policyModels = policy.allowedModelSkus
+    ? publicCatalog.models.filter((model) => policy.allowedModelSkus?.includes(model.sku))
+    : publicCatalog.models
+  const models = access.allowedModelSkus
+    ? policyModels.filter((model) => access.allowedModelSkus?.includes(model.sku))
+    : policyModels
+  if (models.length === 0) throw new Error("RENWORK_MODEL_ACCESS_EMPTY")
+
+  return models.map((model) => ({
+    modelId: model.sku,
+    name: model.displayName,
+    modelConfig: {
+      upstreamModel: model.sku,
+      displayName: `RenWork: ${model.displayName}`,
+      enabled: true,
+      usageFactor: model.effectiveDisplayMultiplierBps / 10_000,
+      contextWindow: model.contextWindow,
+    },
+  }))
 }
 
 async function revokeMemberInferenceKeys(memberId: MemberId) {
@@ -159,7 +226,12 @@ async function createMemberInferenceKey(input: { organizationId: OrgId; memberId
   return key
 }
 
-async function ensureRenWorkLlmProviderForMember(input: { organizationId: OrgId; memberId: MemberId; inferenceKey: string }) {
+async function ensureRenWorkLlmProviderForMember(input: {
+  organizationId: OrgId
+  memberId: MemberId
+  inferenceKey: string
+  models: ManagedRenWorkModel[]
+}) {
   const now = new Date()
   const providerRows = await db
     .select({ id: LlmProviderTable.id })
@@ -199,16 +271,14 @@ async function ensureRenWorkLlmProviderForMember(input: { organizationId: OrgId;
     }
 
     await tx.insert(LlmProviderModelTable).values(
-      Object.entries(RENWORK_MODEL_CATALOG)
-        .filter(([, model]) => model.enabled)
-        .map(([modelId, model]) => ({
-          id: createDenTypeId("llmProviderModel"),
-          llmProviderId: providerId,
-          modelId,
-          name: model.displayName.replace(/^RenWork:\s*/, ""),
-          modelConfig: { ...model },
-          createdAt: now,
-        })),
+      input.models.map((model) => ({
+        id: createDenTypeId("llmProviderModel"),
+        llmProviderId: providerId,
+        modelId: model.modelId,
+        name: model.name,
+        modelConfig: model.modelConfig,
+        createdAt: now,
+      })),
     )
 
     await tx.insert(LlmProviderAccessTable).values({
@@ -221,14 +291,23 @@ async function ensureRenWorkLlmProviderForMember(input: { organizationId: OrgId;
   })
 }
 
-async function ensureMemberInferenceAccess(input: { organizationId: OrgId; memberId: MemberId }) {
+async function ensureMemberInferenceAccess(input: {
+  organizationId: OrgId
+  memberId: MemberId
+  models?: ManagedRenWorkModel[]
+}) {
+  const models = input.models ?? await loadManagedRenWorkModels(input.organizationId)
   const key = await createMemberInferenceKey(input)
-  await ensureRenWorkLlmProviderForMember({ ...input, inferenceKey: key })
+  await ensureRenWorkLlmProviderForMember({ ...input, inferenceKey: key, models })
 }
 
-async function memberHasRenWorkInferenceAccess(input: { organizationId: OrgId; memberId: MemberId }) {
+async function memberHasRenWorkInferenceAccess(input: {
+  organizationId: OrgId
+  memberId: MemberId
+  models: ManagedRenWorkModel[]
+}) {
   const [provider] = await db
-    .select({ id: LlmProviderTable.id })
+    .select({ id: LlmProviderTable.id, providerConfig: LlmProviderTable.providerConfig })
     .from(LlmProviderTable)
     .where(and(
       eq(LlmProviderTable.organizationId, input.organizationId),
@@ -247,7 +326,25 @@ async function memberHasRenWorkInferenceAccess(input: { organizationId: OrgId; m
     ))
     .limit(1)
 
-  return Boolean(provider && key)
+  if (!provider || !key) {
+    return false
+  }
+
+  const providerOptions = isRecord(provider.providerConfig?.options) ? provider.providerConfig.options : null
+  const providerHeaders = isRecord(providerOptions?.headers) ? providerOptions.headers : null
+  if (providerHeaders?.["X-RenWork-Client"] !== "desktop") {
+    return false
+  }
+
+  const enabledModelIds = input.models.map((model) => model.modelId).sort()
+  const storedModels = await db
+    .select({ modelId: LlmProviderModelTable.modelId })
+    .from(LlmProviderModelTable)
+    .where(eq(LlmProviderModelTable.llmProviderId, provider.id))
+  const storedModelIds = storedModels.map((model) => model.modelId).sort()
+
+  return storedModelIds.length === enabledModelIds.length
+    && storedModelIds.every((modelId, index) => modelId === enabledModelIds[index])
 }
 
 /**
@@ -270,12 +367,13 @@ export async function repairMemberInferenceAccessIfNeeded(input: {
     return false
   }
 
-  if (await memberHasRenWorkInferenceAccess(input)) {
+  const models = await loadManagedRenWorkModels(input.organizationId)
+  if (await memberHasRenWorkInferenceAccess({ ...input, models })) {
     return false
   }
 
   await revokeMemberInferenceKeys(input.memberId)
-  await ensureMemberInferenceAccess(input)
+  await ensureMemberInferenceAccess({ ...input, models })
   return true
 }
 

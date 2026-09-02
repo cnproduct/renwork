@@ -12,8 +12,10 @@ describe("RenCredit local OAuth runtime", () => {
         const body = request.method === "GET" ? null : await request.json().catch(() => null);
         requests.push({ path: url.pathname, method: request.method, body, idempotency: request.headers.get("Idempotency-Key") });
         expect(request.headers.get("Authorization")).toBe("Bearer member-inference-key");
-        if (request.method === "PUT") return Response.json({ status: "active" });
         if (url.pathname.endsWith("/reservations")) {
+          if (!requests.some((entry) => entry.method === "PUT")) {
+            return Response.json({ error: { code: "LOCAL_RUNTIME_DEVICE_NOT_APPROVED" } }, { status: 409 });
+          }
           return Response.json({
             reservationId: "rsv_1",
             runId: "run_1",
@@ -22,11 +24,12 @@ describe("RenCredit local OAuth runtime", () => {
             execution: { providerID: "lpr_openai-seat", modelID: "gpt-5" },
           }, { status: 201 });
         }
+        if (request.method === "PUT") return Response.json({ status: "active" });
         if (url.pathname.endsWith("/settlements")) {
           return Response.json({ reservationId: "rsv_1", status: "captured", capturedMicroCredits: 21, releasedMicroCredits: 0 });
         }
         if (url.pathname.endsWith("/release")) {
-          return Response.json({ reservationId: "rsv_1", status: "released", releasedMicroCredits: 21 });
+          return Response.json({ reservationId: "rsv_1", status: "released", capturedMicroCredits: 0, releasedMicroCredits: 21 });
         }
         return new Response(null, { status: 404 });
       },
@@ -51,7 +54,9 @@ describe("RenCredit local OAuth runtime", () => {
         providerID: "lpr_openai-seat",
         modelID: "gpt-5",
       });
-      expect(requests[1]?.idempotency).toBe("desktop:device_1:run_1");
+      expect(requests[0]?.idempotency).toBe("desktop:device_1:run_1");
+      expect(requests[1]?.method).toBe("PUT");
+      expect(requests[2]?.idempotency).toBe("desktop:device_1:run_1");
 
       await client.settle(reservation, {
         usage: { inputTokens: 11, outputTokens: 7, reasoningTokens: 3, cacheReadTokens: 2, cacheWriteTokens: 1 },
@@ -78,7 +83,9 @@ describe("RenCredit local OAuth runtime", () => {
   test("rejects pending devices before any provider call", async () => {
     const server = Bun.serve({
       port: 0,
-      fetch: () => Response.json({ status: "pending" }, { status: 202 }),
+      fetch: (request) => request.method === "PUT"
+        ? Response.json({ status: "pending" }, { status: 202 })
+        : Response.json({ error: { code: "LOCAL_RUNTIME_DEVICE_NOT_APPROVED" } }, { status: 409 }),
     });
     const client = new RenCreditLocalRuntimeClient({
       credentials: () => ({ baseUrl: `http://127.0.0.1:${server.port}`, apiKey: "key", orgId: "org" }),
@@ -89,6 +96,30 @@ describe("RenCredit local OAuth runtime", () => {
         status: 403,
         code: "rencredit_device_approval_required",
       });
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("delegates official models to the cloud gateway without registering a device", async () => {
+    const requests: string[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        requests.push(`${request.method} ${new URL(request.url).pathname}`);
+        return Response.json({ error: { code: "CLOUD_GATEWAY_REQUIRED" } }, { status: 409 });
+      },
+    });
+    const client = new RenCreditLocalRuntimeClient({
+      credentials: () => ({ baseUrl: `http://127.0.0.1:${server.port}`, apiKey: "key", orgId: "org" }),
+      signer: async () => ({ deviceId: "device", publicKeyPem: "pem", sign: async () => "signature" }),
+    });
+    try {
+      await expect(client.reserve({ modelSku: "renwork-code-kimi-k3", body: new Uint8Array([1]).buffer })).rejects.toMatchObject({
+        status: 409,
+        code: "CLOUD_GATEWAY_REQUIRED",
+      });
+      expect(requests).toEqual(["POST /api/v1/metered-runtime/reservations"]);
     } finally {
       server.stop(true);
     }
