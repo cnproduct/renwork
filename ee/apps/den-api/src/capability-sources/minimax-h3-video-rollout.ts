@@ -31,6 +31,16 @@ export function organizationMinimaxH3VideoEnabled(
   if (!environment.RENWORK_METASO_H3_API_KEY?.trim()) {
     return false
   }
+  const providerBaseUrl = environment.RENWORK_METASO_H3_BASE_URL?.trim()
+  if (!providerBaseUrl) {
+    return false
+  }
+  try {
+    const parsedProviderBaseUrl = new URL(providerBaseUrl)
+    if (parsedProviderBaseUrl.protocol !== "https:") return false
+  } catch {
+    return false
+  }
   const licenseEvidenceId = environment.RENWORK_METASO_H3_LICENSE_EVIDENCE_ID?.trim()
   if (!licenseEvidenceId || licenseEvidenceId.length > 128) {
     return false

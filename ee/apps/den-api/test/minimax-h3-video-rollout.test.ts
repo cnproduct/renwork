@@ -5,6 +5,7 @@ const readyEnvironment = {
   RENWORK_METASO_H3_COMMERCIAL_LICENSE_CONFIRMED: "true",
   RENWORK_METASO_H3_LICENSE_EVIDENCE_ID: "license-evidence-2026-09-01",
   RENWORK_METASO_H3_API_KEY: "server-secret",
+  RENWORK_METASO_H3_BASE_URL: "https://api.example.test",
   RENWORK_METASO_H3_RESULT_HOSTS: "cdn.example.test",
   RENWORK_H3_RENCREDIT_MICROCREDITS_PER_SECOND: "1000",
   RENWORK_H3_PRICE_VERSION: "h3-phase2-canary-v1",
@@ -28,6 +29,16 @@ describe("H3 organization rollout", () => {
       { capabilities: { minimaxH3Video: true } },
       "org_canary",
       { ...readyEnvironment, RENWORK_METASO_H3_RESULT_HOSTS: "" },
+    )).toBe(false)
+    expect(organizationMinimaxH3VideoEnabled(
+      { capabilities: { minimaxH3Video: true } },
+      "org_canary",
+      { ...readyEnvironment, RENWORK_METASO_H3_BASE_URL: "" },
+    )).toBe(false)
+    expect(organizationMinimaxH3VideoEnabled(
+      { capabilities: { minimaxH3Video: true } },
+      "org_canary",
+      { ...readyEnvironment, RENWORK_METASO_H3_BASE_URL: "http://provider.example.test" },
     )).toBe(false)
   })
 

@@ -148,7 +148,7 @@ export class MetaSoH3Provider {
 
   constructor(
     private readonly apiKey: string,
-    baseUrl = "https://metaso.cn/api/minimax",
+    baseUrl: string,
     private readonly fetchImpl: FetchImplementation = globalThis.fetch,
     private readonly resultHosts: readonly string[] = [],
   ) {
@@ -198,7 +198,7 @@ export class MetaSoH3Provider {
         content: [
           { type: "text", text: input.directedPrompt },
           ...(input.firstFrameReference
-            ? [{ type: "image", image_url: { url: input.firstFrameReference }, role: "first_frame" }]
+            ? [{ type: "image_url", image_url: { url: input.firstFrameReference }, role: "first_frame" }]
             : []),
         ],
         resolution: input.resolution,
@@ -294,9 +294,11 @@ export class MetaSoH3Provider {
 export function createMetaSoH3ProviderFromEnvironment(environment: NodeJS.ProcessEnv = process.env) {
   const apiKey = environment.RENWORK_METASO_H3_API_KEY?.trim()
   if (!apiKey) throw new H3ProviderError("PROVIDER_CREDENTIAL_MISSING")
+  const baseUrl = environment.RENWORK_METASO_H3_BASE_URL?.trim()
+  if (!baseUrl) throw new H3ProviderError("PROVIDER_BASE_URL_MISSING")
   const resultHosts = (environment.RENWORK_METASO_H3_RESULT_HOSTS ?? "")
     .split(",")
     .map((host) => host.trim().toLowerCase())
     .filter(Boolean)
-  return new MetaSoH3Provider(apiKey, environment.RENWORK_METASO_H3_BASE_URL, globalThis.fetch, resultHosts)
+  return new MetaSoH3Provider(apiKey, baseUrl, globalThis.fetch, resultHosts)
 }

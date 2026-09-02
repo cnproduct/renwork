@@ -15,7 +15,7 @@ Phase 1 是单路由灰度：仅开放文生视频与首帧生视频、768P、4�
 
 - `RENWORK_METASO_H3_COMMERCIAL_LICENSE_CONFIRMED`：只有书面商业授权核验完成后才能设为 `true`。
 - `RENWORK_METASO_H3_API_KEY`：Den 服务端凭据。
-- `RENWORK_METASO_H3_BASE_URL`：可选；未配置时使用集成默认地址。
+- `RENWORK_METASO_H3_BASE_URL`：必填的已授权供应商 HTTPS API 根地址。不得根据网页功能、非公开路径或普通用户账号猜测端点；使用 MiniMax 官方开放平台时按其当前 H3 v2 文档配置，使用 MetaSO 企业接口时必须以双方书面 API 合同为准。
 - `RENWORK_METASO_H3_RESULT_HOSTS`：逗号分隔的结果下载域名精确 allowlist，不支持通配符。
 - `RENWORK_H3_RENCREDIT_MICROCREDITS_PER_SECOND`：每秒 RenCredit 微单位，必须是正整数。
 - `RENWORK_H3_PRICE_VERSION`：不可变价格版本；改价时生成新版本，不能覆盖旧任务收据。
