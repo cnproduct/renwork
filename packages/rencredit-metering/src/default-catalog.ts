@@ -12,6 +12,8 @@ const DEFAULT_RATES = {
   cacheWriteMicroCreditsPerMillion: 1_250_000,
 } as const;
 
+export const OPENAI_OAUTH_CATALOG_MIGRATION = "v13-openai-oauth-chat-models";
+
 function defaultModel(input: {
   sku: string;
   displayName: string;
@@ -62,9 +64,44 @@ function defaultModel(input: {
   };
 }
 
+function openAIOAuthModel(input: {
+  sku: string;
+  upstreamModelId: string;
+  displayName: string;
+  description: string;
+  tier: RenWorkModelTier;
+  sortOrder: number;
+  tags?: string[];
+}): RenWorkAdminModel {
+  return {
+    sku: input.sku,
+    displayName: input.displayName,
+    description: input.description,
+    tier: input.tier,
+    sortOrder: input.sortOrder,
+    autoEligible: false,
+    status: "published",
+    contextWindow: null,
+    tags: ["openai", "oauth", "personal-device", ...(input.tags ?? [])],
+    displayMultiplierBps: 10_000,
+    priceMultiplierBps: 10_000,
+    rates: { ...DEFAULT_RATES },
+    promotion: null,
+    allowedPlanIds: ["individual", "enterprise"],
+    routes: [{
+      id: `route-${input.sku}-personal`,
+      providerId: "openai",
+      upstreamModelId: input.upstreamModelId,
+      priority: 10,
+      enabled: true,
+      source: "local",
+    }],
+  };
+}
+
 export function createDefaultRenWorkModelCatalog(now = new Date()): RenWorkAdminModelCatalog {
   return {
-    version: "renwork-model-catalog-v1",
+    version: "renwork-model-catalog-v13",
     status: "active",
     currency: "REN_CREDIT",
     billingPolicy: {
@@ -92,6 +129,26 @@ export function createDefaultRenWorkModelCatalog(now = new Date()): RenWorkAdmin
       displayName: "OpenAI Codex OAuth（个人设备）",
       kind: "runtime",
       protocol: "codex_cli",
+      baseUrl: null,
+      credentialRef: null,
+      authMode: "device_oauth",
+      credentialStore: "device_vault",
+      executionScope: "personal_device",
+      sharingScope: "user_private",
+      deviceOAuthPolicy: {
+        maxDevicesPerUser: 3,
+        maxConcurrentRunsPerUser: 1,
+      },
+      enabled: true,
+      health: "unknown",
+    }, {
+      // This ID deliberately matches OpenCode's built-in OpenAI provider. The
+      // OAuth credential remains in the signed-in user's device vault; Den
+      // returns only this provider/model route in the execution grant.
+      id: "openai",
+      displayName: "OpenAI ChatGPT OAuth（个人设备）",
+      kind: "runtime",
+      protocol: "opencode",
       baseUrl: null,
       credentialRef: null,
       authMode: "device_oauth",
@@ -144,7 +201,7 @@ export function createDefaultRenWorkModelCatalog(now = new Date()): RenWorkAdmin
       }),
       {
         sku: "renwork-codex",
-        displayName: "Codex OAuth",
+        displayName: "Codex CLI OAuth",
         description: "在已批准的个人设备上使用 ChatGPT Plus / Pro 的 Codex CLI，并按实际 Token 结算 RenCredit",
         tier: "professional",
         sortOrder: 40,
@@ -166,6 +223,84 @@ export function createDefaultRenWorkModelCatalog(now = new Date()): RenWorkAdmin
           source: "local",
         }],
       },
+      openAIOAuthModel({
+        sku: "renwork-openai-gpt-5-6-luna",
+        upstreamModelId: "gpt-5.6-luna",
+        displayName: "GPT-5.6 Luna",
+        description: "使用本机 ChatGPT OAuth，适合快速日常任务",
+        tier: "standard",
+        sortOrder: 15,
+      }),
+      openAIOAuthModel({
+        sku: "renwork-openai-gpt-5-5",
+        upstreamModelId: "gpt-5.5",
+        displayName: "GPT-5.5",
+        description: "使用本机 ChatGPT OAuth，适合通用编程与知识工作",
+        tier: "professional",
+        sortOrder: 41,
+      }),
+      openAIOAuthModel({
+        sku: "renwork-openai-gpt-5-6",
+        upstreamModelId: "gpt-5.6",
+        displayName: "GPT-5.6",
+        description: "使用本机 ChatGPT OAuth 的 GPT-5.6 通用模型",
+        tier: "professional",
+        sortOrder: 42,
+      }),
+      openAIOAuthModel({
+        sku: "renwork-openai-gpt-5-6-terra",
+        upstreamModelId: "gpt-5.6-terra",
+        displayName: "GPT-5.6 Terra",
+        description: "使用本机 ChatGPT OAuth，平衡速度与复杂任务能力",
+        tier: "professional",
+        sortOrder: 43,
+      }),
+      openAIOAuthModel({
+        sku: "renwork-openai-gpt-5-3-codex-spark",
+        upstreamModelId: "gpt-5.3-codex-spark",
+        displayName: "GPT-5.3 Codex Spark",
+        description: "使用本机 ChatGPT Pro OAuth 的高速代码模型",
+        tier: "professional",
+        sortOrder: 44,
+        tags: ["codex", "pro-only"],
+      }),
+      openAIOAuthModel({
+        sku: "renwork-openai-gpt-5-6-sol",
+        upstreamModelId: "gpt-5.6-sol",
+        displayName: "GPT-5.6 Sol",
+        description: "使用本机 ChatGPT OAuth，适合可靠的高强度任务",
+        tier: "ultimate",
+        sortOrder: 31,
+      }),
     ],
+  };
+}
+
+/**
+ * Adds product defaults introduced after a catalog was first persisted while
+ * preserving every administrator-owned row and override. Callers must record
+ * the migration separately so an intentional later deletion is not re-added
+ * on every service restart.
+ */
+export function mergeMissingDefaultCatalogEntries(
+  persisted: RenWorkAdminModelCatalog,
+  defaults: RenWorkAdminModelCatalog,
+): { catalog: RenWorkAdminModelCatalog; changed: boolean } {
+  const providerIds = new Set(persisted.providers.map((provider) => provider.id));
+  const modelSkus = new Set(persisted.models.map((model) => model.sku));
+  const missingProviders = defaults.providers.filter((provider) => !providerIds.has(provider.id));
+  const missingModels = defaults.models.filter((model) => !modelSkus.has(model.sku));
+  const changed = missingProviders.length > 0 || missingModels.length > 0;
+
+  if (!changed) return { catalog: persisted, changed: false };
+  return {
+    changed: true,
+    catalog: {
+      ...persisted,
+      version: `${persisted.version}-${OPENAI_OAUTH_CATALOG_MIGRATION}`,
+      updatedAt: defaults.updatedAt,
+      providers: [...persisted.providers, ...missingProviders],
+      models: [...persisted.models, ...missingModels],
+    },
   };
 }
