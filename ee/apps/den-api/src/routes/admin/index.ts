@@ -46,6 +46,7 @@ import { registerAdminOrganizationModelPolicyRoutes } from "./model-policy.js"
 import { registerAdminRenCreditRoutes } from "./rencredit.js"
 import { readRenworkAccessGrant } from "../../renwork-access.js"
 import { readRenworkSubscriptionRequest } from "../../renwork-subscription-request.js"
+import { syncInferenceForOrganizationMembers } from "../../inference.js"
 
 type UserId = typeof AuthUserTable.$inferSelect.id
 type OrganizationId = typeof OrganizationTable.$inferSelect.id
@@ -1334,6 +1335,7 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
         },
       }
       await db.update(OrganizationTable).set({ metadata }).where(eq(OrganizationTable.id, organizationId))
+      await syncInferenceForOrganizationMembers({ organizationId })
       return c.json({ ok: true, organizationId, grant: metadata.renworkAccessGrant })
     },
   )

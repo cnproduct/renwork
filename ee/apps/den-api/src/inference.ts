@@ -307,7 +307,11 @@ async function memberHasRenWorkInferenceAccess(input: {
   models: ManagedRenWorkModel[]
 }) {
   const [provider] = await db
-    .select({ id: LlmProviderTable.id, providerConfig: LlmProviderTable.providerConfig })
+    .select({
+      id: LlmProviderTable.id,
+      providerConfig: LlmProviderTable.providerConfig,
+      apiKey: LlmProviderTable.apiKey,
+    })
     .from(LlmProviderTable)
     .where(and(
       eq(LlmProviderTable.organizationId, input.organizationId),
@@ -317,7 +321,7 @@ async function memberHasRenWorkInferenceAccess(input: {
     ))
     .limit(1)
   const [key] = await db
-    .select({ id: InferenceKeyTable.id })
+    .select({ id: InferenceKeyTable.id, keyHash: InferenceKeyTable.key_hash })
     .from(InferenceKeyTable)
     .where(and(
       eq(InferenceKeyTable.organization_id, input.organizationId),
@@ -327,6 +331,10 @@ async function memberHasRenWorkInferenceAccess(input: {
     .limit(1)
 
   if (!provider || !key) {
+    return false
+  }
+
+  if (!provider.apiKey || sha256(provider.apiKey) !== key.keyHash) {
     return false
   }
 
@@ -384,13 +392,21 @@ export async function syncInferenceForOrganizationMembers(input: { organizationI
     .where(eq(OrganizationTable.id, input.organizationId))
     .limit(1)
 
-  const inference = readInferenceMetadata(organization?.metadata ?? null)
-  if (!inference) {
+  if (!organization) {
     return
   }
 
+  const inference = readInferenceMetadata(organization.metadata)
+  const access = await resolveRenworkModelAccess({
+    organizationId: input.organizationId,
+    metadata: organization.metadata,
+  })
+  if (!inference && !access.allowed) return
+
   const members = await listOrgMembers(input.organizationId)
-  await syncInferenceLimitPolicies({ organizationId: input.organizationId, tier: inference.tier, memberCount: members.length })
+  if (inference) {
+    await syncInferenceLimitPolicies({ organizationId: input.organizationId, tier: inference.tier, memberCount: members.length })
+  }
 
   for (const member of members) {
     await repairMemberInferenceAccessIfNeeded({
