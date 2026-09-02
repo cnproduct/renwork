@@ -8,6 +8,7 @@ export const videoGenerationStatusSchema = z.enum([
   "succeeded",
   "failed",
 ])
+export const videoGenerationReviewStatusSchema = z.enum(["pending_review", "approved", "rejected"])
 
 export type FirstFrameDimensionValidation =
   | { ok: true }
@@ -55,6 +56,7 @@ export const createVideoJobSchema = z.object({
 export type VideoGenerationInput = z.infer<typeof videoGenerationInputSchema>
 export type VideoGenerationMode = z.infer<typeof videoGenerationModeSchema>
 export type VideoGenerationStatus = z.infer<typeof videoGenerationStatusSchema>
+export type VideoGenerationReviewStatus = z.infer<typeof videoGenerationReviewStatusSchema>
 
 export type VideoGenerationCapability = {
   visible: boolean
@@ -86,6 +88,9 @@ export type MemberVideoJob = {
   durationSeconds: number
   reservedMicroCredits: number
   capturedMicroCredits: number
+  settlementStatus: "reserved" | "captured" | "released"
+  aiProvenanceStatus: "pending" | "preserved"
+  reviewStatus: VideoGenerationReviewStatus
   assetUrl: string | null
   taskHash: string
   resultHash: string | null

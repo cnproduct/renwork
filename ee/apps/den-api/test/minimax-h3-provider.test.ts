@@ -89,6 +89,21 @@ describe("MetaSo H3 provider adapter", () => {
     expect(await provider.query("task-1")).toEqual({ state: "failed", failureCode: "PROVIDER_RESULT_MISSING" })
   })
 
+  test("does not synthesize actual cost from an unaudited provider task response", async () => {
+    const provider = new MetaSoH3Provider("server-secret", "https://example.test/api", async () => Response.json({
+      base_resp: { status_code: 0 },
+      task: {
+        status: "done",
+        content: { url: "https://cdn.example.test/video.mp4" },
+        actual_cost: 123,
+      },
+    }))
+    expect(await provider.query("task-1")).toEqual({
+      state: "succeeded",
+      resultUrl: "https://cdn.example.test/video.mp4",
+    })
+  })
+
   test("normalizes cancelled official tasks as failures", async () => {
     const provider = new MetaSoH3Provider("server-secret", "https://example.test/api", async () => Response.json({
       base_resp: { status_code: 0 },
