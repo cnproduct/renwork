@@ -27,7 +27,10 @@ jobs:
         include:
           - os: macos-latest
             artifact: macos
-            target: --mac dmg zip
+            target: --mac dmg zip --arm64
+          - os: macos-latest
+            artifact: macos-x64
+            target: --mac dmg zip --x64
           - os: ubuntu-latest
             artifact: linux
             target: --linux AppImage tar.gz
