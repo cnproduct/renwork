@@ -4,6 +4,7 @@ import { join } from "node:path"
 
 const route = readFileSync(join(import.meta.dir, "..", "src", "routes", "org", "model-catalog.ts"), "utf8")
 const orgRoutes = readFileSync(join(import.meta.dir, "..", "src", "routes", "org", "index.ts"), "utf8")
+const inferenceProvisioning = readFileSync(join(import.meta.dir, "..", "src", "inference.ts"), "utf8")
 const client = readFileSync(join(import.meta.dir, "..", "..", "..", "..", "apps", "app", "src", "app", "lib", "den.ts"), "utf8")
 
 function seedRequiredEnv() {
@@ -54,5 +55,14 @@ describe("RenWork member model catalog route", () => {
     expect(route).toContain("MODEL_CATALOG_INVALID_RESPONSE")
     expect(route).toContain("MODEL_CATALOG_NOT_ACTIVE")
     expect(route).toContain('"Cache-Control", "private, no-store"')
+  })
+
+  test("provisions desktop RenWork models from the same authoritative member-safe catalog", () => {
+    expect(inferenceProvisioning).toContain('requestModelCatalog("/v1/admin/models/catalog")')
+    expect(inferenceProvisioning).toContain("toPublicModelCatalogForPlan")
+    expect(inferenceProvisioning).toContain("readOrganizationModelPolicy")
+    expect(inferenceProvisioning).toContain("access.allowedModelSkus")
+    expect(inferenceProvisioning).toContain("modelId: model.sku")
+    expect(inferenceProvisioning).not.toContain("Object.entries(RENWORK_MODEL_CATALOG)")
   })
 })

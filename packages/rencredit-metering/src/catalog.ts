@@ -69,7 +69,12 @@ export function validateAdminModelCatalog(catalog: RenWorkAdminModelCatalog): vo
   if (!Number.isFinite(Date.parse(catalog.updatedAt))) throw new Error("catalog.updatedAt must be an ISO date.");
 
   const providerIds = new Set<string>();
-  for (const provider of catalog.providers) {
+  // Catalog rows written before the OAuth governance fields were introduced
+  // intentionally omit those fields. Validate their normalized projection so
+  // a rolling Den deployment can continue to read the previous catalog while
+  // the catalog service is upgraded independently.
+  for (const persistedProvider of catalog.providers) {
+    const provider = normalizeAdminProvider(persistedProvider);
     requireNonEmpty(provider.id, "provider.id");
     if (providerIds.has(provider.id)) throw new Error(`Duplicate provider id: ${provider.id}`);
     providerIds.add(provider.id);

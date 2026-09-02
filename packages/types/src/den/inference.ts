@@ -111,7 +111,7 @@ export const RENWORK_MODEL_CATALOG = {
   "moonshotai/kimi-k3": {
     upstreamModel: "moonshotai/kimi-k3",
     displayName: "RenWork: Kimi K3",
-    enabled: true,
+    enabled: false,
     usageFactor: 1,
   },
   // Stable RenWork product SKUs. Keep these after the upstream aliases so
@@ -140,6 +140,12 @@ export const RENWORK_MODEL_CATALOG = {
     displayName: "RenWork: 极致",
     enabled: true,
     usageFactor: 2.8,
+  },
+  "renwork-code-kimi-k3": {
+    upstreamModel: "renwork-code-kimi-k3",
+    displayName: "RenWork: Kimi K3",
+    enabled: true,
+    usageFactor: 1,
   },
 } as const;
 

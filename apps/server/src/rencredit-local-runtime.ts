@@ -136,28 +136,34 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
   async reserve(input: { modelSku: string; body: ArrayBuffer; runId?: string }): Promise<LocalRuntimeReservation> {
     const credentials = this.requireCredentials();
     const signer = await this.options.signer!();
-    const registration = await requestJson(credentials, `/api/v1/metered-runtime/devices/${encodeURIComponent(signer.deviceId)}`, {
-      method: "PUT",
-      body: JSON.stringify({ publicKeyPem: signer.publicKeyPem }),
-    });
-    if (!registration.response.ok || !isRecord(registration.payload)) {
-      throw new ApiError(registration.response.status || 503, errorCode(registration.payload), "RenWork could not register this billing device.");
-    }
-    if (registration.payload.status !== "active") {
-      throw new ApiError(403, "rencredit_device_approval_required", "This desktop must be approved by a RenWork platform administrator before OAuth models can run.");
-    }
-
     const runId = input.runId ?? randomUUID();
-    const reserved = await requestJson(credentials, "/api/v1/metered-runtime/reservations", {
-      method: "POST",
-      headers: { "Idempotency-Key": `desktop:${signer.deviceId}:${runId}` },
-      body: JSON.stringify({
-        deviceId: signer.deviceId,
-        runId,
-        modelSku: input.modelSku,
-        estimatedUsage: estimatePromptUsage(input.body),
-      }),
-    });
+    const reserveOnce = () => requestJson(credentials, "/api/v1/metered-runtime/reservations", {
+        method: "POST",
+        headers: { "Idempotency-Key": `desktop:${signer.deviceId}:${runId}` },
+        body: JSON.stringify({
+          deviceId: signer.deviceId,
+          runId,
+          modelSku: input.modelSku,
+          estimatedUsage: estimatePromptUsage(input.body),
+        }),
+      });
+    let reserved = await reserveOnce();
+    if (!reserved.response.ok && errorCode(reserved.payload) === "CLOUD_GATEWAY_REQUIRED") {
+      throw new ApiError(reserved.response.status || 409, "CLOUD_GATEWAY_REQUIRED", "This model is metered by the RenWork cloud gateway.");
+    }
+    if (!reserved.response.ok && errorCode(reserved.payload) === "LOCAL_RUNTIME_DEVICE_NOT_APPROVED") {
+      const registration = await requestJson(credentials, `/api/v1/metered-runtime/devices/${encodeURIComponent(signer.deviceId)}`, {
+        method: "PUT",
+        body: JSON.stringify({ publicKeyPem: signer.publicKeyPem }),
+      });
+      if (!registration.response.ok || !isRecord(registration.payload)) {
+        throw new ApiError(registration.response.status || 503, errorCode(registration.payload), "RenWork could not register this billing device.");
+      }
+      if (registration.payload.status !== "active") {
+        throw new ApiError(403, "rencredit_device_approval_required", "This desktop must be approved by a RenWork platform administrator before OAuth models can run.");
+      }
+      reserved = await reserveOnce();
+    }
     if (!reserved.response.ok || !isRecord(reserved.payload)) {
       throw new ApiError(reserved.response.status || 503, errorCode(reserved.payload), "RenWork could not reserve RenCredit for this task.");
     }

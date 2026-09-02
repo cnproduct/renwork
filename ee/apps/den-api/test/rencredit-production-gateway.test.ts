@@ -17,6 +17,11 @@ describe("RenWork production inference gateway", () => {
     expect(gateway).not.toContain('c.req.header("X-Organization-Id")')
   })
 
+  test("lets the signed desktop provider supply an automatic per-run idempotency key", () => {
+    expect(gateway).toContain('c.req.header("X-RenWork-Client")')
+    expect(gateway).toContain('`desktop:${principal.inferenceKeyId}:${runId}`')
+  })
+
   test("reserves before egress and releases every failed or empty result", () => {
     expect(gateway.indexOf("reserveInferenceCredits({")).toBeLessThan(gateway.indexOf("await fetch(chatCompletionsUrl"))
     expect(gateway).toContain("UPSTREAM_NETWORK_ERROR")
@@ -26,8 +31,26 @@ describe("RenWork production inference gateway", () => {
 
   test("requests stream usage and hides the upstream model id", () => {
     expect(gateway).toContain("include_usage: true")
+    expect(gateway).toContain("delete upstreamBody.usage")
     expect(gateway).toContain("sanitizeStreamEvent(event, model.sku)")
     expect(gateway).toContain("JSON.stringify({ ...payload, model: model.sku })")
+    expect(gateway).toContain("while (true)")
+    expect(gateway).toContain('streamEventData(event) === "[DONE]"')
+    expect(gateway).toContain("normalizeOpenAiStreamPayload")
+    expect(gateway).toContain("Object.entries(choice.delta).filter(([, value]) => value !== null)")
+    expect(gateway).toContain('controller.enqueue(new TextEncoder().encode("data: [DONE]\\n\\n"))')
+    expect(gateway).toContain('releaseOnce("CLIENT_ABORTED")')
+    expect(gateway).not.toContain("async pull(controller)")
+  })
+
+  test("logs only sanitized upstream rejection structure before releasing credits", () => {
+    expect(gateway).toContain("safeUpstreamErrorDetails(upstreamError)")
+    expect(gateway).toContain("summarizeToolSchemas(upstreamBody)")
+    expect(gateway).toContain('request_keys: Object.keys(upstreamBody).sort()')
+    expect(gateway.indexOf('logger.warn("RenWork upstream inference rejected request"')).toBeLessThan(
+      gateway.indexOf('releaseInferenceCredits({ reservationId: reservation.id, failureCode: `UPSTREAM_HTTP_${upstream.status}` })'),
+    )
+    expect(gateway).not.toContain("upstreamBody.messages")
   })
 })
 

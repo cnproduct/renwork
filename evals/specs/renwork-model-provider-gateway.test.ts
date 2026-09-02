@@ -16,6 +16,11 @@ test("RenWork owns the managed model catalog and provider routing boundary", asy
   expect(RENWORK_MANAGED_PROVIDER_ID).toBe("renwork");
   expect(catalog.length).toBeGreaterThan(0);
   expect(Object.values(RENWORK_MODEL_CATALOG).every((model) => model.displayName.startsWith("RenWork:"))).toBe(true);
+  expect(RENWORK_MODEL_CATALOG["renwork-code-kimi-k3"]).toMatchObject({
+    upstreamModel: "renwork-code-kimi-k3",
+    enabled: true,
+  });
+  expect(RENWORK_MODEL_CATALOG["moonshotai/kimi-k3"].enabled).toBe(false);
   expect(resolveModelAlias(`renwork/${catalog[0]?.alias}`)?.alias).toBe(catalog[0]?.alias);
   expect(resolveModelAlias(`openwork/${catalog[0]?.alias}`)?.alias).toBe(catalog[0]?.alias);
   expect(catalog.some((model) => model.alias.startsWith("openwork/"))).toBe(false);
@@ -39,7 +44,7 @@ test("RenWork owns the managed model catalog and provider routing boundary", asy
 
   evidence.fact(
     "RenWork model catalog and provider gateway are established",
-    "The public catalog is RenWork-branded, the RenWork provider prefix resolves, the legacy prefix remains a non-advertised compatibility alias, and routing is delegated through a registered server-side provider adapter.",
+    "The public catalog is RenWork-branded, the stable Kimi K3 SKU is enabled while the upstream alias is compatibility-only, the RenWork provider prefix resolves, and routing is delegated through a registered server-side provider adapter.",
     true,
   );
 });

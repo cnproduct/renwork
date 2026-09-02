@@ -17,6 +17,7 @@ import { db } from "../db.js"
 import { parseOrganizationPlan } from "../entitlements.js"
 import { env } from "../env.js"
 import { publicRoute } from "../middleware/index.js"
+import { appLogger } from "../observability/logger.js"
 import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
 import { accessAllowsModel, resolveRenworkModelAccess } from "../renwork-access.js"
 import {
@@ -27,6 +28,8 @@ import {
 } from "../rencredit-ledger.js"
 
 type JsonRecord = Record<string, unknown>
+
+const logger = appLogger.child({ component: "inference_gateway" })
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -87,9 +90,13 @@ async function loadProductionCatalog() {
   return catalog
 }
 
-function extractStreamEvent(event: string) {
-  const data = event.split("\n").filter((line) => line.startsWith("data:"))
+function streamEventData(event: string) {
+  return event.split("\n").filter((line) => line.startsWith("data:"))
     .map((line) => line.slice(5).trim()).join("")
+}
+
+function extractStreamEvent(event: string) {
+  const data = streamEventData(event)
   if (!data || data === "[DONE]") return null
   try {
     const parsed = JSON.parse(data) as unknown
@@ -99,12 +106,30 @@ function extractStreamEvent(event: string) {
   }
 }
 
+function normalizeOpenAiStreamPayload(payload: JsonRecord) {
+  if (!Array.isArray(payload.choices)) return payload
+  return {
+    ...payload,
+    choices: payload.choices.map((choice) => {
+      if (!isRecord(choice) || !isRecord(choice.delta)) return choice
+      return {
+        ...choice,
+        // Some OpenAI-compatible relays emit nullable delta fields. The
+        // OpenAI stream contract represents these as absent fields; forwarding
+        // null makes strict desktop SDKs reject an otherwise valid response.
+        delta: Object.fromEntries(Object.entries(choice.delta).filter(([, value]) => value !== null)),
+      }
+    }),
+  }
+}
+
 function sanitizeStreamEvent(event: string, modelSku: string) {
   const trimmed = event.trim()
   if (!trimmed) return ""
+  if (streamEventData(event) === "[DONE]") return ""
   const parsed = extractStreamEvent(event)
   if (!parsed) return `${event}\n\n`
-  return `data: ${JSON.stringify({ ...parsed, model: modelSku })}\n\n`
+  return `data: ${JSON.stringify({ ...normalizeOpenAiStreamPayload(parsed), model: modelSku })}\n\n`
 }
 
 function responseHasResult(payload: JsonRecord) {
@@ -130,6 +155,54 @@ function copySafeUpstreamHeaders(upstream: Response) {
   return headers
 }
 
+function safeUpstreamErrorDetails(raw: string) {
+  const fallback = raw.trim().slice(0, 1_000)
+  if (!fallback) return { providerErrorCode: null, providerErrorMessage: null }
+  try {
+    const parsed = JSON.parse(fallback) as unknown
+    if (!isRecord(parsed)) return { providerErrorCode: null, providerErrorMessage: fallback }
+    const error = isRecord(parsed.error) ? parsed.error : parsed
+    return {
+      providerErrorCode: typeof error.code === "string" ? error.code.slice(0, 160) : null,
+      providerErrorMessage: typeof error.message === "string" ? error.message.slice(0, 1_000) : fallback,
+    }
+  } catch {
+    return { providerErrorCode: null, providerErrorMessage: fallback }
+  }
+}
+
+function summarizeToolSchemas(body: JsonRecord) {
+  const tools = Array.isArray(body.tools) ? body.tools : []
+  return tools.map((tool) => {
+    if (!isRecord(tool)) return { name: null, parametersType: typeof tool, suspiciousKeys: [] as string[] }
+    const definition = isRecord(tool.function) ? tool.function : null
+    const parameters = definition && isRecord(definition.parameters) ? definition.parameters : null
+    const suspiciousKeys = parameters
+      ? Object.keys(parameters).filter((key) => key.startsWith("_") || ["def", "shape", "parse", "safeParse"].includes(key)).slice(0, 8)
+      : []
+    return {
+      name: definition && typeof definition.name === "string" ? definition.name.slice(0, 160) : null,
+      parametersType: parameters && typeof parameters.type === "string" ? parameters.type : parameters ? "object" : "missing",
+      suspiciousKeys,
+    }
+  })
+}
+
+function buildUpstreamBody(body: JsonRecord, upstreamModelId: string) {
+  const upstreamBody: JsonRecord = { ...body, model: upstreamModelId }
+  // OpenCode includes a local response-usage accumulator on requests. It is
+  // not part of the OpenAI Chat Completions request schema and strict relays
+  // such as OpenCode Go reject the whole request when it is forwarded.
+  delete upstreamBody.usage
+  if (body.stream === true) {
+    upstreamBody.stream_options = {
+      ...(isRecord(body.stream_options) ? body.stream_options : {}),
+      include_usage: true,
+    }
+  }
+  return upstreamBody
+}
+
 export function registerInferenceGatewayRoutes<T extends { Variables: Record<string, unknown> }>(app: Hono<T>) {
   app.post("/api/v1/chat/completions", publicRoute, async (c) => {
     const apiKey = bearerToken(c.req.header("Authorization"))
@@ -141,7 +214,12 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     if (!isRecord(body) || typeof body.model !== "string") {
       return c.json({ error: { code: "VALIDATION_FAILED", message: "model and a valid JSON request body are required." } }, 400)
     }
-    const idempotencyKey = c.req.header("Idempotency-Key")?.trim()
+    const explicitIdempotencyKey = c.req.header("Idempotency-Key")?.trim()
+    const desktopClient = c.req.header("X-RenWork-Client")?.trim().toLowerCase() === "desktop"
+    const runId = c.req.header("X-RenWork-Run-Id")?.trim() || randomUUID()
+    const idempotencyKey = explicitIdempotencyKey || (desktopClient
+      ? `desktop:${principal.inferenceKeyId}:${runId}`
+      : null)
     if (!idempotencyKey) {
       return c.json({ error: { code: "IDEMPOTENCY_KEY_REQUIRED", message: "Idempotency-Key is required for metered inference." } }, 400)
     }
@@ -202,7 +280,6 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     const estimatedUsage = estimateOpenAiRequestUsage(body)
     const billingMode = catalog.billingPolicy[route.source]
     const reservedMicroCredits = billingMode === "free" ? 0 : calculateRenCreditMicroCharge(estimatedUsage, model)
-    const runId = c.req.header("X-RenWork-Run-Id")?.trim() || randomUUID()
     let reservation
     try {
       const reserved = await reserveInferenceCredits({
@@ -245,8 +322,7 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
       return c.json({ error: { code, message } }, status)
     }
 
-    const upstreamBody: JsonRecord = { ...body, model: route.upstreamModelId }
-    if (body.stream === true) upstreamBody.stream_options = { ...(isRecord(body.stream_options) ? body.stream_options : {}), include_usage: true }
+    const upstreamBody = buildUpstreamBody(body, route.upstreamModelId)
     const headers = new Headers({ "content-type": "application/json", accept: body.stream === true ? "text/event-stream" : "application/json" })
     if (credential) headers.set("authorization", `Bearer ${credential}`)
 
@@ -263,6 +339,19 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
       return c.json({ error: { code: "UPSTREAM_UNAVAILABLE", message: "The RenWork model route is temporarily unavailable." } }, 502)
     }
     if (!upstream.ok) {
+      const upstreamError = await upstream.text().catch(() => "")
+      logger.warn("RenWork upstream inference rejected request", {
+        organization_id: principal.organizationId,
+        member_id: principal.memberId,
+        provider_id: provider.id,
+        route_id: route.id,
+        model_sku: model.sku,
+        upstream_model_id: route.upstreamModelId,
+        upstream_status: upstream.status,
+        request_keys: Object.keys(upstreamBody).sort(),
+        tools: summarizeToolSchemas(upstreamBody),
+        ...safeUpstreamErrorDetails(upstreamError),
+      })
       await releaseInferenceCredits({ reservationId: reservation.id, failureCode: `UPSTREAM_HTTP_${upstream.status}` })
       return c.json({ error: { code: "UPSTREAM_ERROR", message: "The RenWork model route could not complete the request." } }, upstream.status >= 500 ? 502 : 400)
     }
@@ -297,46 +386,58 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     let usageReported = false
     let providerResponseId = `run:${runId}`
     let hasResult = false
+    let finalized = false
+    const observeEvent = (event: string) => {
+      const parsed = extractStreamEvent(event)
+      if (!parsed) return
+      if (typeof parsed.id === "string") providerResponseId = parsed.id
+      if (isRecord(parsed.usage)) { usage = normalizeOpenAiUsage(parsed.usage); usageReported = true }
+      hasResult ||= responseHasResult(parsed)
+    }
+    const settleOnce = async () => {
+      if (finalized) return
+      finalized = true
+      const finalUsage = usageReported ? usage : estimatedUsage
+      await settleInferenceCredits({ reservationId: reservation.id, usage: finalUsage, providerResponseId, accuracy: usageReported ? "reported" : "estimated", hasResult })
+    }
+    const releaseOnce = async (failureCode: string) => {
+      if (finalized) return
+      finalized = true
+      await releaseInferenceCredits({ reservationId: reservation.id, failureCode })
+    }
     const stream = new ReadableStream<Uint8Array>({
-      async pull(controller) {
-        try {
-          const next = await reader.read()
-          if (next.done) {
-            buffer += decoder.decode()
-            for (const event of buffer.split(/\n\n/)) {
-              const parsed = extractStreamEvent(event)
-              if (!parsed) continue
-              if (typeof parsed.id === "string") providerResponseId = parsed.id
-              if (isRecord(parsed.usage)) { usage = normalizeOpenAiUsage(parsed.usage); usageReported = true }
-              hasResult ||= responseHasResult(parsed)
+      start(controller) {
+        void (async () => {
+          try {
+            while (true) {
+              const next = await reader.read()
+              if (next.done) {
+                buffer += decoder.decode()
+                const finalEvents = buffer.split(/\n\n/)
+                for (const event of finalEvents) observeEvent(event)
+                const sanitized = finalEvents.map((event) => sanitizeStreamEvent(event, model.sku)).join("")
+                if (sanitized) controller.enqueue(new TextEncoder().encode(sanitized))
+                await settleOnce()
+                controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"))
+                controller.close()
+                return
+              }
+              buffer += decoder.decode(next.value, { stream: true })
+              const events = buffer.split(/\n\n/)
+              buffer = events.pop() ?? ""
+              for (const event of events) observeEvent(event)
+              const sanitized = events.map((event) => sanitizeStreamEvent(event, model.sku)).join("")
+              if (sanitized) controller.enqueue(new TextEncoder().encode(sanitized))
             }
-            const finalUsage = usageReported ? usage : estimatedUsage
-            await settleInferenceCredits({ reservationId: reservation.id, usage: finalUsage, providerResponseId, accuracy: usageReported ? "reported" : "estimated", hasResult })
-            if (buffer) controller.enqueue(new TextEncoder().encode(sanitizeStreamEvent(buffer, model.sku)))
-            controller.close()
-            return
+          } catch (error) {
+            await releaseOnce("STREAM_ABORTED").catch(() => undefined)
+            controller.error(error)
           }
-          const text = decoder.decode(next.value, { stream: true })
-          buffer += text
-          const events = buffer.split(/\n\n/)
-          buffer = events.pop() ?? ""
-          for (const event of events) {
-            const parsed = extractStreamEvent(event)
-            if (!parsed) continue
-            if (typeof parsed.id === "string") providerResponseId = parsed.id
-            if (isRecord(parsed.usage)) { usage = normalizeOpenAiUsage(parsed.usage); usageReported = true }
-            hasResult ||= responseHasResult(parsed)
-          }
-          const sanitized = events.map((event) => sanitizeStreamEvent(event, model.sku)).join("")
-          if (sanitized) controller.enqueue(new TextEncoder().encode(sanitized))
-        } catch (error) {
-          await releaseInferenceCredits({ reservationId: reservation.id, failureCode: "STREAM_ABORTED" }).catch(() => undefined)
-          controller.error(error)
-        }
+        })()
       },
       async cancel() {
         await reader.cancel().catch(() => undefined)
-        await releaseInferenceCredits({ reservationId: reservation.id, failureCode: "CLIENT_ABORTED" }).catch(() => undefined)
+        await releaseOnce("CLIENT_ABORTED").catch(() => undefined)
       },
     })
     return new Response(stream, { status: 200, headers: copySafeUpstreamHeaders(upstream) })

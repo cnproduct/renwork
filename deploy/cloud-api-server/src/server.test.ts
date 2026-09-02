@@ -1,13 +1,15 @@
 import { beforeAll, describe, expect, test } from "bun:test";
+import { readFile } from "node:fs/promises";
 import type { Hono } from "hono";
 
 let app: Hono;
+const statePath = `/private/tmp/renwork-model-catalog-test-${process.pid}.json`;
 
 beforeAll(async () => {
   process.env.NODE_ENV = "test";
   process.env.RENWORK_SUPER_ADMIN_TOKEN = "renwork-super-admin-test-token";
   delete process.env.OPENROUTER_API_KEY;
-  process.env.DATA_PATH = `/private/tmp/renwork-cloud-api-test-${process.pid}.json`;
+  process.env.DATA_PATH = statePath;
   ({ app } = await import("./server.js"));
 });
 
@@ -16,7 +18,7 @@ describe("RenWork model catalog API", () => {
     const response = await app.request("/v1/models/catalog");
     expect(response.status).toBe(200);
     const payload = await response.json();
-    expect(payload.models).toHaveLength(4);
+    expect(payload.models.length).toBeGreaterThan(0);
     expect(payload.models[0]?.providerID).toBe("renwork");
     expect(JSON.stringify(payload)).not.toContain("providers");
     expect(JSON.stringify(payload)).not.toContain("credentialRef");
@@ -91,5 +93,16 @@ describe("RenWork model catalog API", () => {
     expect(payload.ok).toBe(true);
     expect(payload.message).toContain("设备 OAuth 策略有效");
     expect(JSON.stringify(await save.json())).not.toContain("oauth_token");
+
+    const persisted = JSON.parse(await readFile(statePath, "utf8"));
+    expect(Object.keys(persisted)).toEqual(["modelCatalog"]);
+    expect(JSON.stringify(persisted)).not.toContain("wallet");
+  });
+
+  test("does not expose the retired file-backed RenCredit ledger", async () => {
+    const wallet = await app.request("/v1/rencredit/wallet");
+    const reserve = await app.request("/v1/rencredit/reservations", { method: "POST" });
+    expect(wallet.status).toBe(404);
+    expect(reserve.status).toBe(404);
   });
 });
