@@ -31,7 +31,7 @@ test("You're in downloads for the detected OS instead of opening /install", asyn
   expect(source).toContain("downloadCtaLabel");
   expect(source).toContain("startInstallerDownload");
   expect(source).toContain('data-download-href={downloadHref ?? undefined}');
-  expect(source).toContain("Already have OpenWork? Open it.");
+  expect(source).toContain("Already have RenWork? Open it.");
   expect(source).toContain('data-testid="join-org-open-app"');
   expect(source).not.toContain("Get the desktop app");
   expect(source).not.toContain("window.location.assign(await createOrganizationInstallLink");
