@@ -371,7 +371,11 @@ export async function repairMemberInferenceAccessIfNeeded(input: {
     .limit(1)
 
   const inference = readInferenceMetadata(organization?.metadata ?? null)
-  if (!inference) {
+  const access = await resolveRenworkModelAccess({
+    organizationId: input.organizationId,
+    metadata: organization?.metadata ?? null,
+  })
+  if (!inference && !access.allowed) {
     return false
   }
 
