@@ -60,7 +60,7 @@ export async function generateMetadata(): Promise<Metadata> {
       images: ["/opengraph-image"]
     },
     icons: {
-      icon: "/openwork-mark.svg"
+      icon: "/renwork-mark.png"
     }
   };
 }

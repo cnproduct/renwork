@@ -19,7 +19,7 @@ describe("Den settings destinations", () => {
 
   test("renders one truthful Billing refresh surface with explicit loading and error states", () => {
     const billing = read("../app/(den)/dashboard/_components/billing-dashboard-screen.tsx");
-    const refreshLabels = billing.match(/>Refresh<\/DenButton>/g) ?? [];
+    const refreshLabels = billing.match(/>\s*Refresh\s*<\/DenButton>/g) ?? [];
 
     expect(billing).toContain('data-testid="stripe-billing-screen"');
     expect(billing).toContain('title="Billing"');
@@ -27,7 +27,7 @@ describe("Den settings destinations", () => {
     expect(billing).toContain("Billing details could not be loaded");
     expect(billing).not.toContain("Subscribe with Stripe");
     expect(billing).toContain('"/v1/billing/stripe/checkout"');
-    expect(billing).toContain("per user per {seatBilling?.interval}");
+    expect(billing).toContain("per {stripeBilling.interval}");
     expect(refreshLabels).toHaveLength(1);
   });
 

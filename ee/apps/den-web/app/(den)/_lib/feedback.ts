@@ -1,4 +1,4 @@
-export const OPENWORK_FEEDBACK_URL = "https://openworklabs.com/feedback";
+export const OPENWORK_FEEDBACK_URL = "https://rrenn.com/feedback";
 
 export function buildDenFeedbackUrl(options?: {
   pathname?: string;

@@ -337,7 +337,7 @@ export function BillingDashboardScreen() {
       <DashboardPageTemplate
         icon={CreditCard}
         title="Billing"
-        description="Two separate subscriptions: seats for your team, and access to OpenWork's built-in AI models. You can have one without the other."
+        description="Two separate subscriptions: seats for your team, and access to RenWork's built-in AI models. You can have one without the other."
         colors={["#F5F3FF", "#312E81", "#635BFF", "#C4B5FD"]}
       >
       {stripeError && stripeBilling ? (
@@ -554,7 +554,7 @@ export function BillingDashboardScreen() {
       <DenCard data-testid="billing-ai-card">
         <DenSectionHeader
           title="AI model access"
-          description="Use OpenWork's built-in models with no API keys to manage. Separate from seats."
+          description="Use RenWork's built-in models with no API keys to manage. Separate from seats."
           action={
             !aiConfigured
               ? <DenBadge tone="neutral">Not billed</DenBadge>
@@ -616,7 +616,7 @@ export function BillingDashboardScreen() {
               description={
                 aiConfigured
                   ? `Turning this on costs ${aiChargeLabel} per ${stripeBilling.interval} for your ${activeMemberCount} ${activeMemberCount === 1 ? "member" : "members"}, not ${stripePrice}. You subscribe from the RenWork Models page.`
-                  : "See which models OpenWork ships with and how your team connects their own provider keys."
+                  : "See which models RenWork ships with and how your team connects their own provider keys."
               }
               action={
                 <DenButton onClick={() => router.push(getInferenceRoute(activeOrg?.slug))}>

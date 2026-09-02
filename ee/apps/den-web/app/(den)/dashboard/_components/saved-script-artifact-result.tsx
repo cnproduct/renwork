@@ -59,7 +59,7 @@ export function SavedScriptArtifactResult(props: {
         {props.freshness ? <span className={`rounded-full px-2 py-1 font-medium ${props.freshness.state === "needs_attention" ? "bg-red-50 text-red-600" : props.freshness.state === "fresh" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{freshnessLabel(props.freshness)}</span> : null}
         {props.lastSuccessful ? <span className="rounded-full bg-blue-50 px-2 py-1 font-medium text-blue-700">Last successful</span> : null}
         <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">Exact Script version {snapshot.configObjectVersionId.slice(0, 8)}</span>
-        <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{snapshot.source === "scheduled" ? "Scheduled · OpenWork Cloud" : "Manual"}</span>
+        <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{snapshot.source === "scheduled" ? "Scheduled · RenWork Cloud" : "Manual"}</span>
       </div>
       {snapshot.contentDeletedAt ? <p className="rounded-xl border border-dashed border-gray-200 p-4 text-[13px] text-gray-400">Artifact content deleted</p> : (
         <>

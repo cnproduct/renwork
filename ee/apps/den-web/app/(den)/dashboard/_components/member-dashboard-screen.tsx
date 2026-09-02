@@ -167,7 +167,7 @@ export function MemberDashboardScreen() {
         <p className="mt-10 w-full border-t border-gray-100 pt-5 text-[13px] text-gray-500">
           Already installed?{" "}
           <a href={OPEN_APP_URL} className="font-medium text-gray-900 underline-offset-2 hover:underline">
-            Open OpenWork →
+            Open RenWork →
           </a>
         </p>
       </div>

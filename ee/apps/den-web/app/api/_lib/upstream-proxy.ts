@@ -39,14 +39,14 @@ const INTERNAL_RESPONSE_HEADERS = new Set([
 const SAFE_X_RESPONSE_HEADERS = new Set(["x-content-type-options"]);
 
 /**
- * OpenWork Cloud instances are served from Daytona preview origins that are
+ * RenWork Cloud instances are served from Daytona preview origins that are
  * re-signed (and therefore renamed) on every wake, so they can never appear in
  * a static CORS allowlist. The signed-in SPA running there has to reach Den for
  * /v1/me, /v1/me/orgs, MCP tokens and org connections.
  *
  * We reflect those origins, and make that safe by stripping the cookie header
  * from the forwarded request: an instance-origin call is authenticated by its
- * bearer token alone and can never ride the viewer's app.openworklabs.com
+ * bearer token alone and can never ride the viewer's app.rrenn.com
  * session. A hostile page on some other origin therefore gains nothing from the
  * reflection - it has no bearer token and its cookies are discarded.
  *

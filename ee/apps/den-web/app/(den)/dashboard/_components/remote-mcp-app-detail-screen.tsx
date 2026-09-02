@@ -82,7 +82,7 @@ export function RemoteMcpAppDetailScreen({ appId }: { appId: string }) {
       </Link>
       <DenPageHeader
         title={metadata.name}
-        description={metadata.description ?? "A portable app cached and served by OpenWork."}
+        description={metadata.description ?? "A portable app cached and served by RenWork."}
         action={(
           <div className="flex items-center gap-2">
             <DenChip tone={app.status === "active" ? "success" : "warning"}>{app.status === "active" ? "Ready" : "Retired"}</DenChip>
@@ -99,7 +99,7 @@ export function RemoteMcpAppDetailScreen({ appId }: { appId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-[14px] font-semibold text-gray-900">Installed copy</h2>
-            <p className="mt-1 text-[12px] leading-5 text-gray-500">The active app runs from this immutable OpenWork resource, not from its source URL.</p>
+            <p className="mt-1 text-[12px] leading-5 text-gray-500">The active app runs from this immutable RenWork resource, not from its source URL.</p>
           </div>
           {app.activeRevision ? (
             <DenButton
@@ -127,7 +127,7 @@ export function RemoteMcpAppDetailScreen({ appId }: { appId: string }) {
       <section className="mb-6 rounded-2xl border border-gray-200 bg-white p-5">
         <h2 className="text-[14px] font-semibold text-gray-900">Standard MCP runtime</h2>
         <p className="mt-1 text-[12px] leading-5 text-gray-500">
-          OpenWork exposes this immutable HTML as a standard MCP App resource from the OpenWork Cloud server. It can use app-visible capability search on that same server to call authorized Connect tools and Code Mode Programs without receiving credentials. Apps distributed with their own MCP server keep that server&apos;s native tools, resources, UI metadata, and same-server calls through Connect.
+          RenWork exposes this immutable HTML as a standard MCP App resource from the RenWork Cloud server. It can use app-visible capability search on that same server to call authorized Connect tools and Code Mode Programs without receiving credentials. Apps distributed with their own MCP server keep that server&apos;s native tools, resources, UI metadata, and same-server calls through Connect.
         </p>
       </section>
 

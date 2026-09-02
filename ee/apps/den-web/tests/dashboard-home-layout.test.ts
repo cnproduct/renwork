@@ -36,7 +36,7 @@ describe("dashboard home layouts", () => {
     expect(member).toContain('data-testid="member-download-app"');
     expect(member).toContain('data-testid="member-copy-install-link"');
     // The install link is minted by the workspace's own den, so the same
-    // action works for OpenWork Cloud and self-hosted orgs.
+    // action works for RenWork Cloud and self-hosted orgs.
     expect(member).toContain("createOrganizationInstallLink");
     expect(member).toContain('"openwork://open"');
     expect(member).not.toContain("useOrgLlmProviders");

@@ -615,7 +615,7 @@ export function LlmProviderEditorScreen({
         }
 
         if (provider?.source === "openwork") {
-            setSaveError("OpenWork-managed providers are controlled from Inference settings.");
+            setSaveError("RenWork-managed providers are controlled from Inference settings.");
             return;
         }
 
