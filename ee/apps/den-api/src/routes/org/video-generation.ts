@@ -30,6 +30,13 @@ import {
   type MetaSoH3Provider,
   validatePersistedVideoResult,
 } from "../../minimax-h3-provider.js"
+import {
+  AI_PROVENANCE_EVIDENCE,
+  videoJobApprovalBlockReason,
+  videoJobCanAcceptCostEvidence,
+  videoJobCanBeReleasedSafely,
+  videoJobHasReviewableDelivery,
+} from "../../minimax-h3-video-policy.js"
 import { organizationHasCapability } from "../../organization-capabilities.js"
 import {
   captureProductCredits,
@@ -45,11 +52,31 @@ const FIRST_FRAME_MAX_BYTES = 10 * 1024 * 1024
 const RESERVATION_TTL_MS = 30 * 60 * 1000
 const QUOTE_TTL_MS = 15 * 60 * 1000
 const ABANDONED_SUBMISSION_CLAIM_MS = 5 * 60 * 1000
+// Persisted before capture as the exact audit code AI_GENERATED_PROVENANCE_PRESERVED.
 
 type VideoJobRow = typeof VideoGenerationJobTable.$inferSelect
 type ProviderFactory = () => MetaSoH3Provider
 
 const idempotencyKeySchema = z.string().trim().min(8).max(128).regex(/^[A-Za-z0-9._:-]+$/)
+const providerCostEvidenceSchema = z.discriminatedUnion("providerCostKind", [
+  z.object({
+    providerCostKind: z.literal("money"),
+    providerCostMicrounits: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    providerCostCurrency: z.string().trim().regex(/^[A-Z]{3}$/),
+    costEvidenceReference: z.string().trim().min(1).max(512),
+  }).strict(),
+  z.object({
+    providerCostKind: z.literal("provider_credits"),
+    providerCostUnits: z.number().finite().nonnegative().max(1_000_000_000_000)
+      .refine((value) => Number.isInteger(value * 1_000_000), "provider credits support at most 6 decimal places"),
+    providerCostUnitCode: z.literal("METASO_H3_CREDIT"),
+    costEvidenceReference: z.string().trim().min(1).max(512),
+  }).strict(),
+])
+const videoReviewSchema = z.object({
+  decision: z.enum(["approved", "rejected"]),
+  reason: z.string().trim().min(1).max(1000),
+})
 
 function sha256(value: string | Uint8Array) {
   return createHash("sha256").update(value).digest("hex")
@@ -70,8 +97,14 @@ function configuredPrice() {
   return { microCreditsPerSecond, priceVersion }
 }
 
-function routeEnabled(metadata: Record<string, unknown> | string | null | undefined) {
-  return organizationMinimaxH3VideoEnabled(metadata)
+function configuredLicenseEvidenceId() {
+  const evidenceId = process.env.RENWORK_METASO_H3_LICENSE_EVIDENCE_ID?.trim()
+  if (!evidenceId || evidenceId.length > 128) throw new Error("VIDEO_LICENSE_EVIDENCE_UNAVAILABLE")
+  return evidenceId
+}
+
+function routeEnabled(metadata: Record<string, unknown> | string | null | undefined, organizationId: string) {
+  return organizationMinimaxH3VideoEnabled(metadata, organizationId)
 }
 
 function organizationRouteEnabled(metadata: Record<string, unknown> | string | null | undefined) {
@@ -111,6 +144,9 @@ async function memberJob(job: VideoJobRow): Promise<MemberVideoJob> {
     durationSeconds: job.duration_seconds,
     reservedMicroCredits: reservation.reserved,
     capturedMicroCredits: reservation.captured,
+    settlementStatus: job.settlement_status,
+    aiProvenanceStatus: job.ai_provenance_status,
+    reviewStatus: job.review_status,
     assetUrl: job.result_asset_id ? memberAssetUrl(job.result_asset_id) : null,
     taskHash: job.task_hash,
     resultHash: job.result_hash,
@@ -153,9 +189,19 @@ function providerFailureCode(error: unknown) {
 
 async function failJob(job: VideoJobRow, failureCode: string) {
   await releaseProductCredits({ reservationId: job.rencredit_reservation_id, failureCode })
+  await db.delete(VideoGenerationAssetTable).where(and(
+    eq(VideoGenerationAssetTable.organization_id, job.organization_id),
+    eq(VideoGenerationAssetTable.org_membership_id, job.org_membership_id),
+    eq(VideoGenerationAssetTable.job_id, job.id),
+    eq(VideoGenerationAssetTable.kind, "result_video"),
+  ))
   await db.update(VideoGenerationJobTable).set({
     status: "failed",
     settlement_status: "released",
+    result_asset_id: null,
+    result_hash: null,
+    ai_provenance_status: "pending",
+    ai_provenance_evidence: null,
     failure_code: failureCode,
     last_reconciled_at: new Date(),
   }).where(and(
@@ -178,9 +224,19 @@ async function alignJobWithSettledReservation(job: VideoJobRow) {
   if (reservation.status === "reserved") return null
 
   if (reservation.status === "released") {
+    await db.delete(VideoGenerationAssetTable).where(and(
+      eq(VideoGenerationAssetTable.organization_id, job.organization_id),
+      eq(VideoGenerationAssetTable.org_membership_id, job.org_membership_id),
+      eq(VideoGenerationAssetTable.job_id, job.id),
+      eq(VideoGenerationAssetTable.kind, "result_video"),
+    ))
     await db.update(VideoGenerationJobTable).set({
       status: "failed",
       settlement_status: "released",
+      result_asset_id: null,
+      result_hash: null,
+      ai_provenance_status: "pending",
+      ai_provenance_evidence: null,
       failure_code: job.failure_code ?? "RENCREDIT_RESERVATION_RELEASED",
       last_reconciled_at: new Date(),
     }).where(and(
@@ -208,6 +264,8 @@ async function alignJobWithSettledReservation(job: VideoJobRow) {
         settlement_status: "captured",
         result_asset_id: asset.id,
         result_hash: asset.result_hash,
+        ai_provenance_status: "preserved",
+        ai_provenance_evidence: AI_PROVENANCE_EVIDENCE,
         failure_code: null,
         last_reconciled_at: new Date(),
       }).where(and(
@@ -345,6 +403,15 @@ async function reconcileVideoJob(job: VideoJobRow, providerFactory: ProviderFact
     persistedByteLength: persistedAsset.byte_length,
   })
   if (persistenceFailure) return failJob(job, persistenceFailure)
+  await db.update(VideoGenerationJobTable).set({
+    ai_provenance_status: "preserved",
+    ai_provenance_evidence: AI_PROVENANCE_EVIDENCE,
+    review_status: "pending_review",
+  }).where(and(
+    eq(VideoGenerationJobTable.id, job.id),
+    eq(VideoGenerationJobTable.organization_id, job.organization_id),
+    eq(VideoGenerationJobTable.settlement_status, "reserved"),
+  ))
   await captureProductCredits({
     reservationId: job.rencredit_reservation_id,
     providerResponseId: job.provider_task_id,
@@ -355,6 +422,9 @@ async function reconcileVideoJob(job: VideoJobRow, providerFactory: ProviderFact
     settlement_status: "captured",
     result_asset_id: persistedAsset.id,
     result_hash: persistedAsset.result_hash,
+    ai_provenance_status: "preserved",
+    ai_provenance_evidence: AI_PROVENANCE_EVIDENCE,
+    review_status: "pending_review",
     failure_code: null,
     last_reconciled_at: new Date(),
   }).where(and(eq(VideoGenerationJobTable.id, job.id), eq(VideoGenerationJobTable.organization_id, job.organization_id)))
@@ -382,7 +452,7 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
   app.get("/v1/video-generation/capabilities", orgRoleRoute(["member"]), async (c) => {
     const payload = c.get("organizationContext")
     const visible = organizationRouteEnabled(payload.organization.metadata)
-    const enabled = routeEnabled(payload.organization.metadata)
+    const enabled = routeEnabled(payload.organization.metadata, payload.organization.id)
     return c.json({
       visible,
       enabled,
@@ -402,7 +472,7 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
     bodyLimit({ maxSize: FIRST_FRAME_MAX_BYTES, onError: (c) => c.json({ error: "FIRST_FRAME_TOO_LARGE" }, 413) }),
     async (c) => {
       const payload = c.get("organizationContext")
-      if (!routeEnabled(payload.organization.metadata)) return c.json({ error: "not_found" }, 404)
+      if (!routeEnabled(payload.organization.metadata, payload.organization.id)) return c.json({ error: "not_found" }, 404)
       if (!c.req.header("content-type")?.toLowerCase().startsWith("multipart/form-data")) {
         return c.json({ error: "FIRST_FRAME_MULTIPART_REQUIRED" }, 400)
       }
@@ -459,7 +529,7 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
     jsonValidator(createVideoQuoteSchema),
     async (c) => {
       const payload = c.get("organizationContext")
-      if (!routeEnabled(payload.organization.metadata)) return c.json({ error: "not_found" }, 404)
+      if (!routeEnabled(payload.organization.metadata, payload.organization.id)) return c.json({ error: "not_found" }, 404)
       const input = c.req.valid("json")
       if (input.firstFrameAssetId && !await loadFirstFrame({
         organizationId: payload.organization.id,
@@ -508,7 +578,7 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
     jsonValidator(createVideoJobSchema),
     async (c) => {
       const payload = c.get("organizationContext")
-      if (!routeEnabled(payload.organization.metadata)) return c.json({ error: "not_found" }, 404)
+      if (!routeEnabled(payload.organization.metadata, payload.organization.id)) return c.json({ error: "not_found" }, 404)
       const idempotency = idempotencyKeySchema.safeParse(c.req.header("Idempotency-Key"))
       if (!idempotency.success) return c.json({ error: "IDEMPOTENCY_KEY_REQUIRED" }, 400)
       const [existing] = await db.select().from(VideoGenerationJobTable).where(and(
@@ -588,6 +658,7 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
           duration_seconds: quote.duration_seconds,
           aspect_ratio: quote.aspect_ratio,
           provider_id: PROVIDER_ID,
+          license_evidence_id: configuredLicenseEvidenceId(),
           price_version: quote.price_version,
           task_hash: taskHash,
         })
@@ -627,7 +698,7 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
     const job = await loadMemberJob({ organizationId: payload.organization.id, memberId: payload.currentMember.id, jobId: c.req.param("jobId") })
     if (!job) return c.json({ error: "not_found" }, 404)
     let reconciled = job
-    if (routeEnabled(payload.organization.metadata)) {
+    if (routeEnabled(payload.organization.metadata, payload.organization.id)) {
       try {
         reconciled = await reconcileVideoJob(job, providerFactory)
       } catch {
@@ -667,16 +738,165 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
       status: VideoGenerationJobTable.status,
       providerId: VideoGenerationJobTable.provider_id,
       providerTaskId: VideoGenerationJobTable.provider_task_id,
+      licenseEvidenceId: VideoGenerationJobTable.license_evidence_id,
       priceVersion: VideoGenerationJobTable.price_version,
       settlement: VideoGenerationJobTable.settlement_status,
       taskHash: VideoGenerationJobTable.task_hash,
       resultHash: VideoGenerationJobTable.result_hash,
+      aiProvenanceStatus: VideoGenerationJobTable.ai_provenance_status,
+      aiProvenanceEvidence: VideoGenerationJobTable.ai_provenance_evidence,
+      providerCostKind: VideoGenerationJobTable.provider_cost_kind,
+      providerCostMicrounits: VideoGenerationJobTable.provider_cost_microunits,
+      providerCostCurrency: VideoGenerationJobTable.provider_cost_currency,
+      providerCostUnits: VideoGenerationJobTable.provider_cost_units,
+      providerCostUnitCode: VideoGenerationJobTable.provider_cost_unit_code,
+      costEvidenceReference: VideoGenerationJobTable.cost_evidence_reference,
+      costEvidenceRecordedByOrgMembershipId: VideoGenerationJobTable.cost_evidence_recorded_by_org_membership_id,
+      costEvidenceRecordedAt: VideoGenerationJobTable.cost_evidence_recorded_at,
+      reviewStatus: VideoGenerationJobTable.review_status,
+      reviewedByOrgMembershipId: VideoGenerationJobTable.reviewed_by_org_membership_id,
+      reviewedAt: VideoGenerationJobTable.reviewed_at,
+      reviewReason: VideoGenerationJobTable.review_reason,
       failureCode: VideoGenerationJobTable.failure_code,
       createdAt: VideoGenerationJobTable.created_at,
     }).from(VideoGenerationJobTable).where(eq(VideoGenerationJobTable.organization_id, payload.organization.id))
       .orderBy(desc(VideoGenerationJobTable.created_at)).limit(100)
-    return c.json({ jobs: jobs.map((job) => ({ ...job, createdAt: dateString(job.createdAt) })) })
+    return c.json({ jobs: jobs.map((job) => ({
+      ...job,
+      costEvidenceRecordedAt: job.costEvidenceRecordedAt ? dateString(job.costEvidenceRecordedAt) : null,
+      reviewedAt: job.reviewedAt ? dateString(job.reviewedAt) : null,
+      createdAt: dateString(job.createdAt),
+    })) })
   })
+
+  app.put(
+    "/v1/video-generation/admin/jobs/:jobId/cost-evidence",
+    orgRoleRoute(["admin"]),
+    jsonValidator(providerCostEvidenceSchema),
+    async (c) => {
+      const payload = c.get("organizationContext")
+      if (!organizationRouteEnabled(payload.organization.metadata)) return c.json({ error: "not_found" }, 404)
+      const jobId = normalizedId("videoGenerationJob", c.req.param("jobId"))
+      if (!jobId) return c.json({ error: "not_found" }, 404)
+      const [job] = await db.select().from(VideoGenerationJobTable).where(and(
+        eq(VideoGenerationJobTable.id, jobId),
+        eq(VideoGenerationJobTable.organization_id, payload.organization.id),
+      )).limit(1)
+      if (!job) return c.json({ error: "not_found" }, 404)
+      if (!videoJobCanAcceptCostEvidence(job)) {
+        return c.json({ error: "JOB_NOT_READY_FOR_COST_RECONCILIATION" }, 409)
+      }
+      const evidence = c.req.valid("json")
+      const providerCost = evidence.providerCostKind === "money"
+        ? {
+            provider_cost_kind: evidence.providerCostKind,
+            provider_cost_microunits: evidence.providerCostMicrounits,
+            provider_cost_currency: evidence.providerCostCurrency,
+            provider_cost_units: null,
+            provider_cost_unit_code: null,
+          }
+        : {
+            provider_cost_kind: evidence.providerCostKind,
+            provider_cost_microunits: null,
+            provider_cost_currency: null,
+            provider_cost_units: evidence.providerCostUnits,
+            provider_cost_unit_code: evidence.providerCostUnitCode,
+          }
+      await db.update(VideoGenerationJobTable).set({
+        ...providerCost,
+        cost_evidence_reference: evidence.costEvidenceReference,
+        cost_evidence_recorded_by_org_membership_id: payload.currentMember.id,
+        cost_evidence_recorded_at: new Date(),
+      }).where(and(
+        eq(VideoGenerationJobTable.id, job.id),
+        eq(VideoGenerationJobTable.organization_id, payload.organization.id),
+        eq(VideoGenerationJobTable.review_status, "pending_review"),
+        isNull(VideoGenerationJobTable.provider_cost_kind),
+        isNull(VideoGenerationJobTable.provider_cost_microunits),
+        isNull(VideoGenerationJobTable.provider_cost_currency),
+        isNull(VideoGenerationJobTable.provider_cost_units),
+        isNull(VideoGenerationJobTable.provider_cost_unit_code),
+        isNull(VideoGenerationJobTable.cost_evidence_reference),
+        isNull(VideoGenerationJobTable.cost_evidence_recorded_by_org_membership_id),
+        isNull(VideoGenerationJobTable.cost_evidence_recorded_at),
+      ))
+      const [recorded] = await db.select({
+        providerCostKind: VideoGenerationJobTable.provider_cost_kind,
+        providerCostMicrounits: VideoGenerationJobTable.provider_cost_microunits,
+        providerCostCurrency: VideoGenerationJobTable.provider_cost_currency,
+        providerCostUnits: VideoGenerationJobTable.provider_cost_units,
+        providerCostUnitCode: VideoGenerationJobTable.provider_cost_unit_code,
+        costEvidenceReference: VideoGenerationJobTable.cost_evidence_reference,
+        recordedBy: VideoGenerationJobTable.cost_evidence_recorded_by_org_membership_id,
+      }).from(VideoGenerationJobTable).where(and(
+        eq(VideoGenerationJobTable.id, job.id),
+        eq(VideoGenerationJobTable.organization_id, payload.organization.id),
+      )).limit(1)
+      const recordedCostMatches = evidence.providerCostKind === "money"
+        ? recorded?.providerCostKind === evidence.providerCostKind
+          && recorded.providerCostMicrounits === evidence.providerCostMicrounits
+          && recorded.providerCostCurrency === evidence.providerCostCurrency
+          && recorded.providerCostUnits === null
+          && recorded.providerCostUnitCode === null
+        : recorded?.providerCostKind === evidence.providerCostKind
+          && recorded.providerCostMicrounits === null
+          && recorded.providerCostCurrency === null
+          && recorded.providerCostUnits === evidence.providerCostUnits
+          && recorded.providerCostUnitCode === evidence.providerCostUnitCode
+      if (
+        !recordedCostMatches
+        || recorded.costEvidenceReference !== evidence.costEvidenceReference
+        || recorded.recordedBy !== payload.currentMember.id
+      ) return c.json({ error: "COST_EVIDENCE_WRITE_CONFLICT" }, 409)
+      return c.json({ recorded: true, jobId: job.id })
+    },
+  )
+
+  app.put(
+    "/v1/video-generation/admin/jobs/:jobId/review",
+    orgRoleRoute(["admin"]),
+    jsonValidator(videoReviewSchema),
+    async (c) => {
+      const payload = c.get("organizationContext")
+      if (!organizationRouteEnabled(payload.organization.metadata)) return c.json({ error: "not_found" }, 404)
+      const jobId = normalizedId("videoGenerationJob", c.req.param("jobId"))
+      if (!jobId) return c.json({ error: "not_found" }, 404)
+      const [job] = await db.select().from(VideoGenerationJobTable).where(and(
+        eq(VideoGenerationJobTable.id, jobId),
+        eq(VideoGenerationJobTable.organization_id, payload.organization.id),
+      )).limit(1)
+      if (!job) return c.json({ error: "not_found" }, 404)
+      if (!videoJobHasReviewableDelivery(job) || job.review_status !== "pending_review") {
+        return c.json({ error: "JOB_NOT_READY_FOR_REVIEW" }, 409)
+      }
+      const review = c.req.valid("json")
+      const approvalBlocked = review.decision === "approved"
+        ? videoJobApprovalBlockReason(job, payload.currentMember.id)
+        : null
+      if (approvalBlocked) return c.json({ error: approvalBlocked }, 409)
+      await db.update(VideoGenerationJobTable).set({
+        review_status: review.decision,
+        reviewed_by_org_membership_id: payload.currentMember.id,
+        reviewed_at: new Date(),
+        review_reason: review.reason,
+      }).where(and(
+        eq(VideoGenerationJobTable.id, job.id),
+        eq(VideoGenerationJobTable.organization_id, payload.organization.id),
+        eq(VideoGenerationJobTable.review_status, "pending_review"),
+      ))
+      const [reviewed] = await db.select({
+        reviewStatus: VideoGenerationJobTable.review_status,
+        reviewedBy: VideoGenerationJobTable.reviewed_by_org_membership_id,
+      }).from(VideoGenerationJobTable).where(and(
+        eq(VideoGenerationJobTable.id, job.id),
+        eq(VideoGenerationJobTable.organization_id, payload.organization.id),
+      )).limit(1)
+      if (reviewed?.reviewStatus !== review.decision || reviewed.reviewedBy !== payload.currentMember.id) {
+        return c.json({ error: "REVIEW_WRITE_CONFLICT" }, 409)
+      }
+      return c.json({ reviewed: true, jobId: job.id, reviewStatus: review.decision })
+    },
+  )
 
   app.post("/v1/video-generation/admin/jobs/:jobId/release", orgRoleRoute(["admin"]), async (c) => {
     const payload = c.get("organizationContext")
@@ -689,13 +909,9 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
     )).limit(1)
     if (!job) return c.json({ error: "not_found" }, 404)
     const abandonedBefore = new Date(Date.now() - ABANDONED_SUBMISSION_CLAIM_MS)
-    if (
-      job.settlement_status !== "reserved" ||
-      job.provider_task_id !== null ||
-      job.submission_claim === null ||
-      job.submission_claimed_at === null ||
-      new Date(job.submission_claimed_at) > abandonedBefore
-    ) {
+    const abandonedClaim = job.submission_claim
+    const abandonedClaimedAt = job.submission_claimed_at
+    if (!videoJobCanBeReleasedSafely(job, abandonedBefore) || !abandonedClaim || !abandonedClaimedAt) {
       return c.json({ error: "JOB_NOT_SAFE_TO_RELEASE" }, 409)
     }
     const releaseClaim = createDenTypeId("request")
@@ -704,7 +920,7 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
         eq(VideoGenerationJobTable.organization_id, payload.organization.id),
         eq(VideoGenerationJobTable.settlement_status, "reserved"),
         isNull(VideoGenerationJobTable.provider_task_id),
-        eq(VideoGenerationJobTable.submission_claim, job.submission_claim),
+        eq(VideoGenerationJobTable.submission_claim, abandonedClaim),
         lte(VideoGenerationJobTable.submission_claimed_at, abandonedBefore),
       ))
     const [claimedForRelease] = await db.select({

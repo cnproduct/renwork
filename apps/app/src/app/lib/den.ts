@@ -301,6 +301,9 @@ export type DenVideoJob = {
   durationSeconds: number;
   reservedMicroCredits: number;
   capturedMicroCredits: number;
+  settlementStatus: "reserved" | "captured" | "released";
+  aiProvenanceStatus: "pending" | "preserved";
+  reviewStatus: "pending_review" | "approved" | "rejected";
   assetUrl: string | null;
   taskHash: string;
   resultHash: string | null;

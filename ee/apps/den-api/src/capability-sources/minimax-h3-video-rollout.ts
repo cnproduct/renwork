@@ -22,12 +22,34 @@ function metadataRecord(input: MetadataInput) {
  */
 export function organizationMinimaxH3VideoEnabled(
   metadata: MetadataInput,
+  organizationId: string,
   environment: NodeJS.ProcessEnv = process.env,
 ) {
   if (environment.RENWORK_METASO_H3_COMMERCIAL_LICENSE_CONFIRMED !== "true") {
     return false
   }
   if (!environment.RENWORK_METASO_H3_API_KEY?.trim()) {
+    return false
+  }
+  const providerBaseUrl = environment.RENWORK_METASO_H3_BASE_URL?.trim()
+  if (!providerBaseUrl) {
+    return false
+  }
+  try {
+    const parsedProviderBaseUrl = new URL(providerBaseUrl)
+    if (parsedProviderBaseUrl.protocol !== "https:") return false
+  } catch {
+    return false
+  }
+  const licenseEvidenceId = environment.RENWORK_METASO_H3_LICENSE_EVIDENCE_ID?.trim()
+  if (!licenseEvidenceId || licenseEvidenceId.length > 128) {
+    return false
+  }
+  if (environment.RENWORK_H3_LIVE_CANARY !== "1") {
+    return false
+  }
+  const canaryOrganizationId = environment.RENWORK_H3_CANARY_ORGANIZATION_ID?.trim()
+  if (!(canaryOrganizationId === organizationId)) {
     return false
   }
   const price = Number(environment.RENWORK_H3_RENCREDIT_MICROCREDITS_PER_SECOND)

@@ -2,10 +2,18 @@ import { describe, expect, test } from "bun:test"
 import {
   hasSupportedVideoContainer,
   MetaSoH3Provider,
+  createMetaSoH3ProviderFromEnvironment,
   validatePersistedVideoResult,
 } from "../src/minimax-h3-provider.js"
 
 describe("MetaSo H3 provider adapter", () => {
+  test("requires an explicitly configured provider base URL", () => {
+    expect(() => createMetaSoH3ProviderFromEnvironment({
+      RENWORK_METASO_H3_API_KEY: "server-secret",
+      RENWORK_METASO_H3_RESULT_HOSTS: "cdn.example.test",
+    })).toThrow("PROVIDER_BASE_URL_MISSING")
+  })
+
   test("submits the official text content shape without exposing credentials in the result", async () => {
     const requests: RequestInit[] = []
     const provider = new MetaSoH3Provider("server-secret", "https://example.test/api", async (_url, init) => {
@@ -62,7 +70,7 @@ describe("MetaSo H3 provider adapter", () => {
       model: "MiniMax-H3",
       content: [
         { type: "text", text: "Develop the opening frame" },
-        { type: "image", image_url: { url: "mm_file://42" }, role: "first_frame" },
+        { type: "image_url", image_url: { url: "mm_file://42" }, role: "first_frame" },
       ],
       resolution: "768P",
       duration: 4,
@@ -87,6 +95,21 @@ describe("MetaSo H3 provider adapter", () => {
       task: { status: "done", content: {} },
     }))
     expect(await provider.query("task-1")).toEqual({ state: "failed", failureCode: "PROVIDER_RESULT_MISSING" })
+  })
+
+  test("does not synthesize actual cost from an unaudited provider task response", async () => {
+    const provider = new MetaSoH3Provider("server-secret", "https://example.test/api", async () => Response.json({
+      base_resp: { status_code: 0 },
+      task: {
+        status: "done",
+        content: { url: "https://cdn.example.test/video.mp4" },
+        actual_cost: 123,
+      },
+    }))
+    expect(await provider.query("task-1")).toEqual({
+      state: "succeeded",
+      resultUrl: "https://cdn.example.test/video.mp4",
+    })
   })
 
   test("normalizes cancelled official tasks as failures", async () => {
