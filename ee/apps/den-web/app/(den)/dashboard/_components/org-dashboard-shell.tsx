@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import renworkMark from "../../../../public/renwork-mark.png";
 import {
   BarChart3,
   Box,
@@ -103,7 +104,7 @@ function OrgMark({ name }: { name: string }) {
 }
 
 function RenWorkMark({ className = "h-9 w-auto" }: { className?: string }) {
-  return <img src="/renwork-mark.png" alt="RenWork" className={className} />;
+  return <img src={renworkMark.src} alt="RenWork" className={className} />;
 }
 
 export function SidebarBrandMark({

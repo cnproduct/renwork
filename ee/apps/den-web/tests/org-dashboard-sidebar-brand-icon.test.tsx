@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SidebarBrandMark } from "../app/(den)/dashboard/_components/org-dashboard-shell";
 
@@ -48,9 +49,20 @@ describe("Den dashboard sidebar brand icon", () => {
       <SidebarBrandMark metadata={null} organizationName="Acme" />,
     );
 
-    expect(markup).toContain('src="/renwork-mark.png"');
     expect(markup).toContain('alt="RenWork"');
     expect(markup).toContain('data-sidebar-brand-icon="fallback"');
+    expect(markup).not.toContain('src="/renwork-mark.png"');
     expect(markup).not.toContain("OpenWork");
+  });
+
+  test("bundles the RenWork mark instead of requesting the landing-site root asset", () => {
+    const source = readFileSync(
+      new URL("../app/(den)/dashboard/_components/org-dashboard-shell.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain('import renworkMark from "../../../../public/renwork-mark.png"');
+    expect(source).toContain("src={renworkMark.src}");
+    expect(source).not.toContain('src="/renwork-mark.png"');
   });
 });
