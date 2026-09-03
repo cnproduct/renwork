@@ -11,6 +11,9 @@ import { ORGANIZATION_SUPER_ADMIN_ROLE, organizationRoleValueSatisfies } from ".
 import type { OrgRouteVariables } from "./shared.js"
 import { ensureOrganizationAdmin, ensureOrganizationSuperAdmin, orgAccessFailureStatus } from "./shared.js"
 import { createRenworkSubscriptionRequest } from "../../renwork-subscription-request.js"
+import { createRenworkCommerceOrderSchema, renworkCommerceOrderSchema } from "@openwork/types/renwork-commerce"
+import { normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+import { closeRenworkCommerceOrder, createRenworkCommerceOrder, getRenworkCommerceOrder } from "../../renwork-commerce-payment.js"
 
 const stripeBillingResponseSchema = z.object({}).passthrough().meta({ ref: "OrgStripeBillingResponse" })
 const stripeCheckoutRequestSchema = z.object({ type: z.enum(["inference", "seat"]).optional() })
@@ -32,6 +35,7 @@ const renworkAccessRequestResponseSchema = z.object({
     requestedAt: z.string(),
   }),
 })
+const renworkCommerceOrderResponseSchema = z.object({ order: renworkCommerceOrderSchema, replayed: z.boolean().optional() })
 
 function getRequestOrigin(c: { req: { raw: Request } }) {
   const url = new URL(c.req.raw.url)
@@ -89,6 +93,87 @@ function checkoutCancelUrl(c: { req: { raw: Request } }) {
 }
 
 export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariables }>(app: Hono<T>) {
+  app.post(
+    "/v1/renwork/commerce/orders",
+    describeRoute({
+      tags: ["RenWork Commerce"],
+      summary: "Create a RenWork payment order",
+      description: "Creates a tenant-scoped WeChat Pay Native or Alipay page-pay order from the authoritative catalog. Merchant secrets never cross this boundary.",
+      responses: {
+        200: jsonResponse("An idempotent order was returned.", renworkCommerceOrderResponseSchema),
+        201: jsonResponse("The payment order was created.", renworkCommerceOrderResponseSchema),
+        400: jsonResponse("The checkout request is invalid.", stripeBillingResponseSchema),
+        401: jsonResponse("The caller must be signed in.", unauthorizedSchema),
+        403: jsonResponse("Only workspace owners and admins can purchase a plan.", forbiddenSchema),
+        503: jsonResponse("The selected payment channel is not configured.", stripeBillingResponseSchema),
+      },
+    }),
+    orgRoleRoute(["admin"]),
+    async (c) => {
+      const permission = ensureOrganizationAdmin(c, "Only workspace owners and admins can purchase a RenWork plan.")
+      if (!permission.ok) return c.json(permission.response, orgAccessFailureStatus(permission.response))
+      const parsed = createRenworkCommerceOrderSchema.safeParse(await c.req.json().catch(() => null))
+      if (!parsed.success) return c.json({ error: "invalid_request", message: "Select a valid plan and payment channel." }, 400)
+      const idempotencyKey = c.req.header("Idempotency-Key")?.trim()
+      if (!idempotencyKey || idempotencyKey.length > 255) return c.json({ error: "idempotency_key_required", message: "A stable Idempotency-Key header is required." }, 400)
+      const payload = c.get("organizationContext")
+      try {
+        const result = await createRenworkCommerceOrder({
+          organizationId: payload.organization.id,
+          memberId: payload.currentMember.id,
+          offerId: parsed.data.offerId,
+          channel: parsed.data.channel,
+          idempotencyKey,
+        })
+        return c.json(result, result.replayed ? 200 : 201)
+      } catch (error) {
+        if (error instanceof Error && (error.message.includes("_missing") || error.message.includes("_create_failed"))) {
+          return c.json({ error: "payment_channel_unavailable", message: "This payment channel is not configured yet. No charge was made." }, 503)
+        }
+        if (error instanceof Error && error.message.startsWith("renwork_checkout_")) {
+          return c.json({ error: "offer_unavailable", message: "This offer is not available for online checkout." }, 400)
+        }
+        throw error
+      }
+    },
+  )
+
+  app.get(
+    "/v1/renwork/commerce/orders/:orderId",
+    orgRoleRoute(["admin"]),
+    async (c) => {
+      const permission = ensureOrganizationAdmin(c, "Only workspace owners and admins can view payment orders.")
+      if (!permission.ok) return c.json(permission.response, orgAccessFailureStatus(permission.response))
+      let orderId
+      try {
+        orderId = normalizeDenTypeId("commerceOrder", c.req.param("orderId"))
+      } catch {
+        return c.json({ error: "invalid_order_id" }, 400)
+      }
+      const payload = c.get("organizationContext")
+      const order = await getRenworkCommerceOrder({ organizationId: payload.organization.id, orderId })
+      return order ? c.json({ order }) : c.json({ error: "not_found" }, 404)
+    },
+  )
+
+  app.post(
+    "/v1/renwork/commerce/orders/:orderId/close",
+    orgRoleRoute(["admin"]),
+    async (c) => {
+      const permission = ensureOrganizationAdmin(c, "Only workspace owners and admins can close payment orders.")
+      if (!permission.ok) return c.json(permission.response, orgAccessFailureStatus(permission.response))
+      let orderId
+      try {
+        orderId = normalizeDenTypeId("commerceOrder", c.req.param("orderId"))
+      } catch {
+        return c.json({ error: "invalid_order_id" }, 400)
+      }
+      const payload = c.get("organizationContext")
+      const order = await closeRenworkCommerceOrder({ organizationId: payload.organization.id, orderId })
+      return order ? c.json({ order }) : c.json({ error: "not_found" }, 404)
+    },
+  )
+
   app.post(
     "/v1/renwork/commerce/access-requests",
     describeRoute({

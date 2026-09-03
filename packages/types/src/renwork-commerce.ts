@@ -146,6 +146,45 @@ export const renworkPlanCatalogSchema = z.object({
 })
 export type RenworkPlanCatalog = z.infer<typeof renworkPlanCatalogSchema>
 
+export const renworkPaymentChannelSchema = z.enum(["wechat_pay", "alipay"])
+export type RenworkPaymentChannel = z.infer<typeof renworkPaymentChannelSchema>
+
+export const renworkCommerceOrderStatusSchema = z.enum([
+  "pending",
+  "paid",
+  "fulfilled",
+  "closed",
+  "failed",
+  "refunded",
+])
+export type RenworkCommerceOrderStatus = z.infer<typeof renworkCommerceOrderStatusSchema>
+
+export const renworkCommerceOrderSchema = z.object({
+  id: identifierSchema,
+  organizationId: identifierSchema,
+  offerId: identifierSchema,
+  planId: identifierSchema,
+  catalogVersion: identifierSchema,
+  channel: renworkPaymentChannelSchema,
+  status: renworkCommerceOrderStatusSchema,
+  currency: currencySchema,
+  amountMinor: z.number().int().positive(),
+  includedRenCredits: z.number().int().nonnegative(),
+  checkoutUrl: z.string().url().nullable(),
+  qrCodeUrl: z.string().url().nullable(),
+  expiresAt: z.string().datetime(),
+  paidAt: z.string().datetime().nullable(),
+  fulfilledAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+})
+export type RenworkCommerceOrder = z.infer<typeof renworkCommerceOrderSchema>
+
+export const createRenworkCommerceOrderSchema = z.object({
+  offerId: identifierSchema,
+  channel: renworkPaymentChannelSchema,
+})
+export type CreateRenworkCommerceOrder = z.infer<typeof createRenworkCommerceOrderSchema>
+
 const personalEntitlementScopeSchema = z.object({
   kind: z.literal("personal"),
   accountId: identifierSchema,

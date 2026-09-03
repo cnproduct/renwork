@@ -185,6 +185,18 @@ const EnvSchema = z.object({
   STRIPE_SEAT_PRICE_ID: z.string().optional(),
   STRIPE_BILLING_SUCCESS_URL: z.string().optional(),
   STRIPE_BILLING_CANCEL_URL: z.string().optional(),
+  WECHAT_PAY_MCH_ID: z.string().optional(),
+  WECHAT_PAY_APP_ID: z.string().optional(),
+  WECHAT_PAY_MERCHANT_SERIAL_NO: z.string().optional(),
+  WECHAT_PAY_PRIVATE_KEY: z.string().optional(),
+  WECHAT_PAY_API_V3_KEY: z.string().optional(),
+  WECHAT_PAY_PLATFORM_PUBLIC_KEY: z.string().optional(),
+  WECHAT_PAY_NOTIFY_URL: z.string().optional(),
+  ALIPAY_APP_ID: z.string().optional(),
+  ALIPAY_PRIVATE_KEY: z.string().optional(),
+  ALIPAY_PUBLIC_KEY: z.string().optional(),
+  ALIPAY_NOTIFY_URL: z.string().optional(),
+  ALIPAY_RETURN_URL: z.string().optional(),
 }).superRefine((value, ctx) => {
   const inferredMode = value.DB_MODE ?? (value.DATABASE_URL ? "mysql" : "planetscale")
 
@@ -691,6 +703,24 @@ export const env = {
     seatPriceId: optionalString(parsed.STRIPE_SEAT_PRICE_ID),
     billingSuccessUrl: optionalString(parsed.STRIPE_BILLING_SUCCESS_URL),
     billingCancelUrl: optionalString(parsed.STRIPE_BILLING_CANCEL_URL),
+  },
+  renworkPayments: {
+    wechatPay: {
+      merchantId: optionalString(parsed.WECHAT_PAY_MCH_ID),
+      appId: optionalString(parsed.WECHAT_PAY_APP_ID),
+      merchantSerialNo: optionalString(parsed.WECHAT_PAY_MERCHANT_SERIAL_NO),
+      privateKey: optionalString(parsed.WECHAT_PAY_PRIVATE_KEY),
+      apiV3Key: optionalString(parsed.WECHAT_PAY_API_V3_KEY),
+      platformPublicKey: optionalString(parsed.WECHAT_PAY_PLATFORM_PUBLIC_KEY),
+      notifyUrl: optionalString(parsed.WECHAT_PAY_NOTIFY_URL),
+    },
+    alipay: {
+      appId: optionalString(parsed.ALIPAY_APP_ID),
+      privateKey: optionalString(parsed.ALIPAY_PRIVATE_KEY),
+      publicKey: optionalString(parsed.ALIPAY_PUBLIC_KEY),
+      notifyUrl: optionalString(parsed.ALIPAY_NOTIFY_URL),
+      returnUrl: optionalString(parsed.ALIPAY_RETURN_URL),
+    },
   },
   render: {
     apiBase: parsed.RENDER_API_BASE ?? "https://api.render.com/v1",

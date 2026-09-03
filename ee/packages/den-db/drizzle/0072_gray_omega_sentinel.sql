@@ -1,0 +1,1 @@
+ALTER TABLE `renwork_plan_subscriptions` ADD `granted_rencredits` bigint DEFAULT 0 NOT NULL;

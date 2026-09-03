@@ -237,4 +237,23 @@ test("two tenants isolate balances, replay safely, release failures and serializ
   expect(receiptsA.some((receipt) => receipt.run_id.startsWith("tenant-b"))).toBe(false)
   expect(receiptsB.some((receipt) => receipt.run_id.startsWith("tenant-a"))).toBe(false)
   expect(ledgerA.every((entry) => !ledgerB.some((other) => other.id === entry.id))).toBe(true)
+
+  await ledger.refundGrantedRenCredit({
+    organizationId: organizationBId,
+    amountMicroCredits: 1_000_000,
+    idempotencyKey: "payment-refund-v14",
+    reasonCode: "PAYMENT_PLAN_CREDIT_REVERSAL",
+  })
+  await ledger.refundGrantedRenCredit({
+    organizationId: organizationBId,
+    amountMicroCredits: 1_000_000,
+    idempotencyKey: "payment-refund-v14",
+    reasonCode: "PAYMENT_PLAN_CREDIT_REVERSAL",
+  })
+  expect(await ledger.getRenCreditWallet(organizationAId)).toMatchObject({ available_microcredits: 1_000_000 })
+  expect(await ledger.getRenCreditWallet(organizationBId)).toMatchObject({ available_microcredits: -100_000 })
+  const refundEntries = (await ledger.listRenCreditLedger(organizationBId))
+    .filter((entry) => entry.reason_code === "PAYMENT_PLAN_CREDIT_REVERSAL")
+  expect(refundEntries).toHaveLength(1)
+  expect(refundEntries[0]).toMatchObject({ entry_type: "refund", available_delta_microcredits: -1_000_000 })
 })

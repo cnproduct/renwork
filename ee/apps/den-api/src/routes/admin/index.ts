@@ -44,6 +44,7 @@ import { buildAdminPageInfo, normalizeAdminPageRequest, sanitizeAdminSearchForLi
 import { registerAdminModelCatalogRoutes } from "./model-catalog.js"
 import { registerAdminOrganizationModelPolicyRoutes } from "./model-policy.js"
 import { registerAdminRenCreditRoutes } from "./rencredit.js"
+import { registerAdminCommerceRoutes } from "./commerce.js"
 import { readRenworkAccessGrant } from "../../renwork-access.js"
 import { readRenworkSubscriptionRequest } from "../../renwork-subscription-request.js"
 import { syncInferenceForOrganizationMembers } from "../../inference.js"
@@ -1195,6 +1196,7 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
   registerAdminModelCatalogRoutes(app)
   registerAdminOrganizationModelPolicyRoutes(app)
   registerAdminRenCreditRoutes(app)
+  registerAdminCommerceRoutes(app)
   app.delete(
     "/v1/admin/users/:userId",
     adminRoute(),
