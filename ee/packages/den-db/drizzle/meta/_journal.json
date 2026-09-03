@@ -498,6 +498,13 @@
       "when": 1788327938912,
       "tag": "0071_fluffy_talos",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "5",
+      "when": 1788405727766,
+      "tag": "0072_breezy_garia",
+      "breakpoints": true
     }
   ]
 }

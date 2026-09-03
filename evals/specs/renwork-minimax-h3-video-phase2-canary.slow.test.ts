@@ -17,11 +17,11 @@ const requirements: NeedsSpec = {
     "RENWORK_H3_CANARY_ORGANIZATION_ID",
     "RENWORK_H3_CANARY_T2V_PROMPT",
     "RENWORK_H3_CANARY_I2V_ASSET_ID",
-    "RENWORK_H3_CANARY_T2V_PROVIDER_COST_MICROUNITS",
+    "RENWORK_H3_CANARY_T2V_PROVIDER_COST_UNITS",
     "RENWORK_H3_CANARY_T2V_COST_EVIDENCE_REFERENCE",
-    "RENWORK_H3_CANARY_I2V_PROVIDER_COST_MICROUNITS",
+    "RENWORK_H3_CANARY_I2V_PROVIDER_COST_UNITS",
     "RENWORK_H3_CANARY_I2V_COST_EVIDENCE_REFERENCE",
-    "RENWORK_H3_CANARY_PROVIDER_COST_CURRENCY",
+    "RENWORK_H3_CANARY_PROVIDER_COST_UNIT_CODE",
     "OPENWORK_EVAL_H3_REVIEWER_EMAIL",
     "OPENWORK_EVAL_H3_REVIEWER_PASSWORD",
   ],
@@ -80,10 +80,10 @@ async function promoteReviewer(admin: DenSession, reviewer: DenSession, orgId: s
 
 async function attachCostAndApprove(input: {
   costEvidenceReference: string
-  currency: string
   jobId: string
   operator: DenSession
-  providerCostMicrounits: number
+  providerCostUnits: number
+  providerCostUnitCode: string
   reviewer: DenSession
   orgId: string
 }) {
@@ -96,8 +96,9 @@ async function attachCostAndApprove(input: {
     method: "PUT",
     headers: headers(input.operator),
     body: JSON.stringify({
-      providerCostMicrounits: input.providerCostMicrounits,
-      providerCostCurrency: input.currency,
+      providerCostKind: "provider_credits",
+      providerCostUnits: input.providerCostUnits,
+      providerCostUnitCode: input.providerCostUnitCode,
       costEvidenceReference: input.costEvidenceReference,
     }),
   })
@@ -267,8 +268,8 @@ test(title, async ({ evidence, place }) => {
     reviewer,
     orgId,
     jobId: text(t2v, "id"),
-    providerCostMicrounits: nonnegativeIntegerFromEnvironment("RENWORK_H3_CANARY_T2V_PROVIDER_COST_MICROUNITS"),
-    currency: process.env.RENWORK_H3_CANARY_PROVIDER_COST_CURRENCY!.trim(),
+    providerCostUnits: nonnegativeIntegerFromEnvironment("RENWORK_H3_CANARY_T2V_PROVIDER_COST_UNITS"),
+    providerCostUnitCode: process.env.RENWORK_H3_CANARY_PROVIDER_COST_UNIT_CODE!.trim(),
     costEvidenceReference: process.env.RENWORK_H3_CANARY_T2V_COST_EVIDENCE_REFERENCE!.trim(),
   })
   await attachCostAndApprove({
@@ -276,8 +277,8 @@ test(title, async ({ evidence, place }) => {
     reviewer,
     orgId,
     jobId: text(i2v, "id"),
-    providerCostMicrounits: nonnegativeIntegerFromEnvironment("RENWORK_H3_CANARY_I2V_PROVIDER_COST_MICROUNITS"),
-    currency: process.env.RENWORK_H3_CANARY_PROVIDER_COST_CURRENCY!.trim(),
+    providerCostUnits: nonnegativeIntegerFromEnvironment("RENWORK_H3_CANARY_I2V_PROVIDER_COST_UNITS"),
+    providerCostUnitCode: process.env.RENWORK_H3_CANARY_PROVIDER_COST_UNIT_CODE!.trim(),
     costEvidenceReference: process.env.RENWORK_H3_CANARY_I2V_COST_EVIDENCE_REFERENCE!.trim(),
   })
 
@@ -299,7 +300,11 @@ test(title, async ({ evidence, place }) => {
     expect(matching[0]?.providerTaskId).toBeTruthy()
     expect(matching[0]?.settlement).toBe("captured")
     expect(matching[0]?.reviewStatus).toBe("approved")
-    expect(matching[0]?.providerCostMicrounits).toEqual(expect.any(Number))
+    expect(matching[0]?.providerCostKind).toBe("provider_credits")
+    expect(matching[0]?.providerCostUnits).toEqual(expect.any(Number))
+    expect(matching[0]?.providerCostUnitCode).toBe("METASO_H3_CREDIT")
+    expect(matching[0]?.providerCostMicrounits).toBeNull()
+    expect(matching[0]?.providerCostCurrency).toBeNull()
     expect(matching[0]?.costEvidenceReference).toEqual(expect.any(String))
   }
   evidence.fact(

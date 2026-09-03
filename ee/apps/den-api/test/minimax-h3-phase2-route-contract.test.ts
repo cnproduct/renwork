@@ -19,8 +19,11 @@ const pendingReviewJob = {
   ai_provenance_status: "preserved",
   ai_provenance_evidence: AI_PROVENANCE_EVIDENCE,
   review_status: "pending_review",
+  provider_cost_kind: null,
   provider_cost_microunits: null,
   provider_cost_currency: null,
+  provider_cost_units: null,
+  provider_cost_unit_code: null,
   cost_evidence_reference: null,
   cost_evidence_recorded_by_org_membership_id: null,
   cost_evidence_recorded_at: null,
@@ -35,6 +38,7 @@ describe("MiniMax H3 Phase 2 route policy", () => {
 
     const reconciled = {
       ...pendingReviewJob,
+      provider_cost_kind: "money",
       provider_cost_microunits: 120_000,
       provider_cost_currency: "CNY",
       cost_evidence_reference: "metaso-invoice:2026-09:line-14",
@@ -44,6 +48,26 @@ describe("MiniMax H3 Phase 2 route policy", () => {
     expect(videoJobCanAcceptCostEvidence(reconciled)).toBe(false)
     expect(videoJobApprovalBlockReason(reconciled, "member_cost_recorder")).toBe("FOUR_EYES_REVIEWER_REQUIRED")
     expect(videoJobApprovalBlockReason(reconciled, "member_reviewer")).toBeNull()
+
+    const creditReconciled = {
+      ...pendingReviewJob,
+      provider_cost_kind: "provider_credits",
+      provider_cost_units: 13,
+      provider_cost_unit_code: "METASO_H3_CREDIT",
+      cost_evidence_reference: "metaso-usage:request-123",
+      cost_evidence_recorded_by_org_membership_id: "member_cost_recorder",
+      cost_evidence_recorded_at: new Date("2026-09-01T00:00:00.000Z"),
+    }
+    expect(videoJobApprovalBlockReason(creditReconciled, "member_reviewer")).toBeNull()
+    expect(videoJobApprovalBlockReason({
+      ...creditReconciled,
+      provider_cost_microunits: 10_800,
+      provider_cost_currency: "CNY",
+    }, "member_reviewer")).toBe("PROVIDER_COST_EVIDENCE_REQUIRED")
+    expect(videoJobApprovalBlockReason({
+      ...creditReconciled,
+      provider_cost_unit_code: "ACCOUNT_TOTAL",
+    }, "member_reviewer")).toBe("PROVIDER_COST_EVIDENCE_REQUIRED")
   })
 
   test("manual release is limited to an abandoned claim with no provider task", () => {
@@ -94,7 +118,10 @@ describe("MiniMax H3 Phase 2 route policy", () => {
     expect(memberProjection).toContain("aiProvenanceStatus")
     expect(memberProjection).toContain("reviewStatus")
     expect(memberProjection).not.toContain("license_evidence_id")
+    expect(memberProjection).not.toContain("provider_cost_kind")
     expect(memberProjection).not.toContain("provider_cost_microunits")
+    expect(memberProjection).not.toContain("provider_cost_units")
+    expect(memberProjection).not.toContain("provider_cost_unit_code")
     expect(memberProjection).not.toContain("cost_evidence_reference")
     expect(memberProjection).not.toContain("provider_task_id")
   })

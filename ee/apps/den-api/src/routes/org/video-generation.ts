@@ -58,11 +58,20 @@ type VideoJobRow = typeof VideoGenerationJobTable.$inferSelect
 type ProviderFactory = () => MetaSoH3Provider
 
 const idempotencyKeySchema = z.string().trim().min(8).max(128).regex(/^[A-Za-z0-9._:-]+$/)
-const providerCostEvidenceSchema = z.object({
-  providerCostMicrounits: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-  providerCostCurrency: z.string().trim().regex(/^[A-Z]{3}$/),
-  costEvidenceReference: z.string().trim().min(1).max(512),
-})
+const providerCostEvidenceSchema = z.discriminatedUnion("providerCostKind", [
+  z.object({
+    providerCostKind: z.literal("money"),
+    providerCostMicrounits: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    providerCostCurrency: z.string().trim().regex(/^[A-Z]{3}$/),
+    costEvidenceReference: z.string().trim().min(1).max(512),
+  }).strict(),
+  z.object({
+    providerCostKind: z.literal("provider_credits"),
+    providerCostUnits: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    providerCostUnitCode: z.literal("METASO_H3_CREDIT"),
+    costEvidenceReference: z.string().trim().min(1).max(512),
+  }).strict(),
+])
 const videoReviewSchema = z.object({
   decision: z.enum(["approved", "rejected"]),
   reason: z.string().trim().min(1).max(1000),
@@ -735,8 +744,11 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
       resultHash: VideoGenerationJobTable.result_hash,
       aiProvenanceStatus: VideoGenerationJobTable.ai_provenance_status,
       aiProvenanceEvidence: VideoGenerationJobTable.ai_provenance_evidence,
+      providerCostKind: VideoGenerationJobTable.provider_cost_kind,
       providerCostMicrounits: VideoGenerationJobTable.provider_cost_microunits,
       providerCostCurrency: VideoGenerationJobTable.provider_cost_currency,
+      providerCostUnits: VideoGenerationJobTable.provider_cost_units,
+      providerCostUnitCode: VideoGenerationJobTable.provider_cost_unit_code,
       costEvidenceReference: VideoGenerationJobTable.cost_evidence_reference,
       costEvidenceRecordedByOrgMembershipId: VideoGenerationJobTable.cost_evidence_recorded_by_org_membership_id,
       costEvidenceRecordedAt: VideoGenerationJobTable.cost_evidence_recorded_at,
@@ -774,9 +786,23 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
         return c.json({ error: "JOB_NOT_READY_FOR_COST_RECONCILIATION" }, 409)
       }
       const evidence = c.req.valid("json")
+      const providerCost = evidence.providerCostKind === "money"
+        ? {
+            provider_cost_kind: evidence.providerCostKind,
+            provider_cost_microunits: evidence.providerCostMicrounits,
+            provider_cost_currency: evidence.providerCostCurrency,
+            provider_cost_units: null,
+            provider_cost_unit_code: null,
+          }
+        : {
+            provider_cost_kind: evidence.providerCostKind,
+            provider_cost_microunits: null,
+            provider_cost_currency: null,
+            provider_cost_units: evidence.providerCostUnits,
+            provider_cost_unit_code: evidence.providerCostUnitCode,
+          }
       await db.update(VideoGenerationJobTable).set({
-        provider_cost_microunits: evidence.providerCostMicrounits,
-        provider_cost_currency: evidence.providerCostCurrency,
+        ...providerCost,
         cost_evidence_reference: evidence.costEvidenceReference,
         cost_evidence_recorded_by_org_membership_id: payload.currentMember.id,
         cost_evidence_recorded_at: new Date(),
@@ -784,24 +810,40 @@ export function registerOrgVideoGenerationRoutes<T extends { Variables: OrgRoute
         eq(VideoGenerationJobTable.id, job.id),
         eq(VideoGenerationJobTable.organization_id, payload.organization.id),
         eq(VideoGenerationJobTable.review_status, "pending_review"),
+        isNull(VideoGenerationJobTable.provider_cost_kind),
         isNull(VideoGenerationJobTable.provider_cost_microunits),
         isNull(VideoGenerationJobTable.provider_cost_currency),
+        isNull(VideoGenerationJobTable.provider_cost_units),
+        isNull(VideoGenerationJobTable.provider_cost_unit_code),
         isNull(VideoGenerationJobTable.cost_evidence_reference),
         isNull(VideoGenerationJobTable.cost_evidence_recorded_by_org_membership_id),
         isNull(VideoGenerationJobTable.cost_evidence_recorded_at),
       ))
       const [recorded] = await db.select({
+        providerCostKind: VideoGenerationJobTable.provider_cost_kind,
         providerCostMicrounits: VideoGenerationJobTable.provider_cost_microunits,
         providerCostCurrency: VideoGenerationJobTable.provider_cost_currency,
+        providerCostUnits: VideoGenerationJobTable.provider_cost_units,
+        providerCostUnitCode: VideoGenerationJobTable.provider_cost_unit_code,
         costEvidenceReference: VideoGenerationJobTable.cost_evidence_reference,
         recordedBy: VideoGenerationJobTable.cost_evidence_recorded_by_org_membership_id,
       }).from(VideoGenerationJobTable).where(and(
         eq(VideoGenerationJobTable.id, job.id),
         eq(VideoGenerationJobTable.organization_id, payload.organization.id),
       )).limit(1)
+      const recordedCostMatches = evidence.providerCostKind === "money"
+        ? recorded?.providerCostKind === evidence.providerCostKind
+          && recorded.providerCostMicrounits === evidence.providerCostMicrounits
+          && recorded.providerCostCurrency === evidence.providerCostCurrency
+          && recorded.providerCostUnits === null
+          && recorded.providerCostUnitCode === null
+        : recorded?.providerCostKind === evidence.providerCostKind
+          && recorded.providerCostMicrounits === null
+          && recorded.providerCostCurrency === null
+          && recorded.providerCostUnits === evidence.providerCostUnits
+          && recorded.providerCostUnitCode === evidence.providerCostUnitCode
       if (
-        recorded?.providerCostMicrounits !== evidence.providerCostMicrounits
-        || recorded.providerCostCurrency !== evidence.providerCostCurrency
+        !recordedCostMatches
         || recorded.costEvidenceReference !== evidence.costEvidenceReference
         || recorded.recordedBy !== payload.currentMember.id
       ) return c.json({ error: "COST_EVIDENCE_WRITE_CONFLICT" }, 409)

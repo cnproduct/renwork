@@ -1,13 +1,17 @@
 # RenWork H3 视频 Phase 2 单组织 Canary SOP
 
-> 状态：**INCOMPLETE**。本阶段只实现并验证 canary 控制面，未执行真实 MetaSO 调用、未产生付费任务、未部署，也未证明供应商书面授权或生产可用性。缺少真实环境、授权证据、供应商任务证据、实际成本对账和人工复核证据时，**不得进入生产灰度**。
+> 状态：**INCOMPLETE**。Phase 2 已取得单组织真实成片，但成本归因与四眼复核尚未闭环，Canary 保持关闭。缺少可关联到具体供应商任务的单笔成本记录和人工复核证据时，**不得进入生产灰度**。
+
+## a003 成本归因状态
+
+a003 已完成成片验收，但 MetaSO 控制台当前只证明账户总积分、余额和购买记录，不能证明该 job 的单笔积分消耗。因此 a003 的金额、货币、积分数量、积分单位和成本证据引用全部保持为空，review 继续为 `pending_review`。取得能够关联供应商任务或 request ID 的单笔积分记录后，才以 `provider_credits` 模式录入；不得用账户余额差倒推。
 
 ## 硬门槛
 
 1. 法务或被授权负责人核验 MetaSO 对 RenWork 多租户、商业化及 OEM 接入的书面授权，并给该证据分配不可变 ID。书面授权未核验时，`RENWORK_METASO_H3_COMMERCIAL_LICENSE_CONFIRMED` 必须保持关闭，`RENWORK_H3_LIVE_CANARY` 必须保持关闭。
 2. 只允许一个明确的预生产试点组织。服务端要求当前组织 ID 与 `RENWORK_H3_CANARY_ORGANIZATION_ID` 精确匹配；组织 capability、全局 gate、授权证据、密钥、价格和结果域任一缺失均 fail closed。
 3. 供应商返回 bytes 不得修改。成片交付前必须记录 `AI_GENERATED_PROVENANCE_PRESERVED`；不得移除、篡改 H3 归属、AI 生成或法定标识。
-4. 技术成功不等于人工验收。有效成片在 capture 后仍为 `pending_review`；管理员附加真实供应商成本证据后才能批准。系统不得推算、默认或伪造供应商实际成本。
+4. 技术成功不等于人工验收。有效成片在 capture 后仍为 `pending_review`；管理员附加真实供应商成本证据后才能批准。证据可以是人民币等法币金额，也可以是 MetaSO H3 单笔积分，但两者必须互斥；系统不得用账户总额或余额差推算、默认或伪造单笔成本。
 
 ## 仅服务端环境变量
 
@@ -30,22 +34,22 @@
 - `OPENWORK_EVAL_H3_LIVE_CANARY`
 - `RENWORK_H3_CANARY_T2V_PROMPT`
 - `RENWORK_H3_CANARY_I2V_ASSET_ID`
-- `RENWORK_H3_CANARY_T2V_PROVIDER_COST_MICROUNITS`
+- `RENWORK_H3_CANARY_T2V_PROVIDER_COST_UNITS`
 - `RENWORK_H3_CANARY_T2V_COST_EVIDENCE_REFERENCE`
-- `RENWORK_H3_CANARY_I2V_PROVIDER_COST_MICROUNITS`
+- `RENWORK_H3_CANARY_I2V_PROVIDER_COST_UNITS`
 - `RENWORK_H3_CANARY_I2V_COST_EVIDENCE_REFERENCE`
-- `RENWORK_H3_CANARY_PROVIDER_COST_CURRENCY`
+- `RENWORK_H3_CANARY_PROVIDER_COST_UNIT_CODE`（MetaSO 固定为 `METASO_H3_CREDIT`）
 - `OPENWORK_EVAL_H3_REVIEWER_EMAIL`
 - `OPENWORK_EVAL_H3_REVIEWER_PASSWORD`
 
 ## 预生产执行顺序
 
-1. 备份并检查目标数据库，在非生产环境应用 `0071_fluffy_talos.sql`。确认 job 已包含授权证据、AI provenance、供应商实际成本和人工复核字段。
+1. 备份并检查目标数据库，依次应用 `0071_fluffy_talos.sql` 和成本证据升级迁移。确认 job 已包含授权证据、AI provenance、法币或供应商积分成本和人工复核字段。
 2. 保持全局 gate 关闭，由平台管理员只为已批准试点组织设置 `minimaxH3Video=true`。普通组织管理员不能自行开启 capability。
 3. 四眼复核授权证据 ID、精确组织 ID、不可变价格版本和 HTTPS 结果域 allowlist 后，才可在预生产将 live canary gate 设为开启。
 4. 先验证文生视频，再验证租户自有首帧生视频。每次只运行 4 秒、768P、单任务；重复提交必须恢复同一 job、一次冻结和一个供应商任务。
 5. 有效结果必须依次通过：结果域校验、容器 magic 和大小校验、租户资产持久化、字节哈希复核、记录 AI provenance、RenCredit capture。供应商失败或无效交付必须 release，且不得保留结果资产或 capture。
-6. 管理员通过 `PUT /v1/video-generation/admin/jobs/:jobId/cost-evidence` 附加供应商账单中的实际微单位成本、ISO 货币和证据引用。只有人工提供的证据可写入这些字段。
+6. 管理员通过 `PUT /v1/video-generation/admin/jobs/:jobId/cost-evidence` 附加供应商单笔成本与证据引用。法币模式提交 `providerCostKind=money`、实际微单位金额和 ISO 货币；MetaSO 积分模式提交 `providerCostKind=provider_credits`、单笔积分和 `METASO_H3_CREDIT`。人民币金额在积分模式下必须为空，只有能关联到该 job 的单笔记录才可写入。
 7. 第二位管理员核对供应商任务、RenCredit 结算、结果哈希、租户隔离、授权与成本证据，再通过 `PUT /v1/video-generation/admin/jobs/:jobId/review` 作出 `approved` 或 `rejected`。批准前必须已有完整成本证据；记录成本者不能批准同一任务，复核结果为终态。
 8. 导出无密钥的证据包并由法务、财务、产品和运维共同签字。即使单组织 canary 通过，在这一步完成前仍不得进入生产灰度。
 

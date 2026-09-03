@@ -16,8 +16,11 @@ type ReviewCandidate = {
   ai_provenance_status: string
   ai_provenance_evidence: string | null
   review_status: string
+  provider_cost_kind: string | null
   provider_cost_microunits: number | null
   provider_cost_currency: string | null
+  provider_cost_units: number | null
+  provider_cost_unit_code: string | null
   cost_evidence_reference: string | null
   cost_evidence_recorded_by_org_membership_id: string | null
   cost_evidence_recorded_at: Date | string | null
@@ -44,18 +47,34 @@ export function videoJobHasReviewableDelivery(job: ReviewCandidate) {
 export function videoJobCanAcceptCostEvidence(job: ReviewCandidate) {
   return videoJobHasReviewableDelivery(job)
     && job.review_status === "pending_review"
+    && job.provider_cost_kind === null
     && job.provider_cost_microunits === null
     && job.provider_cost_currency === null
+    && job.provider_cost_units === null
+    && job.provider_cost_unit_code === null
     && job.cost_evidence_reference === null
     && job.cost_evidence_recorded_by_org_membership_id === null
     && job.cost_evidence_recorded_at === null
 }
 
+function videoJobHasCompleteProviderCostEvidence(job: ReviewCandidate) {
+  const hasMoneyEvidence = job.provider_cost_kind === "money"
+    && job.provider_cost_microunits !== null
+    && job.provider_cost_currency !== null
+    && job.provider_cost_units === null
+    && job.provider_cost_unit_code === null
+  const hasProviderCreditEvidence = job.provider_cost_kind === "provider_credits"
+    && job.provider_cost_microunits === null
+    && job.provider_cost_currency === null
+    && job.provider_cost_units !== null
+    && job.provider_cost_unit_code === "METASO_H3_CREDIT"
+  return hasMoneyEvidence || hasProviderCreditEvidence
+}
+
 export function videoJobApprovalBlockReason(job: ReviewCandidate, reviewerMembershipId: string) {
   if (!videoJobHasReviewableDelivery(job) || job.review_status !== "pending_review") return "JOB_NOT_READY_FOR_REVIEW"
   if (
-    job.provider_cost_microunits === null
-    || job.provider_cost_currency === null
+    !videoJobHasCompleteProviderCostEvidence(job)
     || job.cost_evidence_reference === null
     || job.cost_evidence_recorded_by_org_membership_id === null
     || job.cost_evidence_recorded_at === null

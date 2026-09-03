@@ -21,11 +21,12 @@ async function source(relativePath: string) {
 }
 
 test("approved Phase 2 voiceover is encoded as a fail-closed one-organization live canary", async ({ evidence }) => {
-  const [rollout, route, schema, migration, provider, phaseTwoRunbook] = await Promise.all([
+  const [rollout, route, schema, phaseTwoMigration, costEvidenceMigration, provider, phaseTwoRunbook] = await Promise.all([
     source("ee/apps/den-api/src/capability-sources/minimax-h3-video-rollout.ts"),
     source("ee/apps/den-api/src/routes/org/video-generation.ts"),
     source("ee/packages/den-db/src/schema/video-generation.ts"),
     source("ee/packages/den-db/drizzle/0071_fluffy_talos.sql"),
+    source("ee/packages/den-db/drizzle/0072_breezy_garia.sql"),
     source("ee/apps/den-api/src/minimax-h3-provider.ts"),
     source("docs/renwork-minimax-h3-phase2-canary.md"),
   ])
@@ -39,8 +40,12 @@ test("approved Phase 2 voiceover is encoded as a fail-closed one-organization li
   expect(rollout).toContain("=== organizationId")
 
   expect(route).toContain("license_evidence_id")
+  expect(route).toContain("provider_cost_kind")
   expect(route).toContain("provider_cost_microunits")
   expect(route).toContain("provider_cost_currency")
+  expect(route).toContain("provider_cost_units")
+  expect(route).toContain("provider_cost_unit_code")
+  expect(route).toContain("METASO_H3_CREDIT")
   expect(route).toContain("cost_evidence_reference")
   expect(route).toContain("review_status")
   expect(route).toContain('"pending_review"')
@@ -51,16 +56,24 @@ test("approved Phase 2 voiceover is encoded as a fail-closed one-organization li
   expect(route).toContain("AI_GENERATED_PROVENANCE_PRESERVED")
 
   expect(schema).toContain("license_evidence_id")
+  expect(schema).toContain("provider_cost_kind")
   expect(schema).toContain("provider_cost_microunits")
   expect(schema).toContain("provider_cost_currency")
+  expect(schema).toContain("provider_cost_units")
+  expect(schema).toContain("provider_cost_unit_code")
   expect(schema).toContain("cost_evidence_reference")
   expect(schema).toContain("review_status")
   expect(schema).toContain("reviewed_by_org_membership_id")
   expect(schema).toContain("reviewed_at")
-  expect(migration).toContain("video_generation_jobs")
-  expect(migration).toContain("license_evidence_id")
-  expect(migration).toContain("provider_cost_microunits")
-  expect(migration).toContain("review_status")
+  expect(phaseTwoMigration).toContain("video_generation_jobs")
+  expect(phaseTwoMigration).toContain("license_evidence_id")
+  expect(phaseTwoMigration).toContain("provider_cost_microunits")
+  expect(phaseTwoMigration).toContain("review_status")
+  expect(costEvidenceMigration).toContain("provider_cost_kind")
+  expect(costEvidenceMigration).toContain("provider_cost_units")
+  expect(costEvidenceMigration).toContain("provider_cost_unit_code")
+  expect(costEvidenceMigration).toContain("SET `provider_cost_kind` = 'money'")
+  expect(costEvidenceMigration).toContain("WHERE `provider_cost_microunits` IS NOT NULL")
 
   expect(provider).toContain("RENWORK_METASO_H3_API_KEY")
   expect(provider).toContain("RENWORK_METASO_H3_RESULT_HOSTS")
@@ -71,9 +84,10 @@ test("approved Phase 2 voiceover is encoded as a fail-closed one-organization li
   expect(phaseTwoRunbook).toContain("RENWORK_H3_CANARY_ORGANIZATION_ID")
   expect(phaseTwoRunbook).toContain("OPENWORK_EVAL_H3_LIVE_CANARY")
   expect(phaseTwoRunbook).toContain("OPENWORK_EVAL_H3_REVIEWER_EMAIL")
-  expect(phaseTwoRunbook).toContain("RENWORK_H3_CANARY_T2V_PROVIDER_COST_MICROUNITS")
-  expect(phaseTwoRunbook).toContain("RENWORK_H3_CANARY_I2V_PROVIDER_COST_MICROUNITS")
-  expect(phaseTwoRunbook).toContain("供应商实际成本")
+  expect(phaseTwoRunbook).toContain("RENWORK_H3_CANARY_T2V_PROVIDER_COST_UNITS")
+  expect(phaseTwoRunbook).toContain("RENWORK_H3_CANARY_I2V_PROVIDER_COST_UNITS")
+  expect(phaseTwoRunbook).toContain("METASO_H3_CREDIT")
+  expect(phaseTwoRunbook).toContain("供应商单笔成本")
   expect(phaseTwoRunbook).toContain("记录成本者不能批准同一任务")
   expect(phaseTwoRunbook).toContain("人工复核")
   expect(phaseTwoRunbook).toContain("不得进入生产灰度")
@@ -86,6 +100,11 @@ test("approved Phase 2 voiceover is encoded as a fail-closed one-organization li
   evidence.fact(
     "Every accepted canary remains review-gated",
     "A job records authorization evidence, technical settlement, provider cost reconciliation, AI provenance, and an explicit human review state before any production decision.",
+    true,
+  )
+  evidence.fact(
+    "MetaSO cost evidence can use attributable H3 credits without inventing a currency amount",
+    "The API and database encode mutually exclusive money or provider-credit evidence; MetaSO credits require METASO_H3_CREDIT, while an unattributed job keeps every cost field null and cannot be approved.",
     true,
   )
 })
