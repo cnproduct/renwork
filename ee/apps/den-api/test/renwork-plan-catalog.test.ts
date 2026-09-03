@@ -7,13 +7,14 @@ import {
 } from "@openwork/types/renwork-commerce"
 import { getRenworkPlanCatalog } from "../src/renwork-growth/plan-catalog.js"
 
-test("RenWork V7 catalog requires paid access and separates personal from enterprise", () => {
+test("RenWork V14 catalog requires paid access and separates personal checkout from enterprise review", () => {
   const catalog = renworkPlanCatalogSchema.parse(getRenworkPlanCatalog())
-  expect(catalog.status).toBe("pilot")
+  expect(catalog.status).toBe("active")
   expect(catalog.plans.every((plan) => !plan.features.localFreeCore)).toBe(true)
   expect(catalog.plans.some((plan) => plan.audience === "personal")).toBe(true)
   expect(catalog.plans.some((plan) => plan.audience === "enterprise")).toBe(true)
-  expect(catalog.plans.flatMap((plan) => plan.offers).some((offer) => offer.purchaseMode === "checkout")).toBe(false)
+  expect(catalog.plans.filter((plan) => plan.audience === "personal").flatMap((plan) => plan.offers).every((offer) => offer.purchaseMode === "checkout")).toBe(true)
+  expect(catalog.plans.filter((plan) => plan.audience === "enterprise").flatMap((plan) => plan.offers).every((offer) => offer.purchaseMode === "request_access" || offer.purchaseMode === "contact_sales")).toBe(true)
   expect(catalog.plans.flatMap((plan) => plan.offers).some((offer) => offer.purchaseMode === "free")).toBe(false)
 })
 

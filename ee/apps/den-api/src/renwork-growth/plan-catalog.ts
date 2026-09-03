@@ -2,9 +2,9 @@ import { renworkPlanCatalogSchema, type RenworkPlanCatalog } from "@openwork/typ
 
 export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSchema.parse({
   schemaVersion: 1,
-  catalogVersion: "renwork-subscription-v7-2026-08-29.1",
-  status: "pilot",
-  effectiveAt: "2026-08-29T00:00:00.000Z",
+  catalogVersion: "renwork-subscription-v14-2026-09-02.1",
+  status: "active",
+  effectiveAt: "2026-09-02T00:00:00.000Z",
   plans: [
     {
       id: "personal-light",
@@ -28,23 +28,23 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
       offers: [
         {
           id: "personal-light-monthly",
-          purchaseMode: "request_access",
+          purchaseMode: "checkout",
           billingInterval: "monthly",
           currency: "CNY",
           priceMinor: 6900,
           monthlyEquivalentPriceMinor: null,
           includedRenCredits: 2000,
-          cta: "request_access",
+          cta: "checkout",
         },
         {
           id: "personal-light-annual",
-          purchaseMode: "request_access",
+          purchaseMode: "checkout",
           billingInterval: "annual",
           currency: "CNY",
           priceMinor: 69800,
           monthlyEquivalentPriceMinor: 5800,
           includedRenCredits: 2000,
-          cta: "request_access",
+          cta: "checkout",
         },
       ],
     },
@@ -71,23 +71,23 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
       offers: [
         {
           id: "personal-pro-monthly",
-          purchaseMode: "request_access",
+          purchaseMode: "checkout",
           billingInterval: "monthly",
           currency: "CNY",
           priceMinor: 13900,
           monthlyEquivalentPriceMinor: null,
           includedRenCredits: 4000,
-          cta: "request_access",
+          cta: "checkout",
         },
         {
           id: "personal-pro-annual",
-          purchaseMode: "request_access",
+          purchaseMode: "checkout",
           billingInterval: "annual",
           currency: "CNY",
           priceMinor: 139000,
           monthlyEquivalentPriceMinor: 11600,
           includedRenCredits: 4000,
-          cta: "request_access",
+          cta: "checkout",
         },
       ],
     },
@@ -111,8 +111,8 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
         privateDeployment: false,
       },
       offers: [
-        { id: "personal-elite-monthly", purchaseMode: "request_access", billingInterval: "monthly", currency: "CNY", priceMinor: 69900, monthlyEquivalentPriceMinor: null, includedRenCredits: 20000, cta: "request_access" },
-        { id: "personal-elite-annual", purchaseMode: "request_access", billingInterval: "annual", currency: "CNY", priceMinor: 699000, monthlyEquivalentPriceMinor: 58300, includedRenCredits: 20000, cta: "request_access" },
+        { id: "personal-elite-monthly", purchaseMode: "checkout", billingInterval: "monthly", currency: "CNY", priceMinor: 69900, monthlyEquivalentPriceMinor: null, includedRenCredits: 20000, cta: "checkout" },
+        { id: "personal-elite-annual", purchaseMode: "checkout", billingInterval: "annual", currency: "CNY", priceMinor: 699000, monthlyEquivalentPriceMinor: 58300, includedRenCredits: 20000, cta: "checkout" },
       ],
     },
     {
@@ -135,8 +135,8 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
         privateDeployment: false,
       },
       offers: [
-        { id: "personal-flagship-monthly", purchaseMode: "request_access", billingInterval: "monthly", currency: "CNY", priceMinor: 139900, monthlyEquivalentPriceMinor: null, includedRenCredits: 40000, cta: "request_access" },
-        { id: "personal-flagship-annual", purchaseMode: "request_access", billingInterval: "annual", currency: "CNY", priceMinor: 1399000, monthlyEquivalentPriceMinor: 116600, includedRenCredits: 40000, cta: "request_access" },
+        { id: "personal-flagship-monthly", purchaseMode: "checkout", billingInterval: "monthly", currency: "CNY", priceMinor: 139900, monthlyEquivalentPriceMinor: null, includedRenCredits: 40000, cta: "checkout" },
+        { id: "personal-flagship-annual", purchaseMode: "checkout", billingInterval: "annual", currency: "CNY", priceMinor: 1399000, monthlyEquivalentPriceMinor: 116600, includedRenCredits: 40000, cta: "checkout" },
       ],
     },
     {

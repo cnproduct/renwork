@@ -270,6 +270,59 @@ export async function grantRenCredit(input: {
   })
 }
 
+/**
+ * Revokes RenCredit previously granted by a refunded commerce order. The
+ * immutable compensation entry is intentionally allowed to take the wallet
+ * below zero when credits have already been consumed; that debt blocks future
+ * reservations instead of rewriting historical usage.
+ */
+export async function refundGrantedRenCredit(input: {
+  organizationId: OrganizationId
+  amountMicroCredits: number
+  idempotencyKey: string
+  reasonCode: string
+  metadata?: Record<string, unknown>
+}) {
+  assertMicroCredits(input.amountMicroCredits, "amountMicroCredits")
+  if (input.amountMicroCredits === 0) throw new Error("amountMicroCredits must be positive.")
+
+  return db.transaction(async (tx) => {
+    const [existing] = await tx.select().from(RenCreditLedgerEntryTable).where(and(
+      eq(RenCreditLedgerEntryTable.organization_id, input.organizationId),
+      eq(RenCreditLedgerEntryTable.idempotency_key, input.idempotencyKey),
+    )).limit(1)
+    if (existing) {
+      const [wallet] = await tx.select().from(RenCreditWalletTable)
+        .where(eq(RenCreditWalletTable.organization_id, input.organizationId)).limit(1)
+      return wallet ?? null
+    }
+
+    const [wallet] = await tx.select().from(RenCreditWalletTable)
+      .where(eq(RenCreditWalletTable.organization_id, input.organizationId)).for("update").limit(1)
+    if (!wallet || wallet.status !== "active") throw new Error("RENCREDIT_WALLET_UNAVAILABLE")
+    const available = wallet.available_microcredits - input.amountMicroCredits
+    const version = wallet.version + 1
+    await tx.update(RenCreditWalletTable).set({ available_microcredits: available, version })
+      .where(eq(RenCreditWalletTable.organization_id, input.organizationId))
+    await tx.insert(RenCreditLedgerEntryTable).values({
+      id: createDenTypeId("renCreditLedgerEntry"),
+      organization_id: input.organizationId,
+      reservation_id: null,
+      entry_type: "refund",
+      idempotency_key: input.idempotencyKey,
+      amount_microcredits: input.amountMicroCredits,
+      available_delta_microcredits: -input.amountMicroCredits,
+      reserved_delta_microcredits: 0,
+      available_balance_after: available,
+      reserved_balance_after: wallet.reserved_microcredits,
+      wallet_version_after: version,
+      reason_code: input.reasonCode,
+      metadata: input.metadata ?? null,
+    })
+    return { ...wallet, available_microcredits: available, version }
+  })
+}
+
 export async function reserveInferenceCredits(input: ReserveInferenceInput) {
   assertMicroCredits(input.reservedMicroCredits, "reservedMicroCredits")
   return db.transaction(async (tx) => {

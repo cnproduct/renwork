@@ -1,4 +1,7 @@
 import { organizationHasActiveInferenceSubscription } from "./stripe-billing.js"
+import { and, eq, gt, lte } from "@openwork-ee/den-db/drizzle"
+import { RenworkPlanSubscriptionTable } from "@openwork-ee/den-db/schema"
+import { db } from "./db.js"
 
 type JsonRecord = Record<string, unknown>
 type OrganizationId = Parameters<typeof organizationHasActiveInferenceSubscription>[0]
@@ -78,8 +81,18 @@ export async function resolveRenworkModelAccess(input: {
   metadata: JsonRecord | string | null | undefined
   now?: Date
 }): Promise<RenworkModelAccess> {
+  const now = input.now ?? new Date()
+  const [renworkSubscription] = await db.select({ id: RenworkPlanSubscriptionTable.id })
+    .from(RenworkPlanSubscriptionTable)
+    .where(and(
+      eq(RenworkPlanSubscriptionTable.organization_id, input.organizationId),
+      eq(RenworkPlanSubscriptionTable.status, "active"),
+      lte(RenworkPlanSubscriptionTable.current_period_start, now),
+      gt(RenworkPlanSubscriptionTable.current_period_end, now),
+    ))
+    .limit(1)
   return resolveRenworkModelAccessFromSources({
-    hasActiveSubscription: await organizationHasActiveInferenceSubscription(input.organizationId),
+    hasActiveSubscription: Boolean(renworkSubscription) || await organizationHasActiveInferenceSubscription(input.organizationId),
     metadata: input.metadata,
     now: input.now,
   })

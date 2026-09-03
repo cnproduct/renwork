@@ -21,7 +21,10 @@ import type {
   UpdateAutomation,
 } from "@openwork/types/automations";
 import {
+  renworkCommerceOrderSchema,
   renworkPlanCatalogSchema,
+  type RenworkCommerceOrder,
+  type RenworkPaymentChannel,
   type RenworkPlanCatalog,
 } from "@openwork/types/renwork-commerce";
 
@@ -2759,6 +2762,33 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
         method: "GET",
       });
       return renworkPlanCatalogSchema.parse(payload);
+    },
+
+    async createRenworkCommerceOrder(input: {
+      organizationId: string;
+      offerId: string;
+      channel: RenworkPaymentChannel;
+      idempotencyKey: string;
+    }): Promise<RenworkCommerceOrder> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/renwork/commerce/orders", {
+        method: "POST",
+        token,
+        organizationId: input.organizationId,
+        idempotencyKey: input.idempotencyKey,
+        body: { offerId: input.offerId, channel: input.channel },
+      });
+      if (!isRecord(payload)) throw new DenApiError(500, "invalid_commerce_order_payload", "Payment order response was invalid.");
+      return renworkCommerceOrderSchema.parse(payload.order);
+    },
+
+    async getRenworkCommerceOrder(organizationId: string, orderId: string): Promise<RenworkCommerceOrder> {
+      const payload = await requestJson<unknown>(baseUrls, `/v1/renwork/commerce/orders/${encodeURIComponent(orderId)}`, {
+        method: "GET",
+        token,
+        organizationId,
+      });
+      if (!isRecord(payload)) throw new DenApiError(500, "invalid_commerce_order_payload", "Payment order response was invalid.");
+      return renworkCommerceOrderSchema.parse(payload.order);
     },
 
     async getRenCreditWallet(orgId: string): Promise<DenRenCreditWallet> {

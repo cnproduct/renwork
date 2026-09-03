@@ -40,7 +40,8 @@ test("one authoritative catalog separates subscription rights from outcome charg
   expect(new Set(catalog.plans.map((plan) => plan.audience))).toEqual(new Set(["personal", "enterprise"]))
   expect(catalog.plans.every((plan) => !plan.features.localFreeCore)).toBe(true)
   expect(catalog.plans.flatMap((plan) => plan.offers).every((offer) => offer.purchaseMode !== "free")).toBe(true)
-  expect(catalog.plans.flatMap((plan) => plan.offers).every((offer) => offer.purchaseMode !== "checkout")).toBe(true)
+  expect(catalog.plans.filter((plan) => plan.audience === "personal").flatMap((plan) => plan.offers).every((offer) => offer.purchaseMode === "checkout")).toBe(true)
+  expect(catalog.plans.filter((plan) => plan.audience === "enterprise").flatMap((plan) => plan.offers).every((offer) => offer.purchaseMode !== "checkout")).toBe(true)
 
   const preview = renworkCreditPolicySchema.parse(
     catalog.creditPolicies.find((policy) => policy.event === "buyer_company_preview"),

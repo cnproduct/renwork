@@ -3,7 +3,7 @@ import { env } from "./env.js"
 export const PLAN_TIERS = ["free", "team", "enterprise"] as const
 export type PlanTier = (typeof PLAN_TIERS)[number]
 
-export const PLAN_SOURCES = ["default", "stripe", "manual", "grandfathered"] as const
+export const PLAN_SOURCES = ["default", "stripe", "manual", "grandfathered", "renwork_payment"] as const
 export type PlanSource = (typeof PLAN_SOURCES)[number]
 
 export type OrganizationPlan = {

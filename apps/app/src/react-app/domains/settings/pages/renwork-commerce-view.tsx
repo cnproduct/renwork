@@ -5,9 +5,12 @@ import type {
   RenworkPlanAudience,
   RenworkPlanFeatures,
   RenworkPlanOffer,
+  RenworkPaymentChannel,
+  RenworkCommerceOrder,
 } from "@openwork/types/renwork-commerce";
 import { formatRenCredit, type RenWorkPublicModelCatalog } from "@openwork/rencredit-metering";
 import { Check, Coins, History, LockKeyhole, ReceiptText, RefreshCcw, ShieldCheck, Users } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 import { isDenOrgAdminRole, type DenRenCreditLedgerEntry, type DenRenCreditTaskReceipt } from "@/app/lib/den";
 import { Badge } from "@/components/ui/badge";
@@ -318,6 +321,10 @@ export function RenworkCommerceView() {
   const [activityError, setActivityError] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [checkoutOffer, setCheckoutOffer] = React.useState<RenworkPlanOffer | null>(null);
+  const [checkoutOrder, setCheckoutOrder] = React.useState<RenworkCommerceOrder | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = React.useState(false);
+  const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
 
   const loadCatalog = React.useCallback(async () => {
     setLoading(true);
@@ -392,11 +399,60 @@ export function RenworkCommerceView() {
     modelCatalog?.models.map((model) => [model.sku, model.contextWindow] as const) ?? [],
   ), [modelCatalog]);
 
-  const openBilling = () => {
+  const openBilling = (offer?: RenworkPlanOffer) => {
     const target = new URL("/dashboard/billing", baseUrl);
     target.searchParams.set("source", "renwork-desktop");
+    if (offer) target.searchParams.set("offer", offer.id);
     void platform.openLink(target.toString());
   };
+
+  const beginPlanAction = (offer: RenworkPlanOffer) => {
+    if (offer.purchaseMode !== "checkout") {
+      openBilling(offer);
+      return;
+    }
+    if (!isSignedIn || !activeOrganization?.id) {
+      openBilling(offer);
+      return;
+    }
+    setCheckoutOffer(offer);
+    setCheckoutOrder(null);
+    setCheckoutError(null);
+  };
+
+  const startCheckout = async (channel: RenworkPaymentChannel) => {
+    if (!checkoutOffer || !activeOrganization?.id) return;
+    setCheckoutBusy(true);
+    setCheckoutError(null);
+    try {
+      const order = await client.createRenworkCommerceOrder({
+        organizationId: activeOrganization.id,
+        offerId: checkoutOffer.id,
+        channel,
+        idempotencyKey: `desktop:${activeOrganization.id}:${checkoutOffer.id}:${channel}:${crypto.randomUUID()}`,
+      });
+      setCheckoutOrder(order);
+      // Alipay is a browser checkout. WeChat's Native code_url must stay in the
+      // client and be rendered as a QR code; opening the weixin:// value would
+      // make desktop checkout unreliable and can expose it to URL handlers.
+      if (order.checkoutUrl) await platform.openLink(order.checkoutUrl);
+    } catch (checkoutFailure) {
+      setCheckoutError(checkoutFailure instanceof Error ? checkoutFailure.message : t("commerce.checkout_error"));
+    } finally {
+      setCheckoutBusy(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!checkoutOrder || checkoutOrder.status !== "pending" || !activeOrganization?.id) return;
+    const timer = window.setInterval(() => {
+      void client.getRenworkCommerceOrder(activeOrganization.id, checkoutOrder.id).then((order) => {
+        setCheckoutOrder(order);
+        if (order.status === "fulfilled") void loadCreditAccount();
+      }).catch(() => undefined);
+    }, 3_000);
+    return () => window.clearInterval(timer);
+  }, [activeOrganization?.id, checkoutOrder, client, loadCreditAccount]);
 
   return (
     <SettingsStack data-testid="renwork-commerce-view">
@@ -598,11 +654,41 @@ export function RenworkCommerceView() {
         ) : null}
 
         {!loading && !error ? (
-          <div className={`grid gap-3 ${audience === "personal" ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
-            {plans.map(({ plan, offer }) => (
-              <PlanCard key={plan.id} plan={plan} offer={offer} onAction={openBilling} />
-            ))}
-          </div>
+          <>
+            {checkoutOffer ? (
+              <SettingsInset data-testid="renwork-payment-channel-picker">
+                <div className="text-sm font-medium text-dls-text">{t("commerce.checkout_title")}</div>
+                <div className="mt-1 text-xs text-dls-secondary">{t("commerce.checkout_description")}</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button disabled={checkoutBusy} onClick={() => void startCheckout("wechat_pay")}>{t("commerce.pay_wechat")}</Button>
+                  <Button disabled={checkoutBusy} variant="outline" onClick={() => void startCheckout("alipay")}>{t("commerce.pay_alipay")}</Button>
+                  <Button disabled={checkoutBusy} variant="ghost" onClick={() => { setCheckoutOffer(null); setCheckoutOrder(null); }}>{t("commerce.checkout_cancel")}</Button>
+                </div>
+                {checkoutBusy ? <div className="mt-3 text-xs text-dls-secondary">{t("commerce.checkout_creating")}</div> : null}
+                {checkoutError ? <div className="mt-3 text-xs text-red-10">{checkoutError}</div> : null}
+                {checkoutOrder ? (
+                  <div className="mt-3 space-y-3 text-xs text-dls-secondary" data-testid="renwork-payment-order-status">
+                    {checkoutOrder.qrCodeUrl && checkoutOrder.status === "pending" ? (
+                      <div className="inline-flex flex-col items-center gap-2 rounded-xl border border-dls-border bg-white p-4" data-testid="renwork-wechat-payment-qr">
+                        <QRCodeSVG value={checkoutOrder.qrCodeUrl} size={184} level="M" />
+                        <span className="text-center text-gray-700">{t("commerce.checkout_wechat_scan")}</span>
+                      </div>
+                    ) : null}
+                    <div>
+                      {checkoutOrder.status === "fulfilled"
+                        ? t("commerce.checkout_fulfilled")
+                        : t("commerce.checkout_pending", { id: checkoutOrder.id })}
+                    </div>
+                  </div>
+                ) : null}
+              </SettingsInset>
+            ) : null}
+            <div className={`grid gap-3 ${audience === "personal" ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
+              {plans.map(({ plan, offer }) => (
+                <PlanCard key={plan.id} plan={plan} offer={offer} onAction={() => beginPlanAction(offer)} />
+              ))}
+            </div>
+          </>
         ) : null}
 
         {audience === "enterprise" ? (
