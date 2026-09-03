@@ -1,4 +1,4 @@
-import { bigint, index, int, json, mysqlEnum, mysqlTable, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core"
+import { bigint, decimal, index, int, json, mysqlEnum, mysqlTable, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core"
 import { denTypeIdColumn, longBlobColumn, timestamps } from "../columns"
 
 export const VideoGenerationQuoteTable = mysqlTable(
@@ -53,7 +53,7 @@ export const VideoGenerationJobTable = mysqlTable(
     provider_cost_kind: mysqlEnum("provider_cost_kind", ["money", "provider_credits"]),
     provider_cost_microunits: bigint("provider_cost_microunits", { mode: "number" }),
     provider_cost_currency: varchar("provider_cost_currency", { length: 3 }),
-    provider_cost_units: bigint("provider_cost_units", { mode: "number" }),
+    provider_cost_units: decimal("provider_cost_units", { precision: 20, scale: 6, mode: "number" }),
     provider_cost_unit_code: varchar("provider_cost_unit_code", { length: 64 }),
     cost_evidence_reference: varchar("cost_evidence_reference", { length: 512 }),
     cost_evidence_recorded_by_org_membership_id: denTypeIdColumn("member", "cost_evidence_recorded_by_org_membership_id"),

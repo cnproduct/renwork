@@ -67,7 +67,8 @@ const providerCostEvidenceSchema = z.discriminatedUnion("providerCostKind", [
   }).strict(),
   z.object({
     providerCostKind: z.literal("provider_credits"),
-    providerCostUnits: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    providerCostUnits: z.number().finite().nonnegative().max(1_000_000_000_000)
+      .refine((value) => Number.isInteger(value * 1_000_000), "provider credits support at most 6 decimal places"),
     providerCostUnitCode: z.literal("METASO_H3_CREDIT"),
     costEvidenceReference: z.string().trim().min(1).max(512),
   }).strict(),

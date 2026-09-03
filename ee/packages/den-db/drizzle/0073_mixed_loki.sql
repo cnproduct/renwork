@@ -1,0 +1,1 @@
+ALTER TABLE `video_generation_jobs` MODIFY COLUMN `provider_cost_units` decimal(20,6);

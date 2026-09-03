@@ -21,12 +21,13 @@ async function source(relativePath: string) {
 }
 
 test("approved Phase 2 voiceover is encoded as a fail-closed one-organization live canary", async ({ evidence }) => {
-  const [rollout, route, schema, phaseTwoMigration, costEvidenceMigration, provider, phaseTwoRunbook] = await Promise.all([
+  const [rollout, route, schema, phaseTwoMigration, costEvidenceMigration, fractionalCostMigration, provider, phaseTwoRunbook] = await Promise.all([
     source("ee/apps/den-api/src/capability-sources/minimax-h3-video-rollout.ts"),
     source("ee/apps/den-api/src/routes/org/video-generation.ts"),
     source("ee/packages/den-db/src/schema/video-generation.ts"),
     source("ee/packages/den-db/drizzle/0071_fluffy_talos.sql"),
     source("ee/packages/den-db/drizzle/0072_breezy_garia.sql"),
+    source("ee/packages/den-db/drizzle/0073_mixed_loki.sql"),
     source("ee/apps/den-api/src/minimax-h3-provider.ts"),
     source("docs/renwork-minimax-h3-phase2-canary.md"),
   ])
@@ -46,6 +47,7 @@ test("approved Phase 2 voiceover is encoded as a fail-closed one-organization li
   expect(route).toContain("provider_cost_units")
   expect(route).toContain("provider_cost_unit_code")
   expect(route).toContain("METASO_H3_CREDIT")
+  expect(route).toContain("provider credits support at most 6 decimal places")
   expect(route).toContain("cost_evidence_reference")
   expect(route).toContain("review_status")
   expect(route).toContain('"pending_review"')
@@ -60,6 +62,7 @@ test("approved Phase 2 voiceover is encoded as a fail-closed one-organization li
   expect(schema).toContain("provider_cost_microunits")
   expect(schema).toContain("provider_cost_currency")
   expect(schema).toContain("provider_cost_units")
+  expect(schema).toContain('decimal("provider_cost_units", { precision: 20, scale: 6, mode: "number" })')
   expect(schema).toContain("provider_cost_unit_code")
   expect(schema).toContain("cost_evidence_reference")
   expect(schema).toContain("review_status")
@@ -74,6 +77,7 @@ test("approved Phase 2 voiceover is encoded as a fail-closed one-organization li
   expect(costEvidenceMigration).toContain("provider_cost_unit_code")
   expect(costEvidenceMigration).toContain("SET `provider_cost_kind` = 'money'")
   expect(costEvidenceMigration).toContain("WHERE `provider_cost_microunits` IS NOT NULL")
+  expect(fractionalCostMigration).toContain("decimal(20,6)")
 
   expect(provider).toContain("RENWORK_METASO_H3_API_KEY")
   expect(provider).toContain("RENWORK_METASO_H3_RESULT_HOSTS")
@@ -104,7 +108,7 @@ test("approved Phase 2 voiceover is encoded as a fail-closed one-organization li
   )
   evidence.fact(
     "MetaSO cost evidence can use attributable H3 credits without inventing a currency amount",
-    "The API and database encode mutually exclusive money or provider-credit evidence; MetaSO credits require METASO_H3_CREDIT, while an unattributed job keeps every cost field null and cannot be approved.",
+    "The API and database encode mutually exclusive money or provider-credit evidence; fractional MetaSO credits are stored exactly to six decimal places under METASO_H3_CREDIT, while an unattributed job keeps every cost field null and cannot be approved.",
     true,
   )
 })

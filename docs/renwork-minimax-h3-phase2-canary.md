@@ -49,7 +49,7 @@ a003 已完成成片验收，但 MetaSO 控制台当前只证明账户总积分�
 3. 四眼复核授权证据 ID、精确组织 ID、不可变价格版本和 HTTPS 结果域 allowlist 后，才可在预生产将 live canary gate 设为开启。
 4. 先验证文生视频，再验证租户自有首帧生视频。每次只运行 4 秒、768P、单任务；重复提交必须恢复同一 job、一次冻结和一个供应商任务。
 5. 有效结果必须依次通过：结果域校验、容器 magic 和大小校验、租户资产持久化、字节哈希复核、记录 AI provenance、RenCredit capture。供应商失败或无效交付必须 release，且不得保留结果资产或 capture。
-6. 管理员通过 `PUT /v1/video-generation/admin/jobs/:jobId/cost-evidence` 附加供应商单笔成本与证据引用。法币模式提交 `providerCostKind=money`、实际微单位金额和 ISO 货币；MetaSO 积分模式提交 `providerCostKind=provider_credits`、单笔积分和 `METASO_H3_CREDIT`。人民币金额在积分模式下必须为空，只有能关联到该 job 的单笔记录才可写入。
+6. 管理员通过 `PUT /v1/video-generation/admin/jobs/:jobId/cost-evidence` 附加供应商单笔成本与证据引用。法币模式提交 `providerCostKind=money`、实际微单位金额和 ISO 货币；MetaSO 积分模式提交 `providerCostKind=provider_credits`、单笔积分和 `METASO_H3_CREDIT`，积分最多保留 6 位小数且不得取整或换算为臆测人民币金额。人民币金额在积分模式下必须为空，只有能关联到该 job 的单笔记录才可写入。
 7. 第二位管理员核对供应商任务、RenCredit 结算、结果哈希、租户隔离、授权与成本证据，再通过 `PUT /v1/video-generation/admin/jobs/:jobId/review` 作出 `approved` 或 `rejected`。批准前必须已有完整成本证据；记录成本者不能批准同一任务，复核结果为终态。
 8. 导出无密钥的证据包并由法务、财务、产品和运维共同签字。即使单组织 canary 通过，在这一步完成前仍不得进入生产灰度。
 

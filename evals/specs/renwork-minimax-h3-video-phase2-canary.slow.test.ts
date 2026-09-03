@@ -47,9 +47,11 @@ function text(value: unknown, key: string) {
   return candidate
 }
 
-function nonnegativeIntegerFromEnvironment(name: string) {
+function nonnegativeProviderCreditsFromEnvironment(name: string) {
   const value = Number(process.env[name])
-  if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${name} must be a nonnegative safe integer`)
+  if (!Number.isFinite(value) || value < 0 || !Number.isInteger(value * 1_000_000)) {
+    throw new Error(`${name} must be a nonnegative number with at most 6 decimal places`)
+  }
   return value
 }
 
@@ -268,7 +270,7 @@ test(title, async ({ evidence, place }) => {
     reviewer,
     orgId,
     jobId: text(t2v, "id"),
-    providerCostUnits: nonnegativeIntegerFromEnvironment("RENWORK_H3_CANARY_T2V_PROVIDER_COST_UNITS"),
+    providerCostUnits: nonnegativeProviderCreditsFromEnvironment("RENWORK_H3_CANARY_T2V_PROVIDER_COST_UNITS"),
     providerCostUnitCode: process.env.RENWORK_H3_CANARY_PROVIDER_COST_UNIT_CODE!.trim(),
     costEvidenceReference: process.env.RENWORK_H3_CANARY_T2V_COST_EVIDENCE_REFERENCE!.trim(),
   })
@@ -277,7 +279,7 @@ test(title, async ({ evidence, place }) => {
     reviewer,
     orgId,
     jobId: text(i2v, "id"),
-    providerCostUnits: nonnegativeIntegerFromEnvironment("RENWORK_H3_CANARY_I2V_PROVIDER_COST_UNITS"),
+    providerCostUnits: nonnegativeProviderCreditsFromEnvironment("RENWORK_H3_CANARY_I2V_PROVIDER_COST_UNITS"),
     providerCostUnitCode: process.env.RENWORK_H3_CANARY_PROVIDER_COST_UNIT_CODE!.trim(),
     costEvidenceReference: process.env.RENWORK_H3_CANARY_I2V_COST_EVIDENCE_REFERENCE!.trim(),
   })
