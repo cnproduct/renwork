@@ -15,6 +15,7 @@ type CatalogModel = {
   displayName: string;
   description: string;
   effectiveDisplayMultiplierBps: number;
+  platformPriceMultiplierBps: number;
 };
 
 type OrganizationMember = {
@@ -33,9 +34,17 @@ type ModelPolicy = {
   memberMonthlyBudgetMicroCredits: Record<string, number | null>;
 };
 
+type ModelPricingPolicy = {
+  modelMultiplierOverridesBps: Record<string, number>;
+  version: number;
+  updatedAt: string | null;
+  updatedByUserId: string | null;
+};
+
 type ModelPolicyPayload = {
   organization: OrganizationSummary;
   policy: ModelPolicy;
+  pricing: ModelPricingPolicy;
   availableModels: CatalogModel[];
   catalogAvailable: boolean;
   members: OrganizationMember[];
@@ -81,7 +90,18 @@ function parsePayload(value: unknown): ModelPolicyPayload | null {
   if (!isRecord(value) || !isRecord(value.organization) || !Array.isArray(value.availableModels) || !Array.isArray(value.members)) return null;
   if (typeof value.organization.id !== "string" || typeof value.organization.name !== "string") return null;
   const policy = parsePolicy(value.policy);
-  if (!policy) return null;
+  if (!policy || !isRecord(value.pricing) || !isRecord(value.pricing.modelMultiplierOverridesBps)) return null;
+  const modelMultiplierOverridesBps: Record<string, number> = {};
+  for (const [sku, multiplier] of Object.entries(value.pricing.modelMultiplierOverridesBps)) {
+    if (typeof multiplier !== "number" || !Number.isSafeInteger(multiplier) || multiplier <= 0) return null;
+    modelMultiplierOverridesBps[sku] = multiplier;
+  }
+  const pricing: ModelPricingPolicy = {
+    modelMultiplierOverridesBps,
+    version: typeof value.pricing.version === "number" && Number.isSafeInteger(value.pricing.version) ? value.pricing.version : 0,
+    updatedAt: typeof value.pricing.updatedAt === "string" ? value.pricing.updatedAt : null,
+    updatedByUserId: typeof value.pricing.updatedByUserId === "string" ? value.pricing.updatedByUserId : null,
+  };
   const availableModels: CatalogModel[] = [];
   for (const model of value.availableModels) {
     if (!isRecord(model) || typeof model.sku !== "string" || typeof model.displayName !== "string") continue;
@@ -90,6 +110,7 @@ function parsePayload(value: unknown): ModelPolicyPayload | null {
       displayName: model.displayName,
       description: typeof model.description === "string" ? model.description : "",
       effectiveDisplayMultiplierBps: typeof model.effectiveDisplayMultiplierBps === "number" ? model.effectiveDisplayMultiplierBps : 10_000,
+      platformPriceMultiplierBps: typeof model.platformPriceMultiplierBps === "number" ? model.platformPriceMultiplierBps : 10_000,
     });
   }
   const members: OrganizationMember[] = [];
@@ -106,6 +127,7 @@ function parsePayload(value: unknown): ModelPolicyPayload | null {
   return {
     organization: { id: value.organization.id, name: value.organization.name },
     policy,
+    pricing,
     availableModels,
     catalogAvailable: value.catalogAvailable === true,
     members,
@@ -194,6 +216,16 @@ export function OrganizationModelPolicyDialog({ organization, onClose }: {
     setNotice(null);
   };
 
+  const updateMultiplier = (sku: string, multiplierBps: number | null) => {
+    setPayload((current) => {
+      if (!current) return current;
+      const next = { ...current.pricing.modelMultiplierOverridesBps };
+      if (multiplierBps === null) delete next[sku]; else next[sku] = multiplierBps;
+      return { ...current, pricing: { ...current.pricing, modelMultiplierOverridesBps: next } };
+    });
+    setNotice(null);
+  };
+
   const save = async () => {
     if (!payload) return;
     setSaving(true);
@@ -202,10 +234,13 @@ export function OrganizationModelPolicyDialog({ organization, onClose }: {
     try {
       const result = await request(`/v1/admin/organizations/${encodeURIComponent(organization.id)}/model-policy`, {
         method: "PUT",
-        body: JSON.stringify(payload.policy),
+        body: JSON.stringify({
+          policy: payload.policy,
+          pricing: { modelMultiplierOverridesBps: payload.pricing.modelMultiplierOverridesBps },
+        }),
       });
       if (!result.response.ok) throw new Error(errorMessage(result.payload, "无法保存组织模型策略。"));
-      setNotice("模型白名单、默认模型、组织预算和成员额度已保存。");
+      setNotice("模型白名单、组织结算倍率、默认模型、组织预算和成员额度已保存。");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "无法保存组织模型策略。");
     } finally {
@@ -220,7 +255,7 @@ export function OrganizationModelPolicyDialog({ organization, onClose }: {
           <div>
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-orange-600">RenWork 平台超级管理员</p>
             <h2 id="organization-model-policy-title" className="mt-1 text-2xl font-semibold text-slate-950">{organization.name} · 模型与额度策略</h2>
-            <p className="mt-1 text-sm text-slate-600">统一管理该组织可选模型、默认模型、预算与成员额度。供应商密钥仍只在全局模型目录管理。</p>
+            <p className="mt-1 text-sm text-slate-600">统一管理该组织可选模型、结算倍率、默认模型、预算与成员额度。供应商密钥仍只在全局模型目录管理。</p>
           </div>
           <button type="button" aria-label="关闭模型策略" onClick={onClose} className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 hover:text-slate-950"><X className="size-5" /></button>
         </div>
@@ -239,8 +274,12 @@ export function OrganizationModelPolicyDialog({ organization, onClose }: {
                 </div>
                 {!payload.catalogAvailable ? <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">全局模型目录暂不可用。现有模型策略将被保留，你仍可修改预算与成员额度。</p> : null}
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  {models.map((model) => (
-                    <label key={model.sku} className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4">
+                  {models.map((model) => {
+                    const override = payload.pricing.modelMultiplierOverridesBps[model.sku] ?? null;
+                    const effective = override ?? model.platformPriceMultiplierBps;
+                    return (
+                    <div key={model.sku} className="rounded-2xl border border-slate-200 p-4">
+                      <label className="flex cursor-pointer items-start gap-3">
                       <input type="checkbox" className="mt-1 size-4 accent-orange-600" checked={allowedSkus.has(model.sku)} onChange={(event) => {
                         const next = new Set(allowedSkus);
                         if (event.target.checked) next.add(model.sku); else next.delete(model.sku);
@@ -248,9 +287,21 @@ export function OrganizationModelPolicyDialog({ organization, onClose }: {
                         updatePolicy({ allowedModelSkus: list, defaultModelSku: policy.defaultModelSku && list.includes(policy.defaultModelSku) ? policy.defaultModelSku : list[0] ?? null });
                       }} />
                       <span className="min-w-0 flex-1"><span className="block font-medium text-slate-950">{model.displayName}</span><span className="block text-xs leading-5 text-slate-500">{model.description}</span></span>
-                      <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs text-orange-700">×{(model.effectiveDisplayMultiplierBps / 10_000).toFixed(2)}</span>
-                    </label>
-                  ))}
+                      </label>
+                      <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3 text-xs sm:grid-cols-3">
+                        <span className="text-slate-500">平台倍率 <strong className="text-slate-800">×{(model.platformPriceMultiplierBps / 10_000).toFixed(2)}</strong></span>
+                        <label className="text-slate-500">组织结算倍率
+                          <MultiplierInput
+                            label={`${model.displayName} 组织结算倍率`}
+                            value={override}
+                            onChange={(value) => updateMultiplier(model.sku, value)}
+                            onError={setError}
+                          />
+                        </label>
+                        <span className="flex items-center justify-between gap-2 text-slate-500">生效倍率 <strong className="text-orange-700">×{(effective / 10_000).toFixed(2)}</strong>{override !== null ? <button type="button" className="text-orange-700 underline" onClick={() => updateMultiplier(model.sku, null)}>恢复继承</button> : null}</span>
+                      </div>
+                    </div>
+                  )})}
                 </div>
                 <label className="mt-4 block text-sm font-medium text-slate-800">默认模型
                   <select value={policy.defaultModelSku ?? ""} disabled={!payload.catalogAvailable} onChange={(event) => updatePolicy({ defaultModelSku: event.target.value || null })} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 disabled:bg-slate-50">
@@ -300,4 +351,31 @@ function BudgetInput({ label, value, onChange, onError }: {
   onError: (message: string | null) => void;
 }) {
   return <label className="text-sm font-medium text-slate-800">{label}<input className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5" inputMode="decimal" placeholder="不设上限" value={toRenCredit(value)} onChange={(event) => { try { onChange(toMicroCredits(event.target.value)); onError(null); } catch (cause) { onError(cause instanceof Error ? cause.message : "额度无效。"); } }} /></label>;
+}
+
+function MultiplierInput({ label, value, onChange, onError }: {
+  label: string;
+  value: number | null;
+  onChange: (value: number | null) => void;
+  onError: (message: string | null) => void;
+}) {
+  const [draft, setDraft] = useState(value === null ? "" : String(value / 10_000));
+  useEffect(() => setDraft(value === null ? "" : String(value / 10_000)), [value]);
+
+  const commit = () => {
+    const raw = draft.trim();
+    if (!raw) { onChange(null); onError(null); return; }
+    const multiplier = Number(raw);
+    if (!Number.isFinite(multiplier) || multiplier <= 0 || multiplier > 100) {
+      onError("组织结算倍率必须大于 0 且不超过 100；免费活动请使用独立授权。");
+      setDraft(value === null ? "" : String(value / 10_000));
+      return;
+    }
+    const multiplierBps = Math.round(multiplier * 10_000);
+    onChange(multiplierBps);
+    onError(null);
+    setDraft(String(multiplierBps / 10_000));
+  };
+
+  return <input aria-label={label} className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm text-slate-900" inputMode="decimal" placeholder="继承平台" value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={commit} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />;
 }

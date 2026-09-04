@@ -13,6 +13,9 @@ describe("RenWork platform super-admin organization model policy", () => {
     expect(dialog).toContain("模型白名单与默认模型");
     expect(dialog).toContain("组织 RenCredit 预算");
     expect(dialog).toContain("成员月额度");
+    expect(dialog).toContain("平台倍率");
+    expect(dialog).toContain("组织结算倍率");
+    expect(dialog).toContain("恢复继承");
   });
 
   test("loads and saves only through platform-admin organization policy routes", () => {

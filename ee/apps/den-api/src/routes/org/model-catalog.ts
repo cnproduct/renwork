@@ -11,7 +11,12 @@ import { z } from "zod"
 import { parseOrganizationPlan } from "../../entitlements.js"
 import { orgRoleRoute } from "../../middleware/index.js"
 import { modelCatalogSchema, requestModelCatalog } from "../../model-catalog-service.js"
-import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../../organization-model-policy.js"
+import {
+  applyOrganizationPricingToPublicCatalog,
+  readOrganizationModelPolicy,
+  readOrganizationModelPricingPolicy,
+  resolveMemberMonthlyBudget,
+} from "../../organization-model-policy.js"
 import { resolveRenworkModelAccess } from "../../renwork-access.js"
 import { forbiddenSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
 import type { OrgRouteVariables } from "./shared.js"
@@ -94,9 +99,13 @@ export function registerOrgModelCatalogRoutes<T extends { Variables: OrgRouteVar
           return c.json({ error: "MODEL_CATALOG_NOT_ACTIVE", message: "RenWork model catalog is temporarily unavailable." }, 503)
         }
 
-        const publicCatalog = access.source === "subscription"
+        const platformCatalog = access.source === "subscription"
           ? toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier)
           : toPublicModelCatalog(parsed.data)
+        const publicCatalog = applyOrganizationPricingToPublicCatalog(
+          platformCatalog,
+          readOrganizationModelPricingPolicy(organization.metadata),
+        )
         const policy = readOrganizationModelPolicy(organization.metadata)
         const allowed = policy.allowedModelSkus ? new Set(policy.allowedModelSkus) : null
         const policyModels = allowed

@@ -7,8 +7,10 @@ import { parseOrganizationPlan } from "../../entitlements.js"
 import { orgRoleRoute } from "../../middleware/index.js"
 import { modelCatalogSchema, requestModelCatalog } from "../../model-catalog-service.js"
 import {
+  applyOrganizationPricingToPublicCatalog,
   organizationModelPolicyInputSchema,
   readOrganizationModelPolicy,
+  readOrganizationModelPricingPolicy,
   writeOrganizationModelPolicy,
 } from "../../organization-model-policy.js"
 import type { OrgRouteVariables } from "./shared.js"
@@ -29,7 +31,10 @@ export function registerOrgModelPolicyRoutes<T extends { Variables: OrgRouteVari
     } catch {
       return c.json({ error: "MODEL_CATALOG_UNAVAILABLE", message: "RenWork model catalog is temporarily unavailable." }, 503)
     }
-    const availableModels = toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier).models
+    const availableModels = applyOrganizationPricingToPublicCatalog(
+      toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier),
+      readOrganizationModelPricingPolicy(organization.metadata),
+    ).models
     c.header("Cache-Control", "private, no-store")
     return c.json({ policy: readOrganizationModelPolicy(organization.metadata), availableModels })
   })

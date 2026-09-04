@@ -20,7 +20,13 @@ import { db } from "../db.js"
 import { parseOrganizationPlan } from "../entitlements.js"
 import { env } from "../env.js"
 import { adminRoute, publicRoute } from "../middleware/index.js"
-import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
+import {
+  applyOrganizationPricingToAdminModel,
+  organizationPricingEvidence,
+  readOrganizationModelPolicy,
+  readOrganizationModelPricingPolicy,
+  resolveMemberMonthlyBudget,
+} from "../organization-model-policy.js"
 import { accessAllowsModel, resolveRenworkModelAccess } from "../renwork-access.js"
 import {
   authenticateInferenceKey,
@@ -79,20 +85,23 @@ async function loadProductionCatalog() {
 
 async function localMeteringAccess(principal: InferencePrincipal, modelSku: string) {
   const catalog = await loadProductionCatalog()
-  const model = findPublishedAdminModel(catalog, modelSku)
+  const platformModel = findPublishedAdminModel(catalog, modelSku)
   const [organization] = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable)
     .where(eq(OrganizationTable.id, principal.organizationId)).limit(1)
   const inferenceMetadata = isRecord(organization?.metadata?.inference) ? organization.metadata.inference : null
   const access = await resolveRenworkModelAccess({ organizationId: principal.organizationId, metadata: organization?.metadata })
   if (!access.allowed) throw new Error("SUBSCRIPTION_REQUIRED")
   if (access.source === "subscription" && inferenceMetadata?.enabled !== true) throw new Error("INFERENCE_DISABLED")
-  if (!accessAllowsModel(access, model.sku)) throw new Error("MODEL_NOT_INCLUDED_IN_GRANT")
+  if (!accessAllowsModel(access, platformModel.sku)) throw new Error("MODEL_NOT_INCLUDED_IN_GRANT")
   const plan = parseOrganizationPlan(organization?.metadata).tier
-  if (access.source === "subscription" && !modelAllowedForPlan(model, plan)) throw new Error("PLAN_UPGRADE_REQUIRED")
+  if (access.source === "subscription" && !modelAllowedForPlan(platformModel, plan)) throw new Error("PLAN_UPGRADE_REQUIRED")
   const policy = readOrganizationModelPolicy(organization?.metadata)
-  if (policy.allowedModelSkus && !policy.allowedModelSkus.includes(model.sku)) {
+  if (policy.allowedModelSkus && !policy.allowedModelSkus.includes(platformModel.sku)) {
     throw new Error("MODEL_NOT_ALLOWED_BY_ORGANIZATION")
   }
+  const pricingPolicy = readOrganizationModelPricingPolicy(organization?.metadata)
+  const pricingEvidence = organizationPricingEvidence(platformModel, pricingPolicy)
+  const model = applyOrganizationPricingToAdminModel(platformModel, pricingPolicy)
   const providers = new Map(catalog.providers.map((provider) => [provider.id, provider]))
   const healthyRoutes = model.routes.filter((candidate) => candidate.enabled)
     .filter((candidate) => {
@@ -104,7 +113,7 @@ async function localMeteringAccess(principal: InferencePrincipal, modelSku: stri
     throw new Error("CLOUD_GATEWAY_REQUIRED")
   }
   if (!route) throw new Error("LOCAL_MODEL_ROUTE_NOT_GRANTED")
-  return { catalog, model, route, policy }
+  return { catalog, model, route, policy, pricingPolicy, pricingEvidence }
 }
 
 function canonicalPublicKey(input: string) {
@@ -239,7 +248,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
       return c.json({ error: { code: "VALIDATION_FAILED" } }, 400)
     }
     try {
-      const { catalog, model, route, policy } = await localMeteringAccess(principal, body.modelSku)
+      const { catalog, model, route, policy, pricingPolicy, pricingEvidence } = await localMeteringAccess(principal, body.modelSku)
       const [device] = await db.select({ id: RenCreditRuntimeDeviceTable.id }).from(RenCreditRuntimeDeviceTable).where(and(
         eq(RenCreditRuntimeDeviceTable.organization_id, principal.organizationId),
         eq(RenCreditRuntimeDeviceTable.org_membership_id, principal.memberId),
@@ -255,13 +264,14 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
         ...principal,
         runId: body.runId,
         idempotencyKey,
-        catalogVersion: catalog.version,
+        catalogVersion: `${catalog.version}:org-pricing-${pricingPolicy.version}`,
         model,
         route,
         providerId: route.providerId,
         billingMode,
         estimatedUsage: body.estimatedUsage,
         reservedMicroCredits,
+        pricingEvidence,
         budgets: {
           organizationDailyMicroCredits: policy.dailyBudgetMicroCredits,
           organizationMonthlyMicroCredits: policy.monthlyBudgetMicroCredits,

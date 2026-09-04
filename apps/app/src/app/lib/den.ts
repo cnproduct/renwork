@@ -242,6 +242,11 @@ export type DenRenCreditTaskReceipt = {
   reservedMicroCredits: number;
   capturedMicroCredits: number;
   releasedMicroCredits: number;
+  catalogVersion: string;
+  platformPriceMultiplierBps: number | null;
+  organizationMultiplierOverrideBps: number | null;
+  effectivePriceMultiplierBps: number | null;
+  pricingPolicyVersion: number | null;
   actualUsage: DenRenCreditTokenUsage | null;
   hasResult: boolean;
   createdAt: string;
@@ -694,15 +699,24 @@ function getRenCreditTaskReceipts(payload: unknown): DenRenCreditTaskReceipt[] |
     const reservedMicroCredits = readSafeInteger(value, "reserved_microcredits");
     const capturedMicroCredits = readSafeInteger(value, "captured_microcredits");
     const releasedMicroCredits = readSafeInteger(value, "released_microcredits");
+    const catalogVersion = typeof value.catalog_version === "string" ? value.catalog_version : "legacy";
+    const platformPriceMultiplierBps = value.platform_price_multiplier_bps == null ? null : readSafeInteger(value, "platform_price_multiplier_bps");
+    const organizationMultiplierOverrideBps = value.organization_multiplier_override_bps == null ? null : readSafeInteger(value, "organization_multiplier_override_bps");
+    const effectivePriceMultiplierBps = value.effective_price_multiplier_bps == null ? null : readSafeInteger(value, "effective_price_multiplier_bps");
+    const pricingPolicyVersion = value.pricing_policy_version == null ? null : readSafeInteger(value, "pricing_policy_version");
     const createdAt = typeof value.created_at === "string" ? value.created_at : "";
     const settledAt = value.settled_at === null || typeof value.settled_at === "string" ? value.settled_at : undefined;
     if (
-      !id || !runId || !modelSku || !createdAt
+      !id || !runId || !modelSku || !createdAt || !catalogVersion
       || (billingMode !== "token_metered" && billingMode !== "outcome_metered" && billingMode !== "free")
       || (status !== "reserved" && status !== "captured" && status !== "released")
       || reservedMicroCredits === null || reservedMicroCredits < 0
       || capturedMicroCredits === null || capturedMicroCredits < 0
       || releasedMicroCredits === null || releasedMicroCredits < 0
+      || value.platform_price_multiplier_bps != null && platformPriceMultiplierBps === null
+      || value.organization_multiplier_override_bps != null && organizationMultiplierOverrideBps === null
+      || value.effective_price_multiplier_bps != null && effectivePriceMultiplierBps === null
+      || value.pricing_policy_version != null && pricingPolicyVersion === null
       || typeof value.has_result !== "boolean"
       || settledAt === undefined
     ) return null;
@@ -717,6 +731,11 @@ function getRenCreditTaskReceipts(payload: unknown): DenRenCreditTaskReceipt[] |
       reservedMicroCredits,
       capturedMicroCredits,
       releasedMicroCredits,
+      catalogVersion,
+      platformPriceMultiplierBps,
+      organizationMultiplierOverrideBps,
+      effectivePriceMultiplierBps,
+      pricingPolicyVersion,
       actualUsage,
       hasResult: value.has_result,
       createdAt,
