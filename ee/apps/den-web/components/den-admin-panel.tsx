@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Pencil, Trash2 } from "lucide-react";
 import { OrganizationModelPolicyDialog } from "./organization-model-policy-dialog";
+import { OfflineActivationDialog } from "./offline-activation-dialog";
 
 type AccessState = "loading" | "ready" | "signed-out" | "forbidden" | "error";
 type ViewMode = "users" | "companies" | "organizations";
@@ -123,7 +124,7 @@ type AdminOrganization = {
   billableSeatCount: number;
   capabilities: AdminOrganizationCapabilities;
   renworkAccessGrant: {
-    source: "campaign" | "super_admin";
+    source: "campaign" | "super_admin" | "offline_payment";
     expiresAt: string;
   } | null;
   renworkSubscriptionRequest: {
@@ -403,7 +404,7 @@ function parseAdminPayload(payload: unknown): AdminPayload | null {
             codemodeScripts: capabilities.codemodeScripts === true,
             cloud: capabilities.cloud === true
           },
-          renworkAccessGrant: accessGrant && (accessGrant.source === "campaign" || accessGrant.source === "super_admin") && typeof accessGrant.expiresAt === "string"
+          renworkAccessGrant: accessGrant && (accessGrant.source === "campaign" || accessGrant.source === "super_admin" || accessGrant.source === "offline_payment") && typeof accessGrant.expiresAt === "string"
             ? { source: accessGrant.source, expiresAt: accessGrant.expiresAt }
             : null,
           renworkSubscriptionRequest: subscriptionRequest
@@ -1331,6 +1332,7 @@ export function DenAdminPanel() {
   const [savingOrgId, setSavingOrgId] = useState<string | null>(null);
   const [freeSeatsDialog, setFreeSeatsDialog] = useState<{ org: AdminOrganization; totalFreeSeats: string } | null>(null);
   const [modelPolicyOrganization, setModelPolicyOrganization] = useState<AdminOrganization | null>(null);
+  const [offlineActivationOrganization, setOfflineActivationOrganization] = useState<AdminOrganization | null>(null);
   const [savingFreeSeatsOrgId, setSavingFreeSeatsOrgId] = useState<string | null>(null);
   const [savingCapabilityOrgId, setSavingCapabilityOrgId] = useState<string | null>(null);
   const [savingAccessGrantOrgId, setSavingAccessGrantOrgId] = useState<string | null>(null);
@@ -2354,6 +2356,14 @@ export function DenAdminPanel() {
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
+                        data-testid={`admin-org-offline-activation-${org.slug}`}
+                        onClick={() => setOfflineActivationOrganization(org)}
+                        className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                      >
+                        线下收款/开通
+                      </button>
+                      <button
+                        type="button"
                         data-testid={`admin-org-model-policy-${org.slug}`}
                         onClick={() => setModelPolicyOrganization(org)}
                         className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 transition hover:bg-orange-100"
@@ -2363,14 +2373,18 @@ export function DenAdminPanel() {
                       <button
                         type="button"
                         data-testid={`admin-org-renwork-access-${org.slug}`}
-                        disabled={savingAccessGrantOrgId === org.id}
+                        disabled={savingAccessGrantOrgId === org.id || org.renworkAccessGrant?.source === "offline_payment"}
                         onClick={() => {
-                          void (org.renworkAccessGrant ? revokeTemporaryRenworkAccess(org) : grantTemporaryRenworkAccess(org));
+                          if (org.renworkAccessGrant?.source !== "offline_payment") {
+                            void (org.renworkAccessGrant ? revokeTemporaryRenworkAccess(org) : grantTemporaryRenworkAccess(org));
+                          }
                         }}
                         className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-60"
                       >
                         {savingAccessGrantOrgId === org.id
                           ? "Saving…"
+                          : org.renworkAccessGrant?.source === "offline_payment"
+                            ? "线下套餐已开通"
                           : org.renworkAccessGrant
                             ? "撤销临时模型授权"
                             : "特批 7 天模型访问"}
@@ -2393,7 +2407,9 @@ export function DenAdminPanel() {
                     <MetaCell label="Members" value={String(org.memberCount)} />
                     <MetaCell
                       label="RenWork model access"
-                      value={org.renworkAccessGrant ? `特批至 ${formatDateTime(org.renworkAccessGrant.expiresAt)}` : "订阅校验或无特批"}
+                      value={org.renworkAccessGrant
+                        ? `${org.renworkAccessGrant.source === "offline_payment" ? "线下套餐" : "特批"}至 ${formatDateTime(org.renworkAccessGrant.expiresAt)}`
+                        : "未开通或订阅校验"}
                     />
                     <MetaCell
                       label="RenWork 开通申请"
@@ -2498,7 +2514,7 @@ export function DenAdminPanel() {
                         }}
                         className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
                       >
-                        <option value="free">Free</option>
+                        <option value="free">未开通（内部兼容）</option>
                         <option value="team">Team</option>
                         <option value="enterprise">Enterprise</option>
                       </select>
@@ -2780,6 +2796,16 @@ export function DenAdminPanel() {
       <OrganizationModelPolicyDialog
         organization={modelPolicyOrganization ? { id: modelPolicyOrganization.id, name: modelPolicyOrganization.name } : null}
         onClose={() => setModelPolicyOrganization(null)}
+      />
+
+      <OfflineActivationDialog
+        organization={offlineActivationOrganization ? { id: offlineActivationOrganization.id, name: offlineActivationOrganization.name } : null}
+        onClose={() => setOfflineActivationOrganization(null)}
+        onConfigurePolicy={(organization) => {
+          const fullOrganization = payload?.organizations.find((entry) => entry.id === organization.id) ?? null;
+          setOfflineActivationOrganization(null);
+          setModelPolicyOrganization(fullOrganization);
+        }}
       />
 
       {deleteUserDialog ? (

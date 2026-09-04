@@ -223,8 +223,13 @@ try {
   opencode = await spawnOpencodeServe({
     directory: tmpdir,
     port,
+    // This case intentionally verifies project-level command/provider config.
+    // The shared harness disables project config by default so unrelated
+    // repository plugins and remote MCPs cannot stall transport tests.
     env: {
-      OPENCODE_DISABLE_PROJECT_CONFIG: "false",
+      OPENCODE_DISABLE_PROJECT_CONFIG: "0",
+      // Keep the fixture independent from a developer machine's global
+      // OpenCode providers, plugins, credentials, sessions, and cache.
       XDG_CONFIG_HOME: path.join(xdgRoot, "config"),
       XDG_DATA_HOME: path.join(xdgRoot, "data"),
       XDG_CACHE_HOME: path.join(xdgRoot, "cache"),

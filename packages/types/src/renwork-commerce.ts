@@ -3,6 +3,7 @@ import { z } from "zod"
 const identifierSchema = z.string().trim().min(1).max(160)
 const currencySchema = z.string().regex(/^[A-Z]{3}$/)
 const billingIntervalSchema = z.enum(["monthly", "annual"])
+const offlinePaymentChannelsSchema = z.tuple([z.literal("offline_manual")])
 
 export const renworkPlanAudienceSchema = z.enum(["personal", "enterprise"])
 export type RenworkPlanAudience = z.infer<typeof renworkPlanAudienceSchema>
@@ -29,6 +30,7 @@ export const renworkPlanOfferSchema = z.discriminatedUnion("purchaseMode", [
     priceMinor: z.number().int().positive(),
     monthlyEquivalentPriceMinor: z.number().int().positive().nullable(),
     includedRenCredits: z.number().int().nonnegative(),
+    paymentChannels: offlinePaymentChannelsSchema,
     cta: z.literal("request_access"),
   }),
   z.object({
@@ -56,6 +58,7 @@ export const renworkPlanOfferSchema = z.discriminatedUnion("purchaseMode", [
     currency: currencySchema.nullable(),
     priceMinor: z.null(),
     includedRenCredits: z.number().int().nonnegative().nullable(),
+    paymentChannels: offlinePaymentChannelsSchema,
     cta: z.literal("contact_sales"),
   }),
   z.object({

@@ -44,6 +44,7 @@ import { buildAdminPageInfo, normalizeAdminPageRequest, sanitizeAdminSearchForLi
 import { registerAdminModelCatalogRoutes } from "./model-catalog.js"
 import { registerAdminOrganizationModelPolicyRoutes } from "./model-policy.js"
 import { registerAdminRenCreditRoutes } from "./rencredit.js"
+import { registerAdminOfflineCommerceRoutes } from "./offline-commerce.js"
 import { readRenworkAccessGrant } from "../../renwork-access.js"
 import { readRenworkSubscriptionRequest } from "../../renwork-subscription-request.js"
 import { syncInferenceForOrganizationMembers } from "../../inference.js"
@@ -1195,6 +1196,7 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
   registerAdminModelCatalogRoutes(app)
   registerAdminOrganizationModelPolicyRoutes(app)
   registerAdminRenCreditRoutes(app)
+  registerAdminOfflineCommerceRoutes(app)
   app.delete(
     "/v1/admin/users/:userId",
     adminRoute(),
@@ -1289,6 +1291,9 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
       if (!organization) {
         return c.json({ error: "not_found", message: "Organization not found." }, 404)
       }
+      if (readRenworkAccessGrant(organization.metadata)?.source === "offline_payment") {
+        return c.json({ error: "offline_order_reversal_required", message: "Reverse the active offline order instead of editing its plan directly." }, 409)
+      }
 
       const normalized = normalizeOrganizationMetadata(organization.metadata).metadata
       const metadata = {
@@ -1322,6 +1327,9 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
       const [organization] = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable)
         .where(eq(OrganizationTable.id, organizationId)).limit(1)
       if (!organization) return c.json({ error: "not_found", message: "Organization not found." }, 404)
+      if (readRenworkAccessGrant(organization.metadata)?.source === "offline_payment") {
+        return c.json({ error: "offline_order_reversal_required", message: "Reverse the active offline order before applying a temporary grant." }, 409)
+      }
 
       const currentUser = c.get("user")
       const existingMetadata = normalizeMetadata(organization.metadata)
@@ -1351,9 +1359,13 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
       const [organization] = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable)
         .where(eq(OrganizationTable.id, organizationId)).limit(1)
       if (!organization) return c.json({ error: "not_found", message: "Organization not found." }, 404)
+      if (readRenworkAccessGrant(organization.metadata)?.source === "offline_payment") {
+        return c.json({ error: "offline_order_reversal_required", message: "Paid access must be reversed through its offline order so the RenCredit refund is recorded." }, 409)
+      }
       const metadata = normalizeMetadata(organization.metadata)
       delete metadata.renworkAccessGrant
       await db.update(OrganizationTable).set({ metadata }).where(eq(OrganizationTable.id, organizationId))
+      await syncInferenceForOrganizationMembers({ organizationId })
       return c.json({ ok: true, organizationId })
     },
   )

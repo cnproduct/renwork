@@ -72,6 +72,13 @@ function offerCta(offer: RenworkPlanOffer): string {
   return t("commerce.cta_checkout");
 }
 
+function offlinePaymentLabel(offer: RenworkPlanOffer): string | null {
+  if (!("paymentChannels" in offer) || !offer.paymentChannels.includes("offline_manual")) return null;
+  return offer.purchaseMode === "contact_sales"
+    ? t("commerce.offline_payment_custom")
+    : t("commerce.offline_payment_channel");
+}
+
 function formatRenCreditBalance(microCredits: number): string {
   const sign = microCredits < 0 ? "−" : "";
   return `${sign}${formatRenCredit(Math.abs(microCredits))}`;
@@ -232,6 +239,7 @@ function PlanCard(props: {
 }) {
   const enabledFeatures = FEATURE_LABELS.filter((feature) => props.plan.features[feature.key]);
   const isCurrent = props.offer.cta === "current";
+  const offlineLabel = offlinePaymentLabel(props.offer);
 
   return (
     <article
@@ -270,6 +278,12 @@ function PlanCard(props: {
       >
         {offerCta(props.offer)}
       </Button>
+
+      {offlineLabel ? (
+        <div className="mt-3 rounded-xl border border-amber-7/30 bg-amber-3 px-3 py-2 text-xs leading-5 text-amber-11" data-testid="offline-payment-channel">
+          {offlineLabel}
+        </div>
+      ) : null}
 
       <div className="mt-5 flex flex-col gap-2 border-t border-dls-border pt-4">
         {props.offer.includedRenCredits !== null ? (

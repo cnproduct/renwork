@@ -74,3 +74,20 @@ test("an approved temporary grant unlocks the same organization access gate as a
     allowedModelSkus: ["renwork-standard"],
   })
 })
+
+test("an unexpired offline payment grant enables access and expires closed", () => {
+  const metadata = {
+    renworkAccessGrant: {
+      status: "active",
+      source: "offline_payment",
+      startsAt: "2026-09-03T00:00:00.000Z",
+      expiresAt: "2026-10-03T00:00:00.000Z",
+      modelSkus: null,
+      reason: "Offline payment receipt RW-1001",
+      grantedBy: "usr_admin",
+      orderId: "rwoo_order",
+    },
+  }
+  expect(resolveRenworkModelAccessFromSources({ hasActiveSubscription: false, metadata, now: new Date("2026-09-04T00:00:00.000Z") }).source).toBe("offline_payment")
+  expect(resolveRenworkModelAccessFromSources({ hasActiveSubscription: false, metadata, now: new Date("2026-10-03T00:00:00.000Z") }).allowed).toBe(false)
+})
