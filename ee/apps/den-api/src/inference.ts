@@ -152,7 +152,7 @@ async function loadManagedRenWorkModels(organizationId: OrgId): Promise<ManagedR
   if (!parsed.success || parsed.data.status !== "active") throw new Error("MODEL_CATALOG_UNAVAILABLE")
   validateAdminModelCatalog(parsed.data)
 
-  const publicCatalog = access.source === "subscription"
+  const publicCatalog = access.source === "subscription" || access.source === "offline_payment"
     ? toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier)
     : toPublicModelCatalog(parsed.data)
   const policy = readOrganizationModelPolicy(organization.metadata)
@@ -375,7 +375,9 @@ export async function repairMemberInferenceAccessIfNeeded(input: {
     organizationId: input.organizationId,
     metadata: organization?.metadata ?? null,
   })
-  if (!inference && !access.allowed) {
+  if (!access.allowed) {
+    await revokeMemberInferenceKeys(input.memberId)
+    await deleteRenWorkProviders(input)
     return false
   }
 
@@ -405,7 +407,14 @@ export async function syncInferenceForOrganizationMembers(input: { organizationI
     organizationId: input.organizationId,
     metadata: organization.metadata,
   })
-  if (!inference && !access.allowed) return
+  if (!access.allowed) {
+    const members = await listOrgMembers(input.organizationId)
+    for (const member of members) {
+      await revokeMemberInferenceKeys(member.id)
+      await deleteRenWorkProviders({ organizationId: input.organizationId, memberId: member.id })
+    }
+    return
+  }
 
   const members = await listOrgMembers(input.organizationId)
   if (inference) {
