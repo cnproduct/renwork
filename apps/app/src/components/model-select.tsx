@@ -50,10 +50,15 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { openModelPickerEvent, openProviderAuthEvent } from "@/react-app/shell/new-providers-listener";
+import {
+  openModelPickerEvent,
+  openProviderAuthEvent,
+  type OpenProviderAuthEventDetail,
+} from "@/react-app/shell/new-providers-listener";
 import { newProvidersEvent } from "@/app/lib/provider-events";
 import {
   catalogModelOptions,
+  requiredPersonalSubscriptionProvider,
   renWorkTierLabel,
   useRenWorkModelCatalog,
 } from "@/react-app/domains/models/renwork-model-catalog";
@@ -111,7 +116,8 @@ function useModelOptions(
       restriction: "allowCustomProviders",
     });
 
-    const options = getConnectedProviderItems(data)
+    const connectedProviders = getConnectedProviderItems(data);
+    const options = connectedProviders
       .flatMap((provider) =>
         Object.entries(provider.models).map(([id, model]) => ({
           providerID: provider.id,
@@ -126,13 +132,16 @@ function useModelOptions(
         })),
       );
 
-    return filterEntitledModelOptions(filterCloudManagedModelOptions(
-      mergeModelOptions(options, fallbackOptions),
-      cloudProvidersEnabled,
-    ), {
-      restrictToCloud,
-      checkRestriction: checkDesktopRestriction,
-    });
+    return {
+      connectedProviderIds: new Set(connectedProviders.map((provider) => provider.id)),
+      options: filterEntitledModelOptions(filterCloudManagedModelOptions(
+        mergeModelOptions(options, fallbackOptions),
+        cloudProvidersEnabled,
+      ), {
+        restrictToCloud,
+        checkRestriction: checkDesktopRestriction,
+      }),
+    };
   }, [checkDesktopRestriction, cloudProvidersEnabled, data, fallbackOptions]);
 }
 
@@ -258,7 +267,8 @@ export function ModelSelect({
   const [promoHidden, setPromoHidden] = React.useState(isOpenWorkModelsPromoHidden);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const denAuth = useDenAuth();
-  const modelOptions = useModelOptions(open, fallbackOptions, denAuth.isSignedIn);
+  const modelState = useModelOptions(open, fallbackOptions, denAuth.isSignedIn);
+  const modelOptions = modelState.options;
   const renWorkCatalog = useRenWorkModelCatalog(open, denAuth.isSignedIn);
   const navigate = useNavigate();
   const platform = usePlatform();
@@ -326,7 +336,19 @@ export function ModelSelect({
       : providerGroups;
   }, [modelOptions, renWorkCatalog, showOpenWorkModelsPromo]);
 
-  const handleSelect = (option: ModelOption) => {
+  const handleSelect = (item: ModelSelectModelItem) => {
+    const requiredPersonalProvider = requiredPersonalSubscriptionProvider(item.billing);
+    if (requiredPersonalProvider && !modelState.connectedProviderIds.has(requiredPersonalProvider)) {
+      const detail: OpenProviderAuthEventDetail = {
+        preferredProviderId: requiredPersonalProvider,
+        scope: "personal_subscription_oauth",
+      };
+      setSearch("");
+      onOpenChange(false);
+      window.dispatchEvent(new CustomEvent<OpenProviderAuthEventDetail>(openProviderAuthEvent, { detail }));
+      return;
+    }
+    const option = item.option;
     onChange({ providerID: option.providerID, modelID: option.modelID });
     setSearch("");
     onOpenChange(false);
@@ -484,7 +506,7 @@ export function ModelSelect({
                         className="gap-2"
                         key={item.id}
                         value={`${option.providerID}:${option.modelID} ${option.title} ${option.description ?? ""}`}
-                        onClick={() => handleSelect(option)}
+                        onClick={() => handleSelect(item)}
                         data-checked={isSameModel(value, option)}
                       >
                         <ProviderIcon

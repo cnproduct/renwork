@@ -33,6 +33,15 @@ export function catalogModelOptions(catalog: RenWorkPublicModelCatalog): RenWork
   }));
 }
 
+export function requiredPersonalSubscriptionProvider(
+  model: RenWorkPublicModelCatalog["models"][number] | null | undefined,
+): "openai" | "google" | null {
+  if (model?.executionLocation !== "local") return null;
+  if (model.tags.includes("openai")) return "openai";
+  if (model.tags.includes("google")) return "google";
+  return null;
+}
+
 export function useRenWorkModelCatalog(open: boolean, signedIn: boolean): RenWorkPublicModelCatalog | null {
   const [catalog, setCatalog] = React.useState<RenWorkPublicModelCatalog | null>(null);
 

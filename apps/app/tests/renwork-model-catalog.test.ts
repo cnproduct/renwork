@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { RenWorkPublicModelCatalog } from "@openwork/rencredit-metering";
 
-import { catalogModelOptions, renWorkTierLabel } from "../src/react-app/domains/models/renwork-model-catalog";
+import {
+  catalogModelOptions,
+  requiredPersonalSubscriptionProvider,
+  renWorkTierLabel,
+} from "../src/react-app/domains/models/renwork-model-catalog";
 
 const catalog: RenWorkPublicModelCatalog = {
   version: "test-v1",
@@ -58,6 +62,15 @@ describe("RenWork member model catalog", () => {
       models: [{ ...catalog.models[0]!, billingMode: "free" }],
     };
     expect(catalogModelOptions(freeCatalog)[0]?.option.isFree).toBe(true);
+  });
+
+  test("requires the matching device OAuth provider for local subscription models", () => {
+    expect(requiredPersonalSubscriptionProvider({
+      ...catalog.models[0]!,
+      executionLocation: "local",
+      tags: ["openai", "oauth", "personal-device"],
+    })).toBe("openai");
+    expect(requiredPersonalSubscriptionProvider(catalog.models[0])).toBeNull();
   });
 
   test("includes the RenCredit workspace package in the pruned gateway image", () => {
