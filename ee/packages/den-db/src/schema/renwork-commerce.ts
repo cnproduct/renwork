@@ -3,6 +3,41 @@ import { denTypeIdColumn, timestamps } from "../columns"
 
 export const RenworkOfflineOrderStatus = ["active", "reversed"] as const
 export const RenworkOfflinePaymentMethods = ["bank_transfer", "wechat_offline", "alipay_offline", "cash", "other"] as const
+export const RenworkContractQuoteStatus = ["draft", "approved", "published", "revoked"] as const
+
+/**
+ * Organization-bound commercial terms for the enterprise custom plan. A quote
+ * is editable only while it is a draft, must be approved by a second platform
+ * administrator, and becomes orderable only after publication.
+ */
+export const RenworkContractQuoteTable = mysqlTable(
+  "renwork_contract_quotes",
+  {
+    id: denTypeIdColumn("renworkContractQuote", "id").notNull().primaryKey(),
+    organization_id: denTypeIdColumn("organization", "organization_id").notNull(),
+    created_by_user_id: denTypeIdColumn("user", "created_by_user_id").notNull(),
+    approved_by_user_id: denTypeIdColumn("user", "approved_by_user_id"),
+    published_by_user_id: denTypeIdColumn("user", "published_by_user_id"),
+    status: mysqlEnum("status", RenworkContractQuoteStatus).notNull().default("draft"),
+    currency: varchar("currency", { length: 3 }).notNull().default("CNY"),
+    amount_minor: int("amount_minor").notNull(),
+    included_rencredits: int("included_rencredits").notNull(),
+    seat_limit: int("seat_limit").notNull(),
+    billing_interval: mysqlEnum("billing_interval", ["monthly", "annual"]).notNull(),
+    contract_reference: varchar("contract_reference", { length: 255 }).notNull(),
+    note: varchar("note", { length: 1000 }),
+    approved_at: timestamp("approved_at", { fsp: 3 }),
+    published_at: timestamp("published_at", { fsp: 3 }),
+    revoked_at: timestamp("revoked_at", { fsp: 3 }),
+    revoke_reason: varchar("revoke_reason", { length: 1000 }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("renwork_contract_quotes_org_reference").on(table.organization_id, table.contract_reference),
+    index("renwork_contract_quotes_org_status").on(table.organization_id, table.status),
+    index("renwork_contract_quotes_created").on(table.created_at),
+  ],
+)
 
 /**
  * Immutable evidence for a platform-admin recorded offline payment. The

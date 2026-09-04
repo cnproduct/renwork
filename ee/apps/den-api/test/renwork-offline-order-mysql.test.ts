@@ -12,6 +12,7 @@ process.env.DEN_API_PUBLIC_URL = "https://api.den.example.test"
 const organizationAId = createDenTypeId("organization")
 const organizationBId = createDenTypeId("organization")
 const adminUserId = createDenTypeId("user")
+const secondAdminUserId = createDenTypeId("user")
 
 let db: typeof import("../src/db.js").db
 let drizzle: typeof import("@openwork-ee/den-db/drizzle")
@@ -27,6 +28,10 @@ async function clearRows() {
     drizzle.eq(schema.RenworkOfflineOrderTable.organization_id, organizationAId),
     drizzle.eq(schema.RenworkOfflineOrderTable.organization_id, organizationBId),
   )
+  const tenantQuotes = drizzle.or(
+    drizzle.eq(schema.RenworkContractQuoteTable.organization_id, organizationAId),
+    drizzle.eq(schema.RenworkContractQuoteTable.organization_id, organizationBId),
+  )
   const tenantWallets = drizzle.or(
     drizzle.eq(schema.RenCreditWalletTable.organization_id, organizationAId),
     drizzle.eq(schema.RenCreditWalletTable.organization_id, organizationBId),
@@ -36,10 +41,12 @@ async function clearRows() {
     drizzle.eq(schema.RenCreditLedgerEntryTable.organization_id, organizationBId),
   )
   await db.delete(schema.RenworkOfflineOrderTable).where(tenantOrders)
+  await db.delete(schema.RenworkContractQuoteTable).where(tenantQuotes)
   await db.delete(schema.RenCreditLedgerEntryTable).where(tenantLedger)
   await db.delete(schema.RenCreditWalletTable).where(tenantWallets)
   await db.delete(schema.OrganizationTable).where(tenants)
   await db.delete(schema.AuthUserTable).where(drizzle.eq(schema.AuthUserTable.id, adminUserId))
+  await db.delete(schema.AuthUserTable).where(drizzle.eq(schema.AuthUserTable.id, secondAdminUserId))
 }
 
 beforeAll(async () => {
@@ -54,7 +61,10 @@ beforeAll(async () => {
   schema = modules[2]
   offline = modules[3]
   await clearRows()
-  await db.insert(schema.AuthUserTable).values({ id: adminUserId, name: "Offline Admin", email: `${adminUserId}@example.test`, emailVerified: true })
+  await db.insert(schema.AuthUserTable).values([
+    { id: adminUserId, name: "Offline Admin", email: `${adminUserId}@example.test`, emailVerified: true },
+    { id: secondAdminUserId, name: "Second Offline Admin", email: `${secondAdminUserId}@example.test`, emailVerified: true },
+  ])
   await db.insert(schema.OrganizationTable).values([
     { id: organizationAId, name: "Offline Tenant A", slug: `offline-a-${organizationAId}`, metadata: { limits: { members: 5, workers: 1 } }, desktopAppRestrictions: {} },
     { id: organizationBId, name: "Offline Tenant B", slug: `offline-b-${organizationBId}`, metadata: { limits: { members: 5, workers: 1 } }, desktopAppRestrictions: {} },
@@ -128,4 +138,57 @@ test("amount mismatches roll back before creating an order or wallet", async () 
     idempotencyKey: "amount-mismatch-v14",
   })).rejects.toThrow("RENWORK_OFFLINE_AMOUNT_MISMATCH")
   expect(await offline.listOfflineOrders({ organizationId: organizationAId })).toHaveLength(1)
+})
+
+test("enterprise contract quote requires a second admin and is orderable only after publication", async () => {
+  const contract = await import("../src/renwork-contract-quote.js")
+  const quote = await contract.createRenworkContractQuote({
+    organizationId: organizationAId,
+    actorUserId: adminUserId,
+    amountMinor: 123_400,
+    includedRenCredits: 9_000,
+    seatLimit: 12,
+    billingInterval: "annual",
+    contractReference: `CUSTOM-${organizationAId}`,
+  })
+
+  await expect(offline.createOfflineOrder({
+    organizationId: organizationAId,
+    actorUserId: adminUserId,
+    offerId: quote.id,
+    amountMinor: 123_400,
+    paymentMethod: "bank_transfer",
+    paymentReference: `CUSTOM-PRE-PUBLISH-${organizationAId}`,
+    idempotencyKey: "custom-before-publish-v15",
+  })).rejects.toThrow("RENWORK_OFFLINE_OFFER_NOT_FOUND")
+  await expect(contract.approveRenworkContractQuote({ quoteId: quote.id, actorUserId: adminUserId }))
+    .rejects.toThrow("RENWORK_CONTRACT_SECOND_ADMIN_REQUIRED")
+
+  await contract.approveRenworkContractQuote({ quoteId: quote.id, actorUserId: secondAdminUserId })
+  await contract.publishRenworkContractQuote({ quoteId: quote.id, actorUserId: adminUserId })
+
+  const [offersA, offersB] = await Promise.all([
+    offline.listOfflineOffersForOrganization(organizationAId),
+    offline.listOfflineOffersForOrganization(organizationBId),
+  ])
+  expect(offersA.find((offer) => offer.offerId === quote.id)).toMatchObject({
+    planId: "enterprise-custom",
+    priceMinor: 123_400,
+    includedRenCredits: 9_000,
+    seatLimit: 12,
+    source: "contract_quote",
+  })
+  expect(offersB.some((offer) => offer.offerId === quote.id)).toBe(false)
+
+  const order = await offline.createOfflineOrder({
+    organizationId: organizationAId,
+    actorUserId: adminUserId,
+    offerId: quote.id,
+    amountMinor: 123_400,
+    paymentMethod: "bank_transfer",
+    paymentReference: `CUSTOM-PAID-${organizationAId}`,
+    idempotencyKey: "custom-published-v15",
+  })
+  expect(order.order.plan_id).toBe("enterprise-custom")
+  expect(order.wallet?.available_microcredits).toBe(9_000_000_000)
 })

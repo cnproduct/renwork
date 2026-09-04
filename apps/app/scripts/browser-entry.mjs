@@ -219,7 +219,22 @@ try {
   });
 
   const port = await findFreePort();
-  opencode = await spawnOpencodeServe({ directory: tmpdir, port });
+  opencode = await spawnOpencodeServe({
+    directory: tmpdir,
+    port,
+    // This case intentionally verifies project-level command/provider config.
+    // The shared harness disables project config by default so unrelated
+    // repository plugins and remote MCPs cannot stall transport tests.
+    env: {
+      OPENCODE_DISABLE_PROJECT_CONFIG: "0",
+      // Keep the fixture independent from a developer machine's global
+      // OpenCode providers, plugins, credentials, sessions, and cache.
+      XDG_CONFIG_HOME: path.join(tmpdir, ".xdg", "config"),
+      XDG_STATE_HOME: path.join(tmpdir, ".xdg", "state"),
+      XDG_DATA_HOME: path.join(tmpdir, ".xdg", "data"),
+      XDG_CACHE_HOME: path.join(tmpdir, ".xdg", "cache"),
+    },
+  });
   const client = makeClient({ baseUrl: opencode.baseUrl, directory: opencode.cwd });
 
   await step("health", async () => {

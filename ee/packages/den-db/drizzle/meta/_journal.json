@@ -498,6 +498,13 @@
       "when": 1788481026987,
       "tag": "0071_first_the_renegades",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "5",
+      "when": 1788506773387,
+      "tag": "0072_rich_deathbird",
+      "breakpoints": true
     }
   ]
 }

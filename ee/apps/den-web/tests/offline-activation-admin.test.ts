@@ -25,9 +25,18 @@ describe("RenWork offline activation admin", () => {
   });
 
   test("uses platform-admin routes for create, history and reversal", () => {
-    expect(route.match(/adminRoute\(\)/g)?.length).toBe(5);
+    expect(route.match(/adminRoute\(\)/g)?.length).toBe(10);
     expect(dialog).toContain("/v1/admin/renwork/offline-orders");
     expect(dialog).toContain("退款/冲正");
+  });
+
+  test("requires an organization-bound two-admin contract quote before custom activation", () => {
+    expect(dialog).toContain('data-testid="enterprise-contract-quote-workflow"');
+    expect(dialog).toContain("必须由另一位平台超级管理员审批");
+    expect(dialog).toContain("第二管理员审批");
+    expect(dialog).toContain("发布报价");
+    expect(route).toContain("/v1/admin/renwork/contract-quotes");
+    expect(route).toContain('denTypeIdSchema("renworkContractQuote")');
   });
 
   test("presents offline payment on every customer plan path", () => {

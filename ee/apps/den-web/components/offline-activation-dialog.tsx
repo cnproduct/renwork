@@ -48,6 +48,21 @@ type LedgerEntry = {
   createdAt: string;
 };
 
+type ContractQuote = {
+  id: string;
+  status: "draft" | "approved" | "published" | "revoked";
+  amount_minor: number;
+  included_rencredits: number;
+  seat_limit: number;
+  billing_interval: "monthly" | "annual";
+  contract_reference: string;
+  note: string | null;
+  created_by_user_id: string;
+  approved_by_user_id: string | null;
+  published_at: string | null;
+  revoke_reason: string | null;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -95,6 +110,13 @@ export function OfflineActivationDialog(props: {
   const [orders, setOrders] = useState<OfflineOrder[]>([]);
   const [wallet, setWallet] = useState<Wallet>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
+  const [quotes, setQuotes] = useState<ContractQuote[]>([]);
+  const [quoteAmountYuan, setQuoteAmountYuan] = useState("");
+  const [quoteCredits, setQuoteCredits] = useState("");
+  const [quoteSeats, setQuoteSeats] = useState("");
+  const [quoteInterval, setQuoteInterval] = useState<"monthly" | "annual">("annual");
+  const [contractReference, setContractReference] = useState("");
+  const [contractNote, setContractNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,19 +127,22 @@ export function OfflineActivationDialog(props: {
     setLoading(true);
     setError(null);
     try {
-      const [optionsPayload, summaryPayload] = await Promise.all([
-        request("/v1/admin/renwork/offline-orders/options"),
+      const [optionsPayload, summaryPayload, quotePayload] = await Promise.all([
+        request(`/v1/admin/renwork/offline-orders/options?organizationId=${encodeURIComponent(organization.id)}`),
         request(`/v1/admin/renwork/offline-orders/${organization.id}/summary`),
+        request(`/v1/admin/renwork/contract-quotes?organizationId=${encodeURIComponent(organization.id)}`),
       ]);
       const nextOffers = isRecord(optionsPayload) && Array.isArray(optionsPayload.offers) ? optionsPayload.offers as OfflineOffer[] : [];
       const nextOrders = isRecord(summaryPayload) && Array.isArray(summaryPayload.orders) ? summaryPayload.orders as OfflineOrder[] : [];
       const nextWallet = isRecord(summaryPayload) && (summaryPayload.wallet === null || isRecord(summaryPayload.wallet)) ? summaryPayload.wallet as Wallet : null;
       const nextLedger = isRecord(summaryPayload) && Array.isArray(summaryPayload.ledger) ? summaryPayload.ledger as LedgerEntry[] : [];
+      const nextQuotes = isRecord(quotePayload) && Array.isArray(quotePayload.quotes) ? quotePayload.quotes as ContractQuote[] : [];
       setOffers(nextOffers);
       setOfferId((current) => current || nextOffers[0]?.offerId || "");
       setOrders(nextOrders);
       setWallet(nextWallet);
       setLedger(nextLedger);
+      setQuotes(nextQuotes);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "无法加载线下开通数据");
     } finally {
@@ -132,6 +157,12 @@ export function OfflineActivationDialog(props: {
     setConfirmed(false);
     setMessage(null);
     setIdempotencyKey(newIdempotencyKey());
+    setQuoteAmountYuan("");
+    setQuoteCredits("");
+    setQuoteSeats("");
+    setQuoteInterval("annual");
+    setContractReference("");
+    setContractNote("");
     void load(props.organization);
   }, [load, props.organization]);
 
@@ -188,6 +219,59 @@ export function OfflineActivationDialog(props: {
     }
   };
 
+  const createContractQuote = async () => {
+    const amountMinor = Math.round(Number(quoteAmountYuan) * 100);
+    const includedRenCredits = Number(quoteCredits);
+    const seatLimit = Number(quoteSeats);
+    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || !Number.isSafeInteger(includedRenCredits) || includedRenCredits <= 0 || !Number.isSafeInteger(seatLimit) || seatLimit <= 0 || contractReference.trim().length < 3) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await request("/v1/admin/renwork/contract-quotes", {
+        method: "POST",
+        body: JSON.stringify({
+          organizationId: organization.id,
+          amountMinor,
+          includedRenCredits,
+          seatLimit,
+          billingInterval: quoteInterval,
+          contractReference: contractReference.trim(),
+          note: contractNote.trim() || null,
+        }),
+      });
+      setMessage("企业定制报价草稿已创建；必须由另一位平台超级管理员审批后才能发布。");
+      setQuoteAmountYuan("");
+      setQuoteCredits("");
+      setQuoteSeats("");
+      setContractReference("");
+      setContractNote("");
+      await load(organization);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "创建合同报价失败");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const transitionQuote = async (quote: ContractQuote, action: "approve" | "publish" | "revoke") => {
+    const reason = action === "revoke" ? window.prompt("请输入撤销报价原因。")?.trim() : null;
+    if (action === "revoke" && !reason) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await request(`/v1/admin/renwork/contract-quotes/${quote.id}/${action}`, {
+        method: "POST",
+        body: action === "revoke" ? JSON.stringify({ reason }) : undefined,
+      });
+      setMessage(action === "approve" ? "报价已由第二位管理员审批。" : action === "publish" ? "报价已发布，现在可在线下开通套餐中选择。" : "报价已撤销，不能再用于新订单。");
+      await load(organization);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "报价状态更新失败");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="offline-activation-title" onClick={props.onClose}>
       <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
@@ -203,6 +287,21 @@ export function OfflineActivationDialog(props: {
 
         {error ? <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
         {message ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p> : null}
+
+        <section data-testid="enterprise-contract-quote-workflow" className="mt-6 rounded-2xl border border-violet-200 bg-violet-50/50 p-4">
+          <h3 className="font-semibold text-slate-950">企业定制报价</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-600">先创建组织专属合同报价草稿，再由另一位平台超级管理员审批并发布。只有已发布报价才会出现在下方权威套餐中。</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1"><span className="text-xs font-semibold text-slate-600">合同/报价编号</span><input value={contractReference} onChange={(event) => setContractReference(event.target.value)} placeholder="例如 RW-2026-001" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label className="grid gap-1"><span className="text-xs font-semibold text-slate-600">账期</span><select value={quoteInterval} onChange={(event) => setQuoteInterval(event.target.value as "monthly" | "annual")} className="rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="annual">年付</option><option value="monthly">月付</option></select></label>
+            <label className="grid gap-1"><span className="text-xs font-semibold text-slate-600">合同金额（人民币元）</span><input inputMode="decimal" value={quoteAmountYuan} onChange={(event) => setQuoteAmountYuan(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label className="grid gap-1"><span className="text-xs font-semibold text-slate-600">包含 RenCredit</span><input inputMode="numeric" value={quoteCredits} onChange={(event) => setQuoteCredits(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label className="grid gap-1"><span className="text-xs font-semibold text-slate-600">席位上限</span><input inputMode="numeric" value={quoteSeats} onChange={(event) => setQuoteSeats(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label className="grid gap-1"><span className="text-xs font-semibold text-slate-600">合同备注</span><input value={contractNote} onChange={(event) => setContractNote(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
+          </div>
+          <div className="mt-3 flex justify-end"><button type="button" disabled={saving || !contractReference.trim() || !quoteAmountYuan || !quoteCredits || !quoteSeats} onClick={() => void createContractQuote()} className="rounded-full bg-violet-700 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">创建报价草稿</button></div>
+          {quotes.length > 0 ? <div className="mt-4 grid gap-2">{quotes.map((quote) => <div key={quote.id} className="rounded-xl border border-violet-100 bg-white px-3 py-3 text-xs"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-semibold text-slate-900">{quote.contract_reference} · {money(quote.amount_minor)} · {quote.included_rencredits.toLocaleString()} RC · {quote.seat_limit} 席</p><p className="mt-1 text-slate-500">{quote.billing_interval === "annual" ? "年付" : "月付"} · 状态 {quote.status} · 创建人 {quote.created_by_user_id}{quote.approved_by_user_id ? ` · 审批人 ${quote.approved_by_user_id}` : ""}</p></div><div className="flex gap-2">{quote.status === "draft" ? <button type="button" disabled={saving} onClick={() => void transitionQuote(quote, "approve")} className="rounded-full border border-violet-200 px-3 py-1 font-semibold text-violet-700">第二管理员审批</button> : null}{quote.status === "approved" ? <button type="button" disabled={saving} onClick={() => void transitionQuote(quote, "publish")} className="rounded-full bg-violet-700 px-3 py-1 font-semibold text-white">发布报价</button> : null}{quote.status !== "revoked" ? <button type="button" disabled={saving} onClick={() => void transitionQuote(quote, "revoke")} className="rounded-full border border-red-200 px-3 py-1 font-semibold text-red-700">撤销</button> : null}</div></div></div>)}</div> : null}
+        </section>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2"><span className="text-xs font-semibold text-slate-600">权威套餐</span><select value={offerId} onChange={(event) => setOfferId(event.target.value)} disabled={loading} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm">{offers.map((offer) => <option key={offer.offerId} value={offer.offerId}>{offer.planName} · {offer.billingInterval === "monthly" ? "月付" : "年付"} · {money(offer.priceMinor)}</option>)}</select></label>

@@ -2,7 +2,7 @@ import { renworkPlanCatalogSchema, type RenworkPlanCatalog } from "@openwork/typ
 
 export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSchema.parse({
   schemaVersion: 1,
-  catalogVersion: "renwork-subscription-v14-2026-09-03.2",
+  catalogVersion: "renwork-subscription-v15-2026-09-04.1",
   status: "pilot",
   effectiveAt: "2026-08-29T00:00:00.000Z",
   plans: [

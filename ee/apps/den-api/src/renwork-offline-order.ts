@@ -4,6 +4,7 @@ import {
   OrganizationTable,
   RenCreditLedgerEntryTable,
   RenCreditWalletTable,
+  RenworkContractQuoteTable,
   RenworkOfflineOrderTable,
 } from "@openwork-ee/den-db/schema"
 import { createDenTypeId } from "@openwork-ee/utils/typeid"
@@ -11,6 +12,7 @@ import { REN_CREDIT_MICRO_UNITS } from "@openwork/rencredit-metering"
 import { db } from "./db.js"
 import { DEFAULT_ORGANIZATION_LIMITS, normalizeOrganizationMetadata } from "./organization-limits.js"
 import { readOrganizationModelPolicy } from "./organization-model-policy.js"
+import { listPublishedRenworkContractQuotes } from "./renwork-contract-quote.js"
 import { getRenworkPlanCatalog } from "./renwork-growth/plan-catalog.js"
 
 type OrganizationId = typeof OrganizationTable.$inferSelect.id
@@ -31,6 +33,9 @@ export type OfflineOffer = {
   currency: "CNY"
   priceMinor: number
   includedRenCredits: number
+  source?: "catalog" | "contract_quote"
+  contractQuoteId?: string
+  contractReference?: string
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -78,9 +83,33 @@ export function listOfflineOffers(): OfflineOffer[] {
         currency: offer.currency,
         priceMinor: offer.priceMinor,
         includedRenCredits: offer.includedRenCredits,
+        source: "catalog" as const,
       }]
     })
   })
+}
+
+function contractQuoteOffer(quote: typeof RenworkContractQuoteTable.$inferSelect): OfflineOffer {
+  return {
+    catalogVersion: `renwork-contract-quote-v1:${quote.id}`,
+    planId: "enterprise-custom",
+    planName: `企业定制版 · ${quote.contract_reference}`,
+    audience: "enterprise",
+    seatLimit: quote.seat_limit,
+    offerId: quote.id,
+    billingInterval: quote.billing_interval,
+    currency: "CNY",
+    priceMinor: quote.amount_minor,
+    includedRenCredits: quote.included_rencredits,
+    source: "contract_quote",
+    contractQuoteId: quote.id,
+    contractReference: quote.contract_reference,
+  }
+}
+
+export async function listOfflineOffersForOrganization(organizationId: OrganizationId): Promise<OfflineOffer[]> {
+  const quotes = await listPublishedRenworkContractQuotes(organizationId)
+  return [...listOfflineOffers(), ...quotes.map(contractQuoteOffer)]
 }
 
 export function resolveOfflineOffer(offerId: string): OfflineOffer {
@@ -108,12 +137,7 @@ export async function createOfflineOrder(input: {
   note?: string | null
   now?: Date
 }) {
-  const offer = resolveOfflineOffer(input.offerId)
-  if (input.amountMinor !== offer.priceMinor) throw new Error("RENWORK_OFFLINE_AMOUNT_MISMATCH")
   const now = input.now ?? new Date()
-  const periodEnd = calculateOfflinePeriodEnd(now, offer.billingInterval)
-  const grantedMicroCredits = offer.includedRenCredits * REN_CREDIT_MICRO_UNITS
-  if (!Number.isSafeInteger(grantedMicroCredits)) throw new Error("RENWORK_OFFLINE_GRANT_INVALID")
 
   const result = await db.transaction(async (tx) => {
     // Lock the tenant before the idempotency lookup so concurrent submissions
@@ -121,6 +145,21 @@ export async function createOfflineOrder(input: {
     const [organization] = await tx.select().from(OrganizationTable)
       .where(eq(OrganizationTable.id, input.organizationId)).for("update").limit(1)
     if (!organization) throw new Error("RENWORK_ORGANIZATION_NOT_FOUND")
+
+    let offer = listOfflineOffers().find((candidate) => candidate.offerId === input.offerId)
+    if (!offer) {
+      const [quote] = await tx.select().from(RenworkContractQuoteTable).where(and(
+        eq(RenworkContractQuoteTable.id, input.offerId as typeof RenworkContractQuoteTable.$inferSelect.id),
+        eq(RenworkContractQuoteTable.organization_id, input.organizationId),
+        eq(RenworkContractQuoteTable.status, "published"),
+      )).for("update").limit(1)
+      if (quote) offer = contractQuoteOffer(quote)
+    }
+    if (!offer) throw new Error("RENWORK_OFFLINE_OFFER_NOT_FOUND")
+    if (input.amountMinor !== offer.priceMinor) throw new Error("RENWORK_OFFLINE_AMOUNT_MISMATCH")
+    const periodEnd = calculateOfflinePeriodEnd(now, offer.billingInterval)
+    const grantedMicroCredits = offer.includedRenCredits * REN_CREDIT_MICRO_UNITS
+    if (!Number.isSafeInteger(grantedMicroCredits)) throw new Error("RENWORK_OFFLINE_GRANT_INVALID")
 
     const [existing] = await tx
       .select()

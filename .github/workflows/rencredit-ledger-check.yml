@@ -7,6 +7,7 @@ on:
       - "ee/apps/den-api/package.json"
       - "ee/apps/den-api/src/rencredit-ledger.ts"
       - "ee/apps/den-api/src/renwork-offline-order.ts"
+      - "ee/apps/den-api/src/renwork-contract-quote.ts"
       - "ee/apps/den-api/src/routes/admin/offline-commerce.ts"
       - "ee/apps/den-api/test/rencredit-two-tenant-mysql.test.ts"
       - "ee/apps/den-api/test/renwork-offline-order-mysql.test.ts"

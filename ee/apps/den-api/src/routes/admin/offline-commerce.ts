@@ -8,9 +8,18 @@ import { denTypeIdSchema } from "../../openapi.js"
 import {
   createOfflineOrder,
   listOfflineOffers,
+  listOfflineOffersForOrganization,
   listOfflineOrders,
   reverseOfflineOrder,
 } from "../../renwork-offline-order.js"
+import {
+  approveRenworkContractQuote,
+  createRenworkContractQuote,
+  listRenworkContractQuotes,
+  publishRenworkContractQuote,
+  revokeRenworkContractQuote,
+  updateRenworkContractQuote,
+} from "../../renwork-contract-quote.js"
 import { syncInferenceForOrganizationMembers } from "../../inference.js"
 import type { AuthContextVariables } from "../../session.js"
 
@@ -28,12 +37,35 @@ const reverseOrderSchema = z.object({
   reason: z.string().trim().min(3).max(1000),
 })
 
+const contractTermsSchema = z.object({
+  amountMinor: z.number().int().positive(),
+  includedRenCredits: z.number().int().positive(),
+  seatLimit: z.number().int().positive(),
+  billingInterval: z.enum(["monthly", "annual"]),
+  contractReference: z.string().trim().min(3).max(255),
+  note: z.string().trim().max(1000).nullable().optional(),
+})
+
+const createContractQuoteSchema = contractTermsSchema.extend({
+  organizationId: denTypeIdSchema("organization"),
+})
+
+const revokeContractQuoteSchema = z.object({
+  reason: z.string().trim().min(3).max(1000),
+})
+
 function statusForError(error: unknown): 400 | 404 | 409 | 500 {
   if (typeof error === "object" && error !== null && "code" in error && error.code === "ER_DUP_ENTRY") return 409
   if (!(error instanceof Error)) return 500
   if (error.message.endsWith("_NOT_FOUND")) return 404
   if (error.message.endsWith("_MISMATCH") || error.message.endsWith("_INVALID")) return 400
-  if (error.message.endsWith("_CONFLICT")) return 409
+  if (
+    error.message.endsWith("_CONFLICT")
+    || error.message.endsWith("_REQUIRED")
+    || error.message.endsWith("_NOT_EDITABLE")
+    || error.message.endsWith("_NOT_APPROVABLE")
+    || error.message.endsWith("_NOT_APPROVED")
+  ) return 409
   return 500
 }
 
@@ -53,12 +85,95 @@ function serializeOrder<T extends { status: "active" | "reversed"; current_perio
 
 export function registerAdminOfflineCommerceRoutes<T extends { Variables: AuthContextVariables }>(app: Hono<T>) {
   app.get("/v1/admin/renwork/offline-orders/options", adminRoute(), async (c) => {
+    const parsedOrganizationId = denTypeIdSchema("organization").safeParse(c.req.query("organizationId"))
+    if (!parsedOrganizationId.success) return c.json({ error: "invalid_organization_id" }, 400)
+    const offers = await listOfflineOffersForOrganization(parsedOrganizationId.data)
     return c.json({
       catalogVersion: listOfflineOffers()[0]?.catalogVersion ?? null,
-      offers: listOfflineOffers(),
+      offers,
       note: "Every fixed-price personal and enterprise offer supports offline activation. Contract-priced offers require agreed terms to be published in the authoritative catalog before activation. No arbitrary RenCredit conversion is permitted.",
     })
   })
+
+  app.get("/v1/admin/renwork/contract-quotes", adminRoute(), async (c) => {
+    const organizationId = c.req.query("organizationId")
+    const parsedOrganizationId = organizationId ? denTypeIdSchema("organization").safeParse(organizationId) : null
+    if (parsedOrganizationId && !parsedOrganizationId.success) return c.json({ error: "invalid_organization_id" }, 400)
+    return c.json({ quotes: await listRenworkContractQuotes({ organizationId: parsedOrganizationId?.data }) })
+  })
+
+  app.post(
+    "/v1/admin/renwork/contract-quotes",
+    adminRoute(),
+    jsonValidator(createContractQuoteSchema),
+    async (c) => {
+      const user = c.get("user")
+      if (!user) return c.json({ error: "unauthorized" }, 401)
+      try {
+        const quote = await createRenworkContractQuote({ ...c.req.valid("json"), actorUserId: user.id })
+        return c.json({ ok: true, quote }, 201)
+      } catch (error) {
+        return c.json({ error: errorMessage(error) }, statusForError(error))
+      }
+    },
+  )
+
+  app.patch(
+    "/v1/admin/renwork/contract-quotes/:quoteId",
+    adminRoute(),
+    jsonValidator(contractTermsSchema),
+    async (c) => {
+      const user = c.get("user")
+      if (!user) return c.json({ error: "unauthorized" }, 401)
+      const quoteId = denTypeIdSchema("renworkContractQuote").safeParse(c.req.param("quoteId"))
+      if (!quoteId.success) return c.json({ error: "invalid_quote_id" }, 400)
+      try {
+        const quote = await updateRenworkContractQuote({ quoteId: quoteId.data, actorUserId: user.id, ...c.req.valid("json") })
+        return c.json({ ok: true, quote })
+      } catch (error) {
+        return c.json({ error: errorMessage(error) }, statusForError(error))
+      }
+    },
+  )
+
+  for (const action of ["approve", "publish"] as const) {
+    app.post(`/v1/admin/renwork/contract-quotes/:quoteId/${action}`, adminRoute(), async (c) => {
+      const user = c.get("user")
+      if (!user) return c.json({ error: "unauthorized" }, 401)
+      const quoteId = denTypeIdSchema("renworkContractQuote").safeParse(c.req.param("quoteId"))
+      if (!quoteId.success) return c.json({ error: "invalid_quote_id" }, 400)
+      try {
+        const result = action === "approve"
+          ? await approveRenworkContractQuote({ quoteId: quoteId.data, actorUserId: user.id })
+          : await publishRenworkContractQuote({ quoteId: quoteId.data, actorUserId: user.id })
+        return c.json({ ok: true, ...result })
+      } catch (error) {
+        return c.json({ error: errorMessage(error) }, statusForError(error))
+      }
+    })
+  }
+
+  app.post(
+    "/v1/admin/renwork/contract-quotes/:quoteId/revoke",
+    adminRoute(),
+    jsonValidator(revokeContractQuoteSchema),
+    async (c) => {
+      const user = c.get("user")
+      if (!user) return c.json({ error: "unauthorized" }, 401)
+      const quoteId = denTypeIdSchema("renworkContractQuote").safeParse(c.req.param("quoteId"))
+      if (!quoteId.success) return c.json({ error: "invalid_quote_id" }, 400)
+      try {
+        const result = await revokeRenworkContractQuote({
+          quoteId: quoteId.data,
+          actorUserId: user.id,
+          reason: c.req.valid("json").reason,
+        })
+        return c.json({ ok: true, ...result })
+      } catch (error) {
+        return c.json({ error: errorMessage(error) }, statusForError(error))
+      }
+    },
+  )
 
   app.get("/v1/admin/renwork/offline-orders", adminRoute(), async (c) => {
     const organizationId = c.req.query("organizationId")
