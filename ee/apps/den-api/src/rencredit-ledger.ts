@@ -27,6 +27,11 @@ export type RenCreditTaskReceipt = {
   reserved_microcredits: number
   captured_microcredits: number
   released_microcredits: number
+  catalog_version: string
+  platform_price_multiplier_bps: number | null
+  organization_multiplier_override_bps: number | null
+  effective_price_multiplier_bps: number | null
+  pricing_policy_version: number | null
   actual_usage: RenWorkTokenUsage | null
   has_result: boolean
   created_at: string
@@ -70,6 +75,12 @@ export type ReserveInferenceInput = InferencePrincipal & {
     memberMonthlyMicroCredits: number | null
   }
   maxConcurrentRunsPerUser?: number
+  pricingEvidence?: {
+    platformPriceMultiplierBps: number
+    organizationMultiplierOverrideBps: number | null
+    effectivePriceMultiplierBps: number
+    pricingPolicyVersion: number
+  }
 }
 
 export type ReserveProductCreditsInput = {
@@ -99,6 +110,10 @@ function safeDate(value: Date | string | null): string | null {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
 function safeTokenUsage(value: unknown): RenWorkTokenUsage | null {
   if (!value || typeof value !== "object") return null
   const usage = value as Record<string, unknown>
@@ -111,6 +126,10 @@ function safeTokenUsage(value: unknown): RenWorkTokenUsage | null {
     cacheReadTokens: usage.cacheReadTokens as number,
     cacheWriteTokens: usage.cacheWriteTokens as number,
   }
+}
+
+function safePricingInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null
 }
 
 export async function authenticateInferenceKey(key: string): Promise<InferencePrincipal | null> {
@@ -194,6 +213,8 @@ export async function listMemberRenCreditTaskReceipts(input: {
       reserved_microcredits: RenCreditReservationTable.reserved_microcredits,
       captured_microcredits: RenCreditReservationTable.captured_microcredits,
       released_microcredits: RenCreditReservationTable.released_microcredits,
+      catalog_version: RenCreditReservationTable.catalog_version,
+      pricing_snapshot: RenCreditReservationTable.pricing_snapshot,
       actual_usage: RenCreditReservationTable.actual_usage,
       has_result: RenCreditReservationTable.has_result,
       created_at: RenCreditReservationTable.created_at,
@@ -207,17 +228,32 @@ export async function listMemberRenCreditTaskReceipts(input: {
     .orderBy(desc(RenCreditReservationTable.created_at))
     .limit(Math.max(1, Math.min(100, input.limit ?? 20)))
 
-  return rows.map((row) => ({
-    ...row,
-    billing_mode: row.billing_mode === "free"
-      ? "free"
-      : row.billing_mode === "outcome_metered"
-        ? "outcome_metered"
-        : "token_metered",
-    actual_usage: safeTokenUsage(row.actual_usage),
-    created_at: safeDate(row.created_at)!,
-    settled_at: safeDate(row.settled_at),
-  }))
+  return rows.map((row) => {
+    const snapshot = isRecord(row.pricing_snapshot) ? row.pricing_snapshot : {}
+    return {
+      id: row.id,
+      run_id: row.run_id,
+      model_sku: row.model_sku,
+      billing_mode: row.billing_mode === "free"
+        ? "free" as const
+        : row.billing_mode === "outcome_metered"
+          ? "outcome_metered" as const
+          : "token_metered" as const,
+      status: row.status,
+      reserved_microcredits: row.reserved_microcredits,
+      captured_microcredits: row.captured_microcredits,
+      released_microcredits: row.released_microcredits,
+      catalog_version: row.catalog_version,
+      actual_usage: safeTokenUsage(row.actual_usage),
+      platform_price_multiplier_bps: safePricingInteger(snapshot.platformPriceMultiplierBps),
+      organization_multiplier_override_bps: safePricingInteger(snapshot.organizationMultiplierOverrideBps),
+      effective_price_multiplier_bps: safePricingInteger(snapshot.effectivePriceMultiplierBps),
+      pricing_policy_version: safePricingInteger(snapshot.pricingPolicyVersion),
+      has_result: row.has_result,
+      created_at: safeDate(row.created_at)!,
+      settled_at: safeDate(row.settled_at),
+    }
+  })
 }
 
 export async function grantRenCredit(input: {
@@ -381,6 +417,12 @@ export async function reserveInferenceCredits(input: ReserveInferenceInput) {
         priceMultiplierBps: input.model.priceMultiplierBps,
         promotion: input.model.promotion,
         routeSource: input.route.source,
+        ...(input.pricingEvidence ?? {
+          platformPriceMultiplierBps: input.model.priceMultiplierBps,
+          organizationMultiplierOverrideBps: null,
+          effectivePriceMultiplierBps: input.model.priceMultiplierBps,
+          pricingPolicyVersion: 0,
+        }),
       },
       expires_at: input.expiresAt,
     })

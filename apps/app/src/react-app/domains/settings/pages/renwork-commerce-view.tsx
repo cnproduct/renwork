@@ -212,6 +212,9 @@ function TaskReceiptRow({ receipt, contextWindow }: { receipt: DenRenCreditTaskR
       {tokenTotal !== null ? (
         <div className="mt-2 text-[11px] text-dls-secondary">
           {t("commerce.receipt_billed_tokens", { total: new Intl.NumberFormat().format(tokenTotal) })}
+          {receipt.effectivePriceMultiplierBps !== null
+            ? ` · RenCredit ×${(receipt.effectivePriceMultiplierBps / 10_000).toFixed(2)} · policy v${receipt.pricingPolicyVersion ?? 0}`
+            : ""}
         </div>
       ) : null}
     </div>

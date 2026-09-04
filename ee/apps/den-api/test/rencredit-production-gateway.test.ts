@@ -86,8 +86,12 @@ describe("RenCredit persistent multi-tenant ledger", () => {
       ledger.indexOf("export async function listMemberRenCreditTaskReceipts"),
       ledger.indexOf("export async function grantRenCredit"),
     )
-    for (const secretField of ["provider_id", "upstream_model_id", "inference_key_id", "idempotency_key", "pricing_snapshot", "provider_response_id"]) {
+    for (const secretField of ["provider_id", "upstream_model_id", "inference_key_id", "idempotency_key", "provider_response_id"]) {
       expect(receiptSelector).not.toContain(secretField)
     }
+    expect(receiptSelector).toContain("platform_price_multiplier_bps")
+    expect(receiptSelector).toContain("organization_multiplier_override_bps")
+    expect(receiptSelector).toContain("effective_price_multiplier_bps")
+    expect(receiptSelector).not.toContain("routeSource")
   })
 })

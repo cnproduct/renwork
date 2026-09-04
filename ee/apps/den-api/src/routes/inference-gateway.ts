@@ -18,7 +18,13 @@ import { parseOrganizationPlan } from "../entitlements.js"
 import { env } from "../env.js"
 import { publicRoute } from "../middleware/index.js"
 import { appLogger } from "../observability/logger.js"
-import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
+import {
+  applyOrganizationPricingToAdminModel,
+  organizationPricingEvidence,
+  readOrganizationModelPolicy,
+  readOrganizationModelPricingPolicy,
+  resolveMemberMonthlyBudget,
+} from "../organization-model-policy.js"
 import { accessAllowsModel, resolveRenworkModelAccess } from "../renwork-access.js"
 import {
   authenticateInferenceKey,
@@ -261,6 +267,9 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     if (modelPolicy.allowedModelSkus && !modelPolicy.allowedModelSkus.includes(model.sku)) {
       return c.json({ error: { code: "MODEL_NOT_ALLOWED_BY_ORGANIZATION", message: "This model is not enabled by the organization owner." } }, 403)
     }
+    const pricingPolicy = readOrganizationModelPricingPolicy(organization?.metadata)
+    const pricingEvidence = organizationPricingEvidence(model, pricingPolicy)
+    model = applyOrganizationPricingToAdminModel(model, pricingPolicy)
 
     const providers = new Map(catalog.providers.map((provider) => [provider.id, provider]))
     const route = model.routes.filter((candidate) => candidate.enabled)
@@ -286,13 +295,14 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
         ...principal,
         runId,
         idempotencyKey,
-        catalogVersion: catalog.version,
+        catalogVersion: `${catalog.version}:org-pricing-${pricingPolicy.version}`,
         model,
         route,
         providerId: provider.id,
         billingMode,
         estimatedUsage,
         reservedMicroCredits,
+        pricingEvidence,
         budgets: {
           organizationDailyMicroCredits: modelPolicy.dailyBudgetMicroCredits,
           organizationMonthlyMicroCredits: modelPolicy.monthlyBudgetMicroCredits,
