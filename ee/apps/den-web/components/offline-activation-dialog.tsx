@@ -193,7 +193,7 @@ export function OfflineActivationDialog(props: {
       <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
         <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-orange-600">Platform super admin</p>
         <h2 id="offline-activation-title" className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950">线下收款与人工开通</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">{organization.name} · 价格和 RenCredit 只读自权威目录，不允许手工兑换。</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{organization.name} · 全部固定价格的个人版和企业版套餐均可线下收款开通；价格和 RenCredit 只读自权威目录，不允许手工兑换。</p>
 
         <div className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-3">
           <div><p className="text-xs text-slate-500">可用余额</p><p className="mt-1 font-semibold">{wallet ? credits(wallet.available_microcredits) : "0"} RC</p></div>
@@ -214,7 +214,7 @@ export function OfflineActivationDialog(props: {
         </div>
 
         <label className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1" /><span>我已核对实际到账、组织、套餐和模型策略。提交后将同时创建订单、开通权益并写入不可变 RenCredit 流水。</span></label>
-        <p className="mt-3 text-xs leading-5 text-slate-500">当前目录没有 ¥100 加油包，因此不能用 ¥100 临时换算 RenCredit。需要先发布固定价格和固定额度的加油包 SKU。</p>
+        <p className="mt-3 text-xs leading-5 text-slate-500">企业定制版同样支持线下付款，但须先签订合同，并把约定金额、席位和 RenCredit 发布为版本化权威报价后才能入账。当前目录没有 ¥100 加油包，不能临时换算 RenCredit。</p>
 
         <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={props.onClose} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold">关闭</button><button type="button" disabled={saving || !selectedOffer || !paymentReference.trim() || !confirmed} onClick={() => void activate()} className="rounded-full bg-slate-950 px-5 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "处理中…" : "确认收款并开通"}</button></div>
 

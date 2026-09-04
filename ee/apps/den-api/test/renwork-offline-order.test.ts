@@ -27,6 +27,14 @@ test("offline activation exposes only fixed authoritative catalog offers", () =>
   const offers = listOfflineOffers()
   expect(offers.length).toBe(10)
   expect(offers.every((offer) => offer.currency === "CNY" && offer.priceMinor > 0 && offer.includedRenCredits > 0)).toBe(true)
+  expect(new Set(offers.map((offer) => offer.planId))).toEqual(new Set([
+    "personal-light",
+    "personal-pro",
+    "personal-elite",
+    "personal-flagship",
+    "enterprise-starter",
+    "enterprise-standard",
+  ]))
   expect(offers.some((offer) => offer.planId === "enterprise-custom")).toBe(false)
 })
 

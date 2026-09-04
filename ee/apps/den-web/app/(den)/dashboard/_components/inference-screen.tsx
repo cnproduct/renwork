@@ -260,8 +260,8 @@ const MODEL_COLUMNS: readonly DenTableColumn<LineupModel>[] = [
 
 const PILLARS = [
   {
-    label: "Subscription required",
-    body: "Choose a personal or enterprise RenWork plan. Cloud model access is activated only after the request is approved.",
+    label: "Offline activation",
+    body: "Every personal and enterprise plan supports offline payment while online checkout is unavailable.",
   },
   {
     label: "Nothing to set up",
@@ -275,7 +275,8 @@ const PILLARS = [
 
 const STEPS: ReactNode[] = [
   "Choose a plan from the authoritative RenWork catalog",
-  "Submit an access request for platform-super-admin review",
+  "Submit an offline activation request and complete the transfer or offline contract",
+  "A platform super-admin verifies the payment and activates the plan",
   <>
     After approval, open RenWork and pick any model from the{" "}
     <code className="rounded-md bg-gray-100 px-2 py-1 font-mono text-[12px] text-gray-700">RenWork</code> group
@@ -341,8 +342,15 @@ function PlanRequestCard({
         variant={plan.recommended ? "primary" : "secondary"}
         onClick={() => onRequest(offer.id)}
       >
-        {pending ? "Request submitted" : offer.purchaseMode === "contact_sales" ? "Contact sales" : "Request access"}
+        {pending ? "Offline request submitted" : offer.purchaseMode === "contact_sales" ? "Contact sales for offline contract" : "Request offline activation"}
       </DenButton>
+      {"paymentChannels" in offer && offer.paymentChannels.includes("offline_manual") ? (
+        <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-800">
+          {offer.purchaseMode === "contact_sales"
+            ? "Offline contract payment · publish the agreed amount, seats, and RenCredit before activation."
+            : "Offline payment · verified and activated by a platform super-admin."}
+        </p>
+      ) : null}
     </article>
   );
 }
@@ -675,7 +683,7 @@ export function InferenceScreen() {
       {subscriptionRequest ? (
         <DenNotice
           tone="info"
-          message={`Plan request ${subscriptionRequest.offerId} was submitted on ${new Date(subscriptionRequest.requestedAt).toLocaleString()}. A platform super-admin must approve access before models are enabled.`}
+          message={`Offline activation request ${subscriptionRequest.offerId} was submitted on ${new Date(subscriptionRequest.requestedAt).toLocaleString()}. Complete the offline payment or contract; a platform super-admin will verify receipt before models are enabled.`}
         />
       ) : null}
 

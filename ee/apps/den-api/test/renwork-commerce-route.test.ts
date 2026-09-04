@@ -23,6 +23,6 @@ test("the public RenWork commerce route returns the authoritative catalog", asyn
   expect(response.status).toBe(200)
   expect(response.headers.get("cache-control")).toBe("public, max-age=60, stale-if-error=300")
   const catalog = renworkPlanCatalogSchema.parse(await response.json())
-  expect(catalog.catalogVersion).toBe("renwork-subscription-v7-2026-08-29.1")
+  expect(catalog.catalogVersion).toBe("renwork-subscription-v14-2026-09-03.2")
   expect(catalog.plans.length).toBeGreaterThan(0)
 })

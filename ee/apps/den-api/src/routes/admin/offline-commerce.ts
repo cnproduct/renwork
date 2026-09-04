@@ -56,7 +56,7 @@ export function registerAdminOfflineCommerceRoutes<T extends { Variables: AuthCo
     return c.json({
       catalogVersion: listOfflineOffers()[0]?.catalogVersion ?? null,
       offers: listOfflineOffers(),
-      note: "Only fixed offers from the authoritative catalog can be activated. No arbitrary RenCredit conversion is permitted.",
+      note: "Every fixed-price personal and enterprise offer supports offline activation. Contract-priced offers require agreed terms to be published in the authoritative catalog before activation. No arbitrary RenCredit conversion is permitted.",
     })
   })
 

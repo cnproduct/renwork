@@ -2,7 +2,7 @@ import { renworkPlanCatalogSchema, type RenworkPlanCatalog } from "@openwork/typ
 
 export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSchema.parse({
   schemaVersion: 1,
-  catalogVersion: "renwork-subscription-v7-2026-08-29.1",
+  catalogVersion: "renwork-subscription-v14-2026-09-03.2",
   status: "pilot",
   effectiveAt: "2026-08-29T00:00:00.000Z",
   plans: [
@@ -34,6 +34,7 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
           priceMinor: 6900,
           monthlyEquivalentPriceMinor: null,
           includedRenCredits: 2000,
+          paymentChannels: ["offline_manual"],
           cta: "request_access",
         },
         {
@@ -44,6 +45,7 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
           priceMinor: 69800,
           monthlyEquivalentPriceMinor: 5800,
           includedRenCredits: 2000,
+          paymentChannels: ["offline_manual"],
           cta: "request_access",
         },
       ],
@@ -77,6 +79,7 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
           priceMinor: 13900,
           monthlyEquivalentPriceMinor: null,
           includedRenCredits: 4000,
+          paymentChannels: ["offline_manual"],
           cta: "request_access",
         },
         {
@@ -87,6 +90,7 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
           priceMinor: 139000,
           monthlyEquivalentPriceMinor: 11600,
           includedRenCredits: 4000,
+          paymentChannels: ["offline_manual"],
           cta: "request_access",
         },
       ],
@@ -111,8 +115,8 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
         privateDeployment: false,
       },
       offers: [
-        { id: "personal-elite-monthly", purchaseMode: "request_access", billingInterval: "monthly", currency: "CNY", priceMinor: 69900, monthlyEquivalentPriceMinor: null, includedRenCredits: 20000, cta: "request_access" },
-        { id: "personal-elite-annual", purchaseMode: "request_access", billingInterval: "annual", currency: "CNY", priceMinor: 699000, monthlyEquivalentPriceMinor: 58300, includedRenCredits: 20000, cta: "request_access" },
+        { id: "personal-elite-monthly", purchaseMode: "request_access", billingInterval: "monthly", currency: "CNY", priceMinor: 69900, monthlyEquivalentPriceMinor: null, includedRenCredits: 20000, paymentChannels: ["offline_manual"], cta: "request_access" },
+        { id: "personal-elite-annual", purchaseMode: "request_access", billingInterval: "annual", currency: "CNY", priceMinor: 699000, monthlyEquivalentPriceMinor: 58300, includedRenCredits: 20000, paymentChannels: ["offline_manual"], cta: "request_access" },
       ],
     },
     {
@@ -135,8 +139,8 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
         privateDeployment: false,
       },
       offers: [
-        { id: "personal-flagship-monthly", purchaseMode: "request_access", billingInterval: "monthly", currency: "CNY", priceMinor: 139900, monthlyEquivalentPriceMinor: null, includedRenCredits: 40000, cta: "request_access" },
-        { id: "personal-flagship-annual", purchaseMode: "request_access", billingInterval: "annual", currency: "CNY", priceMinor: 1399000, monthlyEquivalentPriceMinor: 116600, includedRenCredits: 40000, cta: "request_access" },
+        { id: "personal-flagship-monthly", purchaseMode: "request_access", billingInterval: "monthly", currency: "CNY", priceMinor: 139900, monthlyEquivalentPriceMinor: null, includedRenCredits: 40000, paymentChannels: ["offline_manual"], cta: "request_access" },
+        { id: "personal-flagship-annual", purchaseMode: "request_access", billingInterval: "annual", currency: "CNY", priceMinor: 1399000, monthlyEquivalentPriceMinor: 116600, includedRenCredits: 40000, paymentChannels: ["offline_manual"], cta: "request_access" },
       ],
     },
     {
@@ -167,6 +171,7 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
           priceMinor: 2000000,
           monthlyEquivalentPriceMinor: null,
           includedRenCredits: 35000,
+          paymentChannels: ["offline_manual"],
           cta: "request_access",
         },
       ],
@@ -182,7 +187,7 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
       qualityModelLimit: { calls: 100, windowHours: 3, fairUse: false },
       features: { localFreeCore: false, managedCloud: true, officialPlugins: true, buyerGrowth: true, sharedWorkspace: true, sharedRenCreditPool: true, roleManagement: true, adminAudit: true, privateDeployment: false },
       offers: [
-        { id: "enterprise-standard-annual", purchaseMode: "request_access", billingInterval: "annual", currency: "CNY", priceMinor: 4000000, monthlyEquivalentPriceMinor: null, includedRenCredits: 80000, cta: "request_access" },
+        { id: "enterprise-standard-annual", purchaseMode: "request_access", billingInterval: "annual", currency: "CNY", priceMinor: 4000000, monthlyEquivalentPriceMinor: null, includedRenCredits: 80000, paymentChannels: ["offline_manual"], cta: "request_access" },
       ],
     },
     {
@@ -195,7 +200,7 @@ export const renworkPilotPlanCatalog: RenworkPlanCatalog = renworkPlanCatalogSch
       qualityModelLimit: null,
       features: { localFreeCore: false, managedCloud: true, officialPlugins: true, buyerGrowth: true, sharedWorkspace: true, sharedRenCreditPool: true, roleManagement: true, adminAudit: true, privateDeployment: true },
       offers: [
-        { id: "enterprise-custom-contact", purchaseMode: "contact_sales", billingInterval: null, currency: null, priceMinor: null, includedRenCredits: null, cta: "contact_sales" },
+        { id: "enterprise-custom-contact", purchaseMode: "contact_sales", billingInterval: null, currency: null, priceMinor: null, includedRenCredits: null, paymentChannels: ["offline_manual"], cta: "contact_sales" },
       ],
     },
   ],

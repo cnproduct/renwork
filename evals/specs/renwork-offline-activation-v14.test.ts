@@ -8,6 +8,7 @@ test("V14 records offline payment, entitlement and RenCredit as one auditable op
   const schema = await readFile("../ee/packages/den-db/src/schema/renwork-commerce.ts", "utf8");
   const dialog = await readFile("../ee/apps/den-web/components/offline-activation-dialog.tsx", "utf8");
   const inference = await readFile("../ee/apps/den-api/src/inference.ts", "utf8");
+  const catalog = await readFile("../ee/apps/den-api/src/renwork-growth/plan-catalog.ts", "utf8");
 
   expect(service).toContain("RENWORK_OFFLINE_AMOUNT_MISMATCH");
   expect(service).toContain('entry_type: "grant"');
@@ -18,6 +19,8 @@ test("V14 records offline payment, entitlement and RenCredit as one auditable op
   expect(schema).toContain("renwork_offline_orders_payment_reference");
   expect(dialog).toContain("确认收款并开通");
   expect(dialog).toContain("当前目录没有 ¥100 加油包");
+  expect(dialog).toContain("全部固定价格的个人版和企业版套餐均可线下收款开通");
+  expect(catalog.match(/paymentChannels: \["offline_manual"\]/g)?.length ?? 0).toBe(11);
   expect(inference).toContain('access.source === "subscription" || access.source === "offline_payment"');
   expect(inference).toContain("await revokeMemberInferenceKeys(member.id)");
 
