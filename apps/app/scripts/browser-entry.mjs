@@ -219,7 +219,17 @@ try {
   });
 
   const port = await findFreePort();
-  opencode = await spawnOpencodeServe({ directory: tmpdir, port });
+  const xdgRoot = path.join(tmpdir, ".xdg");
+  opencode = await spawnOpencodeServe({
+    directory: tmpdir,
+    port,
+    env: {
+      XDG_CONFIG_HOME: path.join(xdgRoot, "config"),
+      XDG_DATA_HOME: path.join(xdgRoot, "data"),
+      XDG_CACHE_HOME: path.join(xdgRoot, "cache"),
+      XDG_STATE_HOME: path.join(xdgRoot, "state"),
+    },
+  });
   const client = makeClient({ baseUrl: opencode.baseUrl, directory: opencode.cwd });
 
   await step("health", async () => {
