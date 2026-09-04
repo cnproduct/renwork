@@ -25,9 +25,13 @@ What it does:
 - Prints randomized host URLs so multiple stacks can run side by side
 
 Production-oriented EE images:
-- `Dockerfile.den` -> `ghcr.io/different-ai/openwork-den-api`
-- `Dockerfile.den-web` -> `ghcr.io/different-ai/openwork-den-web`
-- `Dockerfile.inference` -> `ghcr.io/different-ai/openwork-inference`
+- `Dockerfile.den` -> `ghcr.io/cnproduct/renwork-den-api`
+- `Dockerfile.den-web` -> `ghcr.io/cnproduct/renwork-den-web`
+- `Dockerfile.inference` -> `ghcr.io/cnproduct/renwork-inference`
+- `Dockerfile.den-gateway` -> `ghcr.io/cnproduct/renwork-den-gateway`
+
+The previous `openwork-*` image packages remain readable for deployments pinned
+to legacy tags or digests. New publishes only write the `renwork-*` packages.
 
 These images are intended for Terraform, Helm, ECS, EKS, and customer-cloud deployments. Prefer immutable tags or digests in production.
 

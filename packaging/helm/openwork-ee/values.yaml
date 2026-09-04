@@ -198,7 +198,7 @@ installerArtifacts:
 denApi:
   replicaCount: 1
   image:
-    repository: ghcr.io/different-ai/openwork-den-api
+    repository: ghcr.io/cnproduct/renwork-den-api
     tag: ""
   service:
     type: ClusterIP
@@ -226,7 +226,7 @@ denApi:
 denWeb:
   replicaCount: 1
   image:
-    repository: ghcr.io/different-ai/openwork-den-web
+    repository: ghcr.io/cnproduct/renwork-den-web
     tag: ""
   service:
     type: ClusterIP
@@ -255,7 +255,7 @@ inference:
   enabled: false
   replicaCount: 1
   image:
-    repository: ghcr.io/different-ai/openwork-inference
+    repository: ghcr.io/cnproduct/renwork-inference
     tag: ""
   service:
     type: ClusterIP
