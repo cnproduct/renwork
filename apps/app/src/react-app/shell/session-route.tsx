@@ -112,7 +112,12 @@ import { useModelBehavior } from "@/react-app/domains/session/surface/use-model-
 import { useSessionFindStore } from "@/react-app/domains/session/surface/find-store";
 import { useModelPicker } from "@/react-app/domains/session/modals/use-model-picker";
 import { getSessionModelSelection, useSessionModelStore } from "@/react-app/domains/session/surface/session-model-store";
-import { openModelPickerEvent, openProviderAuthEvent } from "@/react-app/shell/new-providers-listener";
+import {
+  openModelPickerEvent,
+  openProviderAuthEvent,
+  readOpenProviderAuthEventDetail,
+  type OpenProviderAuthEventDetail,
+} from "@/react-app/shell/new-providers-listener";
 import { appMentionInstruction } from "@/react-app/domains/session/surface/composer/app-mentions";
 import { decodeComposerMentionValue } from "@/react-app/domains/session/surface/composer/mention-encoding";
 import { connectSkillPrompt, parseConnectSkillToken } from "@/react-app/domains/session/surface/composer/connect-skill-token";
@@ -134,7 +139,10 @@ import {
   shouldAutoOpenUnavailableModelPicker,
 } from "@/react-app/domains/connections/provider-auth/managed-models-recovery";
 import { useSessionProviderAuth } from "@/react-app/domains/connections/provider-auth/use-session-provider-auth";
-import { canManageDesktopModelProviders } from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
+import {
+  canConnectPersonalSubscriptionOAuth,
+  canManageDesktopModelProviders,
+} from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
 import {
   disabledProvidersFromConfig,
   updateManagedDisabledProviders,
@@ -615,6 +623,14 @@ export function SessionRoute() {
     signedIn: denAuth.isSignedIn,
     hasAuthToken: Boolean(denSettings.authToken?.trim()),
     hasActiveOrganization: Boolean(denSettings.activeOrgId?.trim()),
+    workspaceType: selectedWorkspace?.workspaceType,
+  });
+  const personalSubscriptionOAuthAllowed = canConnectPersonalSubscriptionOAuth({
+    desktopRuntime: isDesktopRuntime(),
+    signedIn: denAuth.isSignedIn,
+    hasAuthToken: Boolean(denSettings.authToken?.trim()),
+    hasActiveOrganization: Boolean(denSettings.activeOrgId?.trim()),
+    hasActiveRuntime: Boolean(opencodeClient && selectedWorkspaceId),
     workspaceType: selectedWorkspace?.workspaceType,
   });
   const cloudWorkspace = useCloudWorkspaceStatus();
@@ -2098,15 +2114,23 @@ export function SessionRoute() {
   }), [localProviderManagementAllowed, sessionProviderAuthStore]);
   useControlAction(addProviderControlAction);
 
-  const handleOpenProviderAuth = useCallback(() => {
-    if (!localProviderManagementAllowed) {
+  const handleOpenProviderAuth = useCallback((request?: OpenProviderAuthEventDetail) => {
+    const personalSubscription = request?.scope === "personal_subscription_oauth";
+    if (personalSubscription && !personalSubscriptionOAuthAllowed) {
+      restrictionNotice.show({
+        title: "本机订阅账号暂不可用",
+        message: "请先登录 RenWork、选择组织并启动本地工作区，再连接此电脑的 OpenAI 或 Google 订阅账号。",
+      });
+      return;
+    }
+    if (!personalSubscription && !localProviderManagementAllowed) {
       restrictionNotice.show({
         title: t("restrictions.add_custom_providers_disabled_title"),
         message: t("restrictions.add_custom_providers_disabled_message"),
       });
       return;
     }
-    if (sessionProviderAuthStore.isProviderAddRestricted()) {
+    if (!personalSubscription && sessionProviderAuthStore.isProviderAddRestricted()) {
       restrictionNotice.show({
         title: t("restrictions.add_custom_providers_disabled_title"),
         message: t("restrictions.add_custom_providers_disabled_message"),
@@ -2116,15 +2140,19 @@ export function SessionRoute() {
 
     // Pre-workspace (chat-first) there is no opencode client yet, so the
     // modal cannot load auth methods — fall back to the AI Providers page.
-    void sessionProviderAuthStore.openProviderAuthModal({ returnFocusTarget: "composer" }).catch(() => {
+    void sessionProviderAuthStore.openProviderAuthModal({
+      returnFocusTarget: "composer",
+      preferredProviderId: request?.preferredProviderId,
+      scope: request?.scope ?? "all",
+    }).catch(() => {
       handleOpenSettings("/settings/ai");
     });
-  }, [handleOpenSettings, localProviderManagementAllowed, restrictionNotice, sessionProviderAuthStore]);
+  }, [handleOpenSettings, localProviderManagementAllowed, personalSubscriptionOAuthAllowed, restrictionNotice, sessionProviderAuthStore]);
 
   // "Your API keys → Connect" in the compact model picker (and anything else
   // outside this route's prop tree) requests the provider auth modal here.
   useEffect(() => {
-    const handler = () => handleOpenProviderAuth();
+    const handler = (event: Event) => handleOpenProviderAuth(readOpenProviderAuthEventDetail(event));
     window.addEventListener(openProviderAuthEvent, handler);
     return () => window.removeEventListener(openProviderAuthEvent, handler);
   }, [handleOpenProviderAuth]);
@@ -2647,7 +2675,9 @@ export function SessionRoute() {
       onChatFirstTask={handleChatFirstTask}
       chatFirstBusy={createWorkspaceBusy}
       newTaskComposer={newTaskComposerContext}
-      providerAuthModal={localProviderManagementAllowed && sessionProviderAuthSnapshot.providerAuthModalOpen ? {
+      providerAuthModal={
+        sessionProviderAuthSnapshot.providerAuthModalOpen &&
+        (localProviderManagementAllowed || sessionProviderAuthSnapshot.providerAuthScope === "personal_subscription_oauth") ? {
         open: true,
         loading: false,
         submitting: sessionProviderAuthSnapshot.providerAuthBusy,
@@ -2673,6 +2703,7 @@ export function SessionRoute() {
         },
         onSubmitOAuth: sessionProviderAuthStore.completeProviderAuthOAuth,
         onRefreshProviders: sessionProviderAuthStore.refreshProviders,
+        personalSubscriptionOnly: sessionProviderAuthSnapshot.providerAuthScope === "personal_subscription_oauth",
         onClose: () => sessionProviderAuthStore.closeProviderAuthModal(),
       } : null}
       settingsSlot={

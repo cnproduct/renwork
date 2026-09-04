@@ -63,12 +63,15 @@ export async function spawnOpencodeServe({
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
-      // The harness verifies the stock OpenCode HTTP contract. Loading the
-      // repository's real `.opencode` project config here also starts remote
-      // MCP/plugin discovery, which can block `/path` for minutes when CI has
-      // no credentials or outbound access. Product configuration has its own
-      // dedicated tests; keep this transport harness deterministic.
+      // E2E only needs the model snapshot bundled with OpenCode. Avoid making
+      // every local API assertion depend on remote catalogs, plugin installs,
+      // LSP downloads, sharing, or filesystem watcher startup.
+      OPENCODE_DISABLE_MODELS_FETCH: "true",
+      OPENCODE_DISABLE_DEFAULT_PLUGINS: "true",
       OPENCODE_DISABLE_PROJECT_CONFIG: "1",
+      OPENCODE_DISABLE_LSP_DOWNLOAD: "true",
+      OPENCODE_DISABLE_SHARE: "true",
+      OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
       ...env,
       // Make it explicit we're a non-TUI client.
       OPENCODE_CLIENT: "openwork-test",

@@ -19,6 +19,23 @@ const NEW_PROVIDERS_DEDUPE_KEY = "new-providers";
 export const openModelPickerEvent = "openwork-open-model-picker";
 /** Custom event to request the provider auth (connect API keys) modal to open. */
 export const openProviderAuthEvent = "openwork-open-provider-auth";
+export type OpenProviderAuthEventDetail = {
+  preferredProviderId?: string;
+  scope?: "personal_subscription_oauth";
+};
+
+export function readOpenProviderAuthEventDetail(event: Event): OpenProviderAuthEventDetail | undefined {
+  if (!(event instanceof CustomEvent) || typeof event.detail !== "object" || event.detail === null) {
+    return undefined;
+  }
+  const preferredProviderId = typeof event.detail.preferredProviderId === "string"
+    ? event.detail.preferredProviderId
+    : undefined;
+  const scope = event.detail.scope === "personal_subscription_oauth"
+    ? "personal_subscription_oauth"
+    : undefined;
+  return { preferredProviderId, scope };
+}
 export const pendingModelPickerProviderIdsKey = PENDING_MODEL_PICKER_KEY;
 
 function readSeenProviderIds(): Set<string> {

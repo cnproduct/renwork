@@ -219,6 +219,7 @@ try {
   });
 
   const port = await findFreePort();
+  const xdgRoot = path.join(tmpdir, ".xdg");
   opencode = await spawnOpencodeServe({
     directory: tmpdir,
     port,
@@ -229,10 +230,10 @@ try {
       OPENCODE_DISABLE_PROJECT_CONFIG: "0",
       // Keep the fixture independent from a developer machine's global
       // OpenCode providers, plugins, credentials, sessions, and cache.
-      XDG_CONFIG_HOME: path.join(tmpdir, ".xdg", "config"),
-      XDG_STATE_HOME: path.join(tmpdir, ".xdg", "state"),
-      XDG_DATA_HOME: path.join(tmpdir, ".xdg", "data"),
-      XDG_CACHE_HOME: path.join(tmpdir, ".xdg", "cache"),
+      XDG_CONFIG_HOME: path.join(xdgRoot, "config"),
+      XDG_DATA_HOME: path.join(xdgRoot, "data"),
+      XDG_CACHE_HOME: path.join(xdgRoot, "cache"),
+      XDG_STATE_HOME: path.join(xdgRoot, "state"),
     },
   });
   const client = makeClient({ baseUrl: opencode.baseUrl, directory: opencode.cwd });

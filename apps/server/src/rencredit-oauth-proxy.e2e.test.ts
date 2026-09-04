@@ -13,6 +13,10 @@ test("desktop OAuth prompt freezes RenCredit, rewrites only inside the host, and
     port: 0,
     async fetch(request) {
       const url = new URL(request.url);
+      if (url.pathname === "/provider") return Response.json({
+        all: [{ id: "lpr_openai-seat", models: { "gpt-5": { name: "GPT-5" } } }],
+        connected: ["lpr_openai-seat"],
+      });
       if (url.pathname === "/session/ses_1/message") {
         if (prompted) postPromptMessageReads += 1;
         return Response.json(prompted && postPromptMessageReads > 1 ? [
@@ -112,6 +116,89 @@ test("desktop OAuth prompt freezes RenCredit, rewrites only inside the host, and
       hasResult: true,
       providerResponseId: "new-1,new-2",
     });
+  } finally {
+    engine.stop(true);
+  }
+});
+
+test("desktop OAuth prompt releases RenCredit and explains when OpenAI is not connected", async () => {
+  let promptCalled = false;
+  const engine = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const url = new URL(request.url);
+      if (url.pathname === "/provider") return Response.json({
+        all: [{ id: "openai", models: { "gpt-5.6-sol": { name: "GPT-5.6 Sol" } } }],
+        connected: [],
+      });
+      if (url.pathname === "/session/ses_missing/message") return Response.json([]);
+      if (url.pathname === "/session/ses_missing/prompt_async") promptCalled = true;
+      return new Response(null, { status: 404 });
+    },
+  });
+  const released: string[] = [];
+  const metering: RenCreditLocalRuntimePort = {
+    reserve: async () => ({
+      reservationId: "rsv_missing",
+      runId: "run_missing",
+      modelSku: "renwork-openai-gpt-5-6-sol",
+      reservedMicroCredits: 200,
+      providerID: "openai",
+      modelID: "gpt-5.6-sol",
+      adapter: "opencode",
+    }),
+    settle: async () => { throw new Error("unexpected settlement"); },
+    release: async (_reservation, failureCode) => {
+      released.push(failureCode);
+      return { reservationId: "rsv_missing", status: "released", capturedMicroCredits: 0, releasedMicroCredits: 200 };
+    },
+  };
+  const workspace: WorkspaceInfo = {
+    id: "ws_missing",
+    name: "Remote",
+    path: "/tmp/remote",
+    preset: "remote",
+    workspaceType: "remote",
+    baseUrl: `http://127.0.0.1:${engine.port}`,
+  };
+  const config: ServerConfig = {
+    host: "127.0.0.1",
+    port: 0,
+    token: "token",
+    hostToken: "host",
+    approval: { mode: "auto", timeoutMs: 1_000 },
+    corsOrigins: ["*"],
+    workspaces: [workspace],
+    authorizedRoots: [],
+    readOnly: false,
+    startedAt: Date.now(),
+    tokenSource: "cli",
+    hostTokenSource: "cli",
+    logFormat: "pretty",
+    logRequests: false,
+    meteredRuntimeRequired: true,
+  };
+  try {
+    await expect(proxyOpencodeRequest({
+      config,
+      workspace,
+      localRuntimeMetering: metering,
+      proxyPath: "/session/ses_missing/prompt_async",
+      url: new URL("http://localhost/workspace/ws_missing/opencode/session/ses_missing/prompt_async"),
+      request: new Request("http://localhost/workspace/ws_missing/opencode/session/ses_missing/prompt_async", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          parts: [{ type: "text", text: "hello" }],
+          model: { providerID: "renwork", modelID: "renwork-openai-gpt-5-6-sol" },
+        }),
+      }),
+    })).rejects.toMatchObject({
+      status: 409,
+      code: "rencredit_local_provider_not_connected",
+    });
+    expect(released).toEqual(["RENCREDIT_LOCAL_PROVIDER_NOT_CONNECTED"]);
+    expect(promptCalled).toBe(false);
   } finally {
     engine.stop(true);
   }

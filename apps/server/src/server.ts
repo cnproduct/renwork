@@ -1274,6 +1274,53 @@ async function sessionIsBusy(input: { baseUrl: string; sessionId: string; header
   return isRecord(status) && status.type !== "idle";
 }
 
+async function assertMeteredLocalModelReady(input: {
+  baseUrl: string;
+  headers: Headers;
+  reservation: LocalRuntimeReservation;
+}): Promise<void> {
+  const response = await loopbackFetch(buildOpencodeProxyUrl(input.baseUrl, "/provider", ""), {
+    method: "GET",
+    headers: input.headers,
+  });
+  if (!response.ok) {
+    throw new ApiError(
+      503,
+      "rencredit_local_runtime_readiness_unavailable",
+      "RenWork could not verify the local model connection. Please retry after the desktop runtime is ready.",
+    );
+  }
+  const value: unknown = await response.json().catch(() => null);
+  if (!isRecord(value) || !Array.isArray(value.all) || !Array.isArray(value.connected)) {
+    throw new ApiError(
+      503,
+      "rencredit_local_runtime_readiness_unavailable",
+      "RenWork received an invalid local model connection status. Please reconnect the provider and retry.",
+    );
+  }
+  const connected = value.connected.some((providerId) => providerId === input.reservation.providerID);
+  if (!connected) {
+    const providerName = input.reservation.providerID === "google" ? "Google" : "OpenAI";
+    throw new ApiError(
+      409,
+      "rencredit_local_provider_not_connected",
+      `${providerName} OAuth is not connected on this desktop. Reconnect it in Settings -> AI model providers.`,
+      { providerID: input.reservation.providerID },
+    );
+  }
+  const provider = value.all.find((candidate) =>
+    isRecord(candidate) && candidate.id === input.reservation.providerID);
+  const models = isRecord(provider) && isRecord(provider.models) ? provider.models : null;
+  if (!models || !Object.hasOwn(models, input.reservation.modelID)) {
+    throw new ApiError(
+      409,
+      "rencredit_local_model_not_available",
+      "This OpenAI model is not available for the connected account. Refresh the model catalog or choose another model.",
+      { providerID: input.reservation.providerID, modelID: input.reservation.modelID },
+    );
+  }
+}
+
 async function settleMeteredOpenCodeRun(input: {
   metering: RenCreditLocalRuntimePort;
   reservation: LocalRuntimeReservation;
@@ -1395,6 +1442,15 @@ export async function proxyOpencodeRequest(input: {
         modelSku: meteredModelSku(kind, body),
         body,
       });
+      try {
+        await assertMeteredLocalModelReady({ baseUrl, headers, reservation });
+      } catch (error) {
+        const failureCode = error instanceof ApiError
+          ? error.code.toUpperCase()
+          : "LOCAL_RUNTIME_READINESS_FAILED";
+        await input.localRuntimeMetering.release(reservation, failureCode).catch(() => undefined);
+        throw error;
+      }
       body = rewriteMeteredModel(kind, body, reservation);
       meteredRun = { reservation, sessionId, beforeAssistantIds };
     } catch (error) {
