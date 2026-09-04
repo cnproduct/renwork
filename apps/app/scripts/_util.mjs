@@ -68,6 +68,7 @@ export async function spawnOpencodeServe({
       // LSP downloads, sharing, or filesystem watcher startup.
       OPENCODE_DISABLE_MODELS_FETCH: "true",
       OPENCODE_DISABLE_DEFAULT_PLUGINS: "true",
+      OPENCODE_DISABLE_PROJECT_CONFIG: "true",
       OPENCODE_DISABLE_LSP_DOWNLOAD: "true",
       OPENCODE_DISABLE_SHARE: "true",
       OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",

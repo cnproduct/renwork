@@ -224,6 +224,7 @@ try {
     directory: tmpdir,
     port,
     env: {
+      OPENCODE_DISABLE_PROJECT_CONFIG: "false",
       XDG_CONFIG_HOME: path.join(xdgRoot, "config"),
       XDG_DATA_HOME: path.join(xdgRoot, "data"),
       XDG_CACHE_HOME: path.join(xdgRoot, "cache"),
