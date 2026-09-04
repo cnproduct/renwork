@@ -9,7 +9,8 @@ describe("Voiceover V12 access grant provisioning", () => {
     ])
 
     expect(inference).toContain("sha256(provider.apiKey) !== key.keyHash")
-    expect(inference.match(/if \(!inference && !access\.allowed\)/g)).toHaveLength(2)
+    expect(inference).toContain("if (!access.allowed) {\n    await revokeMemberInferenceKeys(input.memberId)")
+    expect(inference).toContain("if (!access.allowed) {\n    const members = await listOrgMembers(input.organizationId)")
     expect(inference).toContain("export async function repairMemberInferenceAccessIfNeeded")
     expect(inference).toContain("metadata: organization?.metadata ?? null")
     expect(admin).toContain("await syncInferenceForOrganizationMembers({ organizationId })")

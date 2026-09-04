@@ -31,10 +31,10 @@ describe("RenWork Models page", () => {
     }
   });
 
-  test("uses the authoritative V7 plan request flow instead of legacy Stripe checkout", () => {
+  test("uses the authoritative offline plan request flow instead of legacy Stripe checkout", () => {
     expect(screen).toContain("/v1/renwork/commerce/catalog");
     expect(screen).toContain("/v1/renwork/commerce/access-requests");
-    expect(screen).toContain("Request access");
+    expect(screen).toContain("Request offline activation");
     expect(screen).toContain("No free plan");
     expect(screen).toContain("Manage subscription");
     expect(screen).not.toContain("/v1/billing/stripe/checkout");

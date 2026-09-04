@@ -7,7 +7,7 @@ import {
 } from "@openwork/types/renwork-commerce"
 import { getRenworkPlanCatalog } from "../src/renwork-growth/plan-catalog.js"
 
-test("RenWork V7 catalog requires paid access and separates personal from enterprise", () => {
+test("RenWork V14 catalog requires paid access, supports offline payment, and separates audiences", () => {
   const catalog = renworkPlanCatalogSchema.parse(getRenworkPlanCatalog())
   expect(catalog.status).toBe("pilot")
   expect(catalog.plans.every((plan) => !plan.features.localFreeCore)).toBe(true)
@@ -15,6 +15,9 @@ test("RenWork V7 catalog requires paid access and separates personal from enterp
   expect(catalog.plans.some((plan) => plan.audience === "enterprise")).toBe(true)
   expect(catalog.plans.flatMap((plan) => plan.offers).some((offer) => offer.purchaseMode === "checkout")).toBe(false)
   expect(catalog.plans.flatMap((plan) => plan.offers).some((offer) => offer.purchaseMode === "free")).toBe(false)
+  expect(catalog.plans.flatMap((plan) => plan.offers).every((offer) => (
+    "paymentChannels" in offer && offer.paymentChannels.includes("offline_manual")
+  ))).toBe(true)
 })
 
 test("RenWork catalog never exposes a provider or upstream credit contract", () => {

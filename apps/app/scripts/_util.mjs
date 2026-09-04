@@ -63,6 +63,12 @@ export async function spawnOpencodeServe({
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
+      // The harness verifies the stock OpenCode HTTP contract. Loading the
+      // repository's real `.opencode` project config here also starts remote
+      // MCP/plugin discovery, which can block `/path` for minutes when CI has
+      // no credentials or outbound access. Product configuration has its own
+      // dedicated tests; keep this transport harness deterministic.
+      OPENCODE_DISABLE_PROJECT_CONFIG: "1",
       ...env,
       // Make it explicit we're a non-TUI client.
       OPENCODE_CLIENT: "openwork-test",
