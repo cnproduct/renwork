@@ -254,7 +254,7 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
       return c.json({ error: { code: "MODEL_NOT_INCLUDED_IN_GRANT", message: "This model is not included in the temporary access grant." } }, 403)
     }
     const plan = parseOrganizationPlan(organization?.metadata).tier
-    if (access.source === "subscription" && !modelAllowedForPlan(model, plan)) {
+    if ((access.source === "subscription" || access.source === "offline_payment") && !modelAllowedForPlan(model, plan)) {
       return c.json({ error: { code: "PLAN_UPGRADE_REQUIRED", message: "This model is not included in the current plan." } }, 402)
     }
     const modelPolicy = readOrganizationModelPolicy(organization?.metadata)

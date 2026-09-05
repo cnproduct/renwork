@@ -43,6 +43,10 @@ describe("RenWork production inference gateway", () => {
     expect(gateway).not.toContain("async pull(controller)")
   })
 
+  test("applies paid-plan model limits to offline activations as well as subscriptions", () => {
+    expect(gateway).toContain('access.source === "subscription" || access.source === "offline_payment"')
+  })
+
   test("logs only sanitized upstream rejection structure before releasing credits", () => {
     expect(gateway).toContain("safeUpstreamErrorDetails(upstreamError)")
     expect(gateway).toContain("summarizeToolSchemas(upstreamBody)")

@@ -88,7 +88,9 @@ async function localMeteringAccess(principal: InferencePrincipal, modelSku: stri
   if (access.source === "subscription" && inferenceMetadata?.enabled !== true) throw new Error("INFERENCE_DISABLED")
   if (!accessAllowsModel(access, model.sku)) throw new Error("MODEL_NOT_INCLUDED_IN_GRANT")
   const plan = parseOrganizationPlan(organization?.metadata).tier
-  if (access.source === "subscription" && !modelAllowedForPlan(model, plan)) throw new Error("PLAN_UPGRADE_REQUIRED")
+  if ((access.source === "subscription" || access.source === "offline_payment") && !modelAllowedForPlan(model, plan)) {
+    throw new Error("PLAN_UPGRADE_REQUIRED")
+  }
   const policy = readOrganizationModelPolicy(organization?.metadata)
   if (policy.allowedModelSkus && !policy.allowedModelSkus.includes(model.sku)) {
     throw new Error("MODEL_NOT_ALLOWED_BY_ORGANIZATION")
