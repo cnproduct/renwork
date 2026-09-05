@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import { AnimatePresence, LazyMotion, domMax, m, useReducedMotion } from "motion/react";
 
 import { clearDenSession, createDenClient, readDenSettings } from "@/app/lib/den";
+import { isServer2016CloudDesktopRuntime } from "@/app/lib/desktop";
 import { isOpenworkGatewayRuntime } from "@/app/lib/gateway-runtime";
 import { denSettingsChangedEvent } from "@/app/lib/den-session-events";
 import { Button } from "@/components/ui/button";
@@ -95,7 +96,7 @@ export function CloudWorkspaceStatusProvider(props: { children: ReactNode }) {
   const [updating, setUpdating] = useState(false);
   const [takeoverActive, setTakeoverActive] = useState(false);
   const lastAttemptedVersion = useRef<string | null>(null);
-  const gatewayMode = isOpenworkGatewayRuntime();
+  const gatewayMode = isOpenworkGatewayRuntime() || isServer2016CloudDesktopRuntime();
   const settingsSnapshot = useSyncExternalStore(
     subscribeToDenSettings,
     readDenSettingsSnapshot,

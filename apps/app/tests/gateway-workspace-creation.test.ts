@@ -10,6 +10,7 @@ function installWindow(options: {
   electronInfo?: {
     baseUrl: string;
     ownerToken: string;
+    cloudOnly?: boolean;
   };
 }) {
   Object.defineProperty(globalThis, "window", {
@@ -21,6 +22,21 @@ function installWindow(options: {
       __OPENWORK_GATEWAY__: options.gateway ? { version: 1 } : undefined,
       __OPENWORK_ELECTRON__: options.electronInfo
         ? {
+            meta: {
+              distribution: {
+                flavor: options.electronInfo.cloudOnly ? "server2016-cloud" : "public",
+                appName: options.electronInfo.cloudOnly ? "RenWork Server 2016 Cloud" : "RenWork",
+                appIdentifier: options.electronInfo.cloudOnly
+                  ? "com.renrenyi.renwork.server2016cloud"
+                  : "com.renrenyi.renwork",
+                protocolScheme: options.electronInfo.cloudOnly ? "renwork-server2016" : "renwork",
+                requireSignin: options.electronInfo.cloudOnly,
+                requireActivation: false,
+                localRuntimeEnabled: !options.electronInfo.cloudOnly,
+                cloudWorkspaceRequired: Boolean(options.electronInfo.cloudOnly),
+                updaterManifestChannel: options.electronInfo.cloudOnly ? "server2016-cloud" : "latest",
+              },
+            },
             invokeDesktop: async () => ({
               running: true,
               baseUrl: options.electronInfo?.baseUrl,
@@ -56,5 +72,17 @@ describe("workspace creation policy", () => {
       electronInfo: { baseUrl: "http://localhost:8787", ownerToken: "owner-token" },
     });
     expect(canCreateWorkspaces()).toBe(true);
+  });
+
+  test("disables local workspace creation in the Server 2016 cloud-only desktop", () => {
+    installWindow({
+      origin: "http://localhost:3000",
+      electronInfo: {
+        baseUrl: "http://localhost:8787",
+        ownerToken: "owner-token",
+        cloudOnly: true,
+      },
+    });
+    expect(canCreateWorkspaces()).toBe(false);
   });
 });

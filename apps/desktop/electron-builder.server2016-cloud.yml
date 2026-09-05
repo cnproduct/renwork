@@ -1,0 +1,39 @@
+extends: ./electron-builder.base.yml
+appId: com.renrenyi.renwork.server2016cloud
+productName: RenWork Server 2016 Cloud
+extraMetadata:
+  version: 0.18.58
+  openworkDistribution: server2016-cloud
+protocols:
+  - name: RenWork Server 2016 Cloud
+    schemes:
+      - renwork-server2016
+publish:
+  - provider: github
+    owner: cnproduct
+    repo: renwork
+    releaseType: prerelease
+    channel: server2016-cloud
+artifactName: RenWork-v${version}-Windows-Server-2016-Cloud-${arch}.${ext}
+directories:
+  output: dist-electron-server2016-cloud
+win:
+  icon: resources/icons/icon.ico
+  extraResources:
+    - from: resources/icons/icon.png
+      to: icons/icon.png
+  target:
+    - nsis
+    - zip
+nsis:
+  include: build/installer.nsh
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: RenWork Server 2016 Cloud
+  differentialPackage: false
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true

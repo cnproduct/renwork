@@ -1334,6 +1334,9 @@ async function bootRuntimeForSelectedWorkspace() {
   if (typeof process.env.OPENWORK_EVAL_FATAL_DESKTOP_BOOTSTRAP_FAILURE === "string") {
     throw new Error(process.env.OPENWORK_EVAL_FATAL_DESKTOP_BOOTSTRAP_FAILURE);
   }
+  if (!DESKTOP_DISTRIBUTION.localRuntimeEnabled) {
+    return { ok: true, skipped: true, reason: "cloud-workspace-required" };
+  }
   const list = await workspaceStore.readWorkspaceState();
   const selectedId = list.selectedId || list.activeId || list.workspaces[0]?.id || "";
   const workspace = selectedId
@@ -1701,6 +1704,9 @@ const desktopCommandHandlers = {
       return workspaceStore.setRuntimeActiveWorkspace(typeof args[0] === "string" && args[0].trim() ? args[0] : null);
   },
   "workspaceCreate": async (event, ...args) => {
+      if (!DESKTOP_DISTRIBUTION.localRuntimeEnabled) {
+        throw new Error("Local workspaces are unavailable in this RenWork cloud-only build.");
+      }
       return workspaceStore.createWorkspace(args[0] ?? {});
   },
   "workspaceCreateRemote": async (event, ...args) => {
@@ -1751,11 +1757,15 @@ const desktopCommandHandlers = {
       );
   },
   "engineStart": async (event, ...args) => {
+      if (!DESKTOP_DISTRIBUTION.localRuntimeEnabled) {
+        throw new Error("The local OpenCode engine is disabled in this cloud-only build.");
+      }
       const projectDir = String(args[0] ?? "").trim();
       const options = args[1] ?? {};
       return runtimeManager.engineStart(projectDir, options);
   },
   "prepareFreshRuntime": async (event, ...args) => {
+      if (!DESKTOP_DISTRIBUTION.localRuntimeEnabled) return undefined;
       return runtimeManager.prepareFreshRuntime();
   },
   "runtimeBootstrap": async (event, ...args) => {
@@ -1768,15 +1778,24 @@ const desktopCommandHandlers = {
       return runtimeManager.engineStop();
   },
   "engineRestart": async (event, ...args) => {
+      if (!DESKTOP_DISTRIBUTION.localRuntimeEnabled) {
+        throw new Error("The local OpenCode engine is disabled in this cloud-only build.");
+      }
       return runtimeManager.engineRestart(args[0] ?? {});
   },
   "engineInfo": async (event, ...args) => {
       return runtimeManager.engineInfo();
   },
   "engineDoctor": async (event, ...args) => {
+      if (!DESKTOP_DISTRIBUTION.localRuntimeEnabled) {
+        throw new Error("Local OpenCode diagnostics are unavailable in this cloud-only build.");
+      }
       return engineDoctor(args[0]);
   },
   "engineInstall": async (event, ...args) => {
+      if (!DESKTOP_DISTRIBUTION.localRuntimeEnabled) {
+        throw new Error("Local OpenCode installation is unavailable in this cloud-only build.");
+      }
       return runtimeManager.engineInstall();
   },
   "appBuildInfo": async (event, ...args) => {
@@ -1973,6 +1992,9 @@ const desktopCommandHandlers = {
       return desktopAutomationRunner.configure(args[0] ?? null);
   },
   "openworkServerRestart": async (event, ...args) => {
+      if (!DESKTOP_DISTRIBUTION.localRuntimeEnabled) {
+        throw new Error("The local RenWork engine is disabled in this cloud-only build.");
+      }
       return runtimeManager.openworkServerRestart(args[0] ?? {});
   },
   "getDefaultWorkspacePath": async (event, ...args) => {
@@ -2661,7 +2683,7 @@ const { ensureAutoUpdater } = registerUpdaterIpc({
   // All distributions intentionally share one application identifier, so they also
   // share Squirrel's ShipIt domain. Keep the shared default rather than
   // implying an isolation the bundle identifier cannot provide.
-  manifestChannel: "latest",
+  manifestChannel: DESKTOP_DISTRIBUTION.updaterManifestChannel,
   electronNet,
   shell,
   distribution: DESKTOP_DISTRIBUTION.flavor,
@@ -2750,7 +2772,7 @@ or use: pnpm dev:worktree`);
       await applyDesktopBootstrapBrandIcon(bootstrapConfig, applyBrandIconUrl);
     }
     applicationMenu.install();
-    if (!desktopActivationRequired(DESKTOP_DISTRIBUTION, bootstrapConfig)) {
+    if (!desktopActivationRequired(DESKTOP_DISTRIBUTION, bootstrapConfig) && DESKTOP_DISTRIBUTION.localRuntimeEnabled) {
       await runtimeManager.prepareFreshRuntime().catch(() => undefined);
     }
 

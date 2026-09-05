@@ -169,12 +169,15 @@ export type AppBuildInfo = {
 };
 
 export type DesktopDistributionInfo = {
-  flavor: "public" | "enterprise";
+  flavor: "standalone" | "public" | "cloud" | "enterprise" | "server2016-cloud";
   appName: string;
   appIdentifier: string;
   protocolScheme: string;
   requireSignin: boolean;
   requireActivation: boolean;
+  localRuntimeEnabled: boolean;
+  cloudWorkspaceRequired: boolean;
+  updaterManifestChannel: "latest" | "cloud" | "enterprise" | "server2016-cloud";
 };
 
 /** Org + first-skill identity shared by the handoff and prepared records. */
