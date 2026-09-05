@@ -47,7 +47,7 @@ test("accepted admission that reaches idle with no assistant result is unresolve
   // exactly the length-check false positive — must also stay unresolved.
   expect(outcome([userMessage("u1", "first ever message")])).toBe("unresolved");
 
-  evidence.recordAssertionEvidence(
+  evidence.fact(
     "Idle with an unanswered accepted user message is a real failure state",
     "resolveAdmissionOutcome returned 'unresolved' for an idle transcript whose last user message has no assistant result, including the single-user-message transcript that previously satisfied the length check and cleared silently.",
     true,
@@ -79,7 +79,7 @@ test("every accepted admission terminates in a supported terminal state", ({ evi
   expect(outcome([])).toBe("settled");
   expect(outcome([assistantMessage("a0", "hello")])).toBe("settled");
 
-  evidence.recordAssertionEvidence(
+  evidence.fact(
     "Terminal invariant covers output, needs-input, error, and unknown-outcome states",
     "resolveAdmissionOutcome classified busy/retry/sending and question/permission waits as pending, visible assistant output and explicit errors as settled, and both the missing and the invisible assistant result as unresolved.",
     true,
@@ -98,7 +98,7 @@ test("the recovery state is a pure function of transcript and status, so it surv
   const after = outcome(rehydrated);
   expect(before).toBe("unresolved");
   expect(after).toBe("unresolved");
-  evidence.recordAssertionEvidence(
+  evidence.fact(
     "Recovery information survives reload by construction",
     "The unresolved outcome was recomputed identically from a rehydrated copy of the same transcript and idle status, with no reliance on in-memory component state.",
     true,
@@ -129,7 +129,7 @@ test("resume single-flight guard admits exactly one recovery prompt for rapid re
   expect(await guard.run(async () => { executions += 1; })).toBe(true);
   expect(executions).toBe(2);
 
-  evidence.recordAssertionEvidence(
+  evidence.fact(
     "Rapid Resume clicks admit exactly one recovery prompt",
     "While one resume was in flight, two further invocations were dropped without executing; after completion a deliberate new invocation ran, proving in-flight exactly-once semantics rather than a permanent lockout.",
     true,

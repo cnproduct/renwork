@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { expect, onTestFinished } from "vitest";
 import { control, createAndSelectWorkspace, evalIn, selectModel, waitFor, waitForText } from "@openwork/behaviors";
-import { screenshot, validate } from "@openwork/test-evidence";
+import { screenshot, validate } from "@openwork/fraimz";
 import { desktop } from "@openwork/hosts";
 import { needs, test } from "@openwork/testkit";
 
@@ -162,7 +162,7 @@ test.skipIf(!e2eTestsEnabled)(title, { timeout: 600_000 }, async ({ evidence }) 
 
   // Admission accepted: the user message was created and is rendered.
   await waitForText(app, prompt, { timeoutMs: 60_000 });
-  evidence.recordAssertionEvidence(
+  evidence.fact(
     "The session, admission, and user message were created",
     "After composer.send the prompt text was rendered as a user message in the new session's transcript.",
     true,
@@ -178,7 +178,7 @@ test.skipIf(!e2eTestsEnabled)(title, { timeout: 600_000 }, async ({ evidence }) 
   const cardShownAfterMs = Date.now() - admittedAt;
   const assistantReplyVisible = await evalIn(app, `document.body.innerText.includes(${JSON.stringify(resumedReply)})`);
   expect(assistantReplyVisible, "no assistant reply must be visible before resume").toBe(false);
-  evidence.recordAssertionEvidence(
+  evidence.fact(
     "Idle without an assistant result surfaces an actionable recovery card",
     `The session reached idle with no visible assistant output and the accepted-but-outcome-unknown recovery card appeared ${Math.round(cardShownAfterMs / 100) / 10}s after admission, instead of silently clearing the wait state.`,
     true,
@@ -207,7 +207,7 @@ test.skipIf(!e2eTestsEnabled)(title, { timeout: 600_000 }, async ({ evidence }) 
     timeoutMs: 60_000,
     label: "recovery card re-derived after reload",
   });
-  evidence.recordAssertionEvidence(
+  evidence.fact(
     "The recovery state survives a reload before resuming",
     "After location.reload() the rehydrated transcript re-derived the same accepted-but-outcome-unknown recovery card for the unanswered user message.",
     true,
@@ -241,7 +241,7 @@ test.skipIf(!e2eTestsEnabled)(title, { timeout: 600_000 }, async ({ evidence }) 
     return count;
   })()`);
   expect(recoveryPromptCount, "exactly one recovery prompt admitted for two rapid clicks").toBe(1);
-  evidence.recordAssertionEvidence(
+  evidence.fact(
     "Two rapid Resume clicks admit exactly one recovery prompt",
     `After a rapid double click the transcript contains exactly one recovery prompt (count=${String(recoveryPromptCount)}), the assistant produced '${resumedReply}', and the recovery card cleared once assistant output arrived.`,
     true,
