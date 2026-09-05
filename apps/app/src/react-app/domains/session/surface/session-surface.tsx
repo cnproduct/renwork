@@ -3,7 +3,7 @@ import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } fro
 import type { UIMessage } from "ai";
 import { useQuery } from "@tanstack/react-query";
 import type { SessionStatus } from "@opencode-ai/sdk/v2/client";
-import { Check, Minimize2 } from "lucide-react";
+import { Check, CirclePause, Minimize2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
 import { captureAnalyticsEvent } from "@/app/lib/analytics";
@@ -53,6 +53,13 @@ import { useShellConfig } from "@/react-app/shell/shell-config";
 import { useReactRenderWatchdog } from "@/react-app/shell/react-render-watchdog";
 import { SessionDebugPanel } from "./debug-panel";
 import { deriveRenderedSessionMessages, resolveRenderedSessionSnapshot } from "./session-render-state";
+import {
+  ADMISSION_OUTCOME_GRACE_MS,
+  createSingleFlight,
+  messageHasVisibleAssistantOutput,
+  resolveAdmissionOutcome,
+} from "./session-admission-outcome";
+import { interruptedTaskRecoveryPrompt } from "@/react-app/domains/session/sync/session-error";
 import { useLocal } from "@/react-app/kernel/local-provider";
 import { resolveAttachmentFileMetadata } from "@/react-app/domains/session/sync/attachment-file-part";
 import { clearSessionDraft, getSessionDraft } from "@/react-app/domains/session/sync/draft-store";
@@ -442,14 +449,6 @@ function useSharedQueryState<T>(queryKey: readonly unknown[], fallback: T) {
   return query.data ?? fallback;
 }
 
-function messageHasVisibleAssistantOutput(message: UIMessage) {
-  if (message.role !== "assistant") return false;
-  return message.parts.some((part) => {
-    if ("text" in part && typeof part.text === "string") return part.text.trim().length > 0;
-    return part.type === "dynamic-tool" || part.type === "file";
-  });
-}
-
 function AssistantWaitingCard({ label = t("session.assistant_thinking") }: { label?: string }) {
   return (
     <div className="flex justify-start" role="status" aria-live="polite">
@@ -467,6 +466,34 @@ function AssistantWaitingCard({ label = t("session.assistant_thinking") }: { lab
           />
         </div>
         <span>{label}</span>
+      </div>
+    </div>
+  );
+}
+
+// Terminal recovery surface for an accepted admission that reached idle with
+// no assistant result. Styled after the interrupted-run status line: a quiet
+// pause, not a failure, with Resume as the single emphasized action.
+function AdmissionOutcomeUnknownCard(props: { resuming: boolean; onResume: () => void }) {
+  return (
+    <div
+      data-testid="admission-outcome-unknown"
+      role="status"
+      className="not-prose mx-auto flex w-full max-w-3xl flex-col items-start gap-2 px-2 md:px-10"
+    >
+      <div className="flex min-w-0 items-center gap-2 py-1 text-sm text-dls-secondary">
+        <CirclePause aria-hidden="true" className="size-4 shrink-0" />
+        <span className="min-w-0">{t("session.admission_outcome_unknown")}</span>
+        <span aria-hidden="true" className="text-dls-secondary/60">·</span>
+        <button
+          type="button"
+          data-testid="admission-outcome-resume"
+          disabled={props.resuming}
+          onClick={props.onResume}
+          className="shrink-0 cursor-pointer font-medium text-dls-text underline-offset-2 transition-colors hover:underline disabled:cursor-default disabled:opacity-60"
+        >
+          {t("session.resume_interrupted")}
+        </button>
       </div>
     </div>
   );
@@ -747,6 +774,9 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const [restoringRevertedMessages, setRestoringRevertedMessages] = useState(false);
   const [showDelayedLoading, setShowDelayedLoading] = useState(false);
   const [awaitingAssistantBaseline, setAwaitingAssistantBaseline] = useState<number | null>(null);
+  // Terminal invariant: an accepted admission that reached idle with no
+  // assistant result surfaces a bounded recovery card instead of plain idle.
+  const [admissionOutcomeUnresolved, setAdmissionOutcomeUnresolved] = useState(false);
   const [rendered, setRendered] = useState<{ sessionId: string; snapshot: OpenworkSessionSnapshot } | null>(null);
   const [toolSkills, setToolSkills] = useState<SkillCard[]>([]);
   const [toolMcpServers, setToolMcpServers] = useState<McpServerEntry[]>([]);
@@ -810,6 +840,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     setRestoringRevertedMessages(false);
     setShowDelayedLoading(false);
     setAwaitingAssistantBaseline(null);
+    setAdmissionOutcomeUnresolved(false);
     // Composer draft state lives in the shared store keyed by session id, so
     // switching sessions preserves each session's own in-progress composer.
     autoOpenedTargetRef.current = null;
@@ -1086,17 +1117,34 @@ export function SessionSurface(props: SessionSurfaceProps) {
     return () => window.clearTimeout(id);
   }, [pendingSessionLoad]);
 
+  // Terminal invariant for accepted admissions: idle with no assistant result
+  // must never silently clear the task. The transcript-length check alone is
+  // not an outcome — the newly appended user message satisfies it even when no
+  // assistant message exists. Deriving the outcome from the transcript (last
+  // user message answered by visible assistant output) also makes the recovery
+  // state survive a reload: rehydrating the same transcript recomputes it.
+  const admissionOutcome = useMemo(() => resolveAdmissionOutcome({
+    messages: renderedMessages,
+    statusType: liveStatus.type,
+    sending,
+    hasActiveQuestion: Boolean(props.activeQuestion),
+    hasActivePermission: Boolean(props.activePermission),
+    hasSessionError: error !== null,
+  }), [error, liveStatus.type, props.activePermission, props.activeQuestion, renderedMessages, sending]);
+
   useEffect(() => {
-    if (awaitingAssistantBaseline === null) return;
-    if (assistantOutputAfterAwaitStart) {
+    if (admissionOutcome !== "unresolved") {
+      setAdmissionOutcomeUnresolved(false);
       return;
     }
-    if (sending || liveStatus.type !== "idle" || renderedMessages.length <= awaitingAssistantBaseline) return;
     const id = window.setTimeout(() => {
+      // Swap the wait state for the recovery card in one step so the
+      // admission never terminates as plain idle without a result.
       setAwaitingAssistantBaseline(null);
-    }, 1200);
+      setAdmissionOutcomeUnresolved(true);
+    }, ADMISSION_OUTCOME_GRACE_MS);
     return () => window.clearTimeout(id);
-  }, [assistantOutputAfterAwaitStart, awaitingAssistantBaseline, liveStatus.type, renderedMessages.length, sending]);
+  }, [admissionOutcome]);
 
   const model = deriveSessionRenderModel({
     intendedSessionId: props.sessionId,
@@ -1720,6 +1768,34 @@ export function SessionSurface(props: SessionSurfaceProps) {
     void typeComposerText(prompt);
   }, [typeComposerText]);
 
+  // Explicit user click on the interrupted-run error card or the
+  // outcome-unknown recovery card. Re-submits the classified recovery prompt
+  // through the normal send path so the agent continues the interrupted task
+  // in this session instead of restarting it. The single-flight guard drops
+  // (never queues) repeat clicks while one resume is in flight, so rapid
+  // clicking admits exactly one recovery prompt.
+  const resumeGuardRef = useRef(createSingleFlight());
+  const [resuming, setResuming] = useState(false);
+  const handleResumeInterrupted = useCallback(async (recoveryPrompt: string) => {
+    await resumeGuardRef.current.run(async () => {
+      setResuming(true);
+      try {
+        await sendDraft({
+          mode: "prompt",
+          parts: [{ type: "text", text: recoveryPrompt }],
+          attachments: [],
+          text: recoveryPrompt,
+        });
+      } catch {
+        // sendDraft already surfaced the failure on the session error state.
+      } finally {
+        setResuming(false);
+      }
+    });
+  }, [sendDraft]);
+  const handleResumeUnknownOutcome = useCallback(() => {
+    void handleResumeInterrupted(interruptedTaskRecoveryPrompt);
+  }, [handleResumeInterrupted]);
   useEffect(() => {
     const resetReconnectState = () => {
       useChatMcpReconnectStore.getState().reset();
@@ -2062,6 +2138,12 @@ export function SessionSurface(props: SessionSurfaceProps) {
                 </OpenTargetProvider>
               </DevProfiler>
             )}
+            {admissionOutcomeUnresolved && renderedMessages.length > 0 ? (
+              <AdmissionOutcomeUnknownCard
+                resuming={resuming}
+                onResume={handleResumeUnknownOutcome}
+              />
+            ) : null}
           </div>
         </div>
         <SessionScrollOverlay
