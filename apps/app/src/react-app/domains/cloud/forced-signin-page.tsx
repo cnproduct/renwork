@@ -1,6 +1,5 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
 
 import { t } from "../../../i18n";
 import {
@@ -12,7 +11,6 @@ import {
   readDenBootstrapConfig,
   readDenSettings,
   resolveDenBaseUrls,
-  setDenBootstrapConfig,
 } from "../../../app/lib/den";
 import { markDesktopSignInInitiated } from "../../../app/lib/den-sign-in-intent";
 import { exchangeHandoffAndSignIn } from "../../../app/lib/den-handoff";
@@ -78,7 +76,6 @@ export function parseManualAuthInput(value: string) {
  * shared `DenSignInSurface` presentation layer.
  */
 export function ForcedSigninPage({ developerMode }: ForcedSigninPageProps) {
-  const navigate = useNavigate();
   const platform = usePlatform();
   const denAuth = useDenAuth();
   const desktopConfig = useDesktopConfig();
@@ -102,15 +99,6 @@ export function ForcedSigninPage({ developerMode }: ForcedSigninPageProps) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [signinFallbackUrl, setSigninFallbackUrl] = useState<string | null>(null);
-
-  const handleUseLocalMode = useCallback(async () => {
-    const current = readDenBootstrapConfig();
-    await setDenBootstrapConfig({
-      ...current,
-      requireSignin: false,
-    });
-    navigate("/welcome", { replace: true });
-  }, [navigate]);
 
   useEffect(() => {
     document.title = appName;
@@ -309,7 +297,6 @@ export function ForcedSigninPage({ developerMode }: ForcedSigninPageProps) {
       organizationServerBusy={baseUrlBusy}
       organizationServerError={baseUrlError}
       organizationServerUrl={baseUrl}
-      onUseLocalMode={handleUseLocalMode}
       onBaseUrlDraftInput={setBaseUrlDraft}
       onOrganizationServerSave={applyBaseUrl}
       onResetBaseUrl={() => setBaseUrlDraft(baseUrl)}

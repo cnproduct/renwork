@@ -135,4 +135,14 @@ describe("enterprise desktop activation", () => {
       "bootstrap.enterpriseActivation?.denBaseUrl ||",
     );
   });
+
+  test("does not expose local bypass from managed desktop distributions", () => {
+    expect(forcedSignInPageSource).not.toContain("onUseLocalMode=");
+    expect(signInSurfaceSource).toContain(
+      'const localModeAvailable = typeof props.onUseLocalMode === "function";',
+    );
+    expect(signInSurfaceSource).toContain(
+      '{localModeAvailable ? "✨ Standalone 独立版" : "RenWork Cloud"}',
+    );
+  });
 });
