@@ -29,6 +29,11 @@ describe("Voiceover V13 release governance", () => {
     expect(ownerPolicy.match(/orgRoleRoute\(\["owner"\]\)/g)?.length).toBe(2)
   })
 
+  test("keeps offline-paid local runtimes inside their purchased plan", () => {
+    const runtime = source("..", "src", "routes", "metered-runtime.ts")
+    expect(runtime).toContain('access.source === "subscription" || access.source === "offline_payment"')
+  })
+
   test("does not let a desktop member or organization owner bypass cloud provider governance", () => {
     const desktopPolicy = source(
       "..", "..", "..", "..", "apps", "app", "src", "react-app", "domains", "connections", "provider-auth", "desktop-provider-management.ts",

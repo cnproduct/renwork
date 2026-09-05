@@ -45,7 +45,7 @@ const publicModelCatalogSchema = z.object({
     memberMonthlyBudgetMicroCredits: z.number().int().nonnegative().nullable(),
   }),
   access: z.object({
-    source: z.enum(["subscription", "campaign", "super_admin"]),
+    source: z.enum(["subscription", "campaign", "super_admin", "offline_payment"]),
     expiresAt: z.string().datetime().nullable(),
   }),
 })
@@ -94,7 +94,7 @@ export function registerOrgModelCatalogRoutes<T extends { Variables: OrgRouteVar
           return c.json({ error: "MODEL_CATALOG_NOT_ACTIVE", message: "RenWork model catalog is temporarily unavailable." }, 503)
         }
 
-        const publicCatalog = access.source === "subscription"
+        const publicCatalog = access.source === "subscription" || access.source === "offline_payment"
           ? toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier)
           : toPublicModelCatalog(parsed.data)
         const policy = readOrganizationModelPolicy(organization.metadata)

@@ -38,8 +38,9 @@ describe("RenWork member model catalog route", () => {
     expect(response.status).toBe(401)
   })
 
-  test("uses subscription plans or a scoped temporary grant and returns only the public projection", () => {
-    expect(route).toContain('access.source === "subscription"')
+  test("uses paid plan filters for subscriptions and offline payments, or a scoped temporary grant", () => {
+    expect(route).toContain('access.source === "subscription" || access.source === "offline_payment"')
+    expect(route).toContain('"offline_payment"')
     expect(route).toContain("parseOrganizationPlan(organization.metadata).tier")
     expect(route).toContain("toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier)")
     expect(route).toContain("toPublicModelCatalog(parsed.data)")
