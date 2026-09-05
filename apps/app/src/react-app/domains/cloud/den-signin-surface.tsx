@@ -76,6 +76,7 @@ const errorBannerClass =
 export function DenSignInSurface(props: DenSignInSurfaceProps) {
   const variant: DenSignInSurfaceVariant = props.variant ?? "panel";
   const appName = props.appName?.trim() || "RenWork";
+  const localModeAvailable = typeof props.onUseLocalMode === "function";
 
   /* -- Panel content (reused by both variants) -- */
   const panelContent = (
@@ -267,7 +268,7 @@ export function DenSignInSurface(props: DenSignInSurfaceProps) {
                 </div>
               </div>
               <span className="inline-flex items-center rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-400 border border-orange-500/20">
-                ✨ Standalone 独立版
+                {localModeAvailable ? "✨ Standalone 独立版" : "RenWork Cloud"}
               </span>
             </div>
 
@@ -280,44 +281,49 @@ export function DenSignInSurface(props: DenSignInSurfaceProps) {
               </p>
             </div>
 
-            {/* Mode 1: Primary Local Standalone Option (Recommended) */}
-            <div className="mt-7 rounded-2xl border-2 border-orange-500/30 bg-orange-500/5 p-5 sm:p-6 flex flex-col gap-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">💻</span>
-                  <div>
-                    <h3 className="text-base font-bold text-foreground">本地独立运行模式 (推荐)</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      无需注册云端账号，本地直连 DeepSeek / OpenAI / Claude 等模型，海关买家穿透、社媒矩阵与外联邮件全流程在本地私密高效运行。
-                    </p>
+            {/* Local mode is available only in an explicitly standalone distribution. */}
+            {localModeAvailable ? (
+              <div className="mt-7 rounded-2xl border-2 border-orange-500/30 bg-orange-500/5 p-5 sm:p-6 flex flex-col gap-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">💻</span>
+                    <div>
+                      <h3 className="text-base font-bold text-foreground">本地独立运行模式 (推荐)</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        无需注册云端账号，本地直连 DeepSeek / OpenAI / Claude 等模型，海关买家穿透、社媒矩阵与外联邮件全流程在本地私密高效运行。
+                      </p>
+                    </div>
                   </div>
+                  <span className="shrink-0 rounded-full bg-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] font-bold px-2.5 py-0.5 border border-orange-500/30">
+                    免登录 · 隐私安全
+                  </span>
                 </div>
-                <span className="shrink-0 rounded-full bg-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] font-bold px-2.5 py-0.5 border border-orange-500/30">
-                  免登录 · 隐私安全
-                </span>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="h-12 w-full text-[15px] font-bold bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-md shadow-orange-500/20 cursor-pointer flex items-center justify-center gap-2"
+                  onClick={props.onUseLocalMode}
+                >
+                  🚀 直接进入本地数字员工工作台
+                  <ArrowRight size={16} />
+                </Button>
               </div>
-              <Button
-                type="button"
-                size="lg"
-                className="h-12 w-full text-[15px] font-bold bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-md shadow-orange-500/20 cursor-pointer flex items-center justify-center gap-2"
-                onClick={props.onUseLocalMode}
-              >
-                🚀 直接进入本地数字员工工作台
-                <ArrowRight size={16} />
-              </Button>
-            </div>
+            ) : null}
 
-            {/* Divider: Or connect to cloud */}
-            <div className="mt-8 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs font-medium text-muted-foreground">
-                或连接云端企业协同中心 (可选)
-              </span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
+            {localModeAvailable ? (
+              <div className="mt-8 flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs font-medium text-muted-foreground">
+                  或连接云端企业协同中心 (可选)
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+            ) : null}
 
-            {/* Mode 2: Cloud Sign-In & Settings */}
-            <div className="mt-4 flex flex-col gap-3">
+            {/* Managed distributions expose cloud sign-in as the only entry path. */}
+            <div
+              className={`${localModeAvailable ? "mt-4" : "mt-8"} flex flex-col gap-3`}
+            >
               <Button
                 type="button"
                 variant="outline"
