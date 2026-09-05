@@ -28,8 +28,8 @@ test("Voiceover V7 is enforced by server and desktop gates", async ({ evidence }
   expect(catalogRoute).toContain("SUBSCRIPTION_REQUIRED");
   expect(gateway).toContain("SUBSCRIPTION_REQUIRED");
   expect(gateway).toContain("accessAllowsModel");
-  expect(gateway).toContain('access.source === "subscription" && !modelAllowedForPlan');
-  expect(catalogRoute).toContain('access.source === "subscription"');
+  expect(gateway).toContain('access.source === "subscription" || access.source === "offline_payment"');
+  expect(catalogRoute).toContain('access.source === "subscription" || access.source === "offline_payment"');
   expect(catalogRoute).toContain("access.allowedModelSkus");
   expect(access).toContain("organizationHasActiveInferenceSubscription");
   expect(access).toContain("expiresAt");
