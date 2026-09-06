@@ -14,6 +14,7 @@ import {
 } from "../../../app/lib/den";
 import { markDesktopSignInInitiated } from "../../../app/lib/den-sign-in-intent";
 import { exchangeHandoffAndSignIn } from "../../../app/lib/den-handoff";
+import { parseManualDenAuthInput } from "../../../app/lib/openwork-links";
 import {
   denSessionUpdatedEvent,
   type DenSessionUpdatedDetail,
@@ -33,37 +34,11 @@ export type ForcedSigninPageProps = {
 
 /**
  * Parse a pasted manual-auth input. Accepts either a raw handoff grant
- * string (>= 12 chars) or an `openwork://den-auth?grant=…` deep link.
+ * string (>= 12 chars) or a branded/legacy `den-auth` deep link.
  * Matches the Solid ForcedSigninPage exactly so flows stay fungible.
  */
 export function parseManualAuthInput(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  try {
-    const url = new URL(trimmed);
-    const protocol = url.protocol.toLowerCase();
-    const routeHost = url.hostname.toLowerCase();
-    const routePath = url.pathname.replace(/^\/+/, "").toLowerCase();
-    const routeSegments = routePath.split("/").filter(Boolean);
-    const routeTail = routeSegments[routeSegments.length - 1] ?? "";
-    if (
-      (protocol === "openwork:" || protocol === "openwork-dev:") &&
-      (routeHost === "den-auth" ||
-        routePath === "den-auth" ||
-        routeTail === "den-auth")
-    ) {
-      const grant = url.searchParams.get("grant")?.trim() ?? "";
-      const nextBaseUrl =
-        normalizeDenBaseUrl(url.searchParams.get("denBaseUrl")?.trim() ?? "") ??
-        undefined;
-      return grant ? { grant, baseUrl: nextBaseUrl } : null;
-    }
-  } catch {
-    // Treat non-URL input as a raw handoff grant.
-  }
-
-  return trimmed.length >= 12 ? { grant: trimmed } : null;
+  return parseManualDenAuthInput(value);
 }
 
 /**
