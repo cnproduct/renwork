@@ -70,6 +70,8 @@ export function cloudWorkspaceBootStages(variant: CloudWorkspacePillVariant): Cl
 /** Past this point "usually under a minute" stops being true, so the copy and the actions change. */
 export const CLOUD_WORKSPACE_SLOW_BOOT_MS = 45_000;
 
+export type CloudWorkspaceRequestError = "not-enabled" | "session-expired" | "unavailable";
+
 export function cloudWorkspaceBootIsSlow(elapsedMs: number): boolean {
   return elapsedMs >= CLOUD_WORKSPACE_SLOW_BOOT_MS;
 }
@@ -85,8 +87,27 @@ export function formatCloudWorkspaceElapsed(elapsedMs: number): string {
 export function cloudWorkspaceTakeoverCopy(input: {
   variant: CloudWorkspacePillVariant;
   slow: boolean;
+  requestError?: CloudWorkspaceRequestError | null;
 }): { title: string; body: string } {
   if (input.variant === "failed") {
+    if (input.requestError === "not-enabled") {
+      return {
+        title: "Cloud workspace not enabled",
+        body: "Windows Server 2016 needs a RenWork cloud workspace. Ask your platform administrator to enable cloud runtime for this organization.",
+      };
+    }
+    if (input.requestError === "session-expired") {
+      return {
+        title: "Sign-in expired",
+        body: "Sign out, then sign in again to reconnect this computer to RenWork Cloud.",
+      };
+    }
+    if (input.requestError === "unavailable") {
+      return {
+        title: "RenWork Cloud is unavailable",
+        body: "The cloud workspace service could not be reached. Retry in a moment, or contact your platform administrator.",
+      };
+    }
     return {
       title: "Workspace needs attention",
       body: "We couldn’t start the sandbox. Retry, or sign out and reconnect.",

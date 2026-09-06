@@ -87,6 +87,17 @@ function installWindow(options: {
     ownerToken: string;
     hostToken?: string;
   };
+  desktopDistribution?: {
+    flavor: "server2016-cloud";
+    appName: string;
+    appIdentifier: string;
+    protocolScheme: string;
+    requireSignin: boolean;
+    requireActivation: boolean;
+    localRuntimeEnabled: boolean;
+    cloudWorkspaceRequired: boolean;
+    updaterManifestChannel: "server2016-cloud";
+  };
   /** Raw openworkServerInfo response for non-ready/restarting server states. */
   electronServerInfoRaw?: Record<string, unknown>;
   /** Simulate a desktop bridge whose openworkServerInfo call fails outright. */
@@ -94,7 +105,7 @@ function installWindow(options: {
 }) {
   const localStorage = memoryStorage();
   const electronBridgeInstalled =
-    options.electronInfo || options.electronServerInfoRaw || options.electronServerInfoError;
+    options.electronInfo || options.desktopDistribution || options.electronServerInfoRaw || options.electronServerInfoError;
   Object.defineProperty(globalThis, "window", {
     configurable: true,
     value: {
@@ -105,6 +116,9 @@ function installWindow(options: {
       __OPENWORK_BOOTSTRAP__: options.bootstrapToken ? { token: options.bootstrapToken } : undefined,
       __OPENWORK_ELECTRON__: electronBridgeInstalled
         ? {
+            meta: options.desktopDistribution
+              ? { distribution: options.desktopDistribution }
+              : undefined,
             invokeDesktop: async (command: string) => {
               if (command !== "openworkServerInfo") {
                 throw new Error(`Unexpected desktop command: ${command}`);
@@ -489,6 +503,33 @@ describe("non-gateway connection modes", () => {
     expect(authUrl.searchParams.get("desktopScheme")).toBe("renwork");
     expect(authUrl.searchParams.get("webAuth")).toBeNull();
     expect(authUrl.searchParams.get("webAuthReturn")).toBeNull();
+  });
+
+  test("Server 2016 desktop auth returns through its isolated protocol", () => {
+    const previous = process.env.VITE_OPENWORK_DEPLOYMENT;
+    process.env.VITE_OPENWORK_DEPLOYMENT = "desktop";
+    installWindow({
+      origin: "http://127.0.0.1:5178",
+      desktopDistribution: {
+        flavor: "server2016-cloud",
+        appName: "RenWork Server 2016 Cloud",
+        appIdentifier: "com.renrenyi.renwork.server2016cloud",
+        protocolScheme: "renwork-server2016",
+        requireSignin: true,
+        requireActivation: false,
+        localRuntimeEnabled: false,
+        cloudWorkspaceRequired: true,
+        updaterManifestChannel: "server2016-cloud",
+      },
+    });
+
+    try {
+      const authUrl = new URL(buildDenAuthUrl(readDenSettings().baseUrl, "sign-in"));
+      expect(authUrl.searchParams.get("desktopAuth")).toBe("1");
+      expect(authUrl.searchParams.get("desktopScheme")).toBe("renwork-server2016");
+    } finally {
+      restoreEnv("VITE_OPENWORK_DEPLOYMENT", previous);
+    }
   });
 
   test("force-env clears a stale stored Den base URL on web bootstrap init", async () => {

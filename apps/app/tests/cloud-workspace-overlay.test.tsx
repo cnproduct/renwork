@@ -245,6 +245,17 @@ describe("cloud workspace slow boot escalation", () => {
     expect(failed.title).toBe("Workspace needs attention");
   });
 
+  test("explains when the organization has no cloud workspace", () => {
+    const failed = cloudWorkspaceTakeoverCopy({
+      variant: "failed",
+      slow: false,
+      requestError: "not-enabled",
+    });
+
+    expect(failed.title).toBe("Cloud workspace not enabled");
+    expect(failed.body).toContain("Windows Server 2016");
+  });
+
   test("formats elapsed time for both short and long waits", () => {
     expect(formatCloudWorkspaceElapsed(0)).toBe("0s elapsed");
     expect(formatCloudWorkspaceElapsed(48_000)).toBe("48s elapsed");
@@ -262,6 +273,7 @@ function renderTakeover(status: DenCloudInstance["status"]) {
         visible: true,
         instance: instance({ status }),
         requestFailed: false,
+        requestError: null,
         updating: false,
         viewModel,
         refresh: async () => {},

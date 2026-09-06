@@ -2180,7 +2180,11 @@ const desktopCommandHandlers = {
   },
   "__applyBrandAppName": async (event, ...args) => {
     currentDisplayAppName = applyBrandAppName(
-      BLANK_SLATE_LAUNCH.enabled || DESKTOP_DISTRIBUTION.flavor === "enterprise" ? null : args[0],
+      BLANK_SLATE_LAUNCH.enabled
+        || DESKTOP_DISTRIBUTION.flavor === "enterprise"
+        || DESKTOP_DISTRIBUTION.flavor === "server2016-cloud"
+        ? null
+        : args[0],
       {
       fallbackName: APP_NAME,
       platform: process.platform,
@@ -2753,7 +2757,9 @@ or use: pnpm dev:worktree`);
     });
     const bootstrapConfig = await workspaceStore.getDesktopBootstrapConfig();
     currentDisplayAppName = applyBrandAppName(
-      BLANK_SLATE_LAUNCH.enabled || DESKTOP_DISTRIBUTION.flavor === "enterprise"
+      BLANK_SLATE_LAUNCH.enabled
+        || DESKTOP_DISTRIBUTION.flavor === "enterprise"
+        || DESKTOP_DISTRIBUTION.flavor === "server2016-cloud"
         ? null
         : bootstrapConfig.brandAppName,
       {

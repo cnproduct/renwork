@@ -1,6 +1,6 @@
 # Voiceover V21 — Windows Server 2016 cloud-only desktop
 
-1. An administrator downloads `RenWork-v0.18.58-Windows-Server-2016-Cloud-x64.exe`, installs it on Windows Server 2016, and launches RenWork without an OpenCode process or missing-entry-point crash.
+1. An administrator downloads `RenWork-v0.18.59-Windows-Server-2016-Cloud-x64.exe`, installs it on Windows Server 2016, and launches RenWork without an OpenCode process or missing-entry-point crash.
 
 2. The package identifies itself as **RenWork Server 2016 Cloud** and uses its own application identifier, protocol, artifact directory, and `server2016-cloud` updater channel, so it cannot silently replace or downgrade a normal RenWork installation.
 

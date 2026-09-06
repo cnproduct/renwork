@@ -42,6 +42,7 @@ import {
   desktopFetchViaMain,
   getDesktopBootstrapConfig as getDesktopBootstrapConfigFromShell,
   readInitialDesktopBootstrapConfig,
+  readDesktopDistributionInfo,
   setDesktopBootstrapConfig as setDesktopBootstrapConfigInShell,
   type DesktopBootstrapConfig as ShellDesktopBootstrapConfig,
 } from "./desktop";
@@ -1304,7 +1305,13 @@ export function buildDenAuthUrl(baseUrl: string, mode: "sign-in" | "sign-up"): s
     // Desktop app, or local/dev web that cannot receive an approved webAuth
     // redirect: Den shows the copyable renwork:// / grant handoff instead.
     target.searchParams.set("desktopAuth", "1");
-    target.searchParams.set("desktopScheme", "renwork");
+    const configuredScheme = isDesktopDeployment()
+      ? readDesktopDistributionInfo().protocolScheme.trim()
+      : "renwork";
+    target.searchParams.set(
+      "desktopScheme",
+      /^[a-z][a-z0-9+.-]*$/i.test(configuredScheme) ? configuredScheme : "renwork",
+    );
   } else if (webReturnOrigin !== null) {
     target.searchParams.set("webAuth", "1");
     target.searchParams.set("webAuthReturn", webReturnOrigin);
