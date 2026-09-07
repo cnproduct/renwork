@@ -136,7 +136,9 @@ async function ownerCloudWorker(scope: OwnerScope) {
 }
 
 export async function cloudAgentRuntimeAvailable(scope: OwnerScope): Promise<boolean> {
-  if (env.provisionerMode !== "daytona" || !env.daytona.apiKey) return false
+  const providerConfigured = (env.provisionerMode === "daytona" && Boolean(env.daytona.apiKey))
+    || (env.provisionerMode === "self_hosted" && Boolean(env.selfHosted.runnerToken))
+  if (!providerConfigured) return false
   const organizationId = normalizeDenTypeId("organization", scope.organizationId)
   const members = await db.select({ id: MemberTable.id }).from(MemberTable).where(and(
     eq(MemberTable.id, normalizeDenTypeId("member", scope.ownerMemberId)),

@@ -6,6 +6,7 @@ import {
   engineStart,
   openworkServerInfo,
   openworkServerRestart,
+  readDesktopDistributionInfo,
   resolveWorkspaceListSelectedId,
   runtimeBootstrap,
   workspaceBootstrap,
@@ -80,6 +81,11 @@ export function useDesktopRuntimeBoot() {
 
     void (async () => {
       try {
+        if (!readDesktopDistributionInfo().localRuntimeEnabled) {
+          setPhase("bootstrapping-workspaces", "Connecting to your RenWork cloud workspace");
+          markReady();
+          return;
+        }
         const evalFatalFailure = window.__OPENWORK_ELECTRON__?.meta?.evalFatalBootstrapFailure;
         if (evalFatalFailure) throw new Error(evalFatalFailure);
         // On Electron specifically: if the previous Tauri install dropped

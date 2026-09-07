@@ -100,9 +100,14 @@ const EnvSchema = z.object({
   CLOUD_IDLE_STOP_MINUTES: z.string().optional(),
   CLOUD_IDLE_LOOP_SECONDS: z.string().optional(),
   CLOUD_IDLE_STOP_BATCH_SIZE: z.string().optional(),
-  PROVISIONER_MODE: z.enum(["stub", "render", "daytona"]).optional(),
+  PROVISIONER_MODE: z.enum(["stub", "render", "daytona", "self_hosted"]).optional(),
   WORKER_URL_TEMPLATE: z.string().optional(),
   WORKER_ACTIVITY_BASE_URL: z.string().optional(),
+  SELF_HOSTED_RUNNER_URL: z.string().optional(),
+  SELF_HOSTED_RUNNER_TOKEN: z.string().optional(),
+  SELF_HOSTED_WORKER_PUBLIC_BASE_URL: z.string().optional(),
+  SELF_HOSTED_WORKER_IMAGE: z.string().optional(),
+  SELF_HOSTED_WORKER_IMAGE_VERSION: z.string().optional(),
   DEN_AUTOMATIONS_POLL_INTERVAL_MS: z.string().optional(),
   DEN_AUTOMATIONS_BATCH_SIZE: z.string().optional(),
   DEN_AUTOMATIONS_MAX_CONCURRENCY: z.string().optional(),
@@ -214,6 +219,18 @@ const EnvSchema = z.object({
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `${key} is required when PROVISIONER_MODE=daytona`,
+          path: [key],
+        })
+      }
+    }
+  }
+
+  if (value.PROVISIONER_MODE === "self_hosted") {
+    for (const key of ["SELF_HOSTED_RUNNER_URL", "SELF_HOSTED_RUNNER_TOKEN", "SELF_HOSTED_WORKER_PUBLIC_BASE_URL", "SELF_HOSTED_WORKER_IMAGE"] as const) {
+      if (!value[key]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${key} is required when PROVISIONER_MODE=self_hosted`,
           path: [key],
         })
       }
@@ -673,6 +690,14 @@ export const env = {
   workerActivityBaseUrl:
     optionalString(parsed.WORKER_ACTIVITY_BASE_URL) ??
     parsed.BETTER_AUTH_URL.trim().replace(/\/+$/, ""),
+  selfHosted: {
+    runnerUrl: optionalString(parsed.SELF_HOSTED_RUNNER_URL),
+    runnerToken: optionalString(parsed.SELF_HOSTED_RUNNER_TOKEN),
+    workerPublicBaseUrl: optionalString(parsed.SELF_HOSTED_WORKER_PUBLIC_BASE_URL),
+    workerImage: optionalString(parsed.SELF_HOSTED_WORKER_IMAGE),
+    workerImageVersion: optionalString(parsed.SELF_HOSTED_WORKER_IMAGE_VERSION)
+      ?? optionalString(parsed.SELF_HOSTED_WORKER_IMAGE),
+  },
   automations: {
     pollIntervalMs: automationTuning(parsed.DEN_AUTOMATIONS_POLL_INTERVAL_MS, 15_000),
     batchSize: automationTuning(parsed.DEN_AUTOMATIONS_BATCH_SIZE, 25),

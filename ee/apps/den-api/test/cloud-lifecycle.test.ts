@@ -273,6 +273,28 @@ describe("cloud lifecycle idle stop", () => {
     expect(stoppedWorker.status).toBe("stopped")
     expect(retryWorker.status).toBe("healthy")
   })
+
+  test("stops an idle self-hosted worker while preserving its volumes", async () => {
+    const worker = makeWorker({
+      status: "healthy",
+      lastActiveAt: new Date("2026-07-25T10:00:00.000Z"),
+    })
+    const { store } = makeStore({ workers: [worker] })
+    const stopped: string[] = []
+    const result = await lifecycle.stopIdleCloudWorkers({
+      store,
+      provisionerMode: "self_hosted",
+      idleBefore: new Date("2026-07-25T12:00:00.000Z"),
+      stopWorker: async (workerId) => {
+        stopped.push(workerId)
+        return { status: "stopped" }
+      },
+    })
+
+    expect(result).toEqual({ checked: 1, stopped: 1 })
+    expect(stopped).toEqual([worker.id])
+    expect(worker.status).toBe("stopped")
+  })
 })
 
 describe("cloud lifecycle wake", () => {

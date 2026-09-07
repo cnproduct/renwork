@@ -49,6 +49,7 @@ import { readOrgSelectionPending } from "../../app/lib/den-sign-in-intent";
 import { UpdateNotifier } from "./update-notifier";
 import { signedInRoute } from "./den-signin-routing";
 import { VideoGenerationPage } from "../domains/video/video-generation-page";
+import { Server2016CloudWorkspaceConnector } from "./server-2016-cloud-workspace";
 
 
 type DenSigninGateProps = {
@@ -381,6 +382,7 @@ export function AppRoot() {
           <CloudWorkspaceStatusProvider>
           <EnterpriseActivationGate>
           <DenSigninGate>
+            <Server2016CloudWorkspaceConnector />
             <Routes>
               <Route
                 path="/signin"

@@ -529,7 +529,14 @@ export function readDesktopDistributionInfo(): DesktopDistributionInfo {
     protocolScheme: "renwork",
     requireSignin: false,
     requireActivation: false,
+    localRuntimeEnabled: true,
+    cloudWorkspaceRequired: false,
+    updaterManifestChannel: "latest",
   };
+}
+
+export function isServer2016CloudDesktopRuntime(): boolean {
+  return readDesktopDistributionInfo().flavor === "server2016-cloud";
 }
 
 // ---------------------------------------------------------------------------

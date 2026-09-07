@@ -62,7 +62,23 @@ services:
       DEN_MCP_RESOURCE_URL: https://www.rrenn.com/api/den/mcp
       DEN_BETTER_AUTH_TRUSTED_ORIGINS: https://www.rrenn.com,https://rrenn.com
       CORS_ORIGINS: https://www.rrenn.com,https://rrenn.com
-      PROVISIONER_MODE: stub
+      # Keep stub as the fail-closed default. Production can explicitly enable
+      # either the managed Daytona backend or the isolated self-hosted runner.
+      PROVISIONER_MODE: ${PROVISIONER_MODE:-stub}
+      SELF_HOSTED_RUNNER_URL: ${SELF_HOSTED_RUNNER_URL:-http://self-hosted-runner:8792}
+      SELF_HOSTED_RUNNER_TOKEN: ${SELF_HOSTED_RUNNER_TOKEN:-}
+      SELF_HOSTED_WORKER_PUBLIC_BASE_URL: ${SELF_HOSTED_WORKER_PUBLIC_BASE_URL:-https://www.rrenn.com/api/den/v1/cloud/workers}
+      SELF_HOSTED_WORKER_IMAGE: ${SELF_HOSTED_WORKER_IMAGE:-}
+      SELF_HOSTED_WORKER_IMAGE_VERSION: ${SELF_HOSTED_WORKER_IMAGE_VERSION:-}
+      CLOUD_IDLE_STOP_MINUTES: ${CLOUD_IDLE_STOP_MINUTES:-15}
+      DAYTONA_API_KEY: ${DAYTONA_API_KEY:-}
+      DAYTONA_API_URL: ${DAYTONA_API_URL:-https://app.daytona.io/api}
+      DAYTONA_TARGET: ${DAYTONA_TARGET:-}
+      DAYTONA_SNAPSHOT: ${DAYTONA_SNAPSHOT:-}
+      DAYTONA_WORKER_PROXY_BASE_URL: ${DAYTONA_WORKER_PROXY_BASE_URL:-}
+      DAYTONA_SANDBOX_CPU: ${DAYTONA_SANDBOX_CPU:-2}
+      DAYTONA_SANDBOX_MEMORY: ${DAYTONA_SANDBOX_MEMORY:-4}
+      DAYTONA_SANDBOX_DISK: ${DAYTONA_SANDBOX_DISK:-8}
       DEN_OBSERVABILITY_BACKEND: none
       RENWORK_MODEL_CATALOG_BASE_URL: http://127.0.0.1:8089
       RENWORK_MODEL_CATALOG_ADMIN_TOKEN: ${RENWORK_SUPER_ADMIN_TOKEN}
@@ -131,6 +147,34 @@ services:
       timeout: 5s
       retries: 30
       start_period: 90s
+
+  # This narrow control-plane sidecar is the only service allowed to reach the
+  # Docker socket. Den authenticates to it over the private Compose network;
+  # it accepts only fixed worker lifecycle operations and one allowlisted image.
+  self-hosted-runner:
+    profiles: ["self-hosted"]
+    image: ${RENWORK_SELF_HOSTED_RUNNER_IMAGE:-ghcr.io/cnproduct/openwork-self-hosted-runner:latest}
+    restart: unless-stopped
+    environment:
+      PORT: "8792"
+      SELF_HOSTED_RUNNER_TOKEN: ${SELF_HOSTED_RUNNER_TOKEN:-}
+      SELF_HOSTED_WORKER_IMAGE: ${SELF_HOSTED_WORKER_IMAGE:-}
+      SELF_HOSTED_WORKER_IMAGE_VERSION: ${SELF_HOSTED_WORKER_IMAGE_VERSION:-}
+      SELF_HOSTED_WORKER_NETWORK: renwork-auth_default
+      SELF_HOSTED_MAX_RUNNING_WORKERS: ${SELF_HOSTED_MAX_RUNNING_WORKERS:-1}
+      SELF_HOSTED_WORKER_MEMORY_BYTES: ${SELF_HOSTED_WORKER_MEMORY_BYTES:-2147483648}
+      SELF_HOSTED_WORKER_NANO_CPUS: ${SELF_HOSTED_WORKER_NANO_CPUS:-1000000000}
+      SELF_HOSTED_WORKER_PIDS_LIMIT: ${SELF_HOSTED_WORKER_PIDS_LIMIT:-256}
+    group_add:
+      - ${DOCKER_GID:-0}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8792/health').then((res)=>process.exit(res.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
 volumes:
   mysql-data:

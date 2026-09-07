@@ -14,6 +14,11 @@ export type DenAuthDeepLink = {
   denBaseUrl: string;
 };
 
+export type ManualDenAuthInput = {
+  grant: string;
+  baseUrl?: string;
+};
+
 export type ConnectDeepLink = {
   /** The full deep link, relayed verbatim to the main process for verification. */
   rawUrl: string;
@@ -144,6 +149,44 @@ export function parseDenAuthDeepLink(rawUrl: string): DenAuthDeepLink | null {
     grant,
     denBaseUrl,
   };
+}
+
+/**
+ * Parse the value pasted into a desktop sign-in fallback. Branded RenWork
+ * links and legacy OpenWork links remain compatible; only non-URL values may
+ * fall back to being interpreted as the raw one-time grant.
+ */
+export function parseManualDenAuthInput(rawValue: string): ManualDenAuthInput | null {
+  const trimmed = rawValue.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    const protocol = url.protocol.toLowerCase();
+    if (
+      protocol !== "renwork:" &&
+      protocol !== "renwork-dev:" &&
+      protocol !== "openwork:" &&
+      protocol !== "openwork-dev:"
+    ) {
+      return null;
+    }
+
+    const routeHost = url.hostname.toLowerCase();
+    const routePath = url.pathname.replace(/^\/+/, "").toLowerCase();
+    const routeSegments = routePath.split("/").filter(Boolean);
+    const routeTail = routeSegments[routeSegments.length - 1] ?? "";
+    if (routeHost !== "den-auth" && routePath !== "den-auth" && routeTail !== "den-auth") {
+      return null;
+    }
+
+    const grant = url.searchParams.get("grant")?.trim() ?? "";
+    if (!grant) return null;
+    const baseUrl = normalizeDenBaseUrl(url.searchParams.get("denBaseUrl")?.trim() ?? "") ?? undefined;
+    return { grant, baseUrl };
+  } catch {
+    return trimmed.length >= 12 ? { grant: trimmed } : null;
+  }
 }
 
 export function parseConnectDeepLink(rawUrl: string): ConnectDeepLink | null {

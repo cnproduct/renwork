@@ -61,7 +61,8 @@ export function resolveWorkerActivityHeartbeatConfig(env: HeartbeatEnv = process
   const token = (env.DEN_ACTIVITY_HEARTBEAT_TOKEN ?? "").trim();
   const featureEnabled = enabled === "1" || enabled === "true" || enabled === "yes";
 
-  if (!featureEnabled || provider !== "daytona" || !workerId || !url || !token) {
+  const supportedProvider = provider === "daytona" || provider === "self_hosted";
+  if (!featureEnabled || !supportedProvider || !workerId || !url || !token) {
     return {
       enabled: false,
       workerId: "",

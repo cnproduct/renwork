@@ -3,7 +3,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AlertTriangle } from "lucide-react";
 import { AnimatePresence, LazyMotion, domMax, m, useReducedMotion } from "motion/react";
 
-import { clearDenSession, createDenClient, readDenSettings } from "@/app/lib/den";
+import {
+  clearDenSession,
+  createDenClient,
+  DenApiError,
+  readDenSettings,
+  type DenCloudInstance,
+} from "@/app/lib/den";
+import { isServer2016CloudDesktopRuntime } from "@/app/lib/desktop";
 import { isOpenworkGatewayRuntime } from "@/app/lib/gateway-runtime";
 import { denSettingsChangedEvent } from "@/app/lib/den-session-events";
 import { Button } from "@/components/ui/button";
@@ -22,9 +29,9 @@ import {
   shouldShowCloudWorkspaceStatusPill,
   type CloudWorkspaceBootStage,
   type CloudWorkspaceMainContentDecision,
+  type CloudWorkspaceRequestError,
   type CloudWorkspaceViewModel,
 } from "./cloud-workspace-status";
-import type { DenCloudInstance } from "@/app/lib/den";
 import { OwDotTicker } from "./dot-ticker";
 import { useBootOverlayVisible } from "./boot-state";
 
@@ -33,6 +40,7 @@ type CloudWorkspaceStatusContextValue = {
   visible: boolean;
   instance: DenCloudInstance | null;
   requestFailed: boolean;
+  requestError: CloudWorkspaceRequestError | null;
   updating: boolean;
   viewModel: CloudWorkspaceViewModel;
   refresh: () => Promise<void>;
@@ -57,6 +65,7 @@ const fallbackCloudWorkspaceStatus: CloudWorkspaceStatusContextValue = {
   visible: false,
   instance: null,
   requestFailed: false,
+  requestError: null,
   updating: false,
   viewModel: fallbackViewModel,
   refresh: noopRefresh,
@@ -92,10 +101,11 @@ export function CloudWorkspaceStatusProvider(props: { children: ReactNode }) {
   const denAuth = useDenAuth();
   const [instance, setInstance] = useState<DenCloudInstance | null>(null);
   const [requestFailed, setRequestFailed] = useState(false);
+  const [requestError, setRequestError] = useState<CloudWorkspaceRequestError | null>(null);
   const [updating, setUpdating] = useState(false);
   const [takeoverActive, setTakeoverActive] = useState(false);
   const lastAttemptedVersion = useRef<string | null>(null);
-  const gatewayMode = isOpenworkGatewayRuntime();
+  const gatewayMode = isOpenworkGatewayRuntime() || isServer2016CloudDesktopRuntime();
   const settingsSnapshot = useSyncExternalStore(
     subscribeToDenSettings,
     readDenSettingsSnapshot,
@@ -114,6 +124,7 @@ export function CloudWorkspaceStatusProvider(props: { children: ReactNode }) {
     if (!gatewayMode) return;
     if (!authToken || !orgId) {
       setRequestFailed(true);
+      setRequestError("session-expired");
       return;
     }
 
@@ -121,8 +132,19 @@ export function CloudWorkspaceStatusProvider(props: { children: ReactNode }) {
       const next = await denClient.getCloudInstance(orgId);
       setInstance(next);
       setRequestFailed(false);
-    } catch {
+      setRequestError(null);
+    } catch (error) {
       setRequestFailed(true);
+      if (error instanceof DenApiError && (error.status === 401 || error.status === 403)) {
+        setRequestError("session-expired");
+      } else if (
+        error instanceof DenApiError
+        && (error.status === 404 || error.code === "cloud_not_found")
+      ) {
+        setRequestError("not-enabled");
+      } else {
+        setRequestError("unavailable");
+      }
     }
   }, [authToken, denClient, gatewayMode, orgId]);
 
@@ -164,18 +186,21 @@ export function CloudWorkspaceStatusProvider(props: { children: ReactNode }) {
     if (!gatewayMode || !orgId || updating) return;
     setUpdating(true);
     setRequestFailed(false);
+    setRequestError(null);
     void denClient
       .updateCloudInstance(orgId)
       .then((result) => {
         if (!result.ok) {
           setUpdating(false);
           setRequestFailed(result.error === "flush_failed");
+          setRequestError(result.error === "flush_failed" ? "unavailable" : null);
         }
         void refresh();
       })
       .catch(() => {
         setUpdating(false);
         setRequestFailed(true);
+        setRequestError("unavailable");
       });
   }, [denClient, gatewayMode, orgId, refresh, updating]);
 
@@ -203,6 +228,7 @@ export function CloudWorkspaceStatusProvider(props: { children: ReactNode }) {
     visible,
     instance,
     requestFailed,
+    requestError,
     updating,
     viewModel,
     refresh,
@@ -210,7 +236,7 @@ export function CloudWorkspaceStatusProvider(props: { children: ReactNode }) {
     updateNow,
     takeoverActive,
     setTakeoverActive,
-  }), [gatewayMode, instance, refresh, requestFailed, signOut, takeoverActive, updateNow, updating, viewModel, visible]);
+  }), [gatewayMode, instance, refresh, requestError, requestFailed, signOut, takeoverActive, updateNow, updating, viewModel, visible]);
 
   return (
     <CloudWorkspaceStatusContext.Provider value={value}>
@@ -297,7 +323,11 @@ export function CloudWorkspaceBootTakeover(props: { decision: CloudWorkspaceMain
   const { viewModel } = cloudWorkspace;
   const failed = viewModel.variant === "failed";
   const slow = !failed && cloudWorkspaceBootIsSlow(elapsedMs);
-  const copy = cloudWorkspaceTakeoverCopy({ variant: viewModel.variant, slow });
+  const copy = cloudWorkspaceTakeoverCopy({
+    variant: viewModel.variant,
+    slow,
+    requestError: cloudWorkspace.requestError,
+  });
   const stages = cloudWorkspaceBootStages(viewModel.variant);
 
   return (

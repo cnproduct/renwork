@@ -34,6 +34,10 @@ function resolveSidecarsDir(context) {
   return path.join(context.appOutDir, "resources", "sidecars");
 }
 
+function isServer2016CloudBuild(context) {
+  return context?.packager?.config?.extraMetadata?.openworkDistribution === "server2016-cloud";
+}
+
 function resolveMacAppPath(context) {
   if (context.electronPlatformName !== "darwin") return null;
   const appName = `${context.packager.appInfo.productFilename}.app`;
@@ -137,10 +141,16 @@ function copyExecutableTargetToAlias(sidecarsDir, targetName, aliasName) {
 
 async function afterPack(context) {
   verifyRuntimeDependencies(context);
+  const sidecarsDir = resolveSidecarsDir(context);
+  if (isServer2016CloudBuild(context)) {
+    if (sidecarsDir && fs.existsSync(sidecarsDir)) {
+      fs.rmSync(sidecarsDir, { force: true, recursive: true });
+    }
+    return;
+  }
+
   const triple = targetTriple(context.electronPlatformName, context.arch);
   if (!triple) return;
-
-  const sidecarsDir = resolveSidecarsDir(context);
   if (!sidecarsDir || !fs.existsSync(sidecarsDir)) return;
 
   const isWindows = context.electronPlatformName === "win32";
@@ -177,3 +187,4 @@ async function afterPack(context) {
 module.exports = afterPack;
 module.exports.default = afterPack;
 module.exports.normalizeArchivePath = normalizeArchivePath;
+module.exports.isServer2016CloudBuild = isServer2016CloudBuild;

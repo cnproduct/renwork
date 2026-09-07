@@ -5,6 +5,7 @@ import {
   CLOUD_DESKTOP_DISTRIBUTION,
   ENTERPRISE_DESKTOP_DISTRIBUTION,
   PUBLIC_DESKTOP_DISTRIBUTION,
+  SERVER_2016_CLOUD_DESKTOP_DISTRIBUTION,
   desktopActivationRequired,
   enterpriseActivationComplete,
   enterprisePreactivationCommandAllowed,
@@ -26,6 +27,9 @@ describe("resolveDesktopDistribution", () => {
         protocolScheme: "renwork",
         requireSignin: true,
         requireActivation: false,
+        localRuntimeEnabled: true,
+        cloudWorkspaceRequired: false,
+        updaterManifestChannel: "cloud",
       },
     );
   });
@@ -44,7 +48,24 @@ describe("resolveDesktopDistribution", () => {
       protocolScheme: "renwork",
       requireSignin: true,
       requireActivation: true,
+      localRuntimeEnabled: true,
+      cloudWorkspaceRequired: false,
+      updaterManifestChannel: "enterprise",
     });
+  });
+
+  it("defines an immutable Server 2016 cloud-only build", () => {
+    assert.deepEqual(
+      resolveDesktopDistribution({
+        isPackaged: true,
+        packageFlavor: "server2016-cloud",
+        environmentFlavor: "public",
+      }),
+      SERVER_2016_CLOUD_DESKTOP_DISTRIBUTION,
+    );
+    assert.equal(SERVER_2016_CLOUD_DESKTOP_DISTRIBUTION.localRuntimeEnabled, false);
+    assert.equal(SERVER_2016_CLOUD_DESKTOP_DISTRIBUTION.cloudWorkspaceRequired, true);
+    assert.equal(SERVER_2016_CLOUD_DESKTOP_DISTRIBUTION.updaterManifestChannel, "server2016-cloud");
   });
 
   it("does not let an environment variable turn a packaged public build into enterprise", () => {

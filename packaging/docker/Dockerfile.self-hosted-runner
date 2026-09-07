@@ -1,0 +1,8 @@
+FROM node:22-bookworm-slim
+
+WORKDIR /app
+COPY deploy/production/self-hosted-runner.mjs /app/self-hosted-runner.mjs
+
+USER node
+EXPOSE 8792
+CMD ["node", "/app/self-hosted-runner.mjs"]
