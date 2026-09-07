@@ -336,6 +336,27 @@ describe("Cloud instance route gate", () => {
     expect(response.status).toBe(404)
     await expect(response.json()).resolves.toEqual({ error: "cloud_not_found" })
   })
+
+  test("allows an entitled organization to resolve through the self-hosted runner", async () => {
+    const context = organizationContext(JSON.stringify({ capabilities: { cloud: true } }))
+    const app = new Hono<{ Variables: OrgRouteVariables }>()
+    const worker = fakeWorker("healthy")
+    routes.registerCloudRoutes(app, {
+      memberRoute: contextMiddleware(context),
+      orgMode: "multi_org",
+      provisionerMode: "self_hosted",
+      selfHostedRunnerToken: "runner-test-token",
+      ensureCloudWorker: async () => worker,
+      getSandboxRecord: async () => fakeSandboxWithId("renwork-worker-test"),
+      inspectSandbox: async () => ({ state: "running" }),
+      refreshSignedPreview: async () => fakeSandboxWithId("renwork-worker-test"),
+      probeSignedPreview: async () => true,
+    })
+
+    const response = await app.request("http://den.local/v1/cloud/instance")
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ status: "ready", url: "https://preview.example.test" })
+  })
 })
 
 describe("Cloud gateway resolve route", () => {

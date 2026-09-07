@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto"
 import { and, asc, eq, inArray, isNull } from "@openwork-ee/den-db/drizzle"
 import { WorkerTable, WorkerTokenTable } from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
 import type { Hono, MiddlewareHandler } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
@@ -12,6 +12,7 @@ import { orgMemberRoute } from "../../middleware/index.js"
 import { jsonResponse, notFoundSchema, unauthorizedSchema } from "../../openapi.js"
 import { materializeCloudWorkerProviders } from "../../llm/cloud-provider-materialization.js"
 import { currentDaytonaSandboxName, flushWorkerCheckpointOnDaytona, getDaytonaSandboxRecord, inspectDaytonaSandbox, refreshDaytonaSignedPreview, stopWorkerOnDaytona } from "../../workers/daytona.js"
+import { flushSelfHostedWorkerCheckpoint, getSelfHostedWorkerRecord, inspectSelfHostedWorker, proxySelfHostedWorkerRequest, refreshSelfHostedWorkerUrl, selfHostedWorkerImageVersion, stopWorkerOnSelfHosted } from "../../workers/self-hosted.js"
 import { CLOUD_INSTANCE_BACKEND, CLOUD_INSTANCE_NAME } from "../../workers/cloud-constants.js"
 import { wakeCloudWorker as defaultWakeCloudWorker } from "../../workers/cloud-lifecycle.js"
 import { appLogger } from "../../observability/logger.js"
@@ -21,11 +22,12 @@ import { continueCloudProvisioning, token } from "../workers/shared.js"
 type CloudRouteOptions = {
   memberRoute?: MiddlewareHandler<{ Variables: OrgRouteVariables }>
   orgMode?: DenOrgMode
-  provisionerMode?: "stub" | "render" | "daytona"
+  provisionerMode?: "stub" | "render" | "daytona" | "self_hosted"
   daytonaApiKey?: string
+  selfHostedRunnerToken?: string
   gatewayKey?: string
   continueProvisioning?: typeof continueCloudProvisioning
-  refreshSignedPreview?: typeof refreshDaytonaSignedPreview
+  refreshSignedPreview?: RefreshSignedPreview
   cloudWorkerStore?: CloudWorkerStore
   ensureCloudWorker?: EnsureCloudWorker
   getSandboxRecord?: GetSandboxRecord
@@ -46,6 +48,7 @@ type CloudSandboxRecord = Pick<NonNullable<Awaited<ReturnType<typeof getDaytonaS
   sandbox_id?: string | null
 }
 type CloudSandboxInspection = { state: string | null } | null
+type RefreshSignedPreview = (workerId: WorkerId) => Promise<CloudSandboxRecord | null>
 type OrgId = typeof WorkerTable.$inferSelect.org_id
 type UserId = NonNullable<typeof WorkerTable.$inferSelect.created_by_user_id>
 type WorkerId = typeof WorkerTable.$inferSelect.id
@@ -338,8 +341,17 @@ function hasDaytonaProvisioner(options: CloudRouteOptions) {
   return (options.provisionerMode ?? env.provisionerMode) === "daytona" && Boolean(apiKey?.trim())
 }
 
+function hasSelfHostedProvisioner(options: CloudRouteOptions) {
+  const token = options.selfHostedRunnerToken !== undefined ? options.selfHostedRunnerToken : env.selfHosted.runnerToken
+  return (options.provisionerMode ?? env.provisionerMode) === "self_hosted" && Boolean(token?.trim())
+}
+
+function hasCloudProvisioner(options: CloudRouteOptions) {
+  return hasDaytonaProvisioner(options) || hasSelfHostedProvisioner(options)
+}
+
 function cloudAvailable(payload: NonNullable<OrgRouteVariables["organizationContext"]>, options: CloudRouteOptions) {
-  return organizationCloudEnabled(payload.organization.metadata, { orgMode: options.orgMode ?? env.orgMode }) && hasDaytonaProvisioner(options)
+  return organizationCloudEnabled(payload.organization.metadata, { orgMode: options.orgMode ?? env.orgMode }) && hasCloudProvisioner(options)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -571,7 +583,7 @@ async function readyFromSignedPreview(input: {
 
 async function refreshAndProbeSignedPreview(input: {
   workerId: WorkerId
-  refreshSignedPreview: typeof refreshDaytonaSignedPreview
+  refreshSignedPreview: RefreshSignedPreview
   probeSignedPreview: ProbeSignedPreview
   now: () => number
 }): Promise<CloudInstanceResponse | null> {
@@ -597,12 +609,12 @@ function isStoppedSandboxState(state: string | null) {
 }
 
 function workerNeedsSnapshotRecycle(worker: CloudWorker) {
-  const snapshot = env.daytona.snapshot
+  const snapshot = env.provisionerMode === "self_hosted" ? selfHostedWorkerImageVersion() : env.daytona.snapshot
   return Boolean(snapshot && "image_version" in worker && worker.image_version !== snapshot)
 }
 
 function workerNeedsUserRequestedUpdate(worker: CloudWorker) {
-  const snapshot = env.daytona.snapshot
+  const snapshot = env.provisionerMode === "self_hosted" ? selfHostedWorkerImageVersion() : env.daytona.snapshot
   return Boolean(snapshot && (worker.image_version ?? null) !== snapshot)
 }
 
@@ -627,7 +639,7 @@ function memberCloudInstanceResponse(worker: CloudWorker, instance: CloudInstanc
     ...instance,
     imageVersion: worker.image_version ?? null,
     ...(instanceName ? { instanceName } : {}),
-    latestVersion: env.daytona.snapshot ?? null,
+    latestVersion: env.provisionerMode === "self_hosted" ? selfHostedWorkerImageVersion() : env.daytona.snapshot ?? null,
   }
 }
 
@@ -689,7 +701,7 @@ async function resolveCloudInstance(input: {
   worker: CloudWorker
   orgId: OrgId
   continueProvisioning: typeof continueCloudProvisioning
-  refreshSignedPreview: typeof refreshDaytonaSignedPreview
+  refreshSignedPreview: RefreshSignedPreview
   getSandboxRecord: GetSandboxRecord
   inspectSandbox: InspectSandbox
   probeSignedPreview: ProbeSignedPreview
@@ -771,7 +783,7 @@ async function resolveCloudInstanceForMember(input: {
   payload: NonNullable<OrgRouteVariables["organizationContext"]>
   user: CloudRouteUser
   continueProvisioning: typeof continueCloudProvisioning
-  refreshSignedPreview: typeof refreshDaytonaSignedPreview
+  refreshSignedPreview: RefreshSignedPreview
   store: CloudWorkerStore
   ensureWorker: EnsureCloudWorker
   getSandboxRecord: GetSandboxRecord
@@ -852,7 +864,7 @@ async function resolveCloudInstanceForGateway(input: {
   payload: NonNullable<OrgRouteVariables["organizationContext"]>
   user: CloudRouteUser
   continueProvisioning: typeof continueCloudProvisioning
-  refreshSignedPreview: typeof refreshDaytonaSignedPreview
+  refreshSignedPreview: RefreshSignedPreview
   store: CloudWorkerStore
   ensureWorker: EnsureCloudWorker
   getSandboxRecord: GetSandboxRecord
@@ -910,22 +922,44 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
   app: Hono<T>,
   options: CloudRouteOptions = {},
 ) {
+  const selfHosted = (options.provisionerMode ?? env.provisionerMode) === "self_hosted"
   const orgMemberRouteMiddleware = options.memberRoute ?? orgMemberRoute()
   const materializeProviders = options.materializeProviders ?? materializeCloudWorkerProviders
   const continueProvisioning: typeof continueCloudProvisioning = options.continueProvisioning
     ?? ((input, continueOptions = {}) => continueCloudProvisioning(input, { ...continueOptions, materializeProviders }))
-  const refreshSignedPreview = options.refreshSignedPreview ?? refreshDaytonaSignedPreview
+  const refreshSignedPreview = options.refreshSignedPreview ?? (selfHosted ? refreshSelfHostedWorkerUrl : refreshDaytonaSignedPreview)
   const store = options.cloudWorkerStore ?? databaseCloudWorkerStore
   const ensureWorker = options.ensureCloudWorker ?? ensureCloudWorker
-  const getSandboxRecord = options.getSandboxRecord ?? getDaytonaSandboxRecord
-  const inspectSandbox = options.inspectSandbox ?? inspectDaytonaSandbox
+  const getSandboxRecord = options.getSandboxRecord ?? (selfHosted ? getSelfHostedWorkerRecord : getDaytonaSandboxRecord)
+  const inspectSandbox = options.inspectSandbox ?? (selfHosted ? inspectSelfHostedWorker : inspectDaytonaSandbox)
   const signedPreviewProbe = options.probeSignedPreview ?? probeSignedPreview
   const wakeCloudWorker = options.wakeCloudWorker ?? defaultWakeCloudWorker
-  const flushWorkerCheckpoint = options.flushWorkerCheckpoint ?? flushWorkerCheckpointOnDaytona
-  const stopCloudWorker = options.stopCloudWorker ?? stopWorkerOnDaytona
+  const flushWorkerCheckpoint = options.flushWorkerCheckpoint ?? (selfHosted ? flushSelfHostedWorkerCheckpoint : flushWorkerCheckpointOnDaytona)
+  const stopCloudWorker = options.stopCloudWorker ?? (selfHosted ? stopWorkerOnSelfHosted : stopWorkerOnDaytona)
   const now = options.now ?? Date.now
   const gatewayKey = options.gatewayKey !== undefined ? options.gatewayKey : env.gatewayKey
   const wakingWorkers = new Set<CloudWorker["id"]>()
+
+  if (selfHosted) {
+    app.all("/v1/cloud/workers/:workerId/*", async (c) => {
+      let workerId: WorkerId
+      try {
+        workerId = normalizeDenTypeId("worker", c.req.param("workerId"))
+      } catch {
+        return c.json(cloudNotFound(), 404)
+      }
+
+      try {
+        return await proxySelfHostedWorkerRequest(c.req.raw, workerId, c.req.param("*") ?? "")
+      } catch (error) {
+        logger.warn("self-hosted worker proxy failed", {
+          worker_id: workerId,
+          message: error instanceof Error ? error.message : "worker_proxy_failed",
+        })
+        return c.json({ error: "cloud_worker_unavailable" }, 503)
+      }
+    })
+  }
 
   function startWake(workerId: CloudWorker["id"]) {
     if (wakingWorkers.has(workerId)) {

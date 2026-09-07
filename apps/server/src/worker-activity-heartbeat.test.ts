@@ -76,6 +76,12 @@ describe("worker activity heartbeat", () => {
     expect(config.activeWindowMs).toBe(5 * 60_000);
   });
 
+  test("enables heartbeats for the self-hosted cloud runner", () => {
+    const config = heartbeatConfig({ DEN_RUNTIME_PROVIDER: "self_hosted" });
+    expect(config.enabled).toBe(true);
+    expect(config.workerId).toBe("worker-1");
+  });
+
   test("prefers updated session activity and falls back to created", () => {
     expect(parseSessionActivityAt({ time: { updated: 2000, created: 1000 } })).toBe(2000);
     expect(parseSessionActivityAt({ time: { created: 1000 } })).toBe(1000);

@@ -12,16 +12,22 @@ import {
   provisionWorkerOnDaytona,
   stopWorkerOnDaytona,
   wakeWorkerOnDaytona,
-  type StopWorkerOnDaytonaResult,
 } from "./daytona.js"
+import {
+  isSelfHostedWorkerMissingError,
+  provisionWorkerOnSelfHosted,
+  stopWorkerOnSelfHosted,
+  wakeWorkerOnSelfHosted,
+} from "./self-hosted.js"
 
 type WorkerId = typeof WorkerTable.$inferSelect.id
 type WorkerStatus = typeof WorkerTable.$inferSelect.status
 type CloudWorker = Pick<typeof WorkerTable.$inferSelect, "id" | "name" | "status" | "last_active_at" | "updated_at"> & Partial<Pick<typeof WorkerTable.$inferSelect, "org_id">>
 type WorkerToken = typeof WorkerTokenTable.$inferSelect
-type WakeWorkerOnDaytona = typeof wakeWorkerOnDaytona
-type ProvisionWorkerOnDaytona = typeof provisionWorkerOnDaytona
-type StopWorkerOnDaytona = typeof stopWorkerOnDaytona
+type WakeWorker = typeof wakeWorkerOnDaytona
+type ProvisionWorker = typeof provisionWorkerOnDaytona
+type StopWorker = typeof stopWorkerOnDaytona
+type StopWorkerResult = Awaited<ReturnType<StopWorker>>
 
 type CloudLifecycleStore = {
   getWorker: (workerId: WorkerId) => Promise<CloudWorker | null>
@@ -34,14 +40,14 @@ type CloudLifecycleStore = {
 
 type WakeCloudWorkerOptions = {
   store?: CloudLifecycleStore
-  wakeWorker?: WakeWorkerOnDaytona
-  provisionWorker?: ProvisionWorkerOnDaytona
+  wakeWorker?: WakeWorker
+  provisionWorker?: ProvisionWorker
   materializeProviders?: typeof materializeCloudWorkerProviders
 }
 
 type StopIdleCloudWorkersOptions = {
   store?: CloudLifecycleStore
-  stopWorker?: StopWorkerOnDaytona
+  stopWorker?: StopWorker
   provisionerMode?: typeof env.provisionerMode
   idleMs?: number
   idleBefore?: Date
@@ -176,8 +182,9 @@ async function safelyMarkWorkerFailed(store: CloudLifecycleStore, workerId: Work
 
 async function runWakeCloudWorker(workerId: WorkerId, options: WakeCloudWorkerOptions) {
   const store = options.store ?? databaseCloudLifecycleStore
-  const wakeWorker = options.wakeWorker ?? wakeWorkerOnDaytona
-  const provisionWorker = options.provisionWorker ?? provisionWorkerOnDaytona
+  const selfHosted = env.provisionerMode === "self_hosted"
+  const wakeWorker = options.wakeWorker ?? (selfHosted ? wakeWorkerOnSelfHosted : wakeWorkerOnDaytona)
+  const provisionWorker = options.provisionWorker ?? (selfHosted ? provisionWorkerOnSelfHosted : provisionWorkerOnDaytona)
   const materializeProviders = options.materializeProviders ?? materializeCloudWorkerProviders
 
   try {
@@ -213,11 +220,11 @@ async function runWakeCloudWorker(workerId: WorkerId, options: WakeCloudWorkerOp
       clientToken,
       activityToken,
     }
-    let woken: Awaited<ReturnType<WakeWorkerOnDaytona>>
+    let woken: Awaited<ReturnType<WakeWorker>>
     try {
       woken = await wakeWorker(wakeInput)
     } catch (error) {
-      if (!isDaytonaSandboxMissingError(error)) {
+      if (!isDaytonaSandboxMissingError(error) && !isSelfHostedWorkerMissingError(error)) {
         throw error
       }
 
@@ -267,17 +274,18 @@ export async function wakeCloudWorker(workerId: WorkerId, options: WakeCloudWork
   return promise
 }
 
-function stopResultAllowsStoppedStatus(result: StopWorkerOnDaytonaResult) {
+function stopResultAllowsStoppedStatus(result: StopWorkerResult) {
   return result.status === "stopped" || result.status === "no_sandbox"
 }
 
 export async function stopIdleCloudWorkers(options: StopIdleCloudWorkersOptions = {}) {
-  if ((options.provisionerMode ?? env.provisionerMode) !== "daytona") {
+  const provisionerMode = options.provisionerMode ?? env.provisionerMode
+  if (provisionerMode !== "daytona" && provisionerMode !== "self_hosted") {
     return { checked: 0, stopped: 0 }
   }
 
   const store = options.store ?? databaseCloudLifecycleStore
-  const stopWorker = options.stopWorker ?? stopWorkerOnDaytona
+  const stopWorker = options.stopWorker ?? (provisionerMode === "self_hosted" ? stopWorkerOnSelfHosted : stopWorkerOnDaytona)
   const idleBefore = options.idleBefore ?? new Date(Date.now() - (options.idleMs ?? env.cloudIdleStopMs))
   const workers = await store.listIdleWorkers({
     idleBefore,

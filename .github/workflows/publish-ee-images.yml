@@ -25,6 +25,9 @@ on:
       - "packaging/docker/Dockerfile.den-gateway"
       - "packaging/docker/Dockerfile.den-web"
       - "packaging/docker/Dockerfile.inference"
+      - "packaging/docker/Dockerfile.self-hosted-runner"
+      - "ee/apps/den-worker-runtime/Dockerfile.daytona-snapshot"
+      - "deploy/production/self-hosted-runner.mjs"
       - "packaging/helm/openwork-ee/**"
       - "ee/apps/den-api/**"
       - "ee/apps/den-gateway/**"
@@ -147,11 +150,13 @@ jobs:
               -e DEN_DB_ENCRYPTION_KEY=ci-den-db-encryption-key-value-123456
               -e BETTER_AUTH_SECRET=ci-better-auth-secret-value-123456
               -e BETTER_AUTH_URL=http://127.0.0.1:8788
+            smoke: true
           - image: openwork-den-web
             dockerfile: packaging/docker/Dockerfile.den-web
             port: 3005
             health_path: /api/health
             smoke_env: ""
+            smoke: true
           - image: openwork-inference
             dockerfile: packaging/docker/Dockerfile.inference
             port: 8791
@@ -160,6 +165,7 @@ jobs:
               -e DB_MODE=mysql
               -e DATABASE_URL=mysql://smoke:smoke@127.0.0.1:3306/smoke
               -e DEN_DB_ENCRYPTION_KEY=ci-den-db-encryption-key-value-123456
+            smoke: true
           # The gateway's own liveness lives at /__gw/health because /health is
           # proxied through to the user's instance.
           - image: openwork-den-gateway
@@ -169,6 +175,21 @@ jobs:
             smoke_env: >-
               -e DEN_API_BASE=http://127.0.0.1:9
               -e DEN_GATEWAY_KEY=ci-den-gateway-key-value-123456
+            smoke: true
+          - image: openwork-self-hosted-runner
+            dockerfile: packaging/docker/Dockerfile.self-hosted-runner
+            port: 8792
+            health_path: /health
+            smoke_env: >-
+              -e SELF_HOSTED_RUNNER_TOKEN=ci-self-hosted-runner-token-value-123456
+              -e SELF_HOSTED_WORKER_IMAGE=ghcr.io/cnproduct/openwork-self-hosted-worker:test
+            smoke: true
+          - image: openwork-self-hosted-worker
+            dockerfile: ee/apps/den-worker-runtime/Dockerfile.daytona-snapshot
+            port: 8787
+            health_path: /health
+            smoke_env: ""
+            smoke: false
 
     steps:
       - name: Checkout
@@ -301,7 +322,7 @@ jobs:
           '
 
       - name: Smoke health endpoint
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' && matrix.smoke != false }}
         shell: bash
         env:
           IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
