@@ -154,12 +154,14 @@ function makeInstance(input: {
   runtimeProviders?: Record<string, unknown>
   opencodeConfigProviders?: Record<string, unknown>
   missingEngineReadbacks?: number
+  failedEngineReads?: number
 } = {}) {
   const calls: FetchCall[] = []
   const envValues = new Map(Object.entries(input.envValues ?? {}))
   let failEnvWrites = input.failEnvWrites ?? 0
   let failConfigPatches = input.failConfigPatches ?? 0
   let missingEngineReadbacks = input.missingEngineReadbacks ?? 0
+  let failedEngineReads = input.failedEngineReads ?? 0
   const runtimeProviders: Record<string, unknown> = { ...(input.runtimeProviders ?? {}) }
   const engineProviders = input.opencodeConfigProviders ? { ...input.opencodeConfigProviders } : null
   const fetchImpl: FetchImpl = async (url, init) => {
@@ -182,6 +184,10 @@ function makeInstance(input: {
     }
 
     if (method === "GET" && parsed.pathname === "/opencode/config") {
+      if (failedEngineReads > 0) {
+        failedEngineReads -= 1
+        return jsonResponse({ error: "engine_starting" }, 400)
+      }
       if (missingEngineReadbacks > 0) {
         missingEngineReadbacks -= 1
         return jsonResponse({ provider: {} })
@@ -311,6 +317,21 @@ async function materialize(input: {
 }
 
 describe("Cloud provider materialization", () => {
+  test("retries while a freshly started worker engine is not ready", async () => {
+    const provider = makeAnthropicProvider({ apiKey: "sk-anthropic" })
+    const instance = makeInstance({ failedEngineReads: 2 })
+
+    const result = await materialize({
+      providers: () => [provider],
+      fetchImpl: instance.fetchImpl,
+      force: true,
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.status).toBe("applied")
+    expect(instance.calls.filter((call) => call.method === "GET" && call.path === "/opencode/config")).toHaveLength(4)
+  })
+
   test("does not rewrite matching provider state after the den-api cache is lost", async () => {
     const provider = makeAnthropicProvider({ apiKey: "sk-anthropic" })
     const instance = makeInstance({

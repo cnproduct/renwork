@@ -97,7 +97,11 @@ export type CloudProviderMaterializationResult =
 export type MaterializeCloudWorkerProviders = typeof materializeCloudWorkerProviders
 
 const logger = appLogger.child({ component: "cloud_provider_materialization" })
-const requestTimeoutMs = 8_000
+// A cold self-hosted worker can need more than 10 seconds before OpenCode
+// answers its first config request. Keep the timeout above that cold-start
+// window; the bounded retry schedule still prevents endless provisioning.
+const requestTimeoutMs = 20_000
+const engineConfigRetryDelaysMs = [250, 500, 1_000, 2_000, 3_000]
 /**
  * Cache of what we have already materialized, keyed by worker AND instance.
  *
@@ -489,15 +493,29 @@ async function readRuntimeManagedProviders(input: {
   instanceUrl: string
   clientToken: string
 }) {
-  const payload = await requestJson({
-    fetchImpl: input.fetchImpl,
-    label: "engine_config_read",
-    url: `${input.instanceUrl}/opencode/config`,
-    init: {
-      method: "GET",
-      headers: bearerHeaders(input.clientToken),
-    },
-  })
+  let payload: JsonRecord | null = null
+  for (let attempt = 0; payload === null; attempt += 1) {
+    try {
+      payload = await requestJson({
+        fetchImpl: input.fetchImpl,
+        label: "engine_config_read",
+        url: `${input.instanceUrl}/opencode/config`,
+        init: {
+          method: "GET",
+          headers: bearerHeaders(input.clientToken),
+        },
+      })
+    } catch (error) {
+      const retryDelay = engineConfigRetryDelaysMs[attempt]
+      const transient = error instanceof MaterializationHttpError
+        && error.label === "engine_config_read"
+        && [400, 409, 425, 429, 500, 502, 503, 504].includes(error.status)
+      if (!transient || retryDelay === undefined) {
+        throw error
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryDelay))
+    }
+  }
   const provider = isRecord(payload.provider) ? payload.provider : null
   const managed: JsonRecord = {}
   if (!provider) {

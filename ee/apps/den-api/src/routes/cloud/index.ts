@@ -15,6 +15,7 @@ import { currentDaytonaSandboxName, flushWorkerCheckpointOnDaytona, getDaytonaSa
 import { flushSelfHostedWorkerCheckpoint, getSelfHostedWorkerRecord, inspectSelfHostedWorker, proxySelfHostedWorkerRequest, refreshSelfHostedWorkerUrl, selfHostedWorkerImageVersion, stopWorkerOnSelfHosted } from "../../workers/self-hosted.js"
 import { CLOUD_INSTANCE_BACKEND, CLOUD_INSTANCE_NAME } from "../../workers/cloud-constants.js"
 import { wakeCloudWorker as defaultWakeCloudWorker } from "../../workers/cloud-lifecycle.js"
+import { resolveSelfHostedWorkerProxyPath } from "../../workers/self-hosted-proxy-path.js"
 import { appLogger } from "../../observability/logger.js"
 import type { OrgRouteVariables } from "../org/shared.js"
 import { continueCloudProvisioning, token } from "../workers/shared.js"
@@ -942,15 +943,21 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
 
   if (selfHosted) {
     app.all("/v1/cloud/workers/:workerId/*", async (c) => {
+      const rawWorkerId = c.req.param("workerId")
       let workerId: WorkerId
       try {
-        workerId = normalizeDenTypeId("worker", c.req.param("workerId"))
+        workerId = normalizeDenTypeId("worker", rawWorkerId)
       } catch {
         return c.json(cloudNotFound(), 404)
       }
 
+      const proxyPath = resolveSelfHostedWorkerProxyPath(c.req.url, rawWorkerId)
+      if (!proxyPath) {
+        return c.json(cloudNotFound(), 404)
+      }
+
       try {
-        return await proxySelfHostedWorkerRequest(c.req.raw, workerId, c.req.param("*") ?? "")
+        return await proxySelfHostedWorkerRequest(c.req.raw, workerId, proxyPath)
       } catch (error) {
         logger.warn("self-hosted worker proxy failed", {
           worker_id: workerId,
