@@ -59,9 +59,14 @@ export function cloudWorkspaceUrl(
   worker: DenWorkerSummary,
   tokens: DenWorkerTokens,
 ): string | null {
-  return tokens.openworkUrl?.trim()
+  // Den's Cloud instance endpoint returns a fresh Daytona signed preview URL.
+  // The worker/token endpoints may still expose the browser gateway vanity URL,
+  // which is useful for web deployments but is not guaranteed to be deployed
+  // alongside the dedicated Server 2016 client. Prefer the signed URL so this
+  // cloud-only desktop can connect directly without a local OpenCode sidecar.
+  return instance.url?.trim()
+    || tokens.openworkUrl?.trim()
     || worker.instanceUrl?.trim()
-    || instance.url?.trim()
     || null;
 }
 

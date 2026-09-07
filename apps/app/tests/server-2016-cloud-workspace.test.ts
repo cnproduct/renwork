@@ -52,8 +52,26 @@ describe("Server 2016 cloud workspace selection", () => {
     ], instance)).toBeNull();
   });
 
-  test("prefers Den's token-bound OpenWork URL", () => {
+  test("prefers Den's fresh signed Cloud instance URL", () => {
     expect(cloudWorkspaceUrl(instance, {
+      workerId: "mine",
+      workerName: "Mine",
+      status: "ready",
+      instanceUrl: "https://worker-row.example",
+      provider: "daytona",
+      isMine: true,
+      createdAt: null,
+    }, {
+      clientToken: "client",
+      ownerToken: "owner",
+      hostToken: "host",
+      openworkUrl: "https://signed-openwork.example",
+      workspaceId: "workspace-1",
+    })).toBe("https://worker-a.example/");
+  });
+
+  test("falls back to Den's token-bound URL while an instance is provisioning", () => {
+    expect(cloudWorkspaceUrl({ ...instance, url: null }, {
       workerId: "mine",
       workerName: "Mine",
       status: "ready",

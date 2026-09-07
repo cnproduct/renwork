@@ -62,7 +62,17 @@ services:
       DEN_MCP_RESOURCE_URL: https://www.rrenn.com/api/den/mcp
       DEN_BETTER_AUTH_TRUSTED_ORIGINS: https://www.rrenn.com,https://rrenn.com
       CORS_ORIGINS: https://www.rrenn.com,https://rrenn.com
-      PROVISIONER_MODE: stub
+      # Keep stub as the fail-closed default, but allow production to enable the
+      # supported isolated Daytona runtime from the server-side .env file.
+      PROVISIONER_MODE: ${PROVISIONER_MODE:-stub}
+      DAYTONA_API_KEY: ${DAYTONA_API_KEY:-}
+      DAYTONA_API_URL: ${DAYTONA_API_URL:-https://app.daytona.io/api}
+      DAYTONA_TARGET: ${DAYTONA_TARGET:-}
+      DAYTONA_SNAPSHOT: ${DAYTONA_SNAPSHOT:-}
+      DAYTONA_WORKER_PROXY_BASE_URL: ${DAYTONA_WORKER_PROXY_BASE_URL:-}
+      DAYTONA_SANDBOX_CPU: ${DAYTONA_SANDBOX_CPU:-2}
+      DAYTONA_SANDBOX_MEMORY: ${DAYTONA_SANDBOX_MEMORY:-4}
+      DAYTONA_SANDBOX_DISK: ${DAYTONA_SANDBOX_DISK:-8}
       DEN_OBSERVABILITY_BACKEND: none
       RENWORK_MODEL_CATALOG_BASE_URL: http://127.0.0.1:8089
       RENWORK_MODEL_CATALOG_ADMIN_TOKEN: ${RENWORK_SUPER_ADMIN_TOKEN}
