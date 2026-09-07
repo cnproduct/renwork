@@ -22,6 +22,11 @@ describe("RenWork production inference gateway", () => {
     expect(gateway).toContain('`desktop:${principal.inferenceKeyId}:${runId}`')
   })
 
+  test("forwards a stable OpenCode session header to upstream routes", () => {
+    expect(gateway).toContain('c.req.header("x-opencode-session")?.trim().slice(0, 255) || runId')
+    expect(gateway).toContain('headers.set("x-opencode-session", upstreamSessionId)')
+  })
+
   test("reserves before egress and releases every failed or empty result", () => {
     expect(gateway.indexOf("reserveInferenceCredits({")).toBeLessThan(gateway.indexOf("await fetch(chatCompletionsUrl"))
     expect(gateway).toContain("UPSTREAM_NETWORK_ERROR")

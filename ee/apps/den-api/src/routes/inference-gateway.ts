@@ -217,6 +217,7 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     const explicitIdempotencyKey = c.req.header("Idempotency-Key")?.trim()
     const desktopClient = c.req.header("X-RenWork-Client")?.trim().toLowerCase() === "desktop"
     const runId = c.req.header("X-RenWork-Run-Id")?.trim() || randomUUID()
+    const upstreamSessionId = c.req.header("x-opencode-session")?.trim().slice(0, 255) || runId
     const idempotencyKey = explicitIdempotencyKey || (desktopClient
       ? `desktop:${principal.inferenceKeyId}:${runId}`
       : null)
@@ -325,6 +326,10 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     const upstreamBody = buildUpstreamBody(body, route.upstreamModelId)
     const headers = new Headers({ "content-type": "application/json", accept: body.stream === true ? "text/event-stream" : "application/json" })
     if (credential) headers.set("authorization", `Bearer ${credential}`)
+    // OpenCode Go requires a stable session header for routing. Desktop
+    // callers may supply the native OpenCode session id; otherwise the
+    // already-stable RenWork run id keeps retries on the same upstream route.
+    headers.set("x-opencode-session", upstreamSessionId)
 
     let upstream: Response
     try {
