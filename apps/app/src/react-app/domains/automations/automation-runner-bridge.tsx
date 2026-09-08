@@ -6,21 +6,13 @@ import { createDenClient, readDenSettings } from "@/app/lib/den"
 import { denSettingsChangedEvent } from "@/app/lib/den-session-events"
 import { isDesktopRuntime } from "@/app/utils"
 import { useDenAuth } from "@/react-app/domains/cloud/den-auth-provider"
+import { readOrCreateAutomationRunnerId } from "./automation-runner-identity"
 
 const RUNNER_TOKEN_REFRESH_MS = 5 * 60_000
-const RUNNER_ID_KEY = "openwork.automations.desktop-runner-id"
-
-function desktopRunnerId() {
-  const existing = localStorage.getItem(RUNNER_ID_KEY)?.trim()
-  if (existing) return existing
-  const created = crypto.randomUUID()
-  localStorage.setItem(RUNNER_ID_KEY, created)
-  return created
-}
 
 /** Keeps this signed-in, preview-enabled desktop registered as the owner's Automation runner. */
 export function AutomationRunnerBridge({ enabled }: { enabled: boolean }) {
-  const { status } = useDenAuth()
+  const { status, user } = useDenAuth()
 
   useEffect(() => {
     if (!isDesktopRuntime() || !window.__OPENWORK_ELECTRON__?.invokeDesktop) return
@@ -41,13 +33,14 @@ export function AutomationRunnerBridge({ enabled }: { enabled: boolean }) {
       const settings = readDenSettings()
       const authToken = settings.authToken?.trim() ?? ""
       const organizationId = settings.activeOrgId?.trim() ?? ""
-      if (!authToken || !organizationId) {
+      const userId = user?.id.trim() ?? ""
+      if (!authToken || !organizationId || !userId) {
         await disconnect()
         return
       }
       try {
         const client = createDenClient({ baseUrl: settings.baseUrl, token: authToken })
-        const runnerId = desktopRunnerId()
+        const runnerId = readOrCreateAutomationRunnerId(localStorage, { organizationId, userId })
         const build = await window.__OPENWORK_ELECTRON__?.invokeDesktop?.("appBuildInfo")
         const agent = navigator.userAgent
         const platform = /Mac/i.test(agent) ? "darwin" : /Win/i.test(agent) ? "win32" : "linux"
@@ -82,7 +75,7 @@ export function AutomationRunnerBridge({ enabled }: { enabled: boolean }) {
       window.removeEventListener(denSettingsChangedEvent, handleSettingsChanged)
       void disconnect()
     }
-  }, [enabled, status])
+  }, [enabled, status, user?.id])
 
   return null
 }

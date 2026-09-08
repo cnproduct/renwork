@@ -79,7 +79,7 @@ describe("Electron distribution configs", () => {
     assert.equal(config.extends, "./electron-builder.base.yml");
     assert.equal(config.appId, "com.renrenyi.renwork.server2016cloud");
     assert.equal(config.productName, "RenWork Server 2016 Cloud");
-    assert.equal(config.extraMetadata.version, "0.18.59");
+    assert.equal(config.extraMetadata.version, "0.18.60");
     assert.equal(config.extraMetadata.openworkDistribution, "server2016-cloud");
     assert.equal(config.protocols[0].schemes[0], "renwork-server2016");
     assert.equal(config.publish[0].owner, "cnproduct");
