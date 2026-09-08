@@ -27,3 +27,13 @@ export function readOrCreateAutomationRunnerId(
   storage.setItem(key, created)
   return created
 }
+
+export function replaceAutomationRunnerId(
+  storage: AutomationRunnerIdentityStorage,
+  scope: AutomationRunnerIdentityScope,
+  createId: () => string = () => crypto.randomUUID(),
+) {
+  const created = createId()
+  storage.setItem(automationRunnerStorageKey(scope), created)
+  return created
+}

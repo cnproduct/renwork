@@ -2,11 +2,11 @@
 import { useEffect } from "react"
 import { AUTOMATION_MODEL_ATTENTION_CAPABILITY } from "@openwork/types/automations"
 
-import { createDenClient, readDenSettings } from "@/app/lib/den"
+import { createDenClient, DenApiError, readDenSettings } from "@/app/lib/den"
 import { denSettingsChangedEvent } from "@/app/lib/den-session-events"
 import { isDesktopRuntime } from "@/app/utils"
 import { useDenAuth } from "@/react-app/domains/cloud/den-auth-provider"
-import { readOrCreateAutomationRunnerId } from "./automation-runner-identity"
+import { readOrCreateAutomationRunnerId, replaceAutomationRunnerId } from "./automation-runner-identity"
 
 const RUNNER_TOKEN_REFRESH_MS = 5 * 60_000
 
@@ -40,12 +40,13 @@ export function AutomationRunnerBridge({ enabled }: { enabled: boolean }) {
       }
       try {
         const client = createDenClient({ baseUrl: settings.baseUrl, token: authToken })
-        const runnerId = readOrCreateAutomationRunnerId(localStorage, { organizationId, userId })
+        const scope = { organizationId, userId }
+        let runnerId = readOrCreateAutomationRunnerId(localStorage, scope)
         const build = await window.__OPENWORK_ELECTRON__?.invokeDesktop?.("appBuildInfo")
         const agent = navigator.userAgent
         const platform = /Mac/i.test(agent) ? "darwin" : /Win/i.test(agent) ? "win32" : "linux"
-        const runner = await client.mintAutomationRunnerToken(organizationId, {
-          runnerId,
+        const register = (registrationRunnerId: string) => client.mintAutomationRunnerToken(organizationId, {
+          runnerId: registrationRunnerId,
           protocolVersion: 1,
           supportedExecutionTargets: ["desktop"],
           capabilities: [AUTOMATION_MODEL_ATTENTION_CAPABILITY],
@@ -53,6 +54,16 @@ export function AutomationRunnerBridge({ enabled }: { enabled: boolean }) {
           platform,
           concurrency: 1,
         })
+        let runner: Awaited<ReturnType<typeof register>>
+        try {
+          runner = await register(runnerId)
+        } catch (error) {
+          if (!(error instanceof DenApiError) || error.status !== 409 || error.code !== "automation_runner_identity_conflict") {
+            throw error
+          }
+          runnerId = replaceAutomationRunnerId(localStorage, scope)
+          runner = await register(runnerId)
+        }
         if (disposed) return
         await window.__OPENWORK_ELECTRON__?.invokeDesktop?.("automationRunnerConfigure", {
           baseUrl: client.baseUrls.apiBaseUrl,

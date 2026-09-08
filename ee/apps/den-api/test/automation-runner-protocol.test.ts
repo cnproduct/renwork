@@ -156,6 +156,8 @@ test("runner credential minting is never exposed as an MCP tool", () => {
   assert.match(routesSource, /operationId: "mintAutomationRunnerToken", "x-mcp": false/)
   assert.match(routesSource, /capabilities: registration\.capabilities/)
   assert.match(routesSource, /AUTOMATION_MODEL_ATTENTION_CAPABILITY_HEADER/)
+  assert.match(routesSource, /automation_runner_identity_conflict/)
+  assert.match(routesSource, /409: jsonResponse\("Runner identity conflict\.", invalidRequestSchema\)/)
 })
 
 test("every runner endpoint re-checks that the token owner is still an active member", () => {
