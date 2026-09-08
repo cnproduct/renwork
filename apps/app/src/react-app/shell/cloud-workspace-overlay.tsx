@@ -34,6 +34,10 @@ import {
 } from "./cloud-workspace-status";
 import { OwDotTicker } from "./dot-ticker";
 import { useBootOverlayVisible } from "./boot-state";
+import {
+  runServer2016CloudDiagnostics,
+  type Server2016DiagnosticCheck,
+} from "./server-2016-cloud-diagnostics";
 
 type CloudWorkspaceStatusContextValue = {
   gatewayMode: boolean;
@@ -303,7 +307,33 @@ export function CloudWorkspaceBootTakeover(props: { decision: CloudWorkspaceMain
   const { setTakeoverActive } = cloudWorkspace;
   const reduceMotion = useReducedMotion() ?? false;
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<Server2016DiagnosticCheck[] | null>(null);
   const active = cloudWorkspace.gatewayMode && cloudWorkspace.visible && props.decision === "takeover";
+  const server2016 = isServer2016CloudDesktopRuntime();
+
+  const diagnose = useCallback(async () => {
+    const settings = readDenSettings();
+    const authToken = settings.authToken?.trim() ?? "";
+    const organizationId = settings.activeOrgId?.trim() ?? "";
+    if (!authToken || !organizationId) {
+      setDiagnostics([{
+        id: "session",
+        label: "RenWork Cloud sign-in",
+        detail: "Sign in again before running diagnostics.",
+        state: "fail",
+      }]);
+      return;
+    }
+
+    setDiagnosing(true);
+    try {
+      const client = createDenClient({ baseUrl: settings.baseUrl, token: authToken });
+      setDiagnostics(await runServer2016CloudDiagnostics(client, organizationId));
+    } finally {
+      setDiagnosing(false);
+    }
+  }, []);
 
   useEffect(() => {
     setTakeoverActive(active);
@@ -406,6 +436,11 @@ export function CloudWorkspaceBootTakeover(props: { decision: CloudWorkspaceMain
               <Button type="button" size="sm" variant="ghost" onClick={cloudWorkspace.signOut}>
                 Sign out
               </Button>
+              {server2016 ? (
+                <Button type="button" size="sm" variant="ghost" onClick={() => void diagnose()} disabled={diagnosing}>
+                  {diagnosing ? "Checking…" : "Run diagnostics"}
+                </Button>
+              ) : null}
               {slow ? (
                 <span className="ml-auto text-[12px] text-dls-secondary" data-testid="cloud-workspace-elapsed">
                   {formatCloudWorkspaceElapsed(elapsedMs)}
@@ -417,6 +452,22 @@ export function CloudWorkspaceBootTakeover(props: { decision: CloudWorkspaceMain
               We’ll open your workspace automatically when it’s ready.
             </p>
           )}
+
+          {server2016 && diagnostics ? (
+            <ul className={cn("mt-4 space-y-2", softCardClass)} data-testid="server-2016-cloud-diagnostics">
+              {diagnostics.map((check) => (
+                <li key={check.id} className="flex items-start gap-2 text-[12px] leading-5">
+                  <span className={check.state === "pass" ? "text-emerald-600" : "text-amber-700"} aria-hidden="true">
+                    {check.state === "pass" ? "✓" : "!"}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="font-medium text-dls-text">{check.label}</span>
+                    <span className="block break-words text-dls-secondary">{check.detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </m.div>
       </div>
     </LazyMotion>

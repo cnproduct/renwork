@@ -2,7 +2,7 @@ extends: ./electron-builder.base.yml
 appId: com.renrenyi.renwork.server2016cloud
 productName: RenWork Server 2016 Cloud
 extraMetadata:
-  version: 0.18.59
+  version: 0.18.60
   openworkDistribution: server2016-cloud
 protocols:
   - name: RenWork Server 2016 Cloud

@@ -37,7 +37,8 @@ describe("Automations availability", () => {
 
     const bridge = read("src/react-app/domains/automations/automation-runner-bridge.tsx")
     expect(bridge).toContain("!enabled || status !== \"signed_in\"")
-    expect(bridge).toContain("[enabled, status]")
+    expect(bridge).toContain("[enabled, status, user?.id]")
+    expect(bridge).toContain("readOrCreateAutomationRunnerId")
     expect(bridge).toContain('automationRunnerConfigure", null')
   })
 
