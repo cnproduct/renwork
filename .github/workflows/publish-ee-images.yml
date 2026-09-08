@@ -142,6 +142,7 @@ jobs:
       matrix:
         include:
           - image: openwork-den-api
+            package: renwork-den-api
             dockerfile: packaging/docker/Dockerfile.den
             port: 8788
             health_path: /health
@@ -152,12 +153,14 @@ jobs:
               -e BETTER_AUTH_URL=http://127.0.0.1:8788
             smoke: true
           - image: openwork-den-web
+            package: renwork-den-web
             dockerfile: packaging/docker/Dockerfile.den-web
             port: 3005
             health_path: /api/health
             smoke_env: ""
             smoke: true
           - image: openwork-inference
+            package: renwork-inference
             dockerfile: packaging/docker/Dockerfile.inference
             port: 8791
             health_path: /health
@@ -169,6 +172,7 @@ jobs:
           # The gateway's own liveness lives at /__gw/health because /health is
           # proxied through to the user's instance.
           - image: openwork-den-gateway
+            package: renwork-den-gateway
             dockerfile: packaging/docker/Dockerfile.den-gateway
             port: 8788
             health_path: /__gw/health
@@ -177,6 +181,7 @@ jobs:
               -e DEN_GATEWAY_KEY=ci-den-gateway-key-value-123456
             smoke: true
           - image: openwork-self-hosted-runner
+            package: openwork-self-hosted-runner
             dockerfile: packaging/docker/Dockerfile.self-hosted-runner
             port: 8792
             health_path: /health
@@ -185,6 +190,7 @@ jobs:
               -e SELF_HOSTED_WORKER_IMAGE=ghcr.io/cnproduct/openwork-self-hosted-worker:test
             smoke: true
           - image: openwork-self-hosted-worker
+            package: openwork-self-hosted-worker
             dockerfile: ee/apps/den-worker-runtime/Dockerfile.daytona-snapshot
             port: 8787
             health_path: /health
@@ -213,7 +219,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.package }}
           tags: |
             type=ref,event=tag
             type=semver,pattern={{version}}
@@ -221,7 +227,7 @@ jobs:
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
           labels: |
-            org.opencontainers.image.title=${{ matrix.image }}
+            org.opencontainers.image.title=${{ matrix.package }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
 
       - name: Resolve Sentry source-map upload
