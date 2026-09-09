@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import {
   isManagedModelAvailabilityPending,
   isOrganizationModelsEmpty,
+  mergeManagedModelEntitlements,
   refreshOrganizationModels,
   shouldAutoOpenUnavailableModelPicker,
   shouldWaitForCloudProviderSyncBeforePolicyReconcile,
@@ -103,6 +104,18 @@ describe("managed model empty state", () => {
 });
 
 describe("managed model recovery", () => {
+  test("merges connected personal OAuth catalog SKUs into session entitlements", () => {
+    expect(mergeManagedModelEntitlements([
+      { providerID: "renwork", modelID: "renwork-standard" },
+    ], [
+      { providerID: "renwork", modelID: "renwork-openai-gpt-5-6-luna" },
+      { providerID: "renwork", modelID: "renwork-standard" },
+    ])).toEqual([
+      { providerID: "renwork", modelID: "renwork-openai-gpt-5-6-luna" },
+      { providerID: "renwork", modelID: "renwork-standard" },
+    ]);
+  });
+
   test("refreshes organization models through the manual sync path before rereading providers", async () => {
     const calls: string[] = [];
 

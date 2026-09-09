@@ -127,7 +127,10 @@ import { CreateRemoteWorkspaceModal } from "@/react-app/domains/workspace/create
 import { CreateWorkspaceModal } from "@/react-app/domains/workspace/create-workspace-modal";
 import type { CreateWorkspaceOptions } from "@/react-app/domains/workspace/types";
 import { isCloudManagedProviderKey } from "@/react-app/domains/connections/provider-auth/cloud-provider-config";
-import { assignedModelOptions } from "@/react-app/domains/connections/provider-auth/assigned-model-options";
+import {
+  assignedModelOptions,
+  mergeModelOptions,
+} from "@/react-app/domains/connections/provider-auth/assigned-model-options";
 import {
   filterEntitledModelOptions,
   resolveEntitledOrgDefaultModel,
@@ -136,6 +139,7 @@ import {
 import {
   isManagedModelAvailabilityPending,
   isOrganizationModelsEmpty,
+  mergeManagedModelEntitlements,
   shouldAutoOpenUnavailableModelPicker,
 } from "@/react-app/domains/connections/provider-auth/managed-models-recovery";
 import { useSessionProviderAuth } from "@/react-app/domains/connections/provider-auth/use-session-provider-auth";
@@ -159,6 +163,10 @@ import {
   hasOpenWorkModelsAvailable,
   shouldShowOpenWorkModelsSyncing,
 } from "@/react-app/domains/cloud/openwork-models-promo";
+import {
+  personalSubscriptionCatalogModelOptions,
+  useRenWorkModelCatalog,
+} from "@/react-app/domains/models/renwork-model-catalog";
 import {
   diagnoseRemoteWorkspaceTaskLoadFailure,
   getRemoteWorkspaceConnectionKey,
@@ -909,6 +917,11 @@ export function SessionRoute() {
     () => assignedModelOptions(sessionProviderAuthSnapshot.cloudOrgProviders),
     [sessionProviderAuthSnapshot.cloudOrgProviders],
   );
+  const renWorkModelCatalog = useRenWorkModelCatalog(true, denAuth.isSignedIn);
+  const personalSubscriptionModelOptions = useMemo(
+    () => personalSubscriptionCatalogModelOptions(renWorkModelCatalog, providerConnectedIds),
+    [providerConnectedIds, renWorkModelCatalog],
+  );
   useEffect(() => {
     if (!denAuth.isSignedIn) {
       setActiveOrganizationRole(null);
@@ -983,8 +996,13 @@ export function SessionRoute() {
     const runtimeOptions = providerListModelEntitlementOptions(
       cloudProviderList ?? providerListQuery.data,
     );
+    const assignedOptions = runtimeOptions.length > 0 ? runtimeOptions : organizationAssignedModelOptions;
+    const combinedOptions = mergeManagedModelEntitlements<ModelEntitlementOption>(
+      assignedOptions,
+      personalSubscriptionModelOptions,
+    );
     return filterEntitledModelOptions(
-      runtimeOptions.length > 0 ? runtimeOptions : organizationAssignedModelOptions,
+      combinedOptions,
       {
         restrictToCloud: restrictToCloudProviders,
         checkRestriction: checkDesktopRestriction,
@@ -994,6 +1012,7 @@ export function SessionRoute() {
     checkDesktopRestriction,
     cloudProviderList,
     organizationAssignedModelOptions,
+    personalSubscriptionModelOptions,
     providerListQuery.data,
     restrictToCloudProviders,
   ]);
@@ -1019,7 +1038,10 @@ export function SessionRoute() {
     baseUrl: opencodeBaseUrl,
     workspaceRoot: selectedWorkspaceRoot,
     onOpen: handleModelPickerOpen,
-    fallbackOptions: organizationAssignedModelOptions,
+    fallbackOptions: mergeModelOptions(
+      organizationAssignedModelOptions,
+      personalSubscriptionModelOptions,
+    ),
     cloudProvidersEnabled: denAuth.isSignedIn,
   });
   const entitledPickerOptions = useMemo(() => {
@@ -1045,12 +1067,24 @@ export function SessionRoute() {
   const selectedModelProviderList = selectedModelUsesCloudProvider
     ? cloudProviderList
     : providerListQuery.data;
+  const selectedPersonalSubscriptionModelAvailable = Boolean(
+    local.prefs.defaultModel && personalSubscriptionModelOptions.some(
+      (option) =>
+        option.providerID === local.prefs.defaultModel?.providerID &&
+        option.modelID === local.prefs.defaultModel.modelID,
+    ),
+  );
   const entitledOrgDefaultModel = useMemo(() => {
     const runtimeOptions = providerListModelEntitlementOptions(
       cloudProviderList ?? providerListQuery.data,
     );
+    const assignedOptions = runtimeOptions.length > 0 ? runtimeOptions : organizationAssignedModelOptions;
+    const combinedOptions = mergeManagedModelEntitlements<ModelEntitlementOption>(
+      assignedOptions,
+      personalSubscriptionModelOptions,
+    );
     return resolveEntitledOrgDefaultModel(
-      runtimeOptions.length > 0 ? runtimeOptions : organizationAssignedModelOptions,
+      combinedOptions,
       {
         currentDefault: local.prefs.defaultModel,
         restrictToCloud: restrictToCloudProviders,
@@ -1062,6 +1096,7 @@ export function SessionRoute() {
     cloudProviderList,
     local.prefs.defaultModel,
     organizationAssignedModelOptions,
+    personalSubscriptionModelOptions,
     providerListQuery.data,
     restrictToCloudProviders,
   ]);
@@ -1081,6 +1116,7 @@ export function SessionRoute() {
       !selectedModelAvailabilityPending &&
       local.prefs.defaultModel &&
       (!selectedModelUsesCloudProvider || cloudProviderSyncReady) &&
+      !selectedPersonalSubscriptionModelAvailable &&
       (
         isDesktopProviderBlocked({
           providerId: local.prefs.defaultModel.providerID,

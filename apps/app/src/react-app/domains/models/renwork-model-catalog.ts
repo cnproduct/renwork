@@ -3,6 +3,7 @@ import type { RenWorkPublicModelCatalog } from "@openwork/rencredit-metering";
 
 import type { ModelOption } from "@/app/types";
 import { createDenClient, readDenSettings } from "@/app/lib/den";
+import { denSettingsChangedEvent } from "@/app/lib/den-session-events";
 
 export type RenWorkCatalogModelOption = {
   option: ModelOption;
@@ -42,14 +43,42 @@ export function requiredPersonalSubscriptionProvider(
   return null;
 }
 
+export function personalSubscriptionCatalogModelOptions(
+  catalog: RenWorkPublicModelCatalog | null | undefined,
+  connectedProviderIds: readonly string[],
+): ModelOption[] {
+  if (!catalog) return [];
+  const connected = new Set(connectedProviderIds.map((providerId) => providerId.trim().toLowerCase()));
+  return catalogModelOptions(catalog).flatMap(({ option, billing }) => {
+    const providerId = requiredPersonalSubscriptionProvider(billing);
+    return providerId && connected.has(providerId) ? [option] : [];
+  });
+}
+
 export function useRenWorkModelCatalog(open: boolean, signedIn: boolean): RenWorkPublicModelCatalog | null {
   const [catalog, setCatalog] = React.useState<RenWorkPublicModelCatalog | null>(null);
+  const [settingsRevision, setSettingsRevision] = React.useState(0);
 
   React.useEffect(() => {
-    if (!open || !signedIn) return;
+    const handleSettingsChanged = () => setSettingsRevision((revision) => revision + 1);
+    window.addEventListener(denSettingsChangedEvent, handleSettingsChanged);
+    return () => window.removeEventListener(denSettingsChangedEvent, handleSettingsChanged);
+  }, []);
+
+  React.useEffect(() => {
+    if (!open || !signedIn) {
+      setCatalog(null);
+      return;
+    }
     const settings = readDenSettings();
-    if (!settings.authToken || !settings.activeOrgId) return;
+    if (!settings.authToken || !settings.activeOrgId) {
+      setCatalog(null);
+      return;
+    }
     let cancelled = false;
+    // Never leave the previous organization's catalog visible while the new
+    // account or active organization is being resolved.
+    setCatalog(null);
     const client = createDenClient({ baseUrl: settings.baseUrl, token: settings.authToken });
     void client.getRenWorkModelCatalog(settings.activeOrgId)
       .then((result) => {
@@ -63,7 +92,7 @@ export function useRenWorkModelCatalog(open: boolean, signedIn: boolean): RenWor
     return () => {
       cancelled = true;
     };
-  }, [open, signedIn]);
+  }, [open, settingsRevision, signedIn]);
 
   return catalog;
 }

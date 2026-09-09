@@ -86,6 +86,23 @@ export type OrganizationModelsRefreshReason =
   | "new_chat"
   | "manual";
 
+export type ManagedModelEntitlement = {
+  providerID: string;
+  modelID: string;
+  disabled?: boolean;
+};
+
+/** Add catalog-backed personal OAuth SKUs without duplicating runtime models. */
+export function mergeManagedModelEntitlements<T extends ManagedModelEntitlement>(
+  primary: readonly T[],
+  additions: readonly T[],
+): T[] {
+  const merged = new Map<string, T>();
+  for (const option of additions) merged.set(`${option.providerID}:${option.modelID}`, option);
+  for (const option of primary) merged.set(`${option.providerID}:${option.modelID}`, option);
+  return [...merged.values()];
+}
+
 export async function refreshOrganizationModels<T>(
   input: OrganizationModelsRefreshInput<T>,
   reason: OrganizationModelsRefreshReason = "manual",
