@@ -210,6 +210,13 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     const principal = await authenticateInferenceKey(apiKey)
     if (!principal) return c.json({ error: { code: "UNAUTHORIZED", message: "The RenWork inference key is invalid or revoked." } }, 401)
 
+    const claimedOrganizationId = c.req.header("X-OpenWork-Org-Id")?.trim()
+      || c.req.header("X-OpenWork-Legacy-Org-Id")?.trim()
+      || c.req.header("X-Organization-Id")?.trim()
+    if (claimedOrganizationId && claimedOrganizationId !== principal.organizationId) {
+      return c.json({ error: { code: "TENANT_SCOPE_MISMATCH", message: "The requested organization does not match this RenWork inference key." } }, 403)
+    }
+
     const body = await c.req.json().catch(() => null)
     if (!isRecord(body) || typeof body.model !== "string") {
       return c.json({ error: { code: "VALIDATION_FAILED", message: "model and a valid JSON request body are required." } }, 400)

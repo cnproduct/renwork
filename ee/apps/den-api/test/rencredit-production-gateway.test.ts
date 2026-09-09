@@ -14,7 +14,13 @@ describe("RenWork production inference gateway", () => {
     expect(gateway).toContain("authenticateInferenceKey(apiKey)")
     expect(gateway).toContain('c.req.header("Idempotency-Key")')
     expect(ledger).toContain("eq(InferenceKeyTable.key_hash, hashInferenceKey(key))")
-    expect(gateway).not.toContain('c.req.header("X-Organization-Id")')
+  })
+
+  test("rejects forged organization scope before parsing or reserving a request", () => {
+    expect(gateway).toContain('c.req.header("X-OpenWork-Legacy-Org-Id")')
+    expect(gateway).toContain('c.req.header("X-Organization-Id")')
+    expect(gateway).toContain("TENANT_SCOPE_MISMATCH")
+    expect(gateway.indexOf("TENANT_SCOPE_MISMATCH")).toBeLessThan(gateway.indexOf("reserveInferenceCredits({"))
   })
 
   test("lets the signed desktop provider supply an automatic per-run idempotency key", () => {
