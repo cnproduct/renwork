@@ -25,6 +25,7 @@ import {
   shouldRequireOrgSelection,
 } from "../../_lib/den-org";
 import { ORG_SCOPE_HEADER, OrganizationNotFoundError, setRequestOrgScope } from "../../_lib/org-scope";
+import { buildSignInRoute } from "../../_lib/client-route";
 
 type OrgDashboardContextValue = {
   orgSlug: string | null;
@@ -906,7 +907,7 @@ export function OrgDashboardProvider({
     if (!user) {
       setRequestOrgScope(null);
       void signOut();
-      router.replace("/");
+      router.replace(buildSignInRoute(pathnameRef.current));
       return;
     }
 

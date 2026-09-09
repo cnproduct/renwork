@@ -201,6 +201,7 @@ describe("gateway runtime mode", () => {
     const authUrl = new URL(buildDenAuthUrl(readDenSettings().baseUrl, "sign-up"));
 
     expect(authUrl.origin).toBe("https://www.rrenn.com");
+    expect(authUrl.pathname).toBe("/sign-in");
     expect(authUrl.searchParams.get("mode")).toBe("sign-up");
     expect(authUrl.searchParams.get("webAuth")).toBe("1");
     expect(authUrl.searchParams.get("webAuthReturn")).toBe("https://gw.example");
@@ -486,6 +487,7 @@ describe("non-gateway connection modes", () => {
       // URL uses desktopAuth (copy link / paste grant) instead.
       const authUrl = new URL(buildDenAuthUrl(settings.baseUrl, "sign-in"));
       expect(authUrl.origin).toBe("https://www.rrenn.com");
+      expect(authUrl.pathname).toBe("/sign-in");
       expect(authUrl.searchParams.get("desktopAuth")).toBe("1");
       expect(authUrl.searchParams.get("webAuth")).toBeNull();
     } finally {
@@ -499,6 +501,7 @@ describe("non-gateway connection modes", () => {
     const authUrl = new URL(buildDenAuthUrl(readDenSettings().baseUrl, "sign-in"));
 
     expect(authUrl.origin).toBe("https://www.rrenn.com");
+    expect(authUrl.pathname).toBe("/sign-in");
     expect(authUrl.searchParams.get("desktopAuth")).toBe("1");
     expect(authUrl.searchParams.get("desktopScheme")).toBe("renwork");
     expect(authUrl.searchParams.get("webAuth")).toBeNull();

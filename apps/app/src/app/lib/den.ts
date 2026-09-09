@@ -1295,6 +1295,7 @@ function canUseCloudWebAuthReturn(origin: string): boolean {
 
 export function buildDenAuthUrl(baseUrl: string, mode: "sign-in" | "sign-up"): string {
   const target = new URL(resolveDenBaseUrls(baseUrl).baseUrl);
+  target.pathname = "/sign-in";
   target.searchParams.set("mode", mode);
   const webReturnOrigin =
     isWebDeployment() && typeof window !== "undefined" ? window.location.origin : null;
