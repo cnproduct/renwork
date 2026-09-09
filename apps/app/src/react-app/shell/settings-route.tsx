@@ -66,6 +66,7 @@ import ProviderAuthModal from "@/react-app/domains/connections/provider-auth/pro
 import {
   canConnectPersonalSubscriptionOAuth,
   canManageDesktopModelProviders,
+  hasPlatformGrantedPersonalSubscriptionModel,
 } from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
 import ConnectionsModals from "@/react-app/domains/connections/modals";
 import { AiSettingsView } from "@/react-app/domains/settings/pages/ai-view";
@@ -829,6 +830,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     hasAuthToken: Boolean(cloudSession.authToken.trim()),
     hasActiveOrganization: cloudSession.hasActiveOrg,
     hasActiveRuntime: Boolean(activeClient && selectedWorkspaceId),
+    hasPlatformGrantedModel: hasPlatformGrantedPersonalSubscriptionModel(providerAuthSnapshot.cloudOrgProviders),
     workspaceType: selectedWorkspace?.workspaceType,
   });
   const connectScope = useMemo(

@@ -73,20 +73,20 @@ async function createRoot(): Promise<string> {
 
 function buildProvider(models: FakeModel[]): FakeProvider {
   return {
-    id: "lpr_test",
-    providerId: "openai-compatible",
-    name: "Test provider",
-    source: "custom",
+    id: "lpr_gateway",
+    providerId: "renwork",
+    name: "RenWork Models",
+    source: "openwork",
     updatedAt: "2026-08-04T10:00:00.000Z",
     providerConfig: {
-      env: ["TEST_PROVIDER_API_KEY"],
+      env: ["RENWORK_API_KEY"],
       npm: "@ai-sdk/openai-compatible",
-      api: "https://models.example.test/api/v1",
-      options: { baseURL: "https://models.example.test/api/v1" },
+      api: "https://den.example.test/api/v1",
+      options: { baseURL: "https://den.example.test/api/v1" },
       whitelist: ["allowed-model"],
       blacklist: ["blocked-model"],
     },
-    apiKey: "sk-test-provider",
+    apiKey: "rw_inf_test",
     apiKeys: null,
     models,
   };
@@ -95,20 +95,20 @@ function buildProvider(models: FakeModel[]): FakeProvider {
 // Declares credential env vars but carries no credential: materialization
 // must skip it — and must say so in status.skippedProviders instead of
 // dropping it silently.
-function buildProviderWithoutCredential(): FakeProvider {
+function buildDirectProvider(): FakeProvider {
   return {
-    id: "lpr_nocred",
-    providerId: "anthropic",
-    name: "No Credential Provider",
+    id: "lpr_direct",
+    providerId: "opencode-go-primary",
+    name: "OpenCode Go",
     source: "custom",
     updatedAt: "2026-08-04T10:00:00.000Z",
     providerConfig: {
-      env: ["NOCRED_PROVIDER_API_KEY"],
-      npm: "@ai-sdk/anthropic",
+      env: ["OPENCODE_GO_API_KEY"],
+      npm: "@ai-sdk/openai-compatible",
     },
-    apiKey: "",
+    apiKey: "must-never-reach-desktop",
     apiKeys: null,
-    models: [{ id: "nocred-model", name: "No Cred Model", config: {} }],
+    models: [{ id: "kimi-k3", name: "Kimi K3", config: {} }],
   };
 }
 
@@ -223,7 +223,7 @@ describe("cloud provider sync gateway", () => {
     });
     expect((await sync.run("before-workspace")).status).toBe("noop");
     expect(sync.status().lastRun?.status).toBe("noop");
-    expect(runtimeProviderMap(await readGlobalRuntimeOpencodeConfig(config)).lpr_test).toBeDefined();
+    expect(runtimeProviderMap(await readGlobalRuntimeOpencodeConfig(config)).renwork).toBeDefined();
     expect(reloads).toBe(0);
     expect(engineRequests).toEqual([]);
 
@@ -237,7 +237,7 @@ describe("cloud provider sync gateway", () => {
     });
     expect(await sync.run("workspace-created")).toEqual({ status: "applied" });
     expect(reloads).toBe(1);
-    expect(engineRequests).toContain("PUT /auth/lpr_test");
+    expect(engineRequests).toContain("PUT /auth/renwork");
   });
 
   test("materializes Den providers globally, reconciles changes, and sweeps the session", async () => {
@@ -265,7 +265,7 @@ describe("cloud provider sync gateway", () => {
         { id: "model-z", name: "Model Z", config: { reasoning: true } },
         { id: "model-a", name: "Model A", config: { family: "test" } },
       ]),
-      buildProviderWithoutCredential(),
+      buildDirectProvider(),
     ];
     const denRequests: Array<{ path: string; authorization: string | null; orgId: string | null }> = [];
     const den = Bun.serve({
@@ -305,7 +305,7 @@ describe("cloud provider sync gateway", () => {
     // credential. The next sync sees the same value, performs no upsert, and
     // must still reclaim ownership so logout removes it.
     await new EnvService({ path: process.env.OPENWORK_ENV_STORE }).upsertMany([
-      { key: "TEST_PROVIDER_API_KEY", value: "sk-test-provider" },
+      { key: "RENWORK_API_KEY", value: "rw_inf_test" },
     ]);
 
     const server = await startServer(config);
@@ -335,38 +335,37 @@ describe("cloud provider sync gateway", () => {
     expect(statusProviders).toHaveLength(1);
     const statusProvider = expectRecord(statusProviders[0], "materialized provider status");
     expect(statusProvider).toMatchObject({
-      cloudProviderId: "lpr_test",
-      providerId: "lpr_test",
-      sourceProviderId: "openai-compatible",
-      name: "Test provider",
-      source: "custom",
+      cloudProviderId: "lpr_gateway",
+      providerId: "renwork",
+      sourceProviderId: "renwork",
+      name: "RenWork Models",
+      source: "openwork",
       updatedAt: "2026-08-04T10:00:00.000Z",
       modelIds: ["model-a", "model-z"],
     });
     expect(typeof statusProvider.importedAt).toBe("number");
     const firstImportedAt = statusProvider.importedAt;
-    // The credential-less provider is skipped — loudly, with a reason.
-    expect(firstStatus.skippedProviders).toEqual([{
-      cloudProviderId: "lpr_nocred",
-      providerId: "lpr_nocred",
-      name: "No Credential Provider",
-      reason: "missing_credentials",
-    }]);
+    expect(firstStatus.skippedProviders).toEqual([]);
     // The idle engine accepted the reload, so no reload is still owed.
     expect(firstStatus.reloadPending).toBe(false);
 
     expect(denRequests.every((request) => request.authorization === "Bearer den-token")).toBe(true);
     expect(denRequests.every((request) => request.orgId === "org_test")).toBe(true);
-    expect(denRequests.map((request) => request.path)).toContain("/v1/llm-providers/lpr_test/connect");
+    expect(denRequests.map((request) => request.path)).toContain("/v1/llm-providers/lpr_gateway/connect");
+    expect(denRequests.map((request) => request.path)).not.toContain("/v1/llm-providers/lpr_direct/connect");
 
     const globalProviders = runtimeProviderMap(await readGlobalRuntimeOpencodeConfig(config));
-    const globalProvider = expectRecord(globalProviders.lpr_test, "global runtime provider");
+    const globalProvider = expectRecord(globalProviders.renwork, "global runtime provider");
     const globalModels = expectRecord(globalProvider.models, "global runtime provider models");
     expect(Object.keys(globalModels).sort()).toEqual(["model-a", "model-z"]);
     expect(expectRecord(globalModels["model-z"], "model-z runtime config").reasoning).toBe(true);
     expect((await new EnvService({ path: process.env.OPENWORK_ENV_STORE }).list()).find(
-      (entry) => entry.key === "TEST_PROVIDER_API_KEY",
-    )?.value).toBe("sk-test-provider");
+      (entry) => entry.key === "RENWORK_API_KEY",
+    )?.value).toBe("rw_inf_test");
+    expect(globalProviders.lpr_direct).toBeUndefined();
+    expect((await new EnvService({ path: process.env.OPENWORK_ENV_STORE }).list()).some(
+      (entry) => entry.value === "must-never-reach-desktop",
+    )).toBe(false);
 
     const workspaceProviders = runtimeProviderMap(await readRuntimeOpencodeConfig(config, "ws_1"));
     expect(workspaceProviders.lpr_stale).toBeUndefined();
@@ -381,7 +380,7 @@ describe("cloud provider sync gateway", () => {
     denProviders = [buildProvider([{ id: "model-b", name: "Model B", config: { tool_call: true } }])];
     expect(await runSync(base, "models-changed")).toEqual({ status: "applied" });
     const updatedGlobal = runtimeProviderMap(await readGlobalRuntimeOpencodeConfig(config));
-    expect(Object.keys(expectRecord(updatedGlobal.lpr_test, "updated global provider").models ?? {})).toEqual(["model-b"]);
+    expect(Object.keys(expectRecord(updatedGlobal.renwork, "updated global provider").models ?? {})).toEqual(["model-b"]);
     const updatedStatusResponse = await fetch(`${base}/cloud-provider-sync/status`, { headers: clientHeaders() });
     const updatedStatus = await responseRecord(updatedStatusResponse, "updated status");
     const updatedProviders = Array.isArray(updatedStatus.providers) ? updatedStatus.providers : [];
@@ -391,7 +390,7 @@ describe("cloud provider sync gateway", () => {
 
     denProviders = [];
     expect(await runSync(base, "provider-removed")).toEqual({ status: "applied" });
-    expect(runtimeProviderMap(await readGlobalRuntimeOpencodeConfig(config)).lpr_test).toBeUndefined();
+    expect(runtimeProviderMap(await readGlobalRuntimeOpencodeConfig(config)).renwork).toBeUndefined();
     const removedStatusResponse = await fetch(`${base}/cloud-provider-sync/status`, { headers: clientHeaders() });
     expect((await responseRecord(removedStatusResponse, "removed status")).providers).toEqual([]);
 
@@ -399,9 +398,9 @@ describe("cloud provider sync gateway", () => {
     expect(await runSync(base, "provider-restored")).toEqual({ status: "applied" });
     const deleteResponse = await fetch(`${base}/den-session`, { method: "DELETE", headers: hostHeaders() });
     expect(deleteResponse.status).toBe(204);
-    expect(runtimeProviderMap(await readGlobalRuntimeOpencodeConfig(config)).lpr_test).toBeUndefined();
+    expect(runtimeProviderMap(await readGlobalRuntimeOpencodeConfig(config)).renwork).toBeUndefined();
     expect((await new EnvService({ path: process.env.OPENWORK_ENV_STORE }).list()).find(
-      (entry) => entry.key === "TEST_PROVIDER_API_KEY",
+      (entry) => entry.key === "RENWORK_API_KEY",
     )).toBeUndefined();
     const clearedStatusResponse = await fetch(`${base}/cloud-provider-sync/status`, { headers: clientHeaders() });
     expect(await responseRecord(clearedStatusResponse, "cleared status")).toEqual({
@@ -411,7 +410,7 @@ describe("cloud provider sync gateway", () => {
       reloadPending: false,
       skippedProviders: [],
     });
-    expect(engineRequests).toContain("DELETE /auth/lpr_test");
+    expect(engineRequests).toContain("DELETE /auth/renwork");
     expect(await runSync(base, "after-delete")).toEqual({ status: "no_session" });
 
     denFailure = true;

@@ -54,6 +54,29 @@ function writeOpencodeConfig(filePath: string, config: Record<string, unknown>):
   writeFileSync(filePath, JSON.stringify(config, null, 2) + "\n", "utf8");
 }
 
+export function assertCustomProviderManagementAllowed(config: Pick<ServerConfig, "meteredRuntimeRequired">): void {
+  if (!config.meteredRuntimeRequired) return;
+  throw new ApiError(
+    403,
+    "provider_management_disabled",
+    "Provider credentials are managed by the RenWork platform administrator for metered distributions.",
+  );
+}
+
+export function sweepLegacyCustomProvidersForMeteredDistribution(
+  config: Pick<ServerConfig, "meteredRuntimeRequired">,
+  filePath = resolveGlobalOpencodeConfigPath(),
+): boolean {
+  if (!config.meteredRuntimeRequired || !existsSync(filePath)) return false;
+  const configData = readOpencodeConfig(filePath);
+  const providers = configData.provider;
+  if (!providers || typeof providers !== "object" || Object.keys(providers).length === 0) return false;
+
+  delete configData.provider;
+  writeOpencodeConfig(filePath, configData);
+  return true;
+}
+
 function maskApiKey(key: string | undefined): string {
   if (!key) return "";
   if (key.length <= 8) return "******";
@@ -71,9 +94,12 @@ export function registerCustomProviderRoutes(options: {
 }): void {
   const { routes, config, jsonResponse, readJsonBody, ensureWritable, requireClientScope } = options;
 
+  sweepLegacyCustomProvidersForMeteredDistribution(config);
+
   // 1. GET /api/custom-providers - List all custom providers
   addRoute(routes, "GET", "/api/custom-providers", "client", async (ctx) => {
     requireClientScope(ctx, "collaborator");
+    assertCustomProviderManagementAllowed(config);
     const globalPath = resolveGlobalOpencodeConfigPath();
     const configData = readOpencodeConfig(globalPath);
     const providersObj = (configData.provider ?? {}) as Record<string, Record<string, unknown>>;
@@ -130,6 +156,7 @@ export function registerCustomProviderRoutes(options: {
   addRoute(routes, "POST", "/api/custom-providers/save", "client", async (ctx) => {
     ensureWritable(config);
     requireClientScope(ctx, "collaborator");
+    assertCustomProviderManagementAllowed(config);
 
     const body = (await readJsonBody(ctx.request).catch(() => ({}))) as Record<string, unknown>;
     const rawId = typeof body.id === "string" ? body.id.trim() : "";
@@ -220,6 +247,7 @@ export function registerCustomProviderRoutes(options: {
   addRoute(routes, "POST", "/api/custom-providers/delete", "client", async (ctx) => {
     ensureWritable(config);
     requireClientScope(ctx, "collaborator");
+    assertCustomProviderManagementAllowed(config);
 
     const body = (await readJsonBody(ctx.request).catch(() => ({}))) as Record<string, unknown>;
     const providerId = typeof body.providerId === "string" ? body.providerId.trim() : "";
@@ -241,6 +269,7 @@ export function registerCustomProviderRoutes(options: {
   // 4. POST /api/custom-providers/test - Test provider connection & latency
   addRoute(routes, "POST", "/api/custom-providers/test", "client", async (ctx) => {
     requireClientScope(ctx, "collaborator");
+    assertCustomProviderManagementAllowed(config);
 
     const body = (await readJsonBody(ctx.request).catch(() => ({}))) as Record<string, unknown>;
     const type = typeof body.type === "string" ? body.type.trim() : "openai-compatible";
@@ -372,6 +401,7 @@ export function registerCustomProviderRoutes(options: {
   // 5. GET /api/custom-providers/scan-ollama - Scan local or specified Ollama
   addRoute(routes, "GET", "/api/custom-providers/scan-ollama", "client", async (ctx) => {
     requireClientScope(ctx, "collaborator");
+    assertCustomProviderManagementAllowed(config);
 
     const queryURL = ctx.url.searchParams.get("baseURL") || "http://127.0.0.1:11434";
     const host = queryURL.replace(/\/v1\/?$/, "").replace(/\/+$/, "");

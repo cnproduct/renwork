@@ -15,6 +15,7 @@ import { z } from "zod"
 import { db } from "../../db.js"
 import { env } from "../../env.js"
 import { memberFacingMcpConnectionsEnabled } from "../../capability-sources/external-mcp-rollout.js"
+import { isMemberConnectableProvider } from "../../llm/provider-connection-policy.js"
 import { listAccessibleMarketplaceCapabilityReferences } from "../../mcp/marketplace-capabilities.js"
 import {
   type MemberTeamsContext,
@@ -112,6 +113,8 @@ async function listAccessibleLlmProviders(input: {
   const rows = await db
     .select({
       id: LlmProviderTable.id,
+      providerId: LlmProviderTable.providerId,
+      source: LlmProviderTable.source,
       updatedAt: LlmProviderTable.updatedAt,
     })
     .from(LlmProviderTable)
@@ -123,6 +126,7 @@ async function listAccessibleLlmProviders(input: {
 
   const providers: Record<string, string> = {}
   for (const row of rows) {
+    if (!isMemberConnectableProvider(row)) continue
     providers[row.id] = timestamp(row.updatedAt)
   }
   return providers

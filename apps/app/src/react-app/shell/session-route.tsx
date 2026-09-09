@@ -146,6 +146,7 @@ import { useSessionProviderAuth } from "@/react-app/domains/connections/provider
 import {
   canConnectPersonalSubscriptionOAuth,
   canManageDesktopModelProviders,
+  hasPlatformGrantedPersonalSubscriptionModel,
 } from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
 import {
   disabledProvidersFromConfig,
@@ -633,12 +634,13 @@ export function SessionRoute() {
     hasActiveOrganization: Boolean(denSettings.activeOrgId?.trim()),
     workspaceType: selectedWorkspace?.workspaceType,
   });
-  const personalSubscriptionOAuthAllowed = canConnectPersonalSubscriptionOAuth({
+  const personalSubscriptionOAuthPrerequisitesMet = canConnectPersonalSubscriptionOAuth({
     desktopRuntime: isDesktopRuntime(),
     signedIn: denAuth.isSignedIn,
     hasAuthToken: Boolean(denSettings.authToken?.trim()),
     hasActiveOrganization: Boolean(denSettings.activeOrgId?.trim()),
     hasActiveRuntime: Boolean(opencodeClient && selectedWorkspaceId),
+    hasPlatformGrantedModel: true,
     workspaceType: selectedWorkspace?.workspaceType,
   });
   const cloudWorkspace = useCloudWorkspaceStatus();
@@ -917,6 +919,9 @@ export function SessionRoute() {
     () => assignedModelOptions(sessionProviderAuthSnapshot.cloudOrgProviders),
     [sessionProviderAuthSnapshot.cloudOrgProviders],
   );
+  const personalSubscriptionOAuthAllowed =
+    personalSubscriptionOAuthPrerequisitesMet &&
+    hasPlatformGrantedPersonalSubscriptionModel(sessionProviderAuthSnapshot.cloudOrgProviders);
   const renWorkModelCatalog = useRenWorkModelCatalog(true, denAuth.isSignedIn);
   const personalSubscriptionModelOptions = useMemo(
     () => personalSubscriptionCatalogModelOptions(renWorkModelCatalog, providerConnectedIds),
