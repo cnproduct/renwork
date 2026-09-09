@@ -2049,7 +2049,7 @@ export function DenAdminPanel() {
         ? "Admin access required"
         : "Backoffice unavailable";
     const message = accessState === "signed-out"
-      ? "Use the main Den page to sign in, then return with a whitelisted admin account."
+      ? "Sign in here with an email/password account from the platform administrator allowlist. You will return to this page automatically."
       : accessState === "forbidden"
         ? "Your session is valid, but the email on it is not present in the Den admin allowlist."
         : error ?? "The backoffice request failed before the dashboard could load.";
@@ -2061,10 +2061,10 @@ export function DenAdminPanel() {
         <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">{message}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <a
-            href="/"
+            href="/admin/sign-in"
             className="inline-flex items-center justify-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
           >
-            Open sign-in page
+            {accessState === "forbidden" ? "Switch administrator account" : "Sign in manually"}
           </a>
           <button
             type="button"
