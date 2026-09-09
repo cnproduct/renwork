@@ -32,6 +32,12 @@ export type ManagedProviderAuthInput = {
   env: EnvReader;
   fetchImpl?: typeof globalThis.fetch;
   logger?: ManagedProviderAuthLogger;
+  /**
+   * Cloud-owned provider ids removed during this convergence pass. Delete
+   * their engine auth even after an app restart, when the in-memory delivery
+   * fingerprint no longer remembers the previous credential.
+   */
+  revokeProviderIds?: readonly string[];
 };
 
 export type ManagedProviderAuthResult = {
@@ -150,13 +156,25 @@ export async function syncManagedProviderAuth(input: ManagedProviderAuthInput): 
     }
   }
 
-  // Only ever remove ids this process delivered. Desktop users authenticate
-  // providers themselves and those must never be touched here.
+  // Explicit revocations are limited by the caller to cloud-owned ids. This
+  // closes the restart gap: an earlier process may have delivered the auth and
+  // exited before the current process could remember its fingerprint.
+  const explicitRevocations = new Set(
+    (input.revokeProviderIds ?? [])
+      .map((providerId) => providerId.trim())
+      .filter((providerId) => providerId.length > 0 && !managedIds.has(providerId)),
+  );
+
+  // Also remove ids this process delivered and that are no longer managed.
   for (const key of [...deliveredFingerprints.keys()]) {
     const [keyBaseUrl, providerId] = key.split("\u0000");
     if (keyBaseUrl !== baseUrl || managedIds.has(providerId ?? "")) continue;
+    if (providerId) explicitRevocations.add(providerId);
+  }
+
+  for (const providerId of explicitRevocations) {
     try {
-      const response = await fetchImpl(`${baseUrl}/auth/${encodeURIComponent(providerId ?? "")}`, {
+      const response = await fetchImpl(`${baseUrl}/auth/${encodeURIComponent(providerId)}`, {
         method: "DELETE",
         headers,
       });
@@ -167,8 +185,8 @@ export async function syncManagedProviderAuth(input: ManagedProviderAuthInput): 
         });
         continue;
       }
-      deliveredFingerprints.delete(key);
-      result.removed.push(providerId ?? "");
+      deliveredFingerprints.delete(fingerprintKey(baseUrl, providerId));
+      result.removed.push(providerId);
     } catch (error) {
       input.logger?.error("managed provider auth removal failed", {
         provider_id: providerId,

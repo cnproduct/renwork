@@ -131,17 +131,17 @@ function startFakeEngine(): FakeEngine {
 function stableDenProvider(): Record<string, unknown> {
   return {
     id: "lpr_steady",
-    providerId: "openai-compatible",
-    name: "Steady provider",
-    source: "custom",
+    providerId: "renwork",
+    name: "RenWork Models",
+    source: "openwork",
     updatedAt: "2026-08-04T10:00:00.000Z",
     providerConfig: {
-      env: ["STEADY_PROVIDER_API_KEY"],
+      env: ["RENWORK_API_KEY"],
       npm: "@ai-sdk/openai-compatible",
-      api: "https://models.example.test/api/v1",
-      options: { baseURL: "https://models.example.test/api/v1" },
+      api: "https://den.example.test/api/v1",
+      options: { baseURL: "https://den.example.test/api/v1" },
     },
-    apiKey: "sk-steady-provider",
+    apiKey: "rw_inf_steady",
     apiKeys: null,
     models: [
       { id: "model-b", name: "Model B", config: {} },
@@ -178,12 +178,17 @@ function startFakeDen(options?: { providers?: Record<string, unknown>[] }): { ur
 function guardProvider(): Record<string, unknown> {
   return {
     id: "lpr_guard",
-    providerId: "anthropic",
-    name: "Guard Provider",
-    source: "custom",
+    providerId: "renwork",
+    name: "RenWork Models",
+    source: "openwork",
     updatedAt: "2026-08-10T00:00:00.000Z",
-    providerConfig: { env: ["GUARD_PROVIDER_API_KEY"], npm: "@ai-sdk/anthropic" },
-    apiKey: "sk-guard",
+    providerConfig: {
+      env: ["RENWORK_API_KEY"],
+      npm: "@ai-sdk/openai-compatible",
+      api: "https://den.example.test/api/v1",
+      options: { baseURL: "https://den.example.test/api/v1" },
+    },
+    apiKey: "rw_inf_guard",
     apiKeys: null,
     models: [{ id: "guard-model", name: "Guard Model", config: {} }],
   };
@@ -343,7 +348,7 @@ describe("engine reload guard", () => {
 
     // The credential push is fingerprint-guarded, so it must not re-deliver
     // on every pass either.
-    expect(engine.requests.filter((entry) => entry === "PUT /auth/lpr_steady")).toHaveLength(1);
+    expect(engine.requests.filter((entry) => entry === "PUT /auth/renwork")).toHaveLength(1);
   });
 
   test("a deferred reload lands by itself once the engine idles, even with no Den session", async () => {

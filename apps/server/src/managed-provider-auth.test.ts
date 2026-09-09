@@ -174,6 +174,29 @@ describe("managed provider auth delivery", () => {
     await rm(dir, { recursive: true, force: true });
   });
 
+  test("removes an explicitly revoked cloud credential after a process restart", async () => {
+    const config = await makeConfig(dir);
+    await writeRuntimeOpencodeConfig(config, ENGINE_GLOBAL_RUNTIME_CONFIG_ID, (current) => ({
+      ...current,
+      provider: {},
+    }));
+    const fetchStub = stubFetch();
+
+    const result = await syncManagedProviderAuth({
+      config,
+      env: { list: async () => [] },
+      fetchImpl: fetchStub.impl,
+      revokeProviderIds: [PROVIDER],
+    });
+
+    expect(result.removed).toEqual([PROVIDER]);
+    expect(fetchStub.calls).toEqual([expect.objectContaining({
+      method: "DELETE",
+      url: `http://127.0.0.1:39999/auth/${PROVIDER}`,
+    })]);
+    await rm(dir, { recursive: true, force: true });
+  });
+
   test("reports an engine rejection with its status and no credential", async () => {
     const config = await makeConfig(dir);
     await seedProvider(config, { id: "anthropic", env: ["ANTHROPIC_API_KEY"] });

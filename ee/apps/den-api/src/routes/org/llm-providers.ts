@@ -15,6 +15,8 @@ import { z } from "zod"
 import { db } from "../../db.js"
 import { CustomProviderConfigError, normalizeCustomProviderConfig } from "../../llm/custom-provider.js"
 import { probeEndpoint, verifyModels } from "../../llm/endpoint-probe.js"
+import { isMemberConnectableProvider } from "../../llm/provider-connection-policy.js"
+import { isAdminEmailAllowed } from "../../middleware/admin.js"
 import {
   ProviderCredentialError,
   decodeProviderCredential,
@@ -36,7 +38,7 @@ import { denTypeIdSchema, emptyResponse, forbiddenSchema, invalidRequestSchema, 
 import { repairMemberInferenceAccessIfNeeded } from "../../inference.js"
 import { listAccessibleLlmProviderAccess } from "./llm-provider-access.js"
 import type { OrgRouteVariables } from "./shared.js"
-import { idParamSchema, memberHasRole } from "./shared.js"
+import { idParamSchema } from "./shared.js"
 
 type LlmProviderId = typeof LlmProviderTable.$inferSelect.id
 type LlmProviderAccessId = typeof LlmProviderAccessTable.$inferSelect.id
@@ -163,17 +165,6 @@ function createFailure(status: number, error: string, message?: string): RouteFa
 
 function isRouteFailure(value: unknown): value is RouteFailure {
   return typeof value === "object" && value !== null && "status" in value && "error" in value
-}
-
-function isOrganizationAdmin(payload: { currentMember: { isOwner: boolean; role: string } }) {
-  return payload.currentMember.isOwner || memberHasRole(payload.currentMember.role, "admin")
-}
-
-function canManageLlmProvider(
-  payload: { currentMember: { id: MemberId; isOwner: boolean; role: string } },
-  provider: LlmProviderRow,
-) {
-  return isOrganizationAdmin(payload) || provider.createdByOrgMembershipId === payload.currentMember.id
 }
 
 async function canAccessLlmProvider(input: {
@@ -658,11 +649,12 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
     describeRoute({
       tags: ["LLM Providers"],
       summary: "List organization LLM providers",
-      description: "Lists usable providers by default. Pass scope=manageable to list providers the current member can administer in Den.",
+      description: "Lists the member-safe RenWork gateway by default. Only a platform super-admin may use scope=manageable to inspect provider configuration.",
       responses: {
         200: jsonResponse("Accessible organization LLM providers returned successfully.", llmProviderListResponseSchema),
         400: jsonResponse("The provider list path parameters were invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to list organization LLM providers.", unauthorizedSchema),
+        403: jsonResponse("Only a platform super-admin may list manageable providers.", forbiddenSchema),
       },
     }),
     orgMemberRoute(),
@@ -672,6 +664,14 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
       const query = c.req.valid("query")
       const payload = c.get("organizationContext")
       const memberTeams = c.get("memberTeams") ?? []
+      const platformAdmin = await isAdminEmailAllowed(c.get("user")?.email)
+
+      if (query.scope === "manageable" && !platformAdmin) {
+        return c.json({
+          error: "forbidden",
+          message: "Only a platform super-admin can list manageable providers.",
+        }, 403)
+      }
 
       // Desktop entitlement is based on this list. If org inference is enabled
       // but this member's OpenWork provider/key was deleted, re-provision before
@@ -691,15 +691,19 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
         organizationId: payload.organization.id,
         currentMemberId: payload.currentMember.id,
         memberTeams,
-        isAdmin: isOrganizationAdmin(payload),
+        isAdmin: platformAdmin,
         scope: query.scope,
       })
 
+      const visibleProviders = query.scope === "usable"
+        ? providers.filter(isMemberConnectableProvider)
+        : providers
+
       return c.json({
-        llmProviders: providers.map((provider) => ({
+        llmProviders: visibleProviders.map((provider) => ({
           ...provider,
           apiKey: undefined,
-          canManage: canManageLlmProvider(payload, provider),
+          canManage: platformAdmin,
         })),
       })
     },
@@ -710,12 +714,12 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
     describeRoute({
       tags: ["LLM Providers"],
       summary: "Get LLM provider connect payload",
-      description: "Returns one accessible organization LLM provider with the concrete model configuration needed to connect to it.",
+      description: "Returns only the revocable per-member RenWork gateway configuration. Upstream service credentials never leave Den.",
       responses: {
         200: jsonResponse("Provider connection payload returned successfully.", llmProviderResponseSchema),
         400: jsonResponse("The provider connect path parameters were invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to connect to an organization LLM provider.", unauthorizedSchema),
-        403: jsonResponse("Only members with access can connect to this provider.", forbiddenSchema),
+        403: jsonResponse("The member lacks access or requested a direct upstream provider connection.", forbiddenSchema),
         404: jsonResponse("The provider could not be found.", notFoundSchema),
       },
     }),
@@ -756,6 +760,17 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
         return c.json({
           error: "forbidden",
           message: "You do not have access to this provider.",
+        }, 403)
+      }
+
+      // Ordinary desktops receive only the revocable per-member RenWork
+      // inference key. Service credentials for OpenCode Go, OpenRouter,
+      // Agnes, and custom providers stay inside Den and are never decoded for
+      // a member-facing response, even when an older client knows the row id.
+      if (!isMemberConnectableProvider(provider)) {
+        return c.json({
+          error: "provider_direct_connect_disabled",
+          message: "Direct provider connections are disabled. Use a published RenWork model through the metered gateway.",
         }, 403)
       }
 

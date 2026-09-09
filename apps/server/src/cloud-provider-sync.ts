@@ -57,7 +57,7 @@ export type CloudProviderSyncSkippedProvider = {
   providerId: string;
   name: string;
   /** Why materialization skipped this provider (e.g. declared env vars but no credential to fill them). */
-  reason: "missing_credentials";
+  reason: "missing_credentials" | "server_exclusive_credentials";
 };
 
 export type CloudProviderSyncRunDetail = {
@@ -328,7 +328,7 @@ async function fetchProviders(
 ): Promise<DenProviderConnection[]> {
   const providers = parseProviderList(await requestJson(fetchImpl, session, "/v1/llm-providers"));
   return Promise.all(
-    providers.map(async (provider) =>
+    providers.filter(isServerExclusiveGatewayProvider).map(async (provider) =>
       parseProviderConnection(
         await requestJson(fetchImpl, session, `/v1/llm-providers/${encodeURIComponent(provider.id)}/connect`),
         provider.id,
@@ -356,6 +356,10 @@ function hashString(value: string): string {
 
 function runtimeProviderId(provider: DenProvider): string {
   return provider.source === "openwork" ? provider.providerId : provider.id;
+}
+
+function isServerExclusiveGatewayProvider(provider: Pick<DenProvider, "providerId" | "source">): boolean {
+  return provider.source === "openwork" && provider.providerId === "renwork";
 }
 
 function isCloudManagedProviderKey(providerId: string): boolean {
@@ -451,6 +455,15 @@ function prepareMaterialization(providers: DenProviderConnection[]): PreparedMat
   const materialized: MaterializedProvider[] = [];
   const skipped: CloudProviderSyncSkippedProvider[] = [];
   for (const provider of providers) {
+    if (!isServerExclusiveGatewayProvider(provider)) {
+      skipped.push({
+        cloudProviderId: provider.id,
+        providerId: runtimeProviderId(provider),
+        name: provider.name,
+        reason: "server_exclusive_credentials",
+      });
+      continue;
+    }
     const envEntries = providerEnvEntries(provider);
     const envNames = readProviderEnvNames(provider.providerConfig);
     if (envNames.length > 0 && !envEntries.some((entry) => envNames.includes(entry.key))) {
@@ -766,6 +779,8 @@ export class CloudProviderSync {
     const globalRuntime = await readGlobalRuntimeOpencodeConfig(this.config);
     const currentManagedProviders = managedProviderMap(runtimeProviderMap(globalRuntime));
     const providerStateChanged = stableJson(currentManagedProviders) !== stableJson(desiredProviders);
+    const revokedProviderIds = Object.keys(currentManagedProviders)
+      .filter((providerId) => !(providerId in desiredProviders));
 
     if (providerStateChanged) {
       const patch: JsonRecord = {};
@@ -792,7 +807,12 @@ export class CloudProviderSync {
     // empty. Reclaim every desired key or the next logout will leave that
     // cloud credential behind permanently.
     for (const key of desiredEnvKeys) this.ownedEnvKeys.add(key);
-    const envDeletes = [...this.ownedEnvKeys].filter((key) => !desiredEnvKeys.has(key));
+    const legacyManagedEnvKeys = revokedProviderIds.flatMap((providerId) => {
+      const provider = currentManagedProviders[providerId];
+      return isRecord(provider) ? readProviderEnvNames(provider) : [];
+    });
+    const envDeletes = [...new Set([...this.ownedEnvKeys, ...legacyManagedEnvKeys])]
+      .filter((key) => !desiredEnvKeys.has(key));
     for (const key of envDeletes) {
       await this.env.delete(key);
       this.ownedEnvKeys.delete(key);
@@ -840,6 +860,7 @@ export class CloudProviderSync {
       env: this.env,
       fetchImpl: this.fetchImpl,
       logger: this.logger,
+      revokeProviderIds: revokedProviderIds,
     });
 
     this.managedProviderIds = new Set(Object.keys(desiredProviders));
@@ -918,7 +939,10 @@ export class CloudProviderSync {
   }
 
   private async sweep(): Promise<void> {
-    const providerPatch = Object.fromEntries([...this.managedProviderIds].map((providerId) => [providerId, null]));
+    const globalRuntime = await readGlobalRuntimeOpencodeConfig(this.config);
+    const persistedManagedProviders = managedProviderMap(runtimeProviderMap(globalRuntime));
+    const providerIds = new Set([...this.managedProviderIds, ...Object.keys(persistedManagedProviders)]);
+    const providerPatch = Object.fromEntries([...providerIds].map((providerId) => [providerId, null]));
     let providerChanged = false;
     if (Object.keys(providerPatch).length > 0) {
       const result = await writeGlobalRuntimeOpencodeConfig(this.config, (current) => ({
@@ -927,7 +951,10 @@ export class CloudProviderSync {
       }));
       providerChanged = result.changed;
     }
-    for (const key of this.ownedEnvKeys) await this.env.delete(key);
+    const persistedManagedEnvKeys = Object.values(persistedManagedProviders).flatMap((provider) =>
+      isRecord(provider) ? readProviderEnvNames(provider) : []
+    );
+    for (const key of new Set([...this.ownedEnvKeys, ...persistedManagedEnvKeys])) await this.env.delete(key);
 
     const engineWorkspace = findManagedEngineWorkspace(this.config.workspaces) ?? this.config.workspaces[0];
     if (engineWorkspace) {
@@ -952,6 +979,7 @@ export class CloudProviderSync {
       env: this.env,
       fetchImpl: this.fetchImpl,
       logger: this.logger,
+      revokeProviderIds: [...providerIds],
     });
     if (reloadError) throw reloadError;
   }
