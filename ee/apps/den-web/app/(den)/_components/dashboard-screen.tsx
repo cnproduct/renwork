@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getWorkerStatusCopy, getWorkerStatusMeta } from "../_lib/den-flow";
 import { getBillingRoute } from "../_lib/den-org";
+import { buildSignInRoute } from "../_lib/client-route";
 import { useDenFlow } from "../_providers/den-flow-provider";
 
 type IconProps = {
@@ -205,7 +206,7 @@ export function DashboardScreen({ showSidebar = true }: { showSidebar?: boolean 
       return;
     }
     if (!user) {
-      router.replace("/");
+      router.replace(buildSignInRoute("/dashboard"));
       return;
     }
   }, [router, sessionHydrated, user]);

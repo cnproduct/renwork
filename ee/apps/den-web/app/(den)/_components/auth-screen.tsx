@@ -2,8 +2,8 @@
 
 import { Dithering } from "@paper-design/shaders-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
-import { isSamePathname } from "../_lib/client-route";
+import { useEffect, useRef, useState } from "react";
+import { getSafeInternalReturnTo, isSamePathname } from "../_lib/client-route";
 import { getMcpOAuthSelectOrganizationRoute } from "../_lib/mcp-oauth-route";
 import { useWebGlSupported } from "../_lib/use-webgl-supported";
 import { useDenFlow } from "../_providers/den-flow-provider";
@@ -48,9 +48,15 @@ export function AuthScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const routingRef = useRef(false);
+  const [authenticatedRedirectPath, setAuthenticatedRedirectPath] = useState<string | null>(null);
   const { user, sessionHydrated, desktopAuthRequested, webAuthRequested, resolveUserLandingRoute } = useDenFlow();
   const webGlSupported = useWebGlSupported();
   const hasResolvedSession = sessionHydrated && Boolean(user) && !desktopAuthRequested && !webAuthRequested;
+
+  useEffect(() => {
+    const returnTo = getSafeInternalReturnTo(new URLSearchParams(window.location.search).get("returnTo"));
+    setAuthenticatedRedirectPath(returnTo);
+  }, []);
 
   useEffect(() => {
     if (!hasResolvedSession || routingRef.current) {
@@ -60,6 +66,13 @@ export function AuthScreen() {
     const oauthRoute = typeof window === "undefined" ? null : getMcpOAuthSelectOrganizationRoute(window.location.search);
     if (oauthRoute && !isSamePathname(pathname, oauthRoute)) {
       router.replace(oauthRoute);
+      return;
+    }
+
+    const returnTo = getSafeInternalReturnTo(new URLSearchParams(window.location.search).get("returnTo"));
+    if (returnTo && !isSamePathname(pathname, returnTo)) {
+      routingRef.current = true;
+      router.replace(returnTo);
       return;
     }
 
@@ -111,7 +124,11 @@ export function AuthScreen() {
             ) : hasResolvedSession ? (
               <SessionStatusPanel mode="redirecting" />
             ) : (
-              <AuthPanel bare emailFirstFlow />
+              <AuthPanel
+                bare
+                emailFirstFlow
+                authenticatedRedirectPath={authenticatedRedirectPath ?? undefined}
+              />
             )}
           </div>
         </div>
