@@ -214,6 +214,8 @@ export function AuthPanel({
   initialMode = "sign-up",
   lockEmail = false,
   hideSocialAuth = false,
+  signInOnly = false,
+  authenticatedRedirectPath,
   hideEmailField = false,
   hideLockedEmailSummary = false,
   emailFirstFlow = false,
@@ -230,6 +232,10 @@ export function AuthPanel({
   initialMode?: AuthMode;
   lockEmail?: boolean;
   hideSocialAuth?: boolean;
+  /** Keep focused entry points, such as the platform admin login, in sign-in mode. */
+  signInOnly?: boolean;
+  /** Optional internal route used after a successful email/password sign-in. */
+  authenticatedRedirectPath?: string;
   hideEmailField?: boolean;
   hideLockedEmailSummary?: boolean;
   emailFirstFlow?: boolean;
@@ -288,7 +294,9 @@ export function AuthPanel({
   const isSingleOrgMode = runtimeConfigLoaded && runtimeConfig.orgMode === "single_org";
   const isSingleOrgSsoMode = isSingleOrgMode && runtimeConfig.singleOrgSsoConfigured;
   const isSingleOrgPrivateSignup = isSingleOrgSignupDisabled(runtimeConfig, runtimeConfigLoaded);
-  const visibleAuthMode = resolveVisibleAuthMode({ authMode, runtimeConfig, runtimeConfigLoaded });
+  const visibleAuthMode = signInOnly
+    ? "sign-in"
+    : resolveVisibleAuthMode({ authMode, runtimeConfig, runtimeConfigLoaded });
   const singleOrgName = runtimeConfig.singleOrgName || "RenWork";
   const singleOrgSlug = runtimeConfig.singleOrgSlug.trim();
   const emailFirstInvite = emailFirstInvitationId?.trim() ?? "";
@@ -306,6 +314,12 @@ export function AuthPanel({
       setAuthMode("sign-in");
     }
   }, [authMode, isSingleOrgPrivateSignup, setAuthMode]);
+
+  useEffect(() => {
+    if (signInOnly && authMode !== "sign-in") {
+      setAuthMode("sign-in");
+    }
+  }, [authMode, setAuthMode, signInOnly]);
 
   useEffect(() => {
     if (!isSingleOrgSsoMode || pathname === "/" || pathname === "/join-org") {
@@ -394,7 +408,7 @@ export function AuthPanel({
 
   const desktopGrant = getDesktopGrant(desktopRedirectUrl);
   const isPasswordResetRequest = authMode === "sign-in" && passwordResetRequested && !verificationRequired;
-  const formBusy = !runtimeConfigLoaded || (isPasswordResetRequest ? passwordResetBusy : authBusy || desktopRedirectBusy);
+  const formBusy = !runtimeConfigLoaded || (signInOnly && authMode !== "sign-in") || (isPasswordResetRequest ? passwordResetBusy : authBusy || desktopRedirectBusy);
   const activeContent = verificationRequired
     ? resolvedVerificationContent
     : isPasswordResetRequest
@@ -412,7 +426,7 @@ export function AuthPanel({
   // The segmented tabs are the primary sign-in/sign-up switch. Hide them for the
   // focused sub-flows (email verification, password reset) where switching mode
   // mid-step would be confusing.
-  const showModeTabs = !emailFirstFlow && !isSingleOrgSsoMode && !isSingleOrgPrivateSignup && !verificationRequired && !isPasswordResetRequest;
+  const showModeTabs = !signInOnly && !emailFirstFlow && !isSingleOrgSsoMode && !isSingleOrgPrivateSignup && !verificationRequired && !isPasswordResetRequest;
   const showSingleOrgSso = isSingleOrgMode && Boolean(singleOrgSlug) && !verificationRequired && !isPasswordResetRequest && (!hideSocialAuth || isSingleOrgSsoMode);
   const showSingleOrgSsoDivider = showSingleOrgSso && !isSingleOrgSsoMode;
   const showEmailPasswordAuth = !isSingleOrgSsoMode;
@@ -568,6 +582,10 @@ export function AuthPanel({
     const oauthRoute = typeof window === "undefined" ? null : getMcpOAuthSelectOrganizationRoute(window.location.search);
     if (next && oauthRoute) {
       router.replace(oauthRoute);
+      return;
+    }
+    if (next && authenticatedRedirectPath) {
+      router.replace(authenticatedRedirectPath);
       return;
     }
     if (next === "dashboard" || next === "join-org") {
@@ -1136,7 +1154,7 @@ export function AuthPanel({
               <span>Waiting for your verification code</span>
             </div>
           ) : null}
-          {authError && visibleAuthMode === "sign-in" && !isSingleOrgPrivateSignup && !verificationRequired && showEmailPasswordAuth ? (
+          {authError && visibleAuthMode === "sign-in" && !signInOnly && !isSingleOrgPrivateSignup && !verificationRequired && showEmailPasswordAuth ? (
             <button
               type="button"
               className="mt-1 inline-flex items-center justify-center gap-1 font-medium text-[var(--dls-text-primary)] transition hover:opacity-70"
