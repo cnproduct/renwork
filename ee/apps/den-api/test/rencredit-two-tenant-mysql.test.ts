@@ -156,6 +156,12 @@ test("two tenants isolate balances, replay safely, release failures and serializ
     available_microcredits: 750_000,
     reserved_microcredits: 250_000,
   })
+  const renewedUntil = new Date(Date.now() + 120_000)
+  const renewedA = await ledger.renewInferenceReservationLease({
+    reservationId: firstA.reservation.id,
+    expiresAt: renewedUntil,
+  })
+  expect(new Date(renewedA.expires_at).getTime()).toBe(renewedUntil.getTime())
 
   const concurrentB = await Promise.allSettled([
     ledger.reserveInferenceCredits({
@@ -206,6 +212,10 @@ test("two tenants isolate balances, replay safely, release failures and serializ
     accuracy: "reported",
     hasResult: false,
   })
+  await expect(ledger.renewInferenceReservationLease({
+    reservationId: firstA.reservation.id,
+    expiresAt: new Date(Date.now() + 120_000),
+  })).rejects.toThrow("RENCREDIT_RESERVATION_NOT_ACTIVE")
   await ledger.settleInferenceCredits({
     reservationId: acceptedB[0]!.value.reservation.id,
     usage: { ...zeroUsage, inputTokens: 100_000 },

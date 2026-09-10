@@ -2099,12 +2099,26 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
         // server had long since applied the sync (#3671, UI layer).
         await refreshImportedCloudProviders();
         if (result.status === "failed" || result.status === "no_session") {
+          // A completed logout invalidates the in-flight synchronization
+          // context; do not turn that expected cancellation into a readiness
+          // failure for the signed-out screen.
+          if (!hasCloudProviderSyncPrerequisites()) return;
           const message = logCloudProviderSyncError(
             reason,
             new Error(result.message ?? "Cloud provider sync failed."),
           );
           publishSettingsCloudProviderSyncError(reason, message);
-          return;
+          return { outcome: "failed", message };
+        }
+        const runtimeStatus = await openworkClient.getCloudProviderSyncStatus();
+        const hasRenWorkRuntime = runtimeStatus.providers.some((provider) => provider.providerId === "renwork");
+        if (hasRenWorkRuntime && !runtimeStatus.meteringReady) {
+          const message = logCloudProviderSyncError(
+            reason,
+            new Error("RenWork model access is still synchronizing its billing authorization."),
+          );
+          publishSettingsCloudProviderSyncError(reason, message);
+          return { outcome: "failed", message };
         }
         // The server may already be synchronized while this route still holds
         // a removed managed-model default. Always reread the live catalog and
@@ -2115,7 +2129,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       } catch (error) {
         const message = logCloudProviderSyncError(reason, error);
         publishSettingsCloudProviderSyncError(reason, message);
-        return;
+        return { outcome: "failed", message };
       }
     }
 

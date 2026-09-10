@@ -562,6 +562,26 @@ function parseSessionError(thrown: unknown): SessionError {
   // The error message may be a JSON string from our serializer in session-route.
   try {
     const parsed = JSON.parse(raw);
+    const code = typeof parsed?.code === "string"
+      ? parsed.code
+      : typeof parsed?.error?.code === "string"
+        ? parsed.error.code
+        : null;
+    if (code === "rencredit_runtime_unavailable") {
+      return { message: "RenWork 正在同步计费授权，请稍候片刻后重试。" };
+    }
+    if (code === "DEVICE_OAUTH_CONCURRENCY_EXCEEDED") {
+      const retryAfter = Number.isSafeInteger(parsed?.details?.retryAfterSeconds)
+        ? parsed.details.retryAfterSeconds
+        : Number.isSafeInteger(parsed?.retryAfterSeconds)
+          ? parsed.retryAfterSeconds
+          : null;
+      return {
+        message: retryAfter
+          ? `上一个模型任务仍在结算，请在 ${retryAfter} 秒内重试。异常任务会自动释放冻结额度。`
+          : "上一个模型任务仍在结算，请稍后重试；异常任务会自动释放冻结额度。",
+      };
+    }
     if (parsed?.name === "ProviderModelNotFoundError" && parsed?.data) {
       const { providerID, modelID, suggestions } = parsed.data;
       return {

@@ -22,6 +22,22 @@ afterEach(() => {
 })
 
 describe("session error resilience", () => {
+  test("turns RenCredit JSON failures into actionable user text", () => {
+    const readiness = presentOpencodeSessionError(JSON.stringify({
+      code: "rencredit_runtime_unavailable",
+      message: "RenWork billing is not ready.",
+    }))
+    expect(readiness.title).toContain("正在同步计费授权")
+    expect(readiness.title).not.toContain("{\"code\"")
+
+    const busy = presentOpencodeSessionError(JSON.stringify({
+      code: "DEVICE_OAUTH_CONCURRENCY_EXCEEDED",
+      details: { retryAfterSeconds: 120 },
+    }))
+    expect(busy.title).toContain("120 秒内重试")
+    expect(busy.title).toContain("自动释放冻结额度")
+  })
+
   test("classifies an OpenCode abort and retains its diagnostic payload", () => {
     const presentation = presentOpencodeSessionError({
       name: "MessageAbortedError",

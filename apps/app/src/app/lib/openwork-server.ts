@@ -58,6 +58,8 @@ export type OpenworkCloudProviderSyncSkippedProvider = {
 
 export type OpenworkCloudProviderSyncStatus = {
   hasSession: boolean;
+  providerSyncReady: boolean;
+  meteringReady: boolean;
   lastRun: { at: string | number; status: OpenworkCloudProviderSyncRun["status"]; message?: string } | null;
   providers: CloudImportedProvider[];
   /** A managed engine reload is still owed: materialized providers are not served yet. */
@@ -136,7 +138,9 @@ function parseCloudProviderSyncStatus(value: unknown): OpenworkCloudProviderSync
       });
     }
   }
-  return { hasSession: value.hasSession, lastRun, providers, reloadPending, skippedProviders };
+  const providerSyncReady = "providerSyncReady" in value && value.providerSyncReady === true;
+  const meteringReady = "meteringReady" in value && value.meteringReady === true;
+  return { hasSession: value.hasSession, providerSyncReady, meteringReady, lastRun, providers, reloadPending, skippedProviders };
 }
 
 export type OpenworkServerStatus = "connected" | "disconnected" | "limited";

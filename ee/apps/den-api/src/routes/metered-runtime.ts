@@ -26,12 +26,17 @@ import {
   authenticateInferenceKey,
   getInferenceReservationForPrincipal,
   releaseInferenceCredits,
+  releaseExpiredInferenceReservations,
+  renewInferenceReservationLease,
   reserveInferenceCredits,
   settleInferenceCredits,
   type InferencePrincipal,
 } from "../rencredit-ledger.js"
 
 type JsonRecord = Record<string, unknown>
+
+const DEVICE_OAUTH_LEASE_MS = 2 * 60_000
+const DEVICE_OAUTH_RETRY_AFTER_SECONDS = Math.ceil(DEVICE_OAUTH_LEASE_MS / 1000)
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -241,6 +246,10 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
       return c.json({ error: { code: "VALIDATION_FAILED" } }, 400)
     }
     try {
+      // Recover abandoned desktop reservations before testing wallet balance or
+      // the per-user OAuth concurrency guard. The periodic sweep remains the
+      // backstop; this makes the request path self-healing immediately.
+      await releaseExpiredInferenceReservations(100)
       const { catalog, model, route, policy } = await localMeteringAccess(principal, body.modelSku)
       const [device] = await db.select({ id: RenCreditRuntimeDeviceTable.id }).from(RenCreditRuntimeDeviceTable).where(and(
         eq(RenCreditRuntimeDeviceTable.organization_id, principal.organizationId),
@@ -253,6 +262,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
       const billingMode = catalog.billingPolicy[route.source]
       const provider = catalog.providers.find((candidate) => candidate.id === route.providerId)
       const reservedMicroCredits = billingMode === "free" ? 0 : calculateRenCreditMicroCharge(body.estimatedUsage, model)
+      const deviceOAuth = provider?.authMode === "device_oauth"
       const reserved = await reserveInferenceCredits({
         ...principal,
         runId: body.runId,
@@ -269,10 +279,10 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
           organizationMonthlyMicroCredits: policy.monthlyBudgetMicroCredits,
           memberMonthlyMicroCredits: resolveMemberMonthlyBudget(policy, principal.memberId),
         },
-        maxConcurrentRunsPerUser: provider?.authMode === "device_oauth"
+        maxConcurrentRunsPerUser: deviceOAuth
           ? provider.deviceOAuthPolicy?.maxConcurrentRunsPerUser
           : undefined,
-        expiresAt: new Date(Date.now() + 30 * 60_000),
+        expiresAt: new Date(Date.now() + (deviceOAuth ? DEVICE_OAUTH_LEASE_MS : 30 * 60_000)),
       })
       if (reserved.replayed) return c.json({ error: { code: "IDEMPOTENT_REQUEST_REPLAYED" } }, 409)
       return c.json({
@@ -289,7 +299,42 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
       }, 201)
     } catch (error) {
       const code = error instanceof Error ? error.message.split(":", 1)[0]! : "RENCREDIT_RESERVATION_FAILED"
+      if (code === "DEVICE_OAUTH_CONCURRENCY_EXCEEDED") {
+        c.header("Retry-After", String(DEVICE_OAUTH_RETRY_AFTER_SECONDS))
+        return c.json({ error: { code }, retryAfterSeconds: DEVICE_OAUTH_RETRY_AFTER_SECONDS }, 409)
+      }
       return c.json({ error: { code } }, statusForMeteringError(code) as 402)
+    }
+  })
+
+  app.post("/api/v1/metered-runtime/reservations/:reservationId/heartbeat", publicRoute, async (c) => {
+    const principal = await principalForRequest(c.req.header("Authorization"))
+    if (!principal) return c.json({ error: { code: "UNAUTHORIZED" } }, 401)
+    const body = await c.req.json().catch(() => null)
+    if (!isRecord(body) || !exactKeys(body, ["deviceId", "runId"]) || !validText(body.deviceId) || !validText(body.runId)) {
+      return c.json({ error: { code: "VALIDATION_FAILED" } }, 400)
+    }
+    const reservation = await getInferenceReservationForPrincipal({ ...principal, reservationId: c.req.param("reservationId") })
+    if (!reservation) return c.json({ error: { code: "RENCREDIT_RESERVATION_NOT_FOUND" } }, 404)
+    if (reservation.run_id !== body.runId) return c.json({ error: { code: "LOCAL_RUNTIME_RECEIPT_MISMATCH" } }, 409)
+    const [device] = await db.select({ id: RenCreditRuntimeDeviceTable.id }).from(RenCreditRuntimeDeviceTable).where(and(
+      eq(RenCreditRuntimeDeviceTable.organization_id, principal.organizationId),
+      eq(RenCreditRuntimeDeviceTable.org_membership_id, principal.memberId),
+      eq(RenCreditRuntimeDeviceTable.inference_key_id, principal.inferenceKeyId),
+      eq(RenCreditRuntimeDeviceTable.device_id, body.deviceId),
+      eq(RenCreditRuntimeDeviceTable.status, "active"),
+    )).limit(1)
+    if (!device) return c.json({ error: { code: "LOCAL_RUNTIME_DEVICE_NOT_APPROVED" } }, 403)
+    try {
+      const renewed = await renewInferenceReservationLease({
+        reservationId: reservation.id,
+        expiresAt: new Date(Date.now() + DEVICE_OAUTH_LEASE_MS),
+      })
+      await db.update(RenCreditRuntimeDeviceTable).set({ last_seen_at: new Date() }).where(eq(RenCreditRuntimeDeviceTable.id, device.id))
+      return c.json({ reservationId: renewed.id, status: renewed.status, leaseExpiresAt: renewed.expires_at })
+    } catch (error) {
+      const code = error instanceof Error ? error.message.split(":", 1)[0]! : "RENCREDIT_RESERVATION_RENEW_FAILED"
+      return c.json({ error: { code } }, statusForMeteringError(code) as 409)
     }
   })
 
