@@ -274,6 +274,7 @@ export const RenCreditRuntimeDeviceTable = mysqlTable(
     org_membership_id: denTypeIdColumn("member", "org_membership_id").notNull(),
     inference_key_id: denTypeIdColumn("inferenceKey", "inference_key_id").notNull(),
     device_id: varchar("device_id", { length: 255 }).notNull(),
+    client_version: varchar("client_version", { length: 80 }),
     public_key_pem: varchar("public_key_pem", { length: 1024 }).notNull(),
     public_key_fingerprint: varchar("public_key_fingerprint", { length: 64 }).notNull(),
     status: mysqlEnum("status", RenCreditRuntimeDeviceStatus).notNull().default("pending"),

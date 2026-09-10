@@ -32,11 +32,21 @@ describe("RenWork platform model catalog admin", () => {
       "适配器自检",
       "五类 Token 单价",
       "私有路由",
+      "运行监控",
+      "组织运行与计费健康",
+      "过期冻结",
+      "客户端版本",
       "普通用户模型选择器预览",
       "发布目录",
     ]) {
       expect(component).toContain(label);
     }
+  });
+
+  test("loads the super-admin-only sanitized runtime health endpoint", () => {
+    expect(component).toContain("/v1/admin/rencredit/runtime-health?limit=200");
+    expect(component).toContain("不显示密钥、提示词或回复内容");
+    expect(component).toContain('data-testid="rencredit-runtime-monitoring"');
   });
 
   test("never asks the browser to store or reveal a raw provider secret", () => {

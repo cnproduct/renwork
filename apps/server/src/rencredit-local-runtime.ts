@@ -69,10 +69,12 @@ async function requestJson(
   credentials: CloudProviderMeteringCredentials,
   path: string,
   init: RequestInit,
+  clientVersion?: string,
 ): Promise<{ response: Response; payload: unknown }> {
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${credentials.apiKey}`);
   headers.set("Accept", "application/json");
+  if (clientVersion?.trim()) headers.set("X-RenWork-Client-Version", clientVersion.trim());
   if (init.body !== undefined) headers.set("Content-Type", "application/json");
   const response = await externalFetch(`${credentials.baseUrl}${path}`, {
     ...init,
@@ -122,6 +124,7 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
     credentials: () => CloudProviderMeteringCredentials | null;
     waitForCredentials?: () => Promise<CloudProviderMeteringCredentials | null>;
     signer?: LocalRuntimeMeteringSignerProvider;
+    clientVersion?: string;
   }) {}
 
   private async requireCredentials() {
@@ -148,7 +151,7 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
           modelSku: input.modelSku,
           estimatedUsage: estimatePromptUsage(input.body),
         }),
-      });
+      }, this.options.clientVersion);
     let reserved = await reserveOnce();
     if (!reserved.response.ok && errorCode(reserved.payload) === "CLOUD_GATEWAY_REQUIRED") {
       throw new ApiError(reserved.response.status || 409, "CLOUD_GATEWAY_REQUIRED", "This model is metered by the RenWork cloud gateway.");
@@ -157,7 +160,7 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
       const registration = await requestJson(credentials, `/api/v1/metered-runtime/devices/${encodeURIComponent(signer.deviceId)}`, {
         method: "PUT",
         body: JSON.stringify({ publicKeyPem: signer.publicKeyPem }),
-      });
+      }, this.options.clientVersion);
       if (!registration.response.ok || !isRecord(registration.payload)) {
         throw new ApiError(registration.response.status || 503, errorCode(registration.payload), "RenWork could not register this billing device.");
       }
@@ -214,6 +217,7 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
       credentials,
       `/api/v1/metered-runtime/reservations/${encodeURIComponent(reservation.reservationId)}/heartbeat`,
       { method: "POST", body: JSON.stringify({ deviceId: signer.deviceId, runId: reservation.runId }) },
+      this.options.clientVersion,
     );
     if (!result.response.ok) throw new Error(errorCode(result.payload));
   }
@@ -241,7 +245,7 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
     const result = await requestJson(credentials, "/api/v1/metered-runtime/settlements", {
       method: "POST",
       body: JSON.stringify(signed),
-    });
+    }, this.options.clientVersion);
     if (!result.response.ok || !isRecord(result.payload)) throw new Error(errorCode(result.payload));
     return parseSettlement(result.payload);
   }
@@ -252,6 +256,7 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
       credentials,
       `/api/v1/metered-runtime/reservations/${encodeURIComponent(reservation.reservationId)}/release`,
       { method: "POST", body: JSON.stringify({ failureCode }) },
+      this.options.clientVersion,
     );
     if (!result.response.ok || !isRecord(result.payload)) throw new Error(errorCode(result.payload));
     return parseSettlement(result.payload);

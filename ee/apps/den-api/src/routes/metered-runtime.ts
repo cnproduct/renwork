@@ -51,6 +51,10 @@ function validText(value: unknown, max = 255): value is string {
   return typeof value === "string" && value.trim().length > 0 && value.length <= max
 }
 
+function clientVersionForRequest(header: string | undefined) {
+  return validText(header, 80) && /^[0-9A-Za-z][0-9A-Za-z.+_-]*$/.test(header) ? header.trim() : null
+}
+
 function validUsage(value: unknown): value is RenWorkTokenUsage {
   if (!isRecord(value)) return false
   return ["inputTokens", "outputTokens", "reasoningTokens", "cacheReadTokens", "cacheWriteTokens"]
@@ -141,6 +145,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
       organizationId: device.organization_id,
       memberId: device.org_membership_id,
       deviceId: device.device_id,
+      clientVersion: device.client_version,
       publicKeyFingerprint: device.public_key_fingerprint,
       status: device.status,
       lastSeenAt: device.last_seen_at,
@@ -189,6 +194,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     const principal = await principalForRequest(c.req.header("Authorization"))
     if (!principal) return c.json({ error: { code: "UNAUTHORIZED" } }, 401)
     const deviceId = c.req.param("deviceId")
+    const clientVersion = clientVersionForRequest(c.req.header("X-RenWork-Client-Version"))
     const body = await c.req.json().catch(() => null)
     if (!validText(deviceId) || !isRecord(body) || !validText(body.publicKeyPem, 2048)) {
       return c.json({ error: { code: "VALIDATION_FAILED" } }, 400)
@@ -205,6 +211,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     if (existing?.public_key_fingerprint === publicKey.fingerprint) {
       await db.update(RenCreditRuntimeDeviceTable).set({
         inference_key_id: principal.inferenceKeyId,
+        client_version: clientVersion ?? existing.client_version,
         last_seen_at: new Date(),
       })
         .where(eq(RenCreditRuntimeDeviceTable.id, existing.id))
@@ -212,24 +219,26 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     }
     const id = existing?.id ?? randomUUID()
     const values = {
-        organization_id: principal.organizationId,
-        org_membership_id: principal.memberId,
-        inference_key_id: principal.inferenceKeyId,
-        device_id: deviceId,
-        public_key_pem: publicKey.pem,
-        public_key_fingerprint: publicKey.fingerprint,
-        status: "pending" as const,
-        revoked_at: null,
-        last_seen_at: new Date(),
+      organization_id: principal.organizationId,
+      org_membership_id: principal.memberId,
+      inference_key_id: principal.inferenceKeyId,
+      device_id: deviceId,
+      client_version: clientVersion,
+      public_key_pem: publicKey.pem,
+      public_key_fingerprint: publicKey.fingerprint,
+      status: "pending" as const,
+      revoked_at: null,
+      last_seen_at: new Date(),
     }
     if (existing) {
       await db.update(RenCreditRuntimeDeviceTable).set({
-      inference_key_id: principal.inferenceKeyId,
-      public_key_pem: publicKey.pem,
-      public_key_fingerprint: publicKey.fingerprint,
-      status: "pending",
-      revoked_at: null,
-      last_seen_at: new Date(),
+        inference_key_id: principal.inferenceKeyId,
+        client_version: clientVersion,
+        public_key_pem: publicKey.pem,
+        public_key_fingerprint: publicKey.fingerprint,
+        status: "pending",
+        revoked_at: null,
+        last_seen_at: new Date(),
       }).where(eq(RenCreditRuntimeDeviceTable.id, existing.id))
     } else {
       await db.insert(RenCreditRuntimeDeviceTable).values({ id, ...values })
@@ -241,6 +250,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     const principal = await principalForRequest(c.req.header("Authorization"))
     if (!principal) return c.json({ error: { code: "UNAUTHORIZED" } }, 401)
     const body = await c.req.json().catch(() => null)
+    const clientVersion = clientVersionForRequest(c.req.header("X-RenWork-Client-Version"))
     const idempotencyKey = c.req.header("Idempotency-Key")?.trim()
     if (!isRecord(body) || !exactKeys(body, ["deviceId", "runId", "modelSku", "estimatedUsage"]) || !idempotencyKey || !validText(body.deviceId) || !validText(body.runId) || !validText(body.modelSku) || !validUsage(body.estimatedUsage)) {
       return c.json({ error: { code: "VALIDATION_FAILED" } }, 400)
@@ -259,6 +269,10 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
         eq(RenCreditRuntimeDeviceTable.status, "active"),
       )).limit(1)
       if (!device) throw new Error("LOCAL_RUNTIME_DEVICE_NOT_APPROVED")
+      await db.update(RenCreditRuntimeDeviceTable).set({
+        last_seen_at: new Date(),
+        ...(clientVersion ? { client_version: clientVersion } : {}),
+      }).where(eq(RenCreditRuntimeDeviceTable.id, device.id))
       const billingMode = catalog.billingPolicy[route.source]
       const provider = catalog.providers.find((candidate) => candidate.id === route.providerId)
       const reservedMicroCredits = billingMode === "free" ? 0 : calculateRenCreditMicroCharge(body.estimatedUsage, model)
@@ -311,6 +325,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     const principal = await principalForRequest(c.req.header("Authorization"))
     if (!principal) return c.json({ error: { code: "UNAUTHORIZED" } }, 401)
     const body = await c.req.json().catch(() => null)
+    const clientVersion = clientVersionForRequest(c.req.header("X-RenWork-Client-Version"))
     if (!isRecord(body) || !exactKeys(body, ["deviceId", "runId"]) || !validText(body.deviceId) || !validText(body.runId)) {
       return c.json({ error: { code: "VALIDATION_FAILED" } }, 400)
     }
@@ -330,7 +345,10 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
         reservationId: reservation.id,
         expiresAt: new Date(Date.now() + DEVICE_OAUTH_LEASE_MS),
       })
-      await db.update(RenCreditRuntimeDeviceTable).set({ last_seen_at: new Date() }).where(eq(RenCreditRuntimeDeviceTable.id, device.id))
+      await db.update(RenCreditRuntimeDeviceTable).set({
+        last_seen_at: new Date(),
+        ...(clientVersion ? { client_version: clientVersion } : {}),
+      }).where(eq(RenCreditRuntimeDeviceTable.id, device.id))
       return c.json({ reservationId: renewed.id, status: renewed.status, leaseExpiresAt: renewed.expires_at })
     } catch (error) {
       const code = error instanceof Error ? error.message.split(":", 1)[0]! : "RENCREDIT_RESERVATION_RENEW_FAILED"
@@ -340,6 +358,7 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
 
   app.post("/api/v1/metered-runtime/settlements", publicRoute, async (c) => {
     const principal = await principalForRequest(c.req.header("Authorization"))
+    const clientVersion = clientVersionForRequest(c.req.header("X-RenWork-Client-Version"))
     if (!principal) return c.json({ error: { code: "UNAUTHORIZED" } }, 401)
     let receipt
     try { receipt = parseSignedLocalRuntimeReceipt(await c.req.json()) } catch (error) {
@@ -379,7 +398,10 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
       accuracy: receipt.payload.accuracy,
       hasResult: receipt.payload.hasResult,
     })
-    await db.update(RenCreditRuntimeDeviceTable).set({ last_seen_at: new Date() }).where(eq(RenCreditRuntimeDeviceTable.id, device.id))
+    await db.update(RenCreditRuntimeDeviceTable).set({
+      last_seen_at: new Date(),
+      ...(clientVersion ? { client_version: clientVersion } : {}),
+    }).where(eq(RenCreditRuntimeDeviceTable.id, device.id))
     return c.json({
       reservationId: settled.id,
       status: settled.status,

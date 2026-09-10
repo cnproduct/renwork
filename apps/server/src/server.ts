@@ -917,6 +917,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
     credentials: () => cloudProviderSync.meteringCredentials(),
     waitForCredentials: () => cloudProviderSync.waitForMeteringCredentials(),
     signer: config.localRuntimeMeteringSigner,
+    clientVersion: SERVER_VERSION,
   });
   const cliRuntimeManager = new RenWorkCliRuntimeManager({ metering: localRuntimeMetering });
   const routes = createRoutes(
