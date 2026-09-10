@@ -1,5 +1,4 @@
 import {
-  DESKTOP_RESTRICTION_OPENCODE_PROVIDER_ID,
   isDesktopProviderBlocked,
   type DesktopAppRestrictionChecker,
 } from "@/app/cloud/desktop-app-restrictions";
@@ -26,6 +25,29 @@ export type ModelEntitlementOption = Pick<ModelOption, "providerID" | "modelID">
   disabled?: boolean;
 };
 
+const RENWORK_AUTO_MODEL_ID = "renwork-auto";
+
+function sameModel(left: ModelRef | null | undefined, right: ModelRef | null | undefined) {
+  return Boolean(
+    left &&
+      right &&
+      left.providerID === right.providerID &&
+      left.modelID === right.modelID,
+  );
+}
+
+function preferredEntitledModel(options: readonly ModelEntitlementOption[]): ModelRef | null {
+  const replacement =
+    options.find(
+      (option) =>
+        isCloudManagedProviderKey(option.providerID) &&
+        option.modelID === RENWORK_AUTO_MODEL_ID,
+    ) ?? options.find((option) => isCloudManagedProviderKey(option.providerID));
+  return replacement
+    ? { providerID: replacement.providerID, modelID: replacement.modelID }
+    : null;
+}
+
 export function isProviderAllowedByDesktopPolicy(input: ProviderDesktopPolicyInput) {
   const providerId = input.providerId.trim();
   if (!providerId) return false;
@@ -40,8 +62,7 @@ export function isProviderAllowedByDesktopPolicy(input: ProviderDesktopPolicyInp
   }
 
   if (!input.restrictToCloud) return true;
-  if (isCloudManagedProviderKey(providerId)) return true;
-  return providerId.toLowerCase() === DESKTOP_RESTRICTION_OPENCODE_PROVIDER_ID;
+  return isCloudManagedProviderKey(providerId);
 }
 
 export function isProviderAddRestrictedByDesktopPolicy(input: ProviderAddRestrictionInput) {
@@ -88,8 +109,29 @@ export function resolveEntitledOrgDefaultModel(
     return null;
   }
 
-  const replacement = entitled.find((option) => isCloudManagedProviderKey(option.providerID));
-  return replacement
-    ? { providerID: replacement.providerID, modelID: replacement.modelID }
-    : null;
+  return preferredEntitledModel(entitled);
+}
+
+/**
+ * Resolve an immediately sendable model for a remembered conversation.
+ *
+ * Session model memory predates organization-scoped catalogs. A removed SKU
+ * can therefore outlive a catalog refresh and keep every retry pinned to a
+ * model the active organization can no longer use. Prefer the current request
+ * while it is still entitled, otherwise fall back to the entitled global
+ * default, then RenWork Auto (or the first managed RenWork model).
+ */
+export function resolveEntitledSessionModel(
+  options: readonly ModelEntitlementOption[],
+  input: { requested: ModelRef | null; currentDefault: ModelRef | null },
+): ModelRef | null {
+  const entitled = options.filter(
+    (option) => !option.disabled && isCloudManagedProviderKey(option.providerID),
+  );
+  const contains = (model: ModelRef | null) =>
+    Boolean(model && entitled.some((option) => sameModel(option, model)));
+
+  if (contains(input.requested)) return input.requested;
+  if (contains(input.currentDefault)) return input.currentDefault;
+  return preferredEntitledModel(entitled);
 }

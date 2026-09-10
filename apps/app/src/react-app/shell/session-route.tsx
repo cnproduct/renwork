@@ -134,6 +134,7 @@ import {
 import {
   filterEntitledModelOptions,
   resolveEntitledOrgDefaultModel,
+  resolveEntitledSessionModel,
   type ModelEntitlementOption,
 } from "@/react-app/domains/connections/provider-auth/provider-policy";
 import {
@@ -1146,6 +1147,30 @@ export function SessionRoute() {
   const autoOpenedUnavailableModelRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!selectedSessionId || selectedModelAvailabilityPending || organizationModelsEmpty) return;
+    const selection = getSessionModelSelection(selectedSessionId);
+    if (!selection) return;
+    const replacement = resolveEntitledSessionModel(entitledModelOptions, {
+      requested: selection.model,
+      currentDefault: local.prefs.defaultModel,
+    });
+    if (
+      !replacement ||
+      (
+        replacement.providerID === selection.model.providerID &&
+        replacement.modelID === selection.model.modelID
+      )
+    ) return;
+    useSessionModelStore.getState().setModel(selectedSessionId, replacement, null);
+  }, [
+    entitledModelOptions,
+    local.prefs.defaultModel,
+    organizationModelsEmpty,
+    selectedModelAvailabilityPending,
+    selectedSessionId,
+  ]);
+
+  useEffect(() => {
     if (!selectedModelUnavailableKey) {
       autoOpenedUnavailableModelRef.current = null;
       return;
@@ -1407,13 +1432,31 @@ export function SessionRoute() {
         // Per-conversation model memory: a session that picked its own model
         // sends with it (and its variant) instead of the global default.
         const sessionModelSelection = getSessionModelSelection(targetSessionId);
-        const sendModel = sessionModelSelection?.model ?? local.prefs.defaultModel;
-        const sendVariant = sessionModelSelection ? sessionModelSelection.variant : modelVariantValue;
-        const sendModelAllowed = sendModel && entitledModelOptions.some(
-          (option) => option.providerID === sendModel.providerID && option.modelID === sendModel.modelID,
-        );
-        if (!sendModelAllowed || (!sessionModelSelection && selectedModelUnavailable)) {
+        const requestedModel = sessionModelSelection?.model ?? local.prefs.defaultModel;
+        const sendModel = resolveEntitledSessionModel(entitledModelOptions, {
+          requested: requestedModel,
+          currentDefault: local.prefs.defaultModel,
+        });
+        if (!sendModel) {
           throw new Error("Selected model is unavailable for this RenWork subscription. Choose an entitled model before sending.");
+        }
+        const recoveredModel = !requestedModel ||
+          requestedModel.providerID !== sendModel.providerID ||
+          requestedModel.modelID !== sendModel.modelID;
+        const sendVariant = recoveredModel
+          ? null
+          : sessionModelSelection
+            ? sessionModelSelection.variant
+            : modelVariantValue;
+        if (recoveredModel) {
+          useSessionModelStore.getState().setModel(targetSessionId, sendModel, null);
+          if (!sessionModelSelection) {
+            local.setPrefs((previous) => ({
+              ...previous,
+              defaultModel: sendModel,
+              modelVariant: null,
+            }));
+          }
         }
 
         return submitWithCloudMcpReadiness({
