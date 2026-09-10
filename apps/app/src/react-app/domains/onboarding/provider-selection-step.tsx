@@ -8,20 +8,16 @@ import {
   PageTitlebarRegion,
 } from "@/components/page";
 import { Button } from "@/components/ui/button";
-import { KeyRoundIcon, SkipForwardIcon, SparklesIcon } from "lucide-react";
+import { SparklesIcon } from "lucide-react";
 
 type ProviderSelectionStepProps = {
   showOpenWorkModels?: boolean;
   onOpenWorkModels: () => void;
-  onBringYourOwn: () => void;
-  onSkip: () => void;
 };
 
 export function ProviderSelectionStep({
   showOpenWorkModels = true,
   onOpenWorkModels,
-  onBringYourOwn,
-  onSkip,
 }: ProviderSelectionStepProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
@@ -32,7 +28,7 @@ export function ProviderSelectionStep({
         <PageHeader className="mb-8 text-center">
           <PageTitle>Power your first task</PageTitle>
           <PageDescription>
-            Connect a model, then try a real task in chat so you can see RenWork work.
+            RenWork models are provisioned by the platform and every request is settled through RenCredit.
           </PageDescription>
         </PageHeader>
 
@@ -55,28 +51,11 @@ export function ProviderSelectionStep({
             </button>
           ) : null}
 
-          <button
-            type="button"
-            className="flex w-full items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-accent"
-            onClick={onBringYourOwn}
-          >
-            <KeyRoundIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-            <div>
-              <div className="text-sm font-medium text-foreground">
-                Bring your own API key
-              </div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                Connect OpenAI, Anthropic, Google, or another provider, then run your first task.
-              </div>
-            </div>
-          </button>
-
-          <div className="pt-1 text-center">
-            <Button variant="ghost" size="sm" onClick={onSkip}>
-              <SkipForwardIcon className="mr-1.5 size-3.5" />
-              Skip and use the free model
+          {!showOpenWorkModels ? (
+            <Button className="w-full" onClick={onOpenWorkModels}>
+              Check RenWork model access
             </Button>
-          </div>
+          ) : null}
         </div>
       </div>
     </div>

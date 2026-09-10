@@ -2,7 +2,6 @@ import type { DenOrgLlmProvider } from "@/app/lib/den"
 import { getModelBehaviorSummary } from "@/app/lib/model-behavior"
 import type { ModelOption, ProviderListItem } from "@/app/types"
 import type { AutomationModel } from "@openwork/types/automations"
-import { AUTOMATION_FREE_MODEL } from "@openwork/types/automations"
 import { INFERENCE_MODEL_ALIASES } from "@openwork/types/den/inference"
 
 /** providerId → modelId → the local runtime's model record. */
@@ -13,7 +12,7 @@ export type AutomationModelOption = {
   modelId: string
   providerName: string
   modelName: string
-  accessKind: "free" | "openwork_managed" | "authorized_custom"
+  accessKind: "openwork_managed" | "authorized_custom"
 }
 
 export type ResolvedProposalModel = {
@@ -21,9 +20,10 @@ export type ResolvedProposalModel = {
   resolution: "exact" | "mapped" | "default" | "fallback"
 }
 
-const freeStarterModel: AutomationModelOption = {
-  ...AUTOMATION_FREE_MODEL,
-  accessKind: "free",
+const RENWORK_AUTOMATION_DEFAULT: AutomationModel = {
+  providerId: "renwork",
+  modelId: "renwork-auto",
+  variant: null,
 }
 
 function openWorkManagedModels(provider: DenOrgLlmProvider): AutomationModelOption[] {
@@ -55,17 +55,13 @@ function authorizedProviderModels(provider: DenOrgLlmProvider): AutomationModelO
  */
 export function automationModelOptions(
   providers: readonly DenOrgLlmProvider[],
-  options: { includeFreeStarter?: boolean } = {},
 ): AutomationModelOption[] {
   const managed = providers.flatMap((provider) => provider.source === "openwork"
     ? openWorkManagedModels(provider)
     : authorizedProviderModels(provider))
 
-  return [
-    ...(options.includeFreeStarter === false ? [] : [freeStarterModel]),
-    ...managed,
-  ].sort((left, right) => {
-    const kindOrder = ["free", "openwork_managed", "authorized_custom"]
+  return managed.sort((left, right) => {
+    const kindOrder = ["openwork_managed", "authorized_custom"]
     return kindOrder.indexOf(left.accessKind) - kindOrder.indexOf(right.accessKind)
       || left.providerName.localeCompare(right.providerName)
       || left.modelName.localeCompare(right.modelName)
@@ -92,12 +88,8 @@ export function resolveProposalModel(
   proposed: AutomationModel | undefined,
   providers: readonly DenOrgLlmProvider[],
 ): ResolvedProposalModel {
-  const freeModel: AutomationModel = {
-    providerId: AUTOMATION_FREE_MODEL.providerId,
-    modelId: AUTOMATION_FREE_MODEL.modelId,
-    variant: null,
-  }
-  if (!proposed) return { model: freeModel, resolution: "default" }
+  const managedDefault = RENWORK_AUTOMATION_DEFAULT
+  if (!proposed) return { model: managedDefault, resolution: "default" }
 
   if (findAutomationModelOption(automationModelOptions(providers), proposed)) {
     return { model: proposed, resolution: "exact" }
@@ -118,7 +110,7 @@ export function resolveProposalModel(
     }
   }
 
-  return { model: freeModel, resolution: "fallback" }
+  return { model: managedDefault, resolution: "fallback" }
 }
 
 /**
@@ -171,7 +163,7 @@ export function automationPickerOptions(input: {
       behaviorDescription: summary?.description ?? "",
       behaviorValue: summary?.value ?? null,
       behaviorOptions: summary?.options ?? [],
-      isFree: option.accessKind === "free",
+      isFree: false,
     }
   })
 }

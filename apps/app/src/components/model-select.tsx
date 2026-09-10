@@ -52,23 +52,13 @@ import {
 } from "@/components/ui/command";
 import {
   openModelPickerEvent,
-  openProviderAuthEvent,
-  type OpenProviderAuthEventDetail,
 } from "@/react-app/shell/new-providers-listener";
 import { newProvidersEvent } from "@/app/lib/provider-events";
 import {
   catalogModelOptions,
-  requiredPersonalSubscriptionProvider,
   renWorkTierLabel,
   useRenWorkModelCatalog,
 } from "@/react-app/domains/models/renwork-model-catalog";
-
-/** Shown with their logos when no keys are connected yet. */
-const SUGGESTED_KEY_PROVIDERS = [
-  { id: "anthropic", name: "Anthropic" },
-  { id: "openai", name: "OpenAI" },
-  { id: "google", name: "Google" },
-];
 
 function getProviderDisplayName(providerId: string) {
   return providerId
@@ -273,8 +263,6 @@ export function ModelSelect({
   const navigate = useNavigate();
   const platform = usePlatform();
   const openWorkModelsPromoEligible = useOpenWorkModelsPromoEligibility();
-  const checkDesktopRestriction = useCheckDesktopRestriction();
-  const canAddProviders = !checkDesktopRestriction({ restriction: "allowCustomProviders" });
 
   React.useEffect(() => {
     const handlePromoChanged = () => setPromoHidden(isOpenWorkModelsPromoHidden());
@@ -337,17 +325,6 @@ export function ModelSelect({
   }, [modelOptions, renWorkCatalog, showOpenWorkModelsPromo]);
 
   const handleSelect = (item: ModelSelectModelItem) => {
-    const requiredPersonalProvider = requiredPersonalSubscriptionProvider(item.billing);
-    if (requiredPersonalProvider && !modelState.connectedProviderIds.has(requiredPersonalProvider)) {
-      const detail: OpenProviderAuthEventDetail = {
-        preferredProviderId: requiredPersonalProvider,
-        scope: "personal_subscription_oauth",
-      };
-      setSearch("");
-      onOpenChange(false);
-      window.dispatchEvent(new CustomEvent<OpenProviderAuthEventDetail>(openProviderAuthEvent, { detail }));
-      return;
-    }
     const option = item.option;
     onChange({ providerID: option.providerID, modelID: option.modelID });
     setSearch("");
@@ -369,30 +346,6 @@ export function ModelSelect({
     hideOpenWorkModelsPromo();
     setPromoHidden(true);
   }, []);
-
-  // Providers the user connected with their own key — OpenCode Zen and
-  // RenWork Models are managed for them, so they never count as "your keys".
-  const keyProviders = React.useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const option of modelOptions) {
-      const id = option.providerID.trim().toLowerCase();
-      if (!id || id === "opencode" || isCloudManagedProviderKey(id)) continue;
-      if (seen.has(id)) continue;
-      seen.set(id, option.description ?? getProviderDisplayName(option.providerID));
-    }
-    return [...seen].map(([id, name]) => ({ id, name }));
-  }, [modelOptions]);
-
-  const hasKeyProviders = keyProviders.length > 0;
-  const keyProviderPreview = hasKeyProviders
-    ? keyProviders.slice(0, 3)
-    : SUGGESTED_KEY_PROVIDERS;
-
-  const handleConnectProvider = React.useCallback(() => {
-    onOpenChange(false);
-    setSearch("");
-    window.dispatchEvent(new Event(openProviderAuthEvent));
-  }, [onOpenChange]);
 
   return (
     <Popover
@@ -568,39 +521,6 @@ export function ModelSelect({
               </CommandGroup>
             )}
           </CommandList>
-          {/* Your API keys → provider configuration. One slot, one action: the
-              label reflects whether any keys are connected yet. */}
-          {canAddProviders && !renWorkCatalog ? (
-            <div className="border-t border-border p-1">
-              <div className="flex items-baseline px-2 pb-0.5 pt-1 text-xs text-muted-foreground">
-                Your API keys
-              </div>
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-                onClick={handleConnectProvider}
-              >
-                <span className="flex shrink-0 items-center">
-                  {keyProviderPreview.map((provider, index) => (
-                    <span
-                      key={provider.id}
-                      className="flex size-[18px] items-center justify-center overflow-hidden rounded-[6px] border border-border bg-background"
-                      style={index === 0 ? undefined : { marginLeft: "-5px" }}
-                    >
-                      <ProviderIcon providerId={provider.id} providerName={provider.name} size={12} />
-                    </span>
-                  ))}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-foreground">
-                  {keyProviderPreview.map((provider) => provider.name).join(", ")}
-                  {!hasKeyProviders || keyProviders.length > keyProviderPreview.length ? "…" : ""}
-                </span>
-                <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                  {hasKeyProviders ? "Connect more providers" : "Add your keys"}
-                </span>
-              </button>
-            </div>
-          ) : null}
           {/* Link to full model picker */}
           {renWorkCatalog ? (
             <div className="border-t border-border px-3 py-2 text-center text-[11px] text-muted-foreground">

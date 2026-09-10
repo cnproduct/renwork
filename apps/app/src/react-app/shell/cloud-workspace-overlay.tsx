@@ -10,7 +10,7 @@ import {
   readDenSettings,
   type DenCloudInstance,
 } from "@/app/lib/den";
-import { isServer2016CloudDesktopRuntime } from "@/app/lib/desktop";
+import { isServer2016CloudDesktopRuntime, readDesktopDistributionInfo } from "@/app/lib/desktop";
 import { isOpenworkGatewayRuntime } from "@/app/lib/gateway-runtime";
 import { denSettingsChangedEvent } from "@/app/lib/den-session-events";
 import { Button } from "@/components/ui/button";
@@ -109,7 +109,7 @@ export function CloudWorkspaceStatusProvider(props: { children: ReactNode }) {
   const [updating, setUpdating] = useState(false);
   const [takeoverActive, setTakeoverActive] = useState(false);
   const lastAttemptedVersion = useRef<string | null>(null);
-  const gatewayMode = isOpenworkGatewayRuntime() || isServer2016CloudDesktopRuntime();
+  const gatewayMode = isOpenworkGatewayRuntime() || readDesktopDistributionInfo().cloudWorkspaceRequired;
   const settingsSnapshot = useSyncExternalStore(
     subscribeToDenSettings,
     readDenSettingsSnapshot,

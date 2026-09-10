@@ -1,6 +1,6 @@
 {
   "name": "openwork-server",
-  "version": "0.18.64",
+  "version": "0.18.65",
   "description": "Filesystem-backed API for RenWork remote clients",
   "type": "module",
   "bin": {

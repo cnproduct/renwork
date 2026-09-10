@@ -23,13 +23,14 @@ describe("Marketplace onboarding page", () => {
     expect(publicInstallers).toContain('name.startsWith("openwork-enterprise-")');
   });
 
-  test("offers RenWork Models and Bring your Own Keys as the model path", () => {
+  test("offers only the Den-metered RenWork Models path", () => {
     expect(screen).toContain("onboarding-choice-openwork-models");
-    expect(screen).toContain("onboarding-choice-byok");
     expect(screen).toContain("Turn on models");
-    expect(screen).toContain("Bring your Own Keys");
     expect(screen).toContain("RenWork Models");
     expect(screen).toContain("/renwork-mark.png");
+    expect(screen).not.toContain("onboarding-choice-byok");
+    expect(screen).not.toContain("Bring your Own Keys");
+    expect(screen).not.toContain("getCustomLlmProvidersRoute");
   });
 
   test("keeps the installed flag and inference check", () => {

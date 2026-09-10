@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
-const { isServer2016CloudBuild, normalizeArchivePath } = require("../scripts/electron-after-pack.cjs");
+const { isDenOnlyBuild, isServer2016CloudBuild, normalizeArchivePath } = require("../scripts/electron-after-pack.cjs");
 
 test("afterPack removes sidecars only from the immutable Server 2016 cloud build", () => {
   assert.equal(isServer2016CloudBuild({
@@ -11,6 +11,17 @@ test("afterPack removes sidecars only from the immutable Server 2016 cloud build
   }), true);
   assert.equal(isServer2016CloudBuild({
     packager: { config: { extraMetadata: { openworkDistribution: "public" } } },
+  }), false);
+});
+
+test("afterPack strips local runtime sidecars from every Den-only distribution", () => {
+  for (const openworkDistribution of ["public", "cloud", "enterprise", "server2016-cloud"]) {
+    assert.equal(isDenOnlyBuild({
+      packager: { config: { extraMetadata: { openworkDistribution } } },
+    }), true);
+  }
+  assert.equal(isDenOnlyBuild({
+    packager: { config: { extraMetadata: { openworkDistribution: "standalone" } } },
   }), false);
 });
 

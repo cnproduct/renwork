@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "@openwork-ee/den-db/drizzle"
 import { AuthUserTable, MemberTable, OrganizationTable } from "@openwork-ee/den-db/schema"
 import { isDenTypeId } from "@openwork-ee/utils/typeid"
-import { toPublicModelCatalogForPlan, validateAdminModelCatalog } from "@openwork/rencredit-metering"
+import { toPublicModelCatalogForPlan, validateDenServerCatalog } from "@openwork/rencredit-metering"
 import type { Hono } from "hono"
 import { db } from "../../db.js"
 import { parseOrganizationPlan } from "../../entitlements.js"
@@ -43,7 +43,7 @@ async function loadAvailableModels(metadata: Record<string, unknown> | null) {
   const parsed = modelCatalogSchema.safeParse(upstream.payload)
   if (!parsed.success || parsed.data.status !== "active") return null
   try {
-    validateAdminModelCatalog(parsed.data)
+    validateDenServerCatalog(parsed.data)
   } catch {
     return null
   }

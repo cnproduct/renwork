@@ -54,7 +54,7 @@ export function TaskSuggestions({ className }: TaskSuggestionsProps) {
     <div className={cn("@container flex flex-col gap-4 pt-1", className)}>
       <p className="text-muted-foreground font-medium select-none">
         {noProviders
-          ? "Connect a model provider to get started:"
+          ? "RenWork Models are not ready yet:"
           : hasOrganizationPrompts
             ? "Try one of your organization's prompts:"
             : "Try one of these:"}
@@ -76,9 +76,9 @@ export function TaskSuggestions({ className }: TaskSuggestionsProps) {
               <BoltIcon className="size-6 text-blue-10" aria-hidden />
             </DescriptiveButtonIcon>
             <DescriptiveButtonContent>
-              <DescriptiveButtonTitle>Connect a model provider</DescriptiveButtonTitle>
-              <DescriptiveButtonDescription>
-                Add an API key for Anthropic, OpenAI, Google, or others
+            <DescriptiveButtonTitle>Check RenWork Models</DescriptiveButtonTitle>
+            <DescriptiveButtonDescription>
+                Sign in, retry synchronization, or ask the platform administrator to grant access
               </DescriptiveButtonDescription>
             </DescriptiveButtonContent>
           </DescriptiveButton>

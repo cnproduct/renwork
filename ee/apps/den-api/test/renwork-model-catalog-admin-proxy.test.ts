@@ -21,7 +21,8 @@ describe("RenWork model catalog admin proxy", () => {
   })
 
   test("validates catalogs and returns only a projected member preview", () => {
-    expect(route).toContain("validateAdminModelCatalog(parsedBody.data.catalog)")
+    expect(route).toContain("validateDenServerCatalog(parsedBody.data.catalog)")
+    expect(route).toContain("validateDenServerCatalog(parsedCatalog.data)")
     expect(route).toContain("toPublicModelCatalog(parsedCatalog.data)")
   })
 

@@ -1,6 +1,6 @@
 import { eq } from "@openwork-ee/den-db/drizzle"
 import { OrganizationTable } from "@openwork-ee/den-db/schema"
-import { toPublicModelCatalogForPlan, validateAdminModelCatalog } from "@openwork/rencredit-metering"
+import { toPublicModelCatalogForPlan, validateDenServerCatalog } from "@openwork/rencredit-metering"
 import type { Hono } from "hono"
 import { db } from "../../db.js"
 import { parseOrganizationPlan } from "../../entitlements.js"
@@ -25,7 +25,7 @@ export function registerOrgModelPolicyRoutes<T extends { Variables: OrgRouteVari
       return c.json({ error: "MODEL_CATALOG_UNAVAILABLE", message: "RenWork model catalog is temporarily unavailable." }, 503)
     }
     try {
-      validateAdminModelCatalog(parsed.data)
+      validateDenServerCatalog(parsed.data)
     } catch {
       return c.json({ error: "MODEL_CATALOG_UNAVAILABLE", message: "RenWork model catalog is temporarily unavailable." }, 503)
     }

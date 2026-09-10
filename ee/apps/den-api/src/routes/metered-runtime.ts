@@ -10,7 +10,7 @@ import {
   modelAllowedForPlan,
   normalizeAdminModelCatalog,
   parseSignedLocalRuntimeReceipt,
-  validateAdminModelCatalog,
+  validateDenServerCatalog,
   type RenWorkAdminModelCatalog,
   type RenWorkTokenUsage,
 } from "@openwork/rencredit-metering"
@@ -81,7 +81,7 @@ async function loadProductionCatalog() {
   })
   if (!response.ok) throw new Error(`MODEL_CATALOG_UNAVAILABLE:${response.status}`)
   const catalog = normalizeAdminModelCatalog(await response.json() as RenWorkAdminModelCatalog)
-  validateAdminModelCatalog(catalog)
+  validateDenServerCatalog(catalog)
   if (catalog.status !== "active") throw new Error("MODEL_CATALOG_NOT_ACTIVE")
   return catalog
 }

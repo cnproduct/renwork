@@ -1,1 +1,1 @@
-export const BUILD_LATEST_APP_VERSION = "0.18.57" as const
+export const BUILD_LATEST_APP_VERSION = "0.18.65" as const

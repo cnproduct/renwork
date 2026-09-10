@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, KeyRound } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   DownloadOpenWorkCard as DownloadRenWorkCard,
   type DownloadCardInstallers,
@@ -12,13 +12,11 @@ import { DenBadge } from "../../_components/ui/badge";
 import { DenChoiceCard } from "../../_components/ui/choice-card";
 import { DenSectionHeader } from "../../_components/ui/section-header";
 import {
-  getCustomLlmProvidersRoute,
   getInferenceRoute,
   getOrgDashboardRoute,
 } from "../../_lib/den-org";
 import { requestJson } from "../../_lib/den-flow";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
-import { LlmProviderLogos } from "./llm-provider-logos";
 
 const APP_INSTALLED_KEY = "openwork:onboarding:app-installed";
 
@@ -121,13 +119,13 @@ export function MarketplaceOnboardingScreen({
       <section className="mt-12 grid gap-5">
         <DenSectionHeader
           align="center"
-          title="Then bring your own keys, or use RenWork Models"
+          title="Use RenWork Models"
           description={
             modelsLoading
               ? "Checking whether RenWork Models are already on…"
               : modelsEnabled
                 ? "RenWork Models are on for this workspace."
-                : "Pick one now, change it whenever — both live under Models."
+                : "Model access is provisioned by the RenWork platform and settled through RenCredit."
           }
           action={
             modelsEnabled ? (
@@ -137,7 +135,7 @@ export function MarketplaceOnboardingScreen({
             ) : null
           }
         />
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="mx-auto grid w-full max-w-xl gap-4">
           <DenChoiceCard
             testId="onboarding-choice-openwork-models"
             icon={<RenWorkMark />}
@@ -149,18 +147,6 @@ export function MarketplaceOnboardingScreen({
             ctaLabel={modelsEnabled ? "Manage models" : "Turn on models"}
             ctaVariant="primary"
           />
-          <DenChoiceCard
-            testId="onboarding-choice-byok"
-            icon={<KeyRound className="h-[18px] w-[18px] text-gray-700" aria-hidden />}
-            title="Bring your Own Keys"
-            subtitle="Your providers, your billing"
-            description="Connect Anthropic, OpenAI, Azure, Mistral or your own gateway, and choose exactly which models the team sees."
-            href={getCustomLlmProvidersRoute(orgSlug)}
-            ctaLabel="Add a provider"
-            ctaVariant="secondary"
-          >
-            <LlmProviderLogos />
-          </DenChoiceCard>
         </div>
       </section>
 

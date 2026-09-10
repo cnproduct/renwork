@@ -7,7 +7,7 @@ import {
   isDenServerRoute,
   modelAllowedForPlan,
   normalizeOpenAiUsage,
-  validateAdminModelCatalog,
+  validateDenServerCatalog,
   type RenWorkAdminModelCatalog,
   type RenWorkAdminProvider,
   type RenWorkTokenUsage,
@@ -86,7 +86,7 @@ async function loadProductionCatalog() {
   })
   if (!response.ok) throw new Error(`MODEL_CATALOG_UNAVAILABLE:${response.status}`)
   const catalog = await response.json() as RenWorkAdminModelCatalog
-  validateAdminModelCatalog(catalog)
+  validateDenServerCatalog(catalog)
   if (catalog.status !== "active") throw new Error("MODEL_CATALOG_NOT_ACTIVE")
   return catalog
 }
