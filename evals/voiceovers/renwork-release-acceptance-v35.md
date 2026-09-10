@@ -1,0 +1,10 @@
+# Voiceover V35 — RenWork v0.18.63 cross-platform release acceptance
+
+1. Platform operators build one immutable `v0.18.63` source revision into ordinary Windows x64, Windows Server 2016 cloud-only x64, Apple Silicon Mac, and Intel Mac packages. Every package carries the same RenWork version and reports it to Den on metered traffic.
+2. Server 2016 packages remain cloud-only and must not contain an OpenCode sidecar. Ordinary desktop packages keep the existing Den-only RenCredit path and may not restore local provider credentials or direct-provider fallback.
+3. Package checks, CI checks, installed-client checks, production deployment, and RenCredit settlement are recorded as separate gates. A build artifact or passing workflow is not evidence that a package installed or billed successfully on another computer.
+4. Installed acceptance covers sign-in, organization loading, model sync, a real model response, and the correlated RenCredit reserve and capture for `olproduct`, `tianya`, and the main test organization.
+5. The platform super administrator revokes a disposable device registration. The revoked client is denied until it completes a fresh registration, and the monitoring view shows the new registration without exposing OAuth credentials, provider keys, prompts, or replies.
+6. A controlled upstream failure must leave an authoritative reservation and release trail with zero captured RenCredit. Successful and failed acceptance calls together may not exceed the previously approved `0.05 RenCredit` ceiling.
+7. Apple public-release candidates require Developer ID signing and notarization. Missing signing credentials keep Mac artifacts explicitly labeled as unsigned test packages and block formal promotion.
+8. The GitHub release remains a prerelease and `rrenn.com` production download and updater pointers remain unchanged until all four exact-platform installed checks, the three-organization checks, device revoke and re-registration, and real failure-release checks pass against the immutable release assets.
