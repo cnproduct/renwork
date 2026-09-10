@@ -12,6 +12,7 @@ import type { RenWorkAdminModel, RenWorkAdminModelRoute, RenWorkTokenUsage } fro
 import { calculateRenCreditMicroCharge } from "@openwork/rencredit-metering"
 import { createHash } from "node:crypto"
 import { db } from "./db.js"
+import { planInferenceSettlement } from "./rencredit-settlement-plan.js"
 
 type OrganizationId = typeof RenCreditWalletTable.$inferSelect.organization_id
 type MemberId = typeof InferenceKeyTable.$inferSelect.org_membership_id
@@ -594,15 +595,24 @@ export async function settleInferenceCredits(input: {
     const computed = reservation.billing_mode === "free" || !input.hasResult
       ? 0
       : calculateRenCreditMicroCharge(input.usage, snapshot, reservation.created_at)
-    const captured = computed
-    const released = Math.max(0, reservation.reserved_microcredits - captured)
-    const additionalCharge = Math.max(0, captured - reservation.reserved_microcredits)
+    const settlement = planInferenceSettlement({
+      walletAvailableMicroCredits: wallet.available_microcredits,
+      walletReservedMicroCredits: wallet.reserved_microcredits,
+      walletVersion: wallet.version,
+      reservationReservedMicroCredits: reservation.reserved_microcredits,
+      computedMicroCredits: computed,
+      hasResult: input.hasResult,
+    })
+    const captured = settlement.capturedMicroCredits
+    const released = settlement.releasedMicroCredits
+    const additionalCharge = settlement.additionalChargeMicroCredits
     const nextStatus = input.hasResult ? "captured" as const : "released" as const
-    // Provider-reported usage is authoritative even if it exceeds the estimate.
-    // A negative available balance represents debt and blocks the next reserve.
-    const available = wallet.available_microcredits + released - additionalCharge
-    const reserved = wallet.reserved_microcredits - reservation.reserved_microcredits
-    const version = wallet.version + 1
+    // Provider-reported usage is authoritative. Any amount above the estimate
+    // is an explicit adjustment row; a negative balance remains visible debt
+    // and blocks the next reservation instead of silently forgiving tokens.
+    const available = settlement.availableBalanceAfterSettlement
+    const reserved = settlement.reservedBalanceAfter
+    const version = settlement.finalWalletVersion
 
     if (input.hasResult) {
       await tx.insert(RenCreditUsageEventTable).values({
@@ -641,15 +651,37 @@ export async function settleInferenceCredits(input: {
       reservation_id: reservation.id,
       entry_type: input.hasResult ? "capture" : "release",
       idempotency_key: `${reservation.id}:settle`,
-      amount_microcredits: captured,
-      available_delta_microcredits: released - additionalCharge,
+      amount_microcredits: settlement.capturedFromReservationMicroCredits,
+      available_delta_microcredits: released,
       reserved_delta_microcredits: -reservation.reserved_microcredits,
-      available_balance_after: available,
+      available_balance_after: settlement.availableBalanceAfterCapture,
       reserved_balance_after: reserved,
-      wallet_version_after: version,
+      wallet_version_after: settlement.captureWalletVersion,
       reason_code: input.hasResult ? "INFERENCE_TOKEN_CAPTURE" : "INFERENCE_NO_RESULT_RELEASE",
-      metadata: { providerResponseId: input.providerResponseId, usage: input.usage },
+      metadata: {
+        providerResponseId: input.providerResponseId,
+        usage: input.usage,
+        capturedFromReservationMicroCredits: settlement.capturedFromReservationMicroCredits,
+        additionalChargeMicroCredits: additionalCharge,
+      },
     })
+    if (additionalCharge > 0) {
+      await tx.insert(RenCreditLedgerEntryTable).values({
+        id: createDenTypeId("renCreditLedgerEntry"),
+        organization_id: reservation.organization_id,
+        reservation_id: reservation.id,
+        entry_type: "adjustment",
+        idempotency_key: `${reservation.id}:overage`,
+        amount_microcredits: additionalCharge,
+        available_delta_microcredits: -additionalCharge,
+        reserved_delta_microcredits: 0,
+        available_balance_after: available,
+        reserved_balance_after: reserved,
+        wallet_version_after: version,
+        reason_code: "INFERENCE_TOKEN_OVERAGE_ADJUSTMENT",
+        metadata: { providerResponseId: input.providerResponseId, computedMicroCredits: captured },
+      })
+    }
     return { ...reservation, status: nextStatus, captured_microcredits: captured, released_microcredits: released }
   })
 }

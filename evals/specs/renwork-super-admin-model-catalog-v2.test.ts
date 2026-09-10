@@ -12,11 +12,11 @@ test("platform super admin controls the private model catalog while members see 
   expect(adminApi).toContain("adminRoute()");
   expect(adminApi).not.toContain("RENWORK_MODEL_CATALOG_ADMIN_TOKEN");
   expect(modelCatalogService).toContain("RENWORK_MODEL_CATALOG_ADMIN_TOKEN");
-  expect(adminUi).toContain("真实 Key 必须注入服务端");
+  expect(adminUi).toContain("真实 Key 或由超级管理员托管的 OAuth 凭据必须注入服务端");
   expect(adminUi).toContain("普通用户模型选择器预览");
   expect(cloudApi).toContain("timingSafeEqual");
   expect(cloudApi).toContain("/v1/admin/models/providers/:providerId/test");
-  expect(metering).toContain("options.catalog.billingPolicy[route.source]");
+  expect(metering).toContain('const billingMode = "token_metered"');
 
   evidence.fact(
     "Only platform admins can configure private routes",

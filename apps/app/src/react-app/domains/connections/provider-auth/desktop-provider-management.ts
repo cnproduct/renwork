@@ -17,15 +17,8 @@ export function canConnectPersonalSubscriptionOAuth(input: {
   hasPlatformGrantedModel: boolean;
   workspaceType: string | null | undefined;
 }) {
-  return (
-    input.desktopRuntime &&
-    input.signedIn &&
-    input.hasAuthToken &&
-    input.hasActiveOrganization &&
-    input.hasActiveRuntime &&
-    input.hasPlatformGrantedModel &&
-    input.workspaceType !== "remote"
-  );
+  void input;
+  return false;
 }
 
 export function hasPlatformGrantedPersonalSubscriptionModel(

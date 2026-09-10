@@ -5,14 +5,12 @@ import type {
   RenWorkAdminModelCatalog,
   RenWorkAdminModelRoute,
   RenWorkAdminProvider,
-  RenWorkBillingMode,
   RenWorkPublicModelCatalog,
   RenWorkProviderKind,
   RenWorkProviderProtocol,
-  RenWorkProviderAuthMode,
   RenWorkRouteSource,
 } from "@openwork/rencredit-metering";
-import { normalizeAdminModelCatalog } from "@openwork/rencredit-metering";
+import { isDenServerRoute, normalizeAdminModelCatalog, validateDenServerCatalog } from "@openwork/rencredit-metering";
 import { CheckCircle2, CircleAlert, Plus, RefreshCw, Save, ServerCog, ShieldCheck, Trash2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -180,12 +178,6 @@ function validateDraftCatalog(catalog: RenWorkAdminModelCatalog) {
     if (provider.credentialRef && !/^(secret|env):\/\/[A-Za-z0-9_./-]+$/.test(provider.credentialRef)) {
       throw new Error(`${provider.displayName} 的密钥必须使用 env:// 或 secret:// 引用。`);
     }
-    if (provider.authMode === "device_oauth") {
-      if (provider.baseUrl || provider.credentialRef) throw new Error(`${provider.displayName} 的设备 OAuth 不能填写 Base URL 或服务端密钥。`);
-      if (!provider.deviceOAuthPolicy || !Number.isSafeInteger(provider.deviceOAuthPolicy.maxDevicesPerUser) || provider.deviceOAuthPolicy.maxDevicesPerUser <= 0 || !Number.isSafeInteger(provider.deviceOAuthPolicy.maxConcurrentRunsPerUser) || provider.deviceOAuthPolicy.maxConcurrentRunsPerUser <= 0) {
-        throw new Error(`${provider.displayName} 的设备数和并发限制必须是正整数。`);
-      }
-    }
     providerIds.add(provider.id);
   }
 
@@ -208,6 +200,7 @@ function validateDraftCatalog(catalog: RenWorkAdminModelCatalog) {
     }
     if (model.status === "published" && !model.routes.some((route) => route.enabled)) throw new Error(`已发布模型 ${model.displayName} 至少需要一条启用路由。`);
   }
+  validateDenServerCatalog(catalog);
 }
 
 function toPublicPreview(catalog: RenWorkAdminModelCatalog, now = new Date()): RenWorkPublicModelCatalog {
@@ -216,11 +209,7 @@ function toPublicPreview(catalog: RenWorkAdminModelCatalog, now = new Date()): R
     .filter((model) => model.status === "published")
     .flatMap((model) => {
       const activeRoute = model.routes
-        .filter((route) => route.enabled)
-        .filter((route) => {
-          const provider = providers.get(route.providerId);
-          return provider?.enabled && provider.health !== "offline";
-        })
+        .filter((route) => isDenServerRoute(route, providers))
         .sort((left, right) => left.priority - right.priority)[0];
       if (!activeRoute) return [];
       const promotionActive = promotionIsActive(model, now);
@@ -239,8 +228,8 @@ function toPublicPreview(catalog: RenWorkAdminModelCatalog, now = new Date()): R
         effectiveDisplayMultiplierBps: Math.ceil(model.displayMultiplierBps * promotionBps / 10_000),
         promotionLabel: promotionActive ? model.promotion?.label ?? null : null,
         promotionEndsAt: promotionActive ? model.promotion?.endsAt ?? null : null,
-        billingMode: catalog.billingPolicy[activeRoute.source],
-        executionLocation: activeRoute.source === "local" ? "local" as const : "cloud" as const,
+        billingMode: "token_metered" as const,
+        executionLocation: "cloud" as const,
         sortOrder: model.sortOrder,
       }];
     })
@@ -316,38 +305,15 @@ function newProvider(count: number): RenWorkAdminProvider {
   };
 }
 
-function withProviderAuthMode(provider: RenWorkAdminProvider, authMode: RenWorkProviderAuthMode): RenWorkAdminProvider {
-  if (authMode === "device_oauth") {
-    return {
-      ...provider,
-      kind: "runtime",
-      protocol: "opencode",
-      baseUrl: null,
-      credentialRef: null,
-      authMode,
-      credentialStore: "device_vault",
-      executionScope: "personal_device",
-      sharingScope: "user_private",
-      deviceOAuthPolicy: provider.deviceOAuthPolicy ?? { maxDevicesPerUser: 3, maxConcurrentRunsPerUser: 1 },
-    };
-  }
-  if (authMode === "service_secret") {
-    return {
-      ...provider,
-      authMode,
-      credentialStore: "server_secret",
-      executionScope: "cloud_gateway",
-      sharingScope: "organization",
-      deviceOAuthPolicy: null,
-    };
-  }
+function withServerSecretAuth(provider: RenWorkAdminProvider): RenWorkAdminProvider {
   return {
     ...provider,
-    authMode,
-    credentialStore: "none",
-    executionScope: provider.kind === "runtime" || provider.kind === "local" ? "personal_device" : "cloud_gateway",
-    sharingScope: provider.kind === "runtime" || provider.kind === "local" ? "user_private" : "organization",
-    credentialRef: null,
+    kind: provider.kind === "direct" || provider.kind === "relay" || provider.kind === "custom" ? provider.kind : "relay",
+    protocol: provider.protocol === "openai_compatible" || provider.protocol === "opencode" ? provider.protocol : "openai_compatible",
+    authMode: "service_secret",
+    credentialStore: "server_secret",
+    executionScope: "cloud_gateway",
+    sharingScope: "organization",
     deviceOAuthPolicy: null,
   };
 }
@@ -737,7 +703,7 @@ export function RenWorkModelCatalogAdmin() {
               <div className="flex size-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-600"><ServerCog className="size-5" /></div>
               <div>
                 <h2 className="text-lg font-semibold text-slate-950">统一 Token 计费策略</h2>
-                <p className="mt-1 text-sm leading-6 text-slate-600">输入、输出、推理、缓存读取和缓存写入都会记录。选择“按 Token 扣费”时统一从 RenCredit 结算。</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">输入、输出、推理、缓存读取和缓存写入全部由 Den 记录并从 RenCredit 结算，不允许免费或客户端直连回退。</p>
               </div>
             </div>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -752,11 +718,10 @@ export function RenWorkModelCatalogAdmin() {
                   <select
                     aria-label={`${title}计费模式`}
                     value={catalog.billingPolicy[source]}
-                    onChange={(event) => setCatalog({ ...catalog, billingPolicy: { ...catalog.billingPolicy, [source]: event.target.value as RenWorkBillingMode } })}
+                    disabled
                     className={`${fieldClass} mt-3`}
                   >
                     <option value="token_metered">按 Token 扣 RenCredit</option>
-                    <option value="free">只记录用量，不扣 RenCredit</option>
                   </select>
                 </label>
               ))}
@@ -784,13 +749,13 @@ export function RenWorkModelCatalogAdmin() {
       {activeTab === "providers" ? (
         <div className="mt-5 space-y-4">
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-            服务端供应商只填写 <code className="rounded bg-white/70 px-1.5 py-0.5">env://变量名</code> 或 <code className="rounded bg-white/70 px-1.5 py-0.5">secret://路径</code> 引用；真实 Key 必须注入服务端，浏览器不会读取或回显。个人账号选择“设备 OAuth”：每台电脑独立授权，原始 OAuth 凭据只保存在该设备的系统安全存储中，不上传云端、不在团队成员之间共享。
+            仅允许 Den 服务端供应商。这里只填写 <code className="rounded bg-white/70 px-1.5 py-0.5">env://变量名</code> 或 <code className="rounded bg-white/70 px-1.5 py-0.5">secret://路径</code> 引用；真实 Key 或由超级管理员托管的 OAuth 凭据必须注入服务端，浏览器和普通客户端不会读取或回显。
           </div>
           <div className="rounded-3xl border border-orange-100 bg-white p-6" data-testid="metered-runtime-devices">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-slate-950">个人 OAuth 设备审批</h2>
-                <p className="mt-1 text-sm leading-6 text-slate-600">只批准设备公钥和执行资格；云端不会接收、保存或转发 OpenAI / Google 的个人 OAuth 凭据。</p>
+                <h2 className="text-lg font-semibold text-slate-950">历史本地设备清理</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">V36 不再允许批准本地执行设备；这里只保留历史记录审计与撤销入口，禁止重新启用。</p>
               </div>
               <button type="button" onClick={() => void loadDevices()} disabled={devicesLoading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">
                 <RefreshCw className={`size-3.5 ${devicesLoading ? "animate-spin" : ""}`} />刷新设备
@@ -805,7 +770,6 @@ export function RenWorkModelCatalogAdmin() {
                     <p className="mt-1 text-xs text-slate-500">状态：{device.status} · 最近在线：{new Date(device.lastSeenAt).toLocaleString()}</p>
                   </div>
                   <div className="flex gap-2">
-                    {device.status !== "active" ? <button type="button" onClick={() => void updateDeviceStatus(device, "active")} className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white">批准</button> : null}
                     {device.status !== "revoked" ? <button type="button" onClick={() => void updateDeviceStatus(device, "revoked")} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700">撤销</button> : null}
                   </div>
                 </div>
@@ -824,7 +788,7 @@ export function RenWorkModelCatalogAdmin() {
                   </div>
                   <div className="flex gap-2">
                     <button type="button" disabled={testingProviderId === provider.id} onClick={() => void testProviderConnection(provider)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50">
-                      <RefreshCw className={`size-3.5 ${testingProviderId === provider.id ? "animate-spin" : ""}`} />{provider.authMode === "device_oauth" ? "适配器自检" : "连接测试"}
+                      <RefreshCw className={`size-3.5 ${testingProviderId === provider.id ? "animate-spin" : ""}`} />连接测试
                     </button>
                     <button type="button" onClick={() => removeProvider(index)} className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700"><Trash2 className="size-3.5" />删除</button>
                   </div>
@@ -839,34 +803,26 @@ export function RenWorkModelCatalogAdmin() {
                   <Field label="显示名称"><input value={provider.displayName} onChange={(event) => replaceProvider(index, { ...provider, displayName: event.target.value })} className={fieldClass} /></Field>
                   <Field label="供应商类型">
                     <select value={provider.kind} onChange={(event) => replaceProvider(index, { ...provider, kind: event.target.value as RenWorkProviderKind })} className={fieldClass}>
-                      {(["direct", "relay", "runtime", "custom", "byok", "local"] as const).map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+                      {(["direct", "relay", "custom"] as const).map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+                      {!(["direct", "relay", "custom"] as readonly RenWorkProviderKind[]).includes(provider.kind) ? <option value={provider.kind} disabled>{provider.kind}（历史项，禁止启用）</option> : null}
                     </select>
                   </Field>
                   <Field label="兼容协议">
                     <select value={provider.protocol} onChange={(event) => replaceProvider(index, { ...provider, protocol: event.target.value as RenWorkProviderProtocol })} className={fieldClass}>
-                      {(["openai_compatible", "anthropic_compatible", "gemini", "opencode", "codex_cli", "antigravity_cli", "local"] as const).map((protocol) => <option key={protocol} value={protocol}>{protocol}</option>)}
+                      {(["openai_compatible", "opencode"] as const).map((protocol) => <option key={protocol} value={protocol}>{protocol}</option>)}
+                      {!(["openai_compatible", "opencode"] as readonly RenWorkProviderProtocol[]).includes(provider.protocol) ? <option value={provider.protocol} disabled>{provider.protocol}（当前网关不支持）</option> : null}
                     </select>
                   </Field>
                   <Field label="认证方式">
-                    <select value={provider.authMode} onChange={(event) => replaceProvider(index, withProviderAuthMode(provider, event.target.value as RenWorkProviderAuthMode))} className={fieldClass} data-testid="provider-auth-mode">
+                    <select value={provider.authMode} onChange={() => replaceProvider(index, withServerSecretAuth(provider))} className={fieldClass} data-testid="provider-auth-mode">
                       <option value="service_secret">服务端密钥</option>
-                      <option value="device_oauth">设备 OAuth（个人账号）</option>
-                      <option value="none">无需认证</option>
+                      {provider.authMode !== "service_secret" ? <option value={provider.authMode} disabled>{provider.authMode}（历史项，禁止启用）</option> : null}
                     </select>
                   </Field>
                   {provider.authMode === "service_secret" ? (
                     <>
                       <Field label="Base URL"><input value={provider.baseUrl ?? ""} onChange={(event) => replaceProvider(index, { ...provider, baseUrl: event.target.value.trim() || null })} placeholder="https://api.example.com/v1" className={fieldClass} /></Field>
                       <Field label="服务端密钥引用" hint="不填写真实 API Key。"><input value={provider.credentialRef ?? ""} onChange={(event) => replaceProvider(index, { ...provider, credentialRef: event.target.value.trim() || null })} placeholder="env://OPENROUTER_API_KEY" className={fieldClass} /></Field>
-                    </>
-                  ) : null}
-                  {provider.authMode === "device_oauth" && provider.deviceOAuthPolicy ? (
-                    <>
-                      <Field label="每用户最多设备数" hint="同一用户的每台电脑都要单独授权。"><input type="number" min="1" value={provider.deviceOAuthPolicy.maxDevicesPerUser} onChange={(event) => replaceProvider(index, { ...provider, deviceOAuthPolicy: { ...provider.deviceOAuthPolicy!, maxDevicesPerUser: Number(event.target.value) } })} className={fieldClass} /></Field>
-                      <Field label="每用户最大并发" hint="并发任务仍统一预占并扣除 RenCredit。"><input type="number" min="1" value={provider.deviceOAuthPolicy.maxConcurrentRunsPerUser} onChange={(event) => replaceProvider(index, { ...provider, deviceOAuthPolicy: { ...provider.deviceOAuthPolicy!, maxConcurrentRunsPerUser: Number(event.target.value) } })} className={fieldClass} /></Field>
-                      <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900 lg:col-span-2" data-testid="device-oauth-policy-note">
-                        凭据存储：系统安全存储 · 执行位置：个人设备 · 共享范围：仅当前用户。云端只保存设备状态、策略和不含内容的 RenCredit 用量收据。
-                      </div>
                     </>
                   ) : null}
                   <Field label="健康状态">
@@ -969,7 +925,8 @@ export function RenWorkModelCatalogAdmin() {
                       <Field label="上游模型 ID"><input value={route.upstreamModelId} onChange={(event) => replaceModel(modelIndex, { ...model, routes: model.routes.map((candidate, index) => index === routeIndex ? { ...route, upstreamModelId: event.target.value } : candidate) })} className={fieldClass} /></Field>
                       <Field label="来源">
                         <select value={route.source} onChange={(event) => replaceModel(modelIndex, { ...model, routes: model.routes.map((candidate, index) => index === routeIndex ? { ...route, source: event.target.value as RenWorkRouteSource } : candidate) })} className={fieldClass}>
-                          <option value="official">official</option><option value="byok">byok</option><option value="local">local</option>
+                          <option value="official">official（Den 强制计费）</option>
+                          {route.source !== "official" ? <option value={route.source} disabled>{route.source}（历史项，禁止启用）</option> : null}
                         </select>
                       </Field>
                       <Field label="优先级"><input type="number" min="0" value={route.priority} onChange={(event) => replaceModel(modelIndex, { ...model, routes: model.routes.map((candidate, index) => index === routeIndex ? { ...route, priority: Number(event.target.value) } : candidate) })} className={fieldClass} /></Field>
@@ -1051,7 +1008,8 @@ export function RenWorkModelCatalogAdmin() {
               {(settlementAudit?.reservations ?? []).map((reservation) => {
                 const usage = reservation.actualUsage ?? {};
                 const tokenTotal = Object.values(usage).reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0);
-                return <tr key={reservation.id} data-settlement-status={reservation.status}><td className="whitespace-nowrap px-4 py-3"><p className="font-medium text-slate-900">{reservation.organizationName ?? reservation.organizationId}</p><p className="mt-1 text-slate-500">{reservation.createdAt ? new Date(reservation.createdAt).toLocaleString() : "—"}</p></td><td className="px-4 py-3"><p className="font-medium text-slate-900">{reservation.modelSku}</p><p className="mt-1 font-mono text-[10px] text-slate-500">{reservation.providerId} · {reservation.routeId} · {reservation.upstreamModelId}</p></td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 font-semibold ${reservation.status === "captured" ? "bg-emerald-50 text-emerald-700" : reservation.status === "released" ? "bg-slate-100 text-slate-700" : "bg-amber-50 text-amber-700"}`}>{reservation.status === "captured" ? "已扣费" : reservation.status === "released" ? "已释放" : "冻结中"}</span>{reservation.failureCode ? <p className="mt-2 text-red-600">{reservation.failureCode}</p> : null}</td><td className="whitespace-nowrap px-4 py-3 text-slate-700">{formatMicroCredits(reservation.reservedMicroCredits)} / {formatMicroCredits(reservation.capturedMicroCredits)} / {formatMicroCredits(reservation.releasedMicroCredits)}</td><td className="px-4 py-3 text-slate-700">{tokenTotal.toLocaleString()}</td></tr>;
+                const overage = Math.max(0, reservation.capturedMicroCredits - reservation.reservedMicroCredits);
+                return <tr key={reservation.id} data-settlement-status={reservation.status}><td className="whitespace-nowrap px-4 py-3"><p className="font-medium text-slate-900">{reservation.organizationName ?? reservation.organizationId}</p><p className="mt-1 text-slate-500">{reservation.createdAt ? new Date(reservation.createdAt).toLocaleString() : "—"}</p></td><td className="px-4 py-3"><p className="font-medium text-slate-900">{reservation.modelSku}</p><p className="mt-1 font-mono text-[10px] text-slate-500">{reservation.providerId} · {reservation.routeId} · {reservation.upstreamModelId}</p></td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 font-semibold ${reservation.status === "captured" ? "bg-emerald-50 text-emerald-700" : reservation.status === "released" ? "bg-slate-100 text-slate-700" : "bg-amber-50 text-amber-700"}`}>{reservation.status === "captured" ? "已扣费" : reservation.status === "released" ? "已释放" : "冻结中"}</span>{reservation.failureCode ? <p className="mt-2 text-red-600">{reservation.failureCode}</p> : null}{overage > 0 ? <p className="mt-2 font-semibold text-orange-700">超出预冻结 {formatMicroCredits(overage)}，已独立补扣</p> : null}</td><td className="whitespace-nowrap px-4 py-3 text-slate-700">{formatMicroCredits(reservation.reservedMicroCredits)} / {formatMicroCredits(reservation.capturedMicroCredits)} / {formatMicroCredits(reservation.releasedMicroCredits)}</td><td className="px-4 py-3 text-slate-700">{tokenTotal.toLocaleString()}</td></tr>;
               })}
             </tbody></table></div>
           </div>

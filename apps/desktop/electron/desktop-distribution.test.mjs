@@ -27,8 +27,8 @@ describe("resolveDesktopDistribution", () => {
         protocolScheme: "renwork",
         requireSignin: true,
         requireActivation: false,
-        localRuntimeEnabled: true,
-        cloudWorkspaceRequired: false,
+        localRuntimeEnabled: false,
+        cloudWorkspaceRequired: true,
         updaterManifestChannel: "cloud",
       },
     );
@@ -48,8 +48,8 @@ describe("resolveDesktopDistribution", () => {
       protocolScheme: "renwork",
       requireSignin: true,
       requireActivation: true,
-      localRuntimeEnabled: true,
-      cloudWorkspaceRequired: false,
+      localRuntimeEnabled: false,
+      cloudWorkspaceRequired: true,
       updaterManifestChannel: "enterprise",
     });
   });

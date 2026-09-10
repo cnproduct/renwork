@@ -1,4 +1,4 @@
-import { findPublishedAdminModel } from "./catalog.js";
+import { findPublishedAdminModel, isDenServerRoute } from "./catalog.js";
 import {
   type RenWorkAdminModelCatalog,
   type RenWorkTokenQuote,
@@ -52,21 +52,17 @@ export function createRenCreditBillingService(options: RenCreditBillingServiceOp
       const model = findPublishedAdminModel(options.catalog, input.modelSku);
       const providers = new Map(options.catalog.providers.map((provider) => [provider.id, provider]));
       const route = model.routes
-        .filter((candidate) => candidate.enabled)
-        .filter((candidate) => {
-          const provider = providers.get(candidate.providerId);
-          return provider?.enabled && provider.health !== "offline";
-        })
+        .filter((candidate) => isDenServerRoute(candidate, providers))
         .sort((left, right) => left.priority - right.priority)[0];
       if (!route) throw new Error("MODEL_ROUTE_UNAVAILABLE");
-      const billingMode = options.catalog.billingPolicy[route.source];
+      const billingMode = "token_metered" as const;
       const createdAt = now();
       const quote: RenWorkTokenQuote = {
         id: createId("quote"),
         catalogVersion: options.catalog.version,
         modelSku: model.sku,
         estimatedUsage: { ...input.estimatedUsage },
-        reservedMicroCredits: billingMode === "free" ? 0 : calculateRenCreditMicroCharge(input.estimatedUsage, model, createdAt),
+        reservedMicroCredits: calculateRenCreditMicroCharge(input.estimatedUsage, model, createdAt),
         billingMode,
         expiresAt: new Date(createdAt.getTime() + (input.ttlMs ?? 5 * 60_000)).toISOString(),
       };
@@ -110,12 +106,15 @@ export function createRenCreditBillingService(options: RenCreditBillingServiceOp
       const capturedMicroCredits = uniqueEvents.reduce((total, event) => {
         const route = model.routes.find((candidate) => candidate.id === event.routeId);
         if (!route) throw new Error(`MODEL_ROUTE_NOT_FOUND:${event.routeId}`);
-        if (options.catalog.billingPolicy[route.source] === "free") return total;
         return total + calculateRenCreditMicroCharge(event.usage, model, new Date(reservation.createdAt));
       }, 0);
-      if (capturedMicroCredits > reservation.reservedMicroCredits) throw new Error("ADDITIONAL_RESERVATION_REQUIRED");
-      const releasedMicroCredits = reservation.reservedMicroCredits - capturedMicroCredits;
-      wallets.set(reservation.tenantId, (wallets.get(reservation.tenantId) ?? 0) + releasedMicroCredits);
+      const capturedFromReservationMicroCredits = Math.min(capturedMicroCredits, reservation.reservedMicroCredits);
+      const releasedMicroCredits = reservation.reservedMicroCredits - capturedFromReservationMicroCredits;
+      const additionalChargeMicroCredits = capturedMicroCredits - capturedFromReservationMicroCredits;
+      wallets.set(
+        reservation.tenantId,
+        (wallets.get(reservation.tenantId) ?? 0) + releasedMicroCredits - additionalChargeMicroCredits,
+      );
       reservation.status = "captured";
       const receipt: RenWorkTokenReceipt = {
         id: createId("receipt"),

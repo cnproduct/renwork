@@ -98,7 +98,44 @@ describe("RenCredit token reservation lifecycle", () => {
     expect(service.getBalance("tenant_a")).toBe(100);
   });
 
-  test("does not exempt official, BYOK, or local routes from token metering", () => {
+  test("captures every reported token when actual usage exceeds the estimate", () => {
+    const service = createRenCreditBillingService({
+      catalog: createTestCatalog(),
+      wallets: { tenant_a: 1_000 },
+      now: () => new Date("2026-08-28T12:00:00.000Z"),
+    });
+    const quote = service.quote({
+      modelSku: "renwork-standard",
+      estimatedUsage: { inputTokens: 20, outputTokens: 20, reasoningTokens: 20, cacheReadTokens: 20, cacheWriteTokens: 20 },
+    });
+    const reservation = service.reserve({
+      quoteId: quote.id,
+      tenantId: "tenant_a",
+      userId: "user_a",
+      idempotencyKey: "reserve-overage",
+    });
+    const receipt = service.settle({
+      reservationId: reservation.id,
+      runId: "run-overage",
+      events: [{
+        id: "usage-overage",
+        runId: "run-overage",
+        modelSku: "renwork-standard",
+        routeId: "route-openrouter-standard",
+        providerResponseId: "provider-response-overage",
+        usage: { inputTokens: 80, outputTokens: 80, reasoningTokens: 80, cacheReadTokens: 80, cacheWriteTokens: 80 },
+        measuredAt: "2026-08-28T12:00:01.000Z",
+        accuracy: "reported",
+      }],
+      idempotencyKey: "settle-overage",
+    });
+    expect(quote.reservedMicroCredits).toBe(50);
+    expect(receipt.capturedMicroCredits).toBe(200);
+    expect(receipt.releasedMicroCredits).toBe(0);
+    expect(service.getBalance("tenant_a")).toBe(800);
+  });
+
+  test("accepts only official Den routes and never exempts them from token metering", () => {
     for (const source of ["official", "byok", "local"] as const) {
       const catalog = createTestCatalog();
       catalog.models[0]!.routes[0]!.source = source;
@@ -107,25 +144,23 @@ describe("RenCredit token reservation lifecycle", () => {
         wallets: { tenant_a: 100 },
         now: () => new Date("2026-08-28T12:00:00.000Z"),
       });
-      const quote = service.quote({
+      const quoteInput = {
         modelSku: "renwork-standard",
-        estimatedUsage: {
-          inputTokens: 1,
-          outputTokens: 1,
-          reasoningTokens: 1,
-          cacheReadTokens: 1,
-          cacheWriteTokens: 1,
-        },
-      });
+        estimatedUsage: { inputTokens: 1, outputTokens: 1, reasoningTokens: 1, cacheReadTokens: 1, cacheWriteTokens: 1 },
+      };
+      if (source !== "official") {
+        expect(() => service.quote(quoteInput)).toThrow("MODEL_ROUTE_UNAVAILABLE");
+        continue;
+      }
+      const quote = service.quote(quoteInput);
       expect(quote.reservedMicroCredits).toBeGreaterThan(0);
       expect(quote.billingMode).toBe("token_metered");
     }
   });
 
-  test("honors a super-admin free-source policy while still recording token usage", () => {
+  test("ignores legacy free-source policy for an official Den route", () => {
     const catalog = createTestCatalog();
-    catalog.billingPolicy.local = "free";
-    catalog.models[0]!.routes[0]!.source = "local";
+    catalog.billingPolicy.official = "free";
     const service = createRenCreditBillingService({
       catalog,
       wallets: { tenant_a: 100 },
@@ -141,7 +176,7 @@ describe("RenCredit token reservation lifecycle", () => {
         cacheWriteTokens: 10,
       },
     });
-    expect(quote.billingMode).toBe("free");
-    expect(quote.reservedMicroCredits).toBe(0);
+    expect(quote.billingMode).toBe("token_metered");
+    expect(quote.reservedMicroCredits).toBeGreaterThan(0);
   });
 });

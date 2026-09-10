@@ -17,8 +17,8 @@ export const PUBLIC_DESKTOP_DISTRIBUTION = Object.freeze({
   protocolScheme: "renwork",
   requireSignin: true,
   requireActivation: false,
-  localRuntimeEnabled: true,
-  cloudWorkspaceRequired: false,
+  localRuntimeEnabled: false,
+  cloudWorkspaceRequired: true,
   updaterManifestChannel: "latest",
 });
 
@@ -29,8 +29,8 @@ export const CLOUD_DESKTOP_DISTRIBUTION = Object.freeze({
   protocolScheme: "renwork",
   requireSignin: true,
   requireActivation: false,
-  localRuntimeEnabled: true,
-  cloudWorkspaceRequired: false,
+  localRuntimeEnabled: false,
+  cloudWorkspaceRequired: true,
   updaterManifestChannel: "cloud",
 });
 
@@ -41,8 +41,8 @@ export const ENTERPRISE_DESKTOP_DISTRIBUTION = Object.freeze({
   protocolScheme: "renwork",
   requireSignin: true,
   requireActivation: true,
-  localRuntimeEnabled: true,
-  cloudWorkspaceRequired: false,
+  localRuntimeEnabled: false,
+  cloudWorkspaceRequired: true,
   updaterManifestChannel: "enterprise",
 });
 

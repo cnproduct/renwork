@@ -9,10 +9,13 @@ import {
   createRenWorkModelCatalogService,
   mergeMissingDefaultCatalogEntries,
   migrateLegacyOpenAIOAuthProvider,
+  migrateToDenServerExclusiveCatalog,
   normalizeAdminModelCatalog,
+  DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION,
   OPENAI_OAUTH_CATALOG_MIGRATION,
   OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION,
   validateAdminModelCatalog,
+  validateDenServerCatalog,
   type RenWorkAdminModelCatalog,
 } from "@openwork/rencredit-metering";
 
@@ -26,8 +29,12 @@ app.use("*", logger());
 // MySQL and must never be recreated in this file-backed runtime.
 const STATE_FILE = process.env.DATA_PATH || "/tmp/renwork_cloud_state.json";
 
-let modelCatalog = createDefaultRenWorkModelCatalog();
-let appliedCatalogMigrations = [OPENAI_OAUTH_CATALOG_MIGRATION, OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION];
+let modelCatalog = migrateToDenServerExclusiveCatalog(createDefaultRenWorkModelCatalog()).catalog;
+let appliedCatalogMigrations = [
+  OPENAI_OAUTH_CATALOG_MIGRATION,
+  OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION,
+  DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION,
+];
 
 function loadState() {
   try {
@@ -55,7 +62,13 @@ function loadState() {
           appliedCatalogMigrations.push(OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION);
           shouldSave = true;
         }
-        validateAdminModelCatalog(nextCatalog);
+        if (!appliedCatalogMigrations.includes(DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION)) {
+          const migrated = migrateToDenServerExclusiveCatalog(nextCatalog);
+          nextCatalog = migrated.catalog;
+          appliedCatalogMigrations.push(DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION);
+          shouldSave = true;
+        }
+        validateDenServerCatalog(nextCatalog);
         modelCatalog = nextCatalog;
         if (shouldSave) {
           saveState();
@@ -112,16 +125,16 @@ async function testProvider(providerId: string) {
   if (!provider) return { found: false as const };
   const startedAt = Date.now();
 
-  if (provider.authMode === "device_oauth") {
+  if (provider.authMode !== "service_secret" || provider.credentialStore !== "server_secret" || provider.executionScope !== "cloud_gateway" || provider.sharingScope !== "organization") {
     return {
       found: true as const,
       result: {
-        ok: true,
+        ok: false,
         providerId,
-        health: "healthy" as const,
+        health: "offline" as const,
         statusCode: null,
         latencyMs: Date.now() - startedAt,
-        message: "设备 OAuth 策略有效。账号授权与令牌健康状态将在每台已批准的 RenWork 设备上独立检查。",
+        message: "Provider blocked: RenWork production accepts only Den server-secret providers.",
       },
     };
   }
@@ -244,7 +257,7 @@ app.put("/v1/admin/models/catalog", async (c) => {
 
   try {
     const normalizedCatalog = normalizeAdminModelCatalog(body.catalog as RenWorkAdminModelCatalog);
-    validateAdminModelCatalog(normalizedCatalog);
+    validateDenServerCatalog(normalizedCatalog);
     modelCatalog = modelCatalogService.replaceAdminCatalog({
       role: "super_admin",
       expectedVersion: body.expectedVersion,
