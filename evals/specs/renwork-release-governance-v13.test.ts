@@ -19,7 +19,7 @@ test("V13 unifies RenWork identity, version governance, RBAC and durable settlem
   expect(dashboard).toContain("RenWork users");
   expect(adminUi).toContain('data-testid="rencredit-settlement-audit"');
   expect(adminUi).toContain("不可变租户账本");
-  expect(rencreditRoute.match(/adminRoute\(\)/g)?.length ?? 0).toBe(2);
+  expect(rencreditRoute.match(/adminRoute\(\)/g)?.length ?? 0).toBe(3);
   expect(desktopPolicy).toContain("return false");
 
   evidence.fact("RenWork identity is visible", "Dashboard and brand settings use RenWork defaults and the managed RenWork mark.", true);
