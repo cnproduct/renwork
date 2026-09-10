@@ -4,6 +4,7 @@ import {
   EMPTY_TOKEN_USAGE,
   calculateRenCreditMicroCharge,
   findPublishedAdminModel,
+  isDenServerRoute,
   modelAllowedForPlan,
   normalizeOpenAiUsage,
   validateAdminModelCatalog,
@@ -271,11 +272,9 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     }
 
     const providers = new Map(catalog.providers.map((provider) => [provider.id, provider]))
-    const route = model.routes.filter((candidate) => candidate.enabled)
-      .filter((candidate) => {
-        const provider = providers.get(candidate.providerId)
-        return provider?.enabled && provider.health !== "offline" && ["openai_compatible", "opencode"].includes(provider.protocol)
-      }).sort((left, right) => left.priority - right.priority)[0]
+    const route = model.routes
+      .filter((candidate) => isDenServerRoute(candidate, providers))
+      .sort((left, right) => left.priority - right.priority)[0]
     const provider = route ? providers.get(route.providerId) : null
     if (!route || !provider?.baseUrl) {
       return c.json({ error: { code: "MODEL_ROUTE_UNAVAILABLE", message: "No healthy RenWork route is available for this model." } }, 503)
@@ -286,8 +285,8 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     }
 
     const estimatedUsage = estimateOpenAiRequestUsage(body)
-    const billingMode = catalog.billingPolicy[route.source]
-    const reservedMicroCredits = billingMode === "free" ? 0 : calculateRenCreditMicroCharge(estimatedUsage, model)
+    const billingMode = "token_metered" as const
+    const reservedMicroCredits = calculateRenCreditMicroCharge(estimatedUsage, model)
     let reservation
     try {
       const reserved = await reserveInferenceCredits({

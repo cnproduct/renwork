@@ -135,6 +135,17 @@ function statusForMeteringError(code: string) {
 }
 
 export function registerMeteredRuntimeRoutes<T extends { Variables: Record<string, unknown> }>(app: Hono<T>) {
+  // Voiceover V36: branded clients execute exclusively through Den's inference
+  // gateway. Keep the legacy implementation below for forensic compatibility
+  // with historical receipts, but make every device-side execution endpoint
+  // fail closed before it can register, reserve, heartbeat, settle or release.
+  app.all("/api/v1/metered-runtime/*", publicRoute, (c) => c.json({
+    error: {
+      code: "LOCAL_RUNTIME_DISABLED",
+      message: "RenWork model execution must use the Den inference gateway.",
+    },
+  }, 410))
+
   app.get("/v1/admin/metered-runtime/devices", adminRoute(), async (c) => {
     const organizationId = c.req.query("organizationId")?.trim()
     const devices = organizationId
@@ -158,31 +169,13 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     if (!isRecord(body) || !exactKeys(body, ["status"]) || (body.status !== "active" && body.status !== "revoked")) {
       return c.json({ error: { code: "VALIDATION_FAILED" } }, 400)
     }
+    if (body.status === "active") {
+      return c.json({ error: { code: "LOCAL_RUNTIME_DISABLED" } }, 409)
+    }
     const registrationId = c.req.param("registrationId")
     const [device] = await db.select().from(RenCreditRuntimeDeviceTable)
       .where(eq(RenCreditRuntimeDeviceTable.id, registrationId)).limit(1)
     if (!device) return c.json({ error: { code: "LOCAL_RUNTIME_DEVICE_NOT_FOUND" } }, 404)
-    if (body.status === "active" && device.status !== "active") {
-      try {
-        const catalog = await loadProductionCatalog()
-        const limits = catalog.providers
-          .filter((provider) => provider.enabled && provider.authMode === "device_oauth")
-          .flatMap((provider) => provider.deviceOAuthPolicy ? [provider.deviceOAuthPolicy.maxDevicesPerUser] : [])
-        if (limits.length > 0) {
-          const maxDevices = Math.min(...limits)
-          const activeDevices = await db.select({ id: RenCreditRuntimeDeviceTable.id }).from(RenCreditRuntimeDeviceTable).where(and(
-            eq(RenCreditRuntimeDeviceTable.organization_id, device.organization_id),
-            eq(RenCreditRuntimeDeviceTable.org_membership_id, device.org_membership_id),
-            eq(RenCreditRuntimeDeviceTable.status, "active"),
-          ))
-          if (activeDevices.length >= maxDevices) {
-            return c.json({ error: { code: "DEVICE_OAUTH_DEVICE_LIMIT_EXCEEDED", maxDevices } }, 409)
-          }
-        }
-      } catch (error) {
-        return c.json({ error: { code: error instanceof Error ? error.message.split(":", 1)[0] : "MODEL_CATALOG_UNAVAILABLE" } }, 503)
-      }
-    }
     await db.update(RenCreditRuntimeDeviceTable).set({
       status: body.status,
       revoked_at: body.status === "revoked" ? new Date() : null,

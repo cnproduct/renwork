@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect } from "vitest";
 import { test } from "@openwork/testkit";
 
-test("Voiceover V9 keeps personal OAuth on each approved device", async ({ evidence }) => {
+test("Voiceover V9 device OAuth records are retained only for V36 revocation", async ({ evidence }) => {
   const [contracts, catalog, admin, desktop, gateway, ledger, cloud] = await Promise.all([
     readFile("../packages/rencredit-metering/src/contracts.ts", "utf8"),
     readFile("../packages/rencredit-metering/src/catalog.ts", "utf8"),
@@ -17,26 +17,26 @@ test("Voiceover V9 keeps personal OAuth on each approved device", async ({ evide
   expect(contracts).toContain('RENWORK_PROVIDER_CREDENTIAL_STORES = ["server_secret", "device_vault", "none"]');
   expect(catalog).toContain("device OAuth cannot contain a server credential or Base URL");
   expect(catalog).toContain('provider.sharingScope !== "user_private"');
-  expect(admin).toContain("个人 OAuth 设备审批");
-  expect(admin).toContain("原始 OAuth 凭据只保存在该设备的系统安全存储中");
-  expect(admin).toContain("适配器自检");
+  expect(admin).toContain("历史本地设备清理");
+  expect(admin).toContain("V36 不再允许批准本地执行设备");
+  expect(admin).not.toContain("批准设备");
   expect(desktop).toContain("Connect this device");
   expect(desktop).toContain("never uploaded to RenWork Cloud");
-  expect(gateway).toContain('status: "pending"');
-  expect(gateway).toContain('eq(RenCreditRuntimeDeviceTable.status, "active")');
-  expect(gateway).toContain("settleInferenceCredits");
-  expect(gateway).toContain("DEVICE_OAUTH_DEVICE_LIMIT_EXCEEDED");
+  expect(gateway).toContain('app.all("/api/v1/metered-runtime/*"');
+  expect(gateway).toContain('code: "LOCAL_RUNTIME_DISABLED"');
+  expect(gateway).toContain("Keep the legacy implementation below for forensic compatibility");
   expect(ledger).toContain("DEVICE_OAUTH_CONCURRENCY_EXCEEDED");
-  expect(cloud).toContain("设备 OAuth 策略有效");
+  expect(cloud).toContain("DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION");
+  expect(cloud).toContain("validateDenServerCatalog");
 
   evidence.fact(
-    "Personal OAuth credentials stay on each device",
-    "The catalog accepts only a device-vault, personal-device, user-private policy and the desktop explains that every computer connects separately.",
+    "Historical device records are revocation only",
+    "Den keeps legacy device contracts and rows for audit and revocation, while a leading fail-closed route prevents any new local-runtime execution.",
     true,
   );
   evidence.fact(
-    "Cloud control is metadata and RenCredit only",
-    "Den approves a public-key device record and settles content-free signed receipts; it never receives provider OAuth tokens.",
+    "V36 supersedes device execution",
+    "Provider execution now requires a Den server secret and official route; no local device can submit a metered runtime receipt.",
     true,
   );
 });

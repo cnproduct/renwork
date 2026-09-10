@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { modelAllowedForPlan, normalizeAdminModelCatalog, requireSuperAdmin, toPublicModelCatalog, toPublicModelCatalogForPlan, validateAdminModelCatalog } from "./catalog.js";
-import { createDefaultRenWorkModelCatalog, mergeMissingDefaultCatalogEntries, migrateLegacyOpenAIOAuthProvider } from "./default-catalog.js";
+import { modelAllowedForPlan, normalizeAdminModelCatalog, requireSuperAdmin, toPublicModelCatalog, toPublicModelCatalogForPlan, validateAdminModelCatalog, validateDenServerCatalog } from "./catalog.js";
+import { createDefaultRenWorkModelCatalog, mergeMissingDefaultCatalogEntries, migrateLegacyOpenAIOAuthProvider, migrateToDenServerExclusiveCatalog } from "./default-catalog.js";
 import { createTestCatalog } from "./test-fixtures.js";
 
 describe("RenWork model catalog", () => {
@@ -61,21 +61,14 @@ describe("RenWork model catalog", () => {
     expect(() => requireSuperAdmin("super_admin")).not.toThrow();
   });
 
-  test("ships cloud and approved-device RenWork product SKUs without exposing credentials", () => {
+  test("publishes only Den server-routed product SKUs without exposing credentials", () => {
     const catalog = createDefaultRenWorkModelCatalog(new Date("2026-08-28T12:00:00.000Z"));
     const publicCatalog = toPublicModelCatalog(catalog);
     expect(publicCatalog.models.map((model) => model.sku)).toEqual([
       "renwork-auto",
       "renwork-standard",
-      "renwork-openai-gpt-5-6-luna",
       "renwork-professional",
-      "renwork-codex",
-      "renwork-openai-gpt-5-5",
-      "renwork-openai-gpt-5-6",
-      "renwork-openai-gpt-5-6-terra",
-      "renwork-openai-gpt-5-3-codex-spark",
       "renwork-ultimate",
-      "renwork-openai-gpt-5-6-sol",
     ]);
     expect(catalog.providers[0]?.credentialRef).toBe("env://OPENROUTER_API_KEY");
     expect(catalog.providers[1]).toMatchObject({
@@ -174,7 +167,7 @@ describe("RenWork model catalog", () => {
     const catalog = createTestCatalog();
     catalog.billingPolicy.official = "free";
     const publicCatalog = toPublicModelCatalog(catalog, new Date("2026-08-28T12:00:00.000Z"));
-    expect(publicCatalog.models[0]?.billingMode).toBe("free");
+    expect(publicCatalog.models[0]?.billingMode).toBe("token_metered");
     expect(JSON.stringify(publicCatalog)).not.toContain('"source"');
   });
 
@@ -190,8 +183,21 @@ describe("RenWork model catalog", () => {
       deviceOAuthPolicy: { maxDevicesPerUser: 3, maxConcurrentRunsPerUser: 1 },
     };
     expect(() => validateAdminModelCatalog(catalog)).not.toThrow();
+    expect(() => validateDenServerCatalog(catalog)).toThrow("Den server secret");
     catalog.providers[1]!.credentialRef = "env://OPENAI_OAUTH_TOKEN";
     expect(() => validateAdminModelCatalog(catalog)).toThrow("cannot contain a server credential");
+  });
+
+  test("migrates legacy device, BYOK and local routes to an auditable disabled state", () => {
+    const catalog = createDefaultRenWorkModelCatalog(new Date("2026-09-10T12:00:00.000Z"));
+    catalog.billingPolicy.local = "free";
+    const migrated = migrateToDenServerExclusiveCatalog(catalog, new Date("2026-09-10T13:00:00.000Z"));
+
+    expect(migrated.changed).toBe(true);
+    expect(migrated.catalog.billingPolicy).toEqual({ official: "token_metered", byok: "token_metered", local: "token_metered" });
+    expect(migrated.catalog.providers.filter((provider) => provider.authMode === "device_oauth").every((provider) => !provider.enabled && provider.health === "offline")).toBe(true);
+    expect(migrated.catalog.models.filter((model) => model.routes.some((route) => route.source === "local")).every((model) => model.status === "paused" && model.routes.every((route) => !route.enabled))).toBe(true);
+    expect(() => validateDenServerCatalog(migrated.catalog)).not.toThrow();
   });
 
   test("normalizes persisted providers from the pre-V9 catalog", () => {

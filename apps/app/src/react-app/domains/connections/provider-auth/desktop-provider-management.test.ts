@@ -21,7 +21,7 @@ describe("desktop provider management", () => {
     })).toBe(false);
   });
 
-  test("allows OAuth-only personal subscriptions on a signed-in local desktop", () => {
+  test("disables personal subscription OAuth on a signed-in local desktop", () => {
     expect(canConnectPersonalSubscriptionOAuth({
       desktopRuntime: true,
       signedIn: true,
@@ -30,7 +30,7 @@ describe("desktop provider management", () => {
       hasActiveRuntime: true,
       hasPlatformGrantedModel: true,
       workspaceType: "local",
-    })).toBe(true);
+    })).toBe(false);
   });
 
   test("does not expose personal subscription OAuth to web, remote, or signed-out contexts", () => {

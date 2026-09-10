@@ -3,6 +3,7 @@ import type {
   RenWorkAdminModelCatalog,
   RenWorkModelTier,
 } from "./contracts.js";
+import { isDenServerProvider } from "./catalog.js";
 
 const DEFAULT_RATES = {
   inputMicroCreditsPerMillion: 1_000_000,
@@ -14,6 +15,7 @@ const DEFAULT_RATES = {
 
 export const OPENAI_OAUTH_CATALOG_MIGRATION = "v13-openai-oauth-chat-models";
 export const OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION = "v13-openai-oauth-provider-policy";
+export const DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION = "v36-den-server-exclusive";
 
 function defaultModel(input: {
   sku: string;
@@ -371,6 +373,56 @@ export function migrateLegacyOpenAIOAuthProvider(
       version: `${persisted.version}-${OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION}`,
       updatedAt: defaults.updatedAt,
       providers,
+    },
+  };
+}
+
+/**
+ * One-time, reversible cleanup for catalogs created before Den became the only
+ * execution boundary. Legacy rows stay visible to the super administrator for
+ * audit, but they cannot be published or selected by a member.
+ */
+export function migrateToDenServerExclusiveCatalog(
+  persisted: RenWorkAdminModelCatalog,
+  now = new Date(),
+): { catalog: RenWorkAdminModelCatalog; changed: boolean } {
+  const serverProviderIds = new Set(
+    persisted.providers.filter((provider) => isDenServerProvider(provider)).map((provider) => provider.id),
+  );
+  const providers = persisted.providers.map((provider) => (
+    serverProviderIds.has(provider.id)
+      ? provider
+      : { ...provider, enabled: false, health: "offline" as const }
+  ));
+  const models = persisted.models.map((model) => {
+    const routes = model.routes.map((route) => (
+      route.source === "official" && serverProviderIds.has(route.providerId)
+        ? route
+        : { ...route, enabled: false }
+    ));
+    const hasEnabledRoute = routes.some((route) => route.enabled);
+    return {
+      ...model,
+      routes,
+      status: model.status === "published" && !hasEnabledRoute ? "paused" as const : model.status,
+    };
+  });
+  const billingPolicy = { official: "token_metered", byok: "token_metered", local: "token_metered" } as const;
+  const changed = persisted.billingPolicy.official !== billingPolicy.official
+    || persisted.billingPolicy.byok !== billingPolicy.byok
+    || persisted.billingPolicy.local !== billingPolicy.local
+    || providers.some((provider, index) => provider.enabled !== persisted.providers[index]?.enabled || provider.health !== persisted.providers[index]?.health)
+    || models.some((model, index) => model.status !== persisted.models[index]?.status || model.routes.some((route, routeIndex) => route.enabled !== persisted.models[index]?.routes[routeIndex]?.enabled));
+  if (!changed) return { catalog: persisted, changed: false };
+  return {
+    changed: true,
+    catalog: {
+      ...persisted,
+      version: `${persisted.version}-${DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION}`,
+      updatedAt: now.toISOString(),
+      billingPolicy,
+      providers,
+      models,
     },
   };
 }

@@ -14,6 +14,8 @@ import {
 } from "./contracts.js";
 
 const TIER_ORDER = new Map(RENWORK_MODEL_TIERS.map((tier, index) => [tier, index]));
+const DEN_INFERENCE_PROTOCOLS = new Set(["openai_compatible", "opencode"]);
+const DEN_SERVER_PROVIDER_KINDS = new Set(["direct", "relay", "custom"]);
 
 function requireNonEmpty(value: string, field: string): void {
   if (!value.trim()) throw new Error(`${field} is required.`);
@@ -44,6 +46,36 @@ export function normalizeAdminProvider(
 
 export function normalizeAdminModelCatalog(catalog: RenWorkAdminModelCatalog): RenWorkAdminModelCatalog {
   return { ...catalog, providers: catalog.providers.map((provider) => normalizeAdminProvider(provider)) };
+}
+
+/**
+ * The branded RenWork service has one authoritative execution boundary: Den.
+ * A selectable provider must therefore be backed by a super-admin-managed
+ * server secret and execute in the organization-scoped cloud gateway.
+ */
+export function isDenServerProvider(provider: RenWorkAdminProvider): boolean {
+  const normalized = normalizeAdminProvider(provider);
+  return normalized.authMode === "service_secret"
+    && DEN_SERVER_PROVIDER_KINDS.has(normalized.kind)
+    && normalized.credentialStore === "server_secret"
+    && normalized.executionScope === "cloud_gateway"
+    && normalized.sharingScope === "organization"
+    && normalized.deviceOAuthPolicy === null
+    && Boolean(normalized.baseUrl?.trim())
+    && Boolean(normalized.credentialRef?.trim())
+    && DEN_INFERENCE_PROTOCOLS.has(normalized.protocol);
+}
+
+export function isDenServerRoute(
+  route: RenWorkAdminModel["routes"][number],
+  providers: ReadonlyMap<string, RenWorkAdminProvider>,
+): boolean {
+  const provider = providers.get(route.providerId);
+  return route.enabled
+    && route.source === "official"
+    && Boolean(provider?.enabled)
+    && provider?.health !== "offline"
+    && Boolean(provider && isDenServerProvider(provider));
 }
 
 function promotionIsActive(promotion: RenWorkModelPromotion | null, now: Date): boolean {
@@ -138,6 +170,34 @@ export function validateAdminModelCatalog(catalog: RenWorkAdminModelCatalog): vo
   }
 }
 
+/** Rejects a production catalog that could expose a direct, BYOK or device path. */
+export function validateDenServerCatalog(catalog: RenWorkAdminModelCatalog): void {
+  validateAdminModelCatalog(catalog);
+  for (const source of RENWORK_ROUTE_SOURCES) {
+    if (catalog.billingPolicy[source] !== "token_metered") {
+      throw new Error(`catalog.billingPolicy.${source} must be token_metered for RenWork production.`);
+    }
+  }
+  const providers = new Map(catalog.providers.map((provider) => [provider.id, provider]));
+  for (const provider of catalog.providers) {
+    if (provider.enabled && !isDenServerProvider(provider)) {
+      throw new Error(`Enabled provider ${provider.id} must use a Den server secret and cloud gateway execution.`);
+    }
+  }
+  for (const model of catalog.models) {
+    const enabledRoutes = model.routes.filter((route) => route.enabled);
+    if (enabledRoutes.some((route) => {
+      const provider = providers.get(route.providerId);
+      return route.source !== "official" || !provider || !isDenServerProvider(provider);
+    })) {
+      throw new Error(`Enabled routes for ${model.sku} must be official Den server routes.`);
+    }
+    if (model.status === "published" && enabledRoutes.length === 0) {
+      throw new Error(`Published model ${model.sku} requires an official Den server route.`);
+    }
+  }
+}
+
 export function requireSuperAdmin(role: RenWorkActorRole): void {
   if (role !== "super_admin") throw new Error("super_admin role required.");
 }
@@ -155,23 +215,13 @@ export function toPublicModelCatalog(catalog: RenWorkAdminModelCatalog, now = ne
 
   const models = catalog.models
     .filter((model) => model.status === "published")
-    .filter((model) => model.routes.some((route) => {
-      const provider = providers.get(route.providerId);
-      return route.enabled && provider?.enabled && provider.health !== "offline";
-    }))
+    .filter((model) => model.routes.some((route) => isDenServerRoute(route, providers)))
     .sort((left, right) => {
       const tierDifference = (TIER_ORDER.get(left.tier) ?? 0) - (TIER_ORDER.get(right.tier) ?? 0);
       return tierDifference || left.sortOrder - right.sortOrder || left.displayName.localeCompare(right.displayName);
     })
     .map((model) => {
       const promotionActive = promotionIsActive(model.promotion, now);
-      const activeRoute = model.routes
-        .filter((route) => route.enabled)
-        .filter((route) => {
-          const provider = providers.get(route.providerId);
-          return provider?.enabled && provider.health !== "offline";
-        })
-        .sort((left, right) => left.priority - right.priority)[0];
       return {
         sku: model.sku,
         providerID: "renwork" as const,
@@ -186,8 +236,8 @@ export function toPublicModelCatalog(catalog: RenWorkAdminModelCatalog, now = ne
         effectiveDisplayMultiplierBps: effectiveDisplayMultiplierBps(model, now),
         promotionLabel: promotionActive ? model.promotion?.label ?? null : null,
         promotionEndsAt: promotionActive ? model.promotion?.endsAt ?? null : null,
-        billingMode: activeRoute ? catalog.billingPolicy[activeRoute.source] : "token_metered",
-        executionLocation: activeRoute?.source === "local" ? "local" as const : "cloud" as const,
+        billingMode: "token_metered" as const,
+        executionLocation: "cloud" as const,
       };
     });
 

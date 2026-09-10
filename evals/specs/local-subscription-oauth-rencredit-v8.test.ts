@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect } from "vitest";
 import { test } from "@openwork/testkit";
 
-test("Voiceover V8 exposes OAuth-only local subscriptions without a billing bypass", async ({ evidence }) => {
+test("Voiceover V8 local OAuth surface is superseded by the V36 Den-only boundary", async ({ evidence }) => {
   const [settings, modal, store, policy, gate, proxy, gateway] = await Promise.all([
     readFile("../apps/app/src/react-app/domains/settings/pages/ai-view.tsx", "utf8"),
     readFile("../apps/app/src/react-app/domains/connections/provider-auth/provider-auth-modal.tsx", "utf8"),
@@ -24,7 +24,7 @@ test("Voiceover V8 exposes OAuth-only local subscriptions without a billing bypa
   expect(store).toContain('new Set(["openai", "google"])');
   expect(store).toContain('providerMethods.filter((method) => method.type === "oauth")');
   expect(policy).toContain("canConnectPersonalSubscriptionOAuth");
-  expect(policy).toContain("input.hasActiveRuntime");
+  expect(policy).toContain("return false");
   expect(gate).toContain('payload.model.providerID !== "renwork"');
   expect(proxy).toContain("rewriteMeteredModel");
   expect(proxy).toContain("settleMeteredOpenCodeRun");
@@ -33,13 +33,13 @@ test("Voiceover V8 exposes OAuth-only local subscriptions without a billing bypa
   expect(gateway).toContain("releaseInferenceCredits");
 
   evidence.fact(
-    "Personal subscriptions are OAuth-only",
-    "The ordinary desktop settings surface lists only OpenAI and Google subscription OAuth; API keys, custom providers, remote workers and signed-out contexts remain excluded.",
+    "Historical personal subscription UI is fail closed",
+    "The historical settings text remains readable for migration, but the V36 policy always rejects new personal OAuth connections.",
     true,
   );
   evidence.fact(
-    "Local subscriptions cannot bypass RenCredit",
-    "The renderer still submits only synthetic renwork model IDs; the host reserves credits before rewriting to the approved device OAuth route and settles a signed usage receipt or releases the reservation.",
+    "All selectable execution is Den metered",
+    "The legacy host implementation remains available only for migration tests; ordinary distributions disable local runtime and Den rejects metered-runtime endpoints.",
     true,
   );
 });

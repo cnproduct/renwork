@@ -27,9 +27,8 @@ describe("RenWork platform model catalog admin", () => {
       "供应商网关",
       "服务端密钥引用",
       "连接测试",
-      "设备 OAuth（个人账号）",
-      "个人 OAuth 设备审批",
-      "适配器自检",
+      "历史本地设备清理",
+      "禁止重新启用",
       "五类 Token 单价",
       "私有路由",
       "运行监控",
@@ -50,10 +49,12 @@ describe("RenWork platform model catalog admin", () => {
   });
 
   test("never asks the browser to store or reveal a raw provider secret", () => {
-    expect(component).toContain("真实 Key 必须注入服务端");
+    expect(component).toContain("真实 Key 或由超级管理员托管的 OAuth 凭据必须注入服务端");
     expect(component).toContain("env://OPENROUTER_API_KEY");
     expect(component).not.toContain('type="password"');
     expect(component).not.toContain("apiKey:");
+    expect(component).not.toContain("批准设备");
+    expect(component).not.toContain('value="device_oauth"');
   });
 
   test("includes the RenCredit workspace package in the pruned Den Web image", () => {
