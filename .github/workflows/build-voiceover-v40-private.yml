@@ -71,8 +71,13 @@ jobs:
       - name: Write checksums
         shell: bash
         run: |
+          if command -v shasum >/dev/null 2>&1; then
+            checksum=(shasum -a 256)
+          else
+            checksum=(sha256sum)
+          fi
           find "${{ matrix.output }}" -maxdepth 1 -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' \) -print0 |
-            sort -z | xargs -0 shasum -a 256 > "${{ matrix.output }}/SHA256SUMS.txt"
+            sort -z | xargs -0 "${checksum[@]}" > "${{ matrix.output }}/SHA256SUMS.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
