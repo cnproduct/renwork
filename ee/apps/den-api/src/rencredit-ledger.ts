@@ -664,6 +664,24 @@ export async function getInferenceReservationForPrincipal(input: InferencePrinci
   return reservation ?? null
 }
 
+export async function renewInferenceReservationLease(input: {
+  reservationId: ReservationId
+  expiresAt: Date
+}) {
+  return db.transaction(async (tx) => {
+    const [reservation] = await tx.select().from(RenCreditReservationTable)
+      .where(eq(RenCreditReservationTable.id, input.reservationId)).for("update").limit(1)
+    if (!reservation) throw new Error("RENCREDIT_RESERVATION_NOT_FOUND")
+    if (reservation.status !== "reserved") throw new Error("RENCREDIT_RESERVATION_NOT_ACTIVE")
+    if (new Date(reservation.expires_at).getTime() < Date.now()) {
+      throw new Error("RENCREDIT_RESERVATION_LEASE_EXPIRED")
+    }
+    await tx.update(RenCreditReservationTable).set({ expires_at: input.expiresAt })
+      .where(eq(RenCreditReservationTable.id, input.reservationId))
+    return { ...reservation, expires_at: input.expiresAt }
+  })
+}
+
 export async function releaseInferenceCredits(input: { reservationId: ReservationId; failureCode: string }) {
   const zeroUsage: RenWorkTokenUsage = { inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
   const settled = await settleInferenceCredits({

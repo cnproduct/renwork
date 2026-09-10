@@ -915,6 +915,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
   });
   const localRuntimeMetering = new RenCreditLocalRuntimeClient({
     credentials: () => cloudProviderSync.meteringCredentials(),
+    waitForCredentials: () => cloudProviderSync.waitForMeteringCredentials(),
     signer: config.localRuntimeMeteringSigner,
   });
   const cliRuntimeManager = new RenWorkCliRuntimeManager({ metering: localRuntimeMetering });
@@ -1331,8 +1332,18 @@ async function settleMeteredOpenCodeRun(input: {
 }): Promise<void> {
   const deadline = Date.now() + 29 * 60_000;
   let idleWithoutAssistantSince: number | null = null;
+  let nextHeartbeatAt = Date.now() + 30_000;
   try {
     while (Date.now() < deadline) {
+      if (input.metering.heartbeat && Date.now() >= nextHeartbeatAt) {
+        try {
+          await input.metering.heartbeat(input.reservation);
+          nextHeartbeatAt = Date.now() + 30_000;
+        } catch {
+          await input.metering.release(input.reservation, "LOCAL_RUNTIME_HEARTBEAT_FAILED").catch(() => undefined);
+          return;
+        }
+      }
       const messages = await readOpenCodeMessages(input);
       const current = messages.filter((message) => {
         const info = message.info;
@@ -2696,7 +2707,7 @@ function createRoutes(
     ensureWritable(config);
     const session = parseCloudProviderDenSession(await readJsonBody(ctx.request));
     if (!session) throw new ApiError(400, "invalid_payload", "baseUrl, token, and orgId are required");
-    cloudProviderSync.setSession(session);
+    await cloudProviderSync.setSession(session);
     return new Response(null, { status: 204 });
   });
 
@@ -2717,6 +2728,18 @@ function createRoutes(
 
   addRoute(routes, "GET", "/cloud-provider-sync/status", "client", async () => {
     return jsonResponse(cloudProviderSync.status());
+  });
+
+  addRoute(routes, "GET", "/rencredit-runtime/status", "client", async () => {
+    const sync = cloudProviderSync.status();
+    return jsonResponse({
+      sessionReady: sync.hasSession,
+      providerSyncReady: sync.providerSyncReady,
+      signerReady: Boolean(config.localRuntimeMeteringSigner),
+      meteringReady: sync.meteringReady && Boolean(config.localRuntimeMeteringSigner),
+      lastSyncStatus: sync.lastRun?.status ?? "not_started",
+      reloadPending: sync.reloadPending,
+    });
   });
 
   addRoute(routes, "PATCH", "/runtime-config/providers", "host-token", async (ctx) => {

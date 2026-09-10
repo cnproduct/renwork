@@ -107,6 +107,17 @@ export async function refreshOrganizationModels<T>(
   input: OrganizationModelsRefreshInput<T>,
   reason: OrganizationModelsRefreshReason = "manual",
 ): Promise<T> {
-  await input.runCloudProviderSync(reason);
+  const result = await input.runCloudProviderSync(reason);
+  if (
+    result &&
+    typeof result === "object" &&
+    "outcome" in result &&
+    result.outcome === "failed"
+  ) {
+    const message = "message" in result && typeof result.message === "string"
+      ? result.message
+      : "RenWork provider sync failed.";
+    throw new Error(message);
+  }
   return input.refreshProviders();
 }

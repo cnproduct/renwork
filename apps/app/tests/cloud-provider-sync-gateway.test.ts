@@ -411,7 +411,10 @@ describe("cloud provider sync in server-capability mode", () => {
     installProviderSyncFetch(requests, { runStatuses: [{ status: "failed", message: "Provider import failed" }] });
     const { store } = createProviderAuthTestStore({ read: true, write: true, providerSync: true });
 
-    expect(await store.runCloudProviderSync("settings_cloud_opened")).toBeUndefined();
+    expect(await store.runCloudProviderSync("settings_cloud_opened")).toEqual({
+      outcome: "failed",
+      message: expect.stringContaining("Provider import failed"),
+    });
     expect(store.getSnapshot().providerAuthError).toContain("Provider import failed");
   });
 

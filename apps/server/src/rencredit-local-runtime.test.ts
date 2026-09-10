@@ -101,6 +101,76 @@ describe("RenCredit local OAuth runtime", () => {
     }
   });
 
+  test("waits for the first provider sync and exposes a short concurrency retry", async () => {
+    const requests: string[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        const url = new URL(request.url);
+        requests.push(`${request.method} ${url.pathname}`);
+        if (url.pathname.endsWith("/reservations")) {
+          return Response.json({
+            error: { code: "DEVICE_OAUTH_CONCURRENCY_EXCEEDED" },
+            retryAfterSeconds: 120,
+          }, { status: 409 });
+        }
+        return Response.json({ status: "active" });
+      },
+    });
+    let waited = false;
+    const client = new RenCreditLocalRuntimeClient({
+      credentials: () => null,
+      waitForCredentials: async () => {
+        waited = true;
+        return { baseUrl: `http://127.0.0.1:${server.port}`, apiKey: "key", orgId: "org" };
+      },
+      signer: async () => ({ deviceId: "device", publicKeyPem: "pem", sign: async () => "signature" }),
+    });
+    try {
+      await expect(client.reserve({ modelSku: "renwork-oauth-pro", body: new Uint8Array([1]).buffer })).rejects.toMatchObject({
+        status: 409,
+        code: "DEVICE_OAUTH_CONCURRENCY_EXCEEDED",
+        details: { retryAfterSeconds: 120 },
+      });
+      expect(waited).toBe(true);
+      expect(requests).toEqual(["POST /api/v1/metered-runtime/reservations"]);
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test("renews the execution lease while a local OAuth task is alive", async () => {
+    const requests: Array<{ path: string; body: unknown }> = [];
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        requests.push({ path: new URL(request.url).pathname, body: await request.json() });
+        return Response.json({ reservationId: "rsv_1", status: "reserved" });
+      },
+    });
+    const client = new RenCreditLocalRuntimeClient({
+      credentials: () => ({ baseUrl: `http://127.0.0.1:${server.port}`, apiKey: "key", orgId: "org" }),
+      signer: async () => ({ deviceId: "device", publicKeyPem: "pem", sign: async () => "signature" }),
+    });
+    try {
+      await client.heartbeat({
+        reservationId: "rsv_1",
+        runId: "run_1",
+        modelSku: "renwork-oauth-pro",
+        reservedMicroCredits: 1,
+        providerID: "provider",
+        modelID: "model",
+        adapter: null,
+      });
+      expect(requests).toEqual([{
+        path: "/api/v1/metered-runtime/reservations/rsv_1/heartbeat",
+        body: { deviceId: "device", runId: "run_1" },
+      }]);
+    } finally {
+      server.stop(true);
+    }
+  });
+
   test("delegates official models to the cloud gateway without registering a device", async () => {
     const requests: string[] = [];
     const server = Bun.serve({

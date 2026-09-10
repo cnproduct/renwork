@@ -331,6 +331,8 @@ describe("cloud provider sync gateway", () => {
 
     const firstStatus = await waitForLastRun(base, "applied");
     expect(firstStatus.hasSession).toBe(true);
+    expect(firstStatus.providerSyncReady).toBe(true);
+    expect(firstStatus.meteringReady).toBe(true);
     const statusProviders = Array.isArray(firstStatus.providers) ? firstStatus.providers : [];
     expect(statusProviders).toHaveLength(1);
     const statusProvider = expectRecord(statusProviders[0], "materialized provider status");
@@ -405,6 +407,8 @@ describe("cloud provider sync gateway", () => {
     const clearedStatusResponse = await fetch(`${base}/cloud-provider-sync/status`, { headers: clientHeaders() });
     expect(await responseRecord(clearedStatusResponse, "cleared status")).toEqual({
       hasSession: false,
+      providerSyncReady: false,
+      meteringReady: false,
       lastRun: null,
       providers: [],
       reloadPending: false,

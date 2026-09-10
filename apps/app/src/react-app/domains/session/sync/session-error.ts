@@ -108,6 +108,36 @@ function normalizeSessionError(text: string) {
   return normalizeErrorText(withOpenAiTokenRefreshHint(withAttachmentRecoveryHint(text)), { cap: 500 }).display;
 }
 
+function parsedJsonErrorText(text: string) {
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    const error = parsed as Record<string, unknown>;
+    const nested = error.error && typeof error.error === "object" ? error.error as Record<string, unknown> : null;
+    const code = typeof error.code === "string" ? error.code : typeof nested?.code === "string" ? nested.code : null;
+    if (code === "rencredit_runtime_unavailable") {
+      return { code, message: "RenWork 正在同步计费授权，请稍候片刻后重试。" };
+    }
+    if (code === "DEVICE_OAUTH_CONCURRENCY_EXCEEDED") {
+      const details = error.details && typeof error.details === "object" ? error.details as Record<string, unknown> : null;
+      const retryAfter = Number.isSafeInteger(details?.retryAfterSeconds)
+        ? details?.retryAfterSeconds as number
+        : Number.isSafeInteger(error.retryAfterSeconds)
+          ? error.retryAfterSeconds as number
+          : null;
+      return {
+        code,
+        message: retryAfter
+          ? `上一个模型任务仍在结算，请在 ${retryAfter} 秒内重试。异常任务会自动释放冻结额度。`
+          : "上一个模型任务仍在结算，请稍后重试；异常任务会自动释放冻结额度。",
+      };
+    }
+  } catch {
+    // Plain provider text.
+  }
+  return null;
+}
+
 function sessionErrorFields(error: unknown, fallback: string) {
   if (error instanceof Error) {
     return {
@@ -121,12 +151,13 @@ function sessionErrorFields(error: unknown, fallback: string) {
     };
   }
   if (typeof error === "string") {
+    const parsed = parsedJsonErrorText(error.trim());
     return {
       name: null,
-      message: error.trim() || fallback,
+      message: parsed?.message ?? (error.trim() || fallback),
       status: null,
       provider: null,
-      code: null,
+      code: parsed?.code ?? null,
       retries: null,
       responseBody: null,
     };

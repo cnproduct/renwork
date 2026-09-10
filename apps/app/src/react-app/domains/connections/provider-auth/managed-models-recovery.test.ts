@@ -149,6 +149,23 @@ describe("managed model recovery", () => {
     expect(result).toBe(snapshot);
   });
 
+  test("does not mark provider sync ready after billing authorization failed", async () => {
+    let providersRead = false;
+    let failure = "";
+    try {
+      await refreshOrganizationModels({
+        runCloudProviderSync: async () => ({ outcome: "failed", message: "billing authorization missing" }),
+        refreshProviders: async () => {
+          providersRead = true;
+        },
+      });
+    } catch (error) {
+      failure = error instanceof Error ? error.message : String(error);
+    }
+    expect(failure).toBe("billing authorization missing");
+    expect(providersRead).toBe(false);
+  });
+
   test("publishes automatic sync results into the live session snapshot", () => {
     expect(sessionProviderAuthSource.includes(
       "useCloudProviderAutoSync(refreshCloudProviderSync)",

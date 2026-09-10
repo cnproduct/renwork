@@ -46,6 +46,7 @@ export type OpenCodeMessageEnvelope = {
 
 export interface RenCreditLocalRuntimePort {
   reserve(input: { modelSku: string; body: ArrayBuffer; runId?: string }): Promise<LocalRuntimeReservation>;
+  heartbeat?(reservation: LocalRuntimeReservation): Promise<void>;
   settle(reservation: LocalRuntimeReservation, measured: ReturnType<typeof aggregateReportedUsage>): Promise<LocalRuntimeSettlement>;
   release(reservation: LocalRuntimeReservation, failureCode: string): Promise<LocalRuntimeSettlement>;
 }
@@ -119,11 +120,12 @@ export function aggregateReportedUsage(messages: readonly OpenCodeMessageEnvelop
 export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
   constructor(private readonly options: {
     credentials: () => CloudProviderMeteringCredentials | null;
+    waitForCredentials?: () => Promise<CloudProviderMeteringCredentials | null>;
     signer?: LocalRuntimeMeteringSignerProvider;
   }) {}
 
-  private requireCredentials() {
-    const credentials = this.options.credentials();
+  private async requireCredentials() {
+    const credentials = this.options.credentials() ?? await this.options.waitForCredentials?.() ?? null;
     if (!credentials) {
       throw new ApiError(503, "rencredit_runtime_unavailable", "RenWork billing is not ready. Sign in and wait for provider sync.");
     }
@@ -134,7 +136,7 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
   }
 
   async reserve(input: { modelSku: string; body: ArrayBuffer; runId?: string }): Promise<LocalRuntimeReservation> {
-    const credentials = this.requireCredentials();
+    const credentials = await this.requireCredentials();
     const signer = await this.options.signer!();
     const runId = input.runId ?? randomUUID();
     const reserveOnce = () => requestJson(credentials, "/api/v1/metered-runtime/reservations", {
@@ -165,7 +167,21 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
       reserved = await reserveOnce();
     }
     if (!reserved.response.ok || !isRecord(reserved.payload)) {
-      throw new ApiError(reserved.response.status || 503, errorCode(reserved.payload), "RenWork could not reserve RenCredit for this task.");
+      const code = errorCode(reserved.payload);
+      const retryAfterSeconds = isRecord(reserved.payload)
+        && Number.isSafeInteger(reserved.payload.retryAfterSeconds)
+        && (reserved.payload.retryAfterSeconds as number) > 0
+        ? reserved.payload.retryAfterSeconds as number
+        : null;
+      const message = code === "DEVICE_OAUTH_CONCURRENCY_EXCEEDED"
+        ? "Another RenWork task is still running or settling. RenWork will retry after its short execution lease expires."
+        : "RenWork could not reserve RenCredit for this task.";
+      throw new ApiError(
+        reserved.response.status || 503,
+        code,
+        message,
+        retryAfterSeconds ? { retryAfterSeconds } : undefined,
+      );
     }
     const execution = isRecord(reserved.payload.execution) ? reserved.payload.execution : null;
     if (
@@ -191,8 +207,19 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
     };
   }
 
+  async heartbeat(reservation: LocalRuntimeReservation): Promise<void> {
+    const credentials = await this.requireCredentials();
+    const signer = await this.options.signer!();
+    const result = await requestJson(
+      credentials,
+      `/api/v1/metered-runtime/reservations/${encodeURIComponent(reservation.reservationId)}/heartbeat`,
+      { method: "POST", body: JSON.stringify({ deviceId: signer.deviceId, runId: reservation.runId }) },
+    );
+    if (!result.response.ok) throw new Error(errorCode(result.payload));
+  }
+
   async settle(reservation: LocalRuntimeReservation, measured: ReturnType<typeof aggregateReportedUsage>): Promise<LocalRuntimeSettlement> {
-    const credentials = this.requireCredentials();
+    const credentials = await this.requireCredentials();
     const signer = await this.options.signer!();
     const payload = {
       version: 1 as const,
@@ -220,7 +247,7 @@ export class RenCreditLocalRuntimeClient implements RenCreditLocalRuntimePort {
   }
 
   async release(reservation: LocalRuntimeReservation, failureCode: string): Promise<LocalRuntimeSettlement> {
-    const credentials = this.requireCredentials();
+    const credentials = await this.requireCredentials();
     const result = await requestJson(
       credentials,
       `/api/v1/metered-runtime/reservations/${encodeURIComponent(reservation.reservationId)}/release`,

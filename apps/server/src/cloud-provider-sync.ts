@@ -73,6 +73,10 @@ export type CloudProviderSyncRunDetail = {
 
 export type CloudProviderSyncStatus = {
   hasSession: boolean;
+  /** The first pass for the current Den session finished successfully. */
+  providerSyncReady: boolean;
+  /** A server-only inference key is available to the RenCredit runtime. */
+  meteringReady: boolean;
   lastRun: {
     at: string;
     status: "applied" | "noop" | "failed";
@@ -573,6 +577,8 @@ export class CloudProviderSync {
   private interval: ReturnType<typeof setInterval> | null = null;
   private pendingReloadRetry: ReturnType<typeof setTimeout> | null = null;
   private readonly reloadRetryMs: number;
+  private sessionGeneration = 0;
+  private readyGeneration = -1;
 
   constructor(options: CloudProviderSyncOptions) {
     this.config = options.config;
@@ -585,15 +591,20 @@ export class CloudProviderSync {
     this.reloadRetryMs = configuredReloadRetryMs();
   }
 
-  setSession(session: CloudProviderDenSession): void {
+  async setSession(session: CloudProviderDenSession): Promise<CloudProviderSyncRunResult> {
+    this.sessionGeneration += 1;
+    this.meteringApiKey = null;
+    this.readyGeneration = -1;
     this.session = session;
     this.startInterval();
-    void this.run("den_session_updated");
+    return this.run("den_session_updated");
   }
 
   async clearSession(): Promise<void> {
+    this.sessionGeneration += 1;
     this.session = null;
     this.meteringApiKey = null;
+    this.readyGeneration = -1;
     this.stopInterval();
     await this.enqueue(async () => {
       try {
@@ -616,12 +627,15 @@ export class CloudProviderSync {
 
   run(reason?: string): Promise<CloudProviderSyncRunResult> {
     if (!this.session) return Promise.resolve({ status: "no_session" });
-    return this.enqueue(() => this.runPass(reason));
+    const generation = this.sessionGeneration;
+    return this.enqueue(() => this.runPass(reason, generation));
   }
 
   status(): CloudProviderSyncStatus {
     return {
       hasSession: this.session !== null,
+      providerSyncReady: this.readyGeneration === this.sessionGeneration && !this.reloadPending,
+      meteringReady: this.meteringCredentials() !== null,
       lastRun: this.lastRun ? { ...this.lastRun } : null,
       providers: this.providers.map((provider) => ({ ...provider, modelIds: [...provider.modelIds] })),
       reloadPending: this.reloadPending,
@@ -638,6 +652,27 @@ export class CloudProviderSync {
     const session = this.session;
     const apiKey = this.meteringApiKey;
     return session && apiKey ? { baseUrl: session.baseUrl, apiKey, orgId: session.orgId } : null;
+  }
+
+  /**
+   * Waits for the serialized first sync pass instead of failing a task that is
+   * submitted immediately after sign-in or an organization switch. No secret
+   * is ever returned through the public status route.
+   */
+  async waitForMeteringCredentials(timeoutMs = requestTimeoutMs + 2_000): Promise<CloudProviderMeteringCredentials | null> {
+    const ready = this.meteringCredentials();
+    if (ready || !this.session) return ready;
+    const queued = this.queue;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    await Promise.race([
+      queued,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, timeoutMs);
+        timer.unref();
+      }),
+    ]);
+    if (timer) clearTimeout(timer);
+    return this.meteringCredentials();
   }
 
   stop(): void {
@@ -740,11 +775,14 @@ export class CloudProviderSync {
     }
   }
 
-  private async runPass(reason?: string): Promise<CloudProviderSyncRunResult> {
+  private async runPass(reason: string | undefined, generation: number): Promise<CloudProviderSyncRunResult> {
     const session = this.session;
     if (!session) return { status: "no_session" };
     try {
       const prepared = prepareMaterialization(await fetchProviders(this.fetchImpl, session));
+      if (generation !== this.sessionGeneration || session !== this.session) {
+        return { status: "no_session" };
+      }
       this.meteringApiKey = prepared.providers.find((entry) => entry.provider.providerId === "renwork")
         ?.provider.apiKey?.trim() || null;
       const { changed, detail, reloadError } = await this.apply(prepared);
@@ -760,11 +798,13 @@ export class CloudProviderSync {
         this.logger?.warn("cloud provider sync failed", { reason, message });
         return { status: "failed", message };
       }
+      this.readyGeneration = generation;
       const status = changed ? "applied" : "noop";
       this.lastRun = { at: new Date().toISOString(), status, detail };
       return { status };
     } catch (error) {
       this.meteringApiKey = null;
+      this.readyGeneration = -1;
       const message = error instanceof Error ? error.message : "cloud_provider_sync_failed";
       this.lastRun = { at: new Date().toISOString(), status: "failed", message };
       this.logger?.warn("cloud provider sync failed", { reason, message });
