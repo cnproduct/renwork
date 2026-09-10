@@ -75,11 +75,15 @@ describe("Electron distribution configs", () => {
   });
 
   it("defines a sidecar-free Windows Server 2016 cloud-only flavor", async () => {
+    const packageMetadata = JSON.parse(
+      await readFile(path.resolve(dirname, "..", "package.json"), "utf8"),
+    );
     const config = await readConfig("electron-builder.server2016-cloud.yml");
     assert.equal(config.extends, "./electron-builder.base.yml");
     assert.equal(config.appId, "com.renrenyi.renwork.server2016cloud");
     assert.equal(config.productName, "RenWork Server 2016 Cloud");
-    assert.equal(config.extraMetadata.version, "0.18.60");
+    assert.match(packageMetadata.version, /^\d+\.\d+\.\d+$/);
+    assert.equal(config.extraMetadata.version, undefined);
     assert.equal(config.extraMetadata.openworkDistribution, "server2016-cloud");
     assert.equal(config.protocols[0].schemes[0], "renwork-server2016");
     assert.equal(config.publish[0].owner, "cnproduct");
