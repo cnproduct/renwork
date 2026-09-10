@@ -39,6 +39,40 @@ function computerUseHelperPath(appPath) {
   return path.join(appPath, "Contents", "Resources", "helpers", computerUseHelperAppName);
 }
 
+function hasMacDistributionSigningMaterial() {
+  return [
+    process.env.CSC_LINK,
+    process.env.CSC_NAME,
+  ].some((value) => typeof value === "string" && value.trim().length > 0);
+}
+
+function hasDistributionSignature(appPath) {
+  const result = spawnSync("codesign", ["--display", "--verbose=4", appPath], { encoding: "utf8" });
+  if (result.error || result.status !== 0) return false;
+  const details = `${result.stdout || ""}\n${result.stderr || ""}`;
+  const teamIdentifier = details.match(/^TeamIdentifier=(.+)$/m)?.[1]?.trim();
+  return details.includes("Authority=Developer ID Application:")
+    || Boolean(teamIdentifier && teamIdentifier !== "not set");
+}
+
+function signMacAppAdHocWhenDistributionIdentityIsUnavailable(appPath) {
+  if (hasMacDistributionSigningMaterial() || hasDistributionSignature(appPath)) return;
+
+  const entitlementsPath = path.resolve(__dirname, "..", "build", "entitlements.mac.plist");
+  run("codesign", [
+    "--force",
+    "--deep",
+    "--options",
+    "runtime",
+    "--entitlements",
+    entitlementsPath,
+    "--sign",
+    "-",
+    appPath,
+  ]);
+  run("codesign", ["--verify", "--deep", "--strict", "--verbose=2", appPath]);
+}
+
 function verifyComputerUseHelper(appPath, requireDistributionSignature) {
   const helperPath = computerUseHelperPath(appPath);
   if (!existsSync(helperPath)) {
@@ -61,14 +95,16 @@ function verifyComputerUseHelper(appPath, requireDistributionSignature) {
 async function afterSign(context) {
   if (context.electronPlatformName !== "darwin") return;
 
+  const appName = `${context.packager.appInfo.productFilename}.app`;
+  const appPath = path.join(context.appOutDir, appName);
+  signMacAppAdHocWhenDistributionIdentityIsUnavailable(appPath);
+
+  verifyComputerUseHelper(appPath, process.env.MACOS_NOTARIZE === "true");
+
   if (process.env.MACOS_NOTARIZE !== "true") {
     console.warn("[electron-after-sign] MACOS_NOTARIZE is not true; skipping notarization.");
     return;
   }
-
-  const appName = `${context.packager.appInfo.productFilename}.app`;
-  const appPath = path.join(context.appOutDir, appName);
-  verifyComputerUseHelper(appPath, process.env.MACOS_NOTARIZE === "true");
 
   const notaryTempDir = mkdtempSync(path.join(tmpdir(), "openwork-electron-notary-"));
   const notaryZipPath = path.join(notaryTempDir, `${context.packager.appInfo.productFilename}-notary.zip`);
@@ -100,4 +136,6 @@ async function afterSign(context) {
 
 module.exports = afterSign;
 module.exports.default = afterSign;
+module.exports.hasMacDistributionSigningMaterial = hasMacDistributionSigningMaterial;
+module.exports.hasDistributionSignature = hasDistributionSignature;
 module.exports.runWithRetry = runWithRetry;

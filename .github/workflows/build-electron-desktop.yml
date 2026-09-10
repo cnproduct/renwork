@@ -70,6 +70,25 @@ jobs:
           pnpm --filter @openwork/desktop run build:electron
           pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml ${{ matrix.target }} --publish never
 
+      - name: Validate macOS application signature envelope
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dmg="$(find apps/desktop/dist-electron -maxdepth 1 -name '*.dmg' -print -quit)"
+          test -n "$dmg"
+          mount_point="$(mktemp -d)"
+          cleanup() {
+            hdiutil detach "$mount_point" >/dev/null 2>&1 || true
+            rmdir "$mount_point" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          hdiutil attach -nobrowse -readonly -mountpoint "$mount_point" "$dmg" >/dev/null
+          app="$(find "$mount_point" -maxdepth 1 -name '*.app' -type d -print -quit)"
+          test -n "$app"
+          test -f "$app/Contents/_CodeSignature/CodeResources"
+          codesign --verify --deep --strict --verbose=2 "$app"
+
       - name: Upload RenWork Release Artifacts
         uses: actions/upload-artifact@v4
         with:
