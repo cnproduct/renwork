@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useMemo, useRef, useState } from "react"
-import { AUTOMATION_FREE_MODEL, type AutomationSchedule, type CreateAutomation } from "@openwork/types/automations"
+import { AUTOMATION_DEFAULT_MODEL, type AutomationSchedule, type CreateAutomation } from "@openwork/types/automations"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -64,7 +64,7 @@ function toLocalDateTime(value: number) {
 }
 
 function defaultInput(modelOptions: readonly AutomationModelOption[]): CreateAutomation {
-  const first = modelOptions[0] ?? AUTOMATION_FREE_MODEL
+  const first = modelOptions[0] ?? AUTOMATION_DEFAULT_MODEL
   return {
     name: "",
     instructions: "",

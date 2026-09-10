@@ -1,6 +1,6 @@
 import {
   AUTOMATION_DEFAULT_MAXIMUM_RUNTIME_MS,
-  AUTOMATION_FREE_MODEL,
+  AUTOMATION_DEFAULT_MODEL,
   AUTOMATION_MAXIMUM_ATTEMPTS,
   automationOccurrenceIdentity,
   automationRevisionDigest,
@@ -158,7 +158,7 @@ function normalizedDefinition(definition: Parameters<AutomationRepository["creat
   if ("action" in definition) {
     const model = definition.action.kind === "agent"
       ? definition.action.model
-      : { providerId: AUTOMATION_FREE_MODEL.providerId, modelId: AUTOMATION_FREE_MODEL.modelId, variant: null }
+      : { providerId: AUTOMATION_DEFAULT_MODEL.providerId, modelId: AUTOMATION_DEFAULT_MODEL.modelId, variant: null }
     return {
       name: definition.name,
       schedule: definition.schedule,
@@ -333,7 +333,7 @@ export class DenAutomationRepository implements AutomationRepository {
       const notifyMiniProgram = input.changes.notifyMiniProgram ?? current.notify_mini_program
       const model = action.kind === "agent"
         ? action.model
-        : { providerId: AUTOMATION_FREE_MODEL.providerId, modelId: AUTOMATION_FREE_MODEL.modelId, variant: null }
+        : { providerId: AUTOMATION_DEFAULT_MODEL.providerId, modelId: AUTOMATION_DEFAULT_MODEL.modelId, variant: null }
       const newRevisionId = createDenTypeId("automationRevision")
       const digest = automationRevisionDigest({
         instructions,

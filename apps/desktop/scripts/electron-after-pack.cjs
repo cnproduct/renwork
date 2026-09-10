@@ -38,6 +38,12 @@ function isServer2016CloudBuild(context) {
   return context?.packager?.config?.extraMetadata?.openworkDistribution === "server2016-cloud";
 }
 
+function isDenOnlyBuild(context) {
+  return ["public", "cloud", "enterprise", "server2016-cloud"].includes(
+    context?.packager?.config?.extraMetadata?.openworkDistribution,
+  );
+}
+
 function resolveMacAppPath(context) {
   if (context.electronPlatformName !== "darwin") return null;
   const appName = `${context.packager.appInfo.productFilename}.app`;
@@ -142,10 +148,11 @@ function copyExecutableTargetToAlias(sidecarsDir, targetName, aliasName) {
 async function afterPack(context) {
   verifyRuntimeDependencies(context);
   const sidecarsDir = resolveSidecarsDir(context);
-  if (isServer2016CloudBuild(context)) {
+  if (isDenOnlyBuild(context)) {
     if (sidecarsDir && fs.existsSync(sidecarsDir)) {
       fs.rmSync(sidecarsDir, { force: true, recursive: true });
     }
+    signComputerUseHelper(context);
     return;
   }
 
@@ -188,3 +195,4 @@ module.exports = afterPack;
 module.exports.default = afterPack;
 module.exports.normalizeArchivePath = normalizeArchivePath;
 module.exports.isServer2016CloudBuild = isServer2016CloudBuild;
+module.exports.isDenOnlyBuild = isDenOnlyBuild;

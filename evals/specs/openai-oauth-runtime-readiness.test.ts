@@ -2,31 +2,32 @@ import { readFile } from "node:fs/promises";
 import { expect } from "vitest";
 import { test } from "@openwork/testkit";
 
-test("OpenAI subscription models require a connected desktop OAuth runtime before execution", async ({ evidence }) => {
-  const [picker, session, server, serverTest] = await Promise.all([
+test("OpenAI personal OAuth readiness is replaced by Den-only catalog readiness", async ({ evidence }) => {
+  const [picker, catalog, catalogPolicy, gateway, legacyRuntime] = await Promise.all([
     readFile("../apps/app/src/components/model-select.tsx", "utf8"),
-    readFile("../apps/app/src/react-app/shell/session-route.tsx", "utf8"),
-    readFile("../apps/server/src/server.ts", "utf8"),
-    readFile("../apps/server/src/rencredit-oauth-proxy.e2e.test.ts", "utf8"),
+    readFile("../packages/rencredit-metering/src/default-catalog.ts", "utf8"),
+    readFile("../packages/rencredit-metering/src/catalog.ts", "utf8"),
+    readFile("../ee/apps/den-api/src/routes/inference-gateway.ts", "utf8"),
+    readFile("../ee/apps/den-api/src/routes/metered-runtime.ts", "utf8"),
   ]);
 
-  expect(picker).toContain("requiredPersonalSubscriptionProvider");
-  expect(picker).toContain('scope: "personal_subscription_oauth"');
-  expect(session).toContain("readOpenProviderAuthEventDetail");
-  expect(session).toContain('personalSubscriptionOnly: sessionProviderAuthSnapshot.providerAuthScope === "personal_subscription_oauth"');
-  expect(server).toContain("assertMeteredLocalModelReady");
-  expect(server).toContain("rencredit_local_provider_not_connected");
-  expect(server).toContain("localRuntimeMetering.release(reservation, failureCode)");
-  expect(serverTest).toContain("releases RenCredit and explains when OpenAI is not connected");
+  expect(picker).not.toContain("requiredPersonalSubscriptionProvider");
+  expect(picker).not.toContain('scope: "personal_subscription_oauth"');
+  expect(catalog).not.toContain('authMode: "device_oauth"');
+  expect(catalog).not.toContain('credentialStore: "device_vault"');
+  expect(catalogPolicy).toContain("validateDenServerCatalog");
+  expect(gateway).toContain("reserveInferenceCredits");
+  expect(gateway).toContain("releaseInferenceCredits");
+  expect(legacyRuntime).toContain('code: "LOCAL_RUNTIME_DISABLED"');
 
   evidence.fact(
-    "Missing OAuth is intercepted before execution",
-    "Choosing a local OpenAI or Google catalog SKU opens the subscription OAuth flow when the matching provider is not connected.",
+    "Ordinary execution does not depend on desktop OAuth readiness",
+    "V38 removes the personal OAuth prompt and device-vault routes; model readiness is determined only by the Den-hosted catalog and credentials.",
     true,
   );
   evidence.fact(
-    "RenCredit freezes cannot linger after readiness failure",
-    "The host verifies the exact provider and model after reservation, releases the reservation on failure, and never forwards an unavailable model to OpenCode.",
+    "Failed Den execution releases reservations",
+    "The inference gateway owns reserve, settlement, and release, while the legacy device metering endpoint remains disabled.",
     true,
   );
 });

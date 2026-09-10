@@ -10,7 +10,9 @@ import {
   mergeMissingDefaultCatalogEntries,
   migrateLegacyOpenAIOAuthProvider,
   migrateToDenServerExclusiveCatalog,
+  purgeNonDenCatalogEntries,
   normalizeAdminModelCatalog,
+  DEN_SERVER_CATALOG_PURGE_MIGRATION,
   DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION,
   OPENAI_OAUTH_CATALOG_MIGRATION,
   OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION,
@@ -29,11 +31,14 @@ app.use("*", logger());
 // MySQL and must never be recreated in this file-backed runtime.
 const STATE_FILE = process.env.DATA_PATH || "/tmp/renwork_cloud_state.json";
 
-let modelCatalog = migrateToDenServerExclusiveCatalog(createDefaultRenWorkModelCatalog()).catalog;
+let modelCatalog = purgeNonDenCatalogEntries(
+  migrateToDenServerExclusiveCatalog(createDefaultRenWorkModelCatalog()).catalog,
+).catalog;
 let appliedCatalogMigrations = [
   OPENAI_OAUTH_CATALOG_MIGRATION,
   OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION,
   DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION,
+  DEN_SERVER_CATALOG_PURGE_MIGRATION,
 ];
 
 function loadState() {
@@ -66,6 +71,13 @@ function loadState() {
           const migrated = migrateToDenServerExclusiveCatalog(nextCatalog);
           nextCatalog = migrated.catalog;
           appliedCatalogMigrations.push(DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION);
+          shouldSave = true;
+        }
+        if (!appliedCatalogMigrations.includes(DEN_SERVER_CATALOG_PURGE_MIGRATION)) {
+          const merged = mergeMissingDefaultCatalogEntries(nextCatalog, defaults);
+          const migrated = purgeNonDenCatalogEntries(merged.catalog);
+          nextCatalog = migrated.catalog;
+          appliedCatalogMigrations.push(DEN_SERVER_CATALOG_PURGE_MIGRATION);
           shouldSave = true;
         }
         validateDenServerCatalog(nextCatalog);

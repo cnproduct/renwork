@@ -180,18 +180,21 @@ export function validateDenServerCatalog(catalog: RenWorkAdminModelCatalog): voi
   }
   const providers = new Map(catalog.providers.map((provider) => [provider.id, provider]));
   for (const provider of catalog.providers) {
-    if (provider.enabled && !isDenServerProvider(provider)) {
-      throw new Error(`Enabled provider ${provider.id} must use a Den server secret and cloud gateway execution.`);
+    if (!isDenServerProvider(provider)) {
+      throw new Error(`Provider ${provider.id} must use a Den server secret and cloud gateway execution.`);
     }
   }
   for (const model of catalog.models) {
-    const enabledRoutes = model.routes.filter((route) => route.enabled);
-    if (enabledRoutes.some((route) => {
+    if (model.allowedPlanIds.length === 0 || model.allowedPlanIds.some((planId) => planId !== "individual" && planId !== "enterprise")) {
+      throw new Error(`Model ${model.sku} must target only paid individual or enterprise plans.`);
+    }
+    if (model.routes.some((route) => {
       const provider = providers.get(route.providerId);
       return route.source !== "official" || !provider || !isDenServerProvider(provider);
     })) {
-      throw new Error(`Enabled routes for ${model.sku} must be official Den server routes.`);
+      throw new Error(`Routes for ${model.sku} must be official Den server routes.`);
     }
+    const enabledRoutes = model.routes.filter((route) => route.enabled);
     if (model.status === "published" && enabledRoutes.length === 0) {
       throw new Error(`Published model ${model.sku} requires an official Den server route.`);
     }
@@ -204,8 +207,9 @@ export function requireSuperAdmin(role: RenWorkActorRole): void {
 
 export function modelAllowedForPlan(model: Pick<RenWorkAdminModel, "allowedPlanIds">, planId: string): boolean {
   const allowedPlans = new Set(model.allowedPlanIds);
-  if (allowedPlans.size === 0 || allowedPlans.has(planId)) return true;
-  if ((planId === "free" || planId === "team") && allowedPlans.has("individual")) return true;
+  if (allowedPlans.size === 0) return false;
+  if (allowedPlans.has(planId)) return true;
+  if (planId === "team" && allowedPlans.has("individual")) return true;
   return false;
 }
 

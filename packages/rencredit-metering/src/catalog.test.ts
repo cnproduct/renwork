@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { modelAllowedForPlan, normalizeAdminModelCatalog, requireSuperAdmin, toPublicModelCatalog, toPublicModelCatalogForPlan, validateAdminModelCatalog, validateDenServerCatalog } from "./catalog.js";
-import { createDefaultRenWorkModelCatalog, mergeMissingDefaultCatalogEntries, migrateLegacyOpenAIOAuthProvider, migrateToDenServerExclusiveCatalog } from "./default-catalog.js";
+import { createDefaultRenWorkModelCatalog, mergeMissingDefaultCatalogEntries, migrateToDenServerExclusiveCatalog, purgeNonDenCatalogEntries } from "./default-catalog.js";
 import { createTestCatalog } from "./test-fixtures.js";
 
 describe("RenWork model catalog", () => {
@@ -18,6 +18,7 @@ describe("RenWork model catalog", () => {
 
     expect(modelAllowedForPlan(catalog.models[0]!, "team")).toBe(true);
     expect(modelAllowedForPlan(catalog.models.at(-1)!, "team")).toBe(false);
+    expect(modelAllowedForPlan({ allowedPlanIds: [] }, "individual")).toBe(false);
     const publicCatalog = toPublicModelCatalogForPlan(catalog, "team");
     expect(publicCatalog.models.map((model) => model.sku)).not.toContain("enterprise-only");
     expect(JSON.stringify(publicCatalog)).not.toMatch(/providers|credentialRef|upstreamModelId|baseUrl/);
@@ -68,38 +69,34 @@ describe("RenWork model catalog", () => {
       "renwork-auto",
       "renwork-standard",
       "renwork-professional",
+      "renwork-code-kimi-k3",
       "renwork-ultimate",
     ]);
     expect(catalog.providers[0]?.credentialRef).toBe("env://OPENROUTER_API_KEY");
     expect(catalog.providers[1]).toMatchObject({
-      protocol: "codex_cli",
-      authMode: "device_oauth",
-      credentialRef: null,
-      executionScope: "personal_device",
-      sharingScope: "user_private",
+      id: "opencode-go-primary",
+      protocol: "openai_compatible",
+      authMode: "service_secret",
+      credentialRef: "env://OPENCODE_GO_API_KEY",
+      executionScope: "cloud_gateway",
+      sharingScope: "organization",
     });
-    expect(catalog.providers[2]).toMatchObject({
-      id: "openai",
-      protocol: "opencode",
-      authMode: "device_oauth",
-      credentialRef: null,
-      executionScope: "personal_device",
-      sharingScope: "user_private",
+    expect(catalog.models.find((model) => model.sku === "renwork-code-kimi-k3")?.routes[0]).toMatchObject({
+      providerId: "opencode-go-primary",
+      upstreamModelId: "kimi-k3",
+      source: "official",
     });
-    expect(catalog.models.find((model) => model.sku === "renwork-openai-gpt-5-6")?.routes[0]).toMatchObject({
-      providerId: "openai",
-      upstreamModelId: "gpt-5.6",
-      source: "local",
-    });
+    expect(catalog.models.every((model) => !model.allowedPlanIds.includes("free"))).toBe(true);
+    expect(() => validateDenServerCatalog(catalog)).not.toThrow();
     expect(JSON.stringify(publicCatalog)).not.toContain("OPENROUTER_API_KEY");
   });
 
-  test("migrates missing OAuth defaults without overwriting administrator catalog choices", () => {
+  test("migrates missing Den defaults without overwriting administrator catalog choices", () => {
     const defaults = createDefaultRenWorkModelCatalog(new Date("2026-09-01T12:00:00.000Z"));
     const persisted = createDefaultRenWorkModelCatalog(new Date("2026-08-28T12:00:00.000Z"));
     persisted.version = "production-admin-catalog";
-    persisted.providers = persisted.providers.filter((provider) => provider.id !== "openai");
-    persisted.models = persisted.models.filter((model) => !model.sku.startsWith("renwork-openai-"));
+    persisted.providers = persisted.providers.filter((provider) => provider.id !== "opencode-go-primary");
+    persisted.models = persisted.models.filter((model) => model.sku !== "renwork-code-kimi-k3");
     persisted.models[0] = { ...persisted.models[0]!, displayName: "管理员自定义 Auto", priceMultiplierBps: 12_345 };
     persisted.models.push({
       ...persisted.models[0]!,
@@ -115,46 +112,86 @@ describe("RenWork model catalog", () => {
       priceMultiplierBps: 12_345,
     });
     expect(migrated.catalog.models.some((model) => model.sku === "admin-custom-model")).toBe(true);
-    expect(migrated.catalog.models.some((model) => model.sku === "renwork-openai-gpt-5-6")).toBe(true);
-    expect(migrated.catalog.providers.some((provider) => provider.id === "openai")).toBe(true);
+    expect(migrated.catalog.models.some((model) => model.sku === "renwork-code-kimi-k3")).toBe(true);
+    expect(migrated.catalog.providers.some((provider) => provider.id === "opencode-go-primary")).toBe(true);
     expect(() => validateAdminModelCatalog(migrated.catalog)).not.toThrow();
   });
 
-  test("upgrades only a legacy OpenAI runtime whose OAuth governance fields were absent", () => {
-    const defaults = createDefaultRenWorkModelCatalog(new Date("2026-09-01T12:00:00.000Z"));
-    const legacyRaw = createDefaultRenWorkModelCatalog(new Date("2026-08-28T12:00:00.000Z")) as unknown as Record<string, unknown>;
-    const rawProvider = (legacyRaw.providers as Array<Record<string, unknown>>).find((provider) => provider.id === "openai")!;
-    delete rawProvider.authMode;
-    delete rawProvider.credentialStore;
-    delete rawProvider.executionScope;
-    delete rawProvider.sharingScope;
-    delete rawProvider.deviceOAuthPolicy;
-
-    const normalized = normalizeAdminModelCatalog(legacyRaw as unknown as ReturnType<typeof createDefaultRenWorkModelCatalog>);
-    expect(normalized.providers.find((provider) => provider.id === "openai")?.authMode).toBe("none");
-    const migrated = migrateLegacyOpenAIOAuthProvider(normalized, legacyRaw, defaults);
-    expect(migrated.changed).toBe(true);
-    expect(migrated.catalog.providers.find((provider) => provider.id === "openai")).toMatchObject({
+  test("purges dormant device credentials, non-Den routes and free-plan access", () => {
+    const catalog = createDefaultRenWorkModelCatalog(new Date("2026-09-10T12:00:00.000Z"));
+    catalog.providers.push({
+      id: "legacy-device",
+      displayName: "Legacy device OAuth",
+      kind: "runtime",
+      protocol: "opencode",
+      baseUrl: null,
+      credentialRef: null,
       authMode: "device_oauth",
       credentialStore: "device_vault",
       executionScope: "personal_device",
       sharingScope: "user_private",
-      deviceOAuthPolicy: { maxDevicesPerUser: 3, maxConcurrentRunsPerUser: 1 },
+      deviceOAuthPolicy: { maxDevicesPerUser: 1, maxConcurrentRunsPerUser: 1 },
+      enabled: false,
+      health: "offline",
     });
-    expect(() => validateAdminModelCatalog(migrated.catalog)).not.toThrow();
+    catalog.models[0]!.allowedPlanIds.unshift("free");
+    catalog.models[0]!.tags.push("oauth", "personal-device");
+    catalog.models[0]!.description = "Personal-device OAuth model using your own API key.";
+    catalog.models[0]!.routes.push({
+      id: "route-legacy-device",
+      providerId: "legacy-device",
+      upstreamModelId: "legacy-model",
+      priority: 99,
+      enabled: false,
+      source: "local",
+    });
+
+    expect(() => validateDenServerCatalog(catalog)).toThrow("Den server secret");
+    const migrated = purgeNonDenCatalogEntries(catalog, new Date("2026-09-10T13:00:00.000Z"));
+    expect(migrated.changed).toBe(true);
+    expect(migrated.catalog.providers.some((provider) => provider.id === "legacy-device")).toBe(false);
+    expect(migrated.catalog.models[0]!.routes.some((route) => route.source !== "official")).toBe(false);
+    expect(migrated.catalog.models[0]!.allowedPlanIds).not.toContain("free");
+    expect(migrated.catalog.models[0]!.tags).not.toContain("oauth");
+    expect(migrated.catalog.models[0]!.description).toBe("通过 RenWork 云端计费网关提供的模型。");
+    expect(() => validateDenServerCatalog(migrated.catalog)).not.toThrow();
+    expect(purgeNonDenCatalogEntries(migrated.catalog).changed).toBe(false);
   });
 
-  test("preserves an explicit administrator OpenAI auth policy", () => {
-    const defaults = createDefaultRenWorkModelCatalog(new Date("2026-09-01T12:00:00.000Z"));
-    const explicit = createDefaultRenWorkModelCatalog(new Date("2026-08-28T12:00:00.000Z"));
-    const provider = explicit.providers.find((candidate) => candidate.id === "openai")!;
-    provider.authMode = "none";
-    provider.credentialStore = "none";
-    provider.deviceOAuthPolicy = null;
+  test("removes a legacy model whose only route bypasses Den", () => {
+    const catalog = createDefaultRenWorkModelCatalog(new Date("2026-09-10T12:00:00.000Z"));
+    catalog.providers.push({
+      id: "legacy-device-only",
+      displayName: "Legacy device",
+      kind: "runtime",
+      protocol: "opencode",
+      baseUrl: null,
+      credentialRef: null,
+      authMode: "device_oauth",
+      credentialStore: "device_vault",
+      executionScope: "personal_device",
+      sharingScope: "user_private",
+      deviceOAuthPolicy: { maxDevicesPerUser: 1, maxConcurrentRunsPerUser: 1 },
+      enabled: false,
+      health: "offline",
+    });
+    catalog.models.push({
+      ...catalog.models[0]!,
+      sku: "legacy-device-model",
+      displayName: "Legacy device model",
+      routes: [{
+        id: "route-legacy-device-only",
+        providerId: "legacy-device-only",
+        upstreamModelId: "legacy-model",
+        priority: 1,
+        enabled: false,
+        source: "local",
+      }],
+    });
 
-    const migrated = migrateLegacyOpenAIOAuthProvider(normalizeAdminModelCatalog(explicit), explicit, defaults);
-    expect(migrated.changed).toBe(false);
-    expect(migrated.catalog.providers.find((candidate) => candidate.id === "openai")?.authMode).toBe("none");
+    const migrated = purgeNonDenCatalogEntries(catalog);
+    expect(migrated.catalog.models.some((model) => model.sku === "legacy-device-model")).toBe(false);
+    expect(() => validateDenServerCatalog(migrated.catalog)).not.toThrow();
   });
 
   test("rejects raw provider credentials in administrator catalog payloads", () => {

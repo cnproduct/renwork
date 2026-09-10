@@ -2186,8 +2186,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
             className="mx-3 mb-2 flex w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg border border-amber-7/40 bg-amber-2/30 px-3 py-2 text-left text-xs text-amber-11 transition-colors hover:bg-amber-3/40"
             onClick={() => props.onOpenSettingsSection?.("providers")}
           >
-            <span className="font-medium">No AI model connected.</span>
-            <span className="text-amber-11/70">Add a provider to run tasks.</span>
+            <span className="font-medium">RenWork Models are unavailable.</span>
+            <span className="text-amber-11/70">Check sign-in, access, and synchronization.</span>
           </button>
         ) : null}
         <DevProfiler id="SessionComposer">

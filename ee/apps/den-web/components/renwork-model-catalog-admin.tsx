@@ -351,7 +351,7 @@ function newModel(count: number, providerId: string): RenWorkAdminModel {
       cacheWriteMicroCreditsPerMillion: 1_250_000,
     },
     promotion: null,
-    allowedPlanIds: ["free", "individual", "enterprise"],
+    allowedPlanIds: ["individual", "enterprise"],
     routes: providerId ? [newRoute(sku, 0, providerId)] : [],
   };
 }
@@ -709,8 +709,8 @@ export function RenWorkModelCatalogAdmin() {
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               {([
                 ["official", "RenWork 官方模型", "平台托管供应商与中转网关"],
-                ["byok", "企业自有 Key", "由企业配置的第三方模型账户"],
-                ["local", "本地运行模型", "Ollama、OpenCode 或本地运行时"],
+                ["byok", "历史 BYOK（禁止）", "生产目录拒绝浏览器或组织侧供应商密钥"],
+                ["local", "本地路由（禁止）", "生产目录只允许 Den 服务端官方路由"],
               ] as const).map(([source, title, description]) => (
                 <label key={source} className="rounded-2xl border border-slate-200 p-4">
                   <span className="block text-sm font-semibold text-slate-950">{title}</span>
@@ -869,7 +869,23 @@ export function RenWorkModelCatalogAdmin() {
                 <Field label="实际计价倍率"><input type="number" min="0" step="0.01" value={model.priceMultiplierBps / 10_000} onChange={(event) => replaceModel(modelIndex, { ...model, priceMultiplierBps: Math.round(Number(event.target.value) * 10_000) })} className={fieldClass} /></Field>
                 <Field label="排序"><input type="number" min="0" value={model.sortOrder} onChange={(event) => replaceModel(modelIndex, { ...model, sortOrder: Number(event.target.value) })} className={fieldClass} /></Field>
                 <Field label="标签" hint="逗号分隔"><input value={model.tags.join(", ")} onChange={(event) => replaceModel(modelIndex, { ...model, tags: splitList(event.target.value) })} className={fieldClass} /></Field>
-                <Field label="允许套餐" hint="逗号分隔"><input value={model.allowedPlanIds.join(", ")} onChange={(event) => replaceModel(modelIndex, { ...model, allowedPlanIds: splitList(event.target.value) })} className={fieldClass} /></Field>
+                <Field label="允许套餐" hint="仅允许付费个人版与企业版；免费套餐会阻止发布。">
+                  <div className="flex h-10 items-center gap-4 rounded-xl border border-slate-200 bg-white px-3">
+                    {(["individual", "enterprise"] as const).map((planId) => (
+                      <Toggle
+                        key={planId}
+                        checked={model.allowedPlanIds.includes(planId)}
+                        onChange={(checked) => replaceModel(modelIndex, {
+                          ...model,
+                          allowedPlanIds: checked
+                            ? [...new Set([...model.allowedPlanIds.filter((value) => value !== "free"), planId])]
+                            : model.allowedPlanIds.filter((value) => value !== planId && value !== "free"),
+                        })}
+                        label={planId === "individual" ? "个人付费" : "企业付费"}
+                      />
+                    ))}
+                  </div>
+                </Field>
                 <div className="flex items-end pb-2"><Toggle checked={model.autoEligible} onChange={(autoEligible) => replaceModel(modelIndex, { ...model, autoEligible })} label="允许 Auto 调度" /></div>
               </div>
               <Field label="用户说明">

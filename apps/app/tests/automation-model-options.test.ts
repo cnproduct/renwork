@@ -20,18 +20,8 @@ function provider(input: Partial<DenOrgLlmProvider> & Pick<DenOrgLlmProvider, "i
 }
 
 describe("Automation model options", () => {
-  test("always offers the normalized free starter model", () => {
-    expect(automationModelOptions([])).toEqual([{
-      providerId: "opencode",
-      modelId: "big-pickle",
-      providerName: "OpenCode Zen",
-      modelName: "Big Pickle",
-      accessKind: "free",
-    }])
-  })
-
-  test("removes the free starter model when desktop policy disables OpenCode Zen", () => {
-    expect(automationModelOptions([], { includeFreeStarter: false })).toEqual([])
+  test("never offers a local free starter model", () => {
+    expect(automationModelOptions([])).toEqual([])
   })
 
   test("expands the member's managed RenWork aliases even when Den stores no model rows", () => {
@@ -106,15 +96,11 @@ describe("Automation model options", () => {
       selected: { providerId: "lpr_team", modelId: "team-model", variant: "high" },
     })
     const selected = picker.find((option) => option.modelID === "team-model")
-    const free = picker.find((option) => option.modelID === "big-pickle")
 
     expect(selected?.behaviorValue).toBe("high")
     expect(selected?.behaviorOptions?.map((option) => option.value)).toContain("low")
     expect(selected?.isFree).toBe(false)
-    // The free starter model is absent from the local catalog here, so it
-    // still lists — just without reasoning levels.
-    expect(free?.isFree).toBe(true)
-    expect(free?.behaviorOptions).toEqual([])
+    expect(picker.every((option) => option.isFree === false)).toBe(true)
   })
 })
 
@@ -127,19 +113,16 @@ describe("Automation proposal model resolution", () => {
     models: [{ id: "deepseek-v4-flash", name: "DeepSeek V4 Flash", config: {}, createdAt: null }],
   })
 
-  test("defaults an omitted model to the free starter model", () => {
+  test("defaults an omitted model to the Den-metered RenWork Auto SKU", () => {
     expect(resolveProposalModel(undefined, [])).toEqual({
-      model: { providerId: "opencode", modelId: "big-pickle", variant: null },
+      model: { providerId: "renwork", modelId: "renwork-auto", variant: null },
       resolution: "default",
     })
   })
 
-  test("preserves exact custom, free, and managed model identities", () => {
+  test("preserves exact custom and managed model identities", () => {
     const custom = { providerId: "lpr_abc", modelId: "deepseek-v4-flash", variant: "high" }
     expect(resolveProposalModel(custom, [customProvider])).toEqual({ model: custom, resolution: "exact" })
-
-    const free = { providerId: "opencode", modelId: "big-pickle", variant: "low" }
-    expect(resolveProposalModel(free, [])).toEqual({ model: free, resolution: "exact" })
 
     const managedProvider = provider({ id: "lpr_managed", providerId: "renwork", source: "openwork", name: "RenWork Models" })
     const managedOption = automationModelOptions([managedProvider]).find((option) => option.accessKind === "openwork_managed")
@@ -171,14 +154,14 @@ describe("Automation proposal model resolution", () => {
       { providerId: "deepseek", modelId: "deepseek-v4-flash" },
       [managed],
     )).toEqual({
-      model: { providerId: "opencode", modelId: "big-pickle", variant: null },
+      model: { providerId: "renwork", modelId: "renwork-auto", variant: null },
       resolution: "fallback",
     })
   })
 
   test("falls back when the provider or model is unavailable", () => {
     const fallback = {
-      model: { providerId: "opencode", modelId: "big-pickle", variant: null },
+      model: { providerId: "renwork", modelId: "renwork-auto", variant: null },
       resolution: "fallback",
     }
     expect(resolveProposalModel({ providerId: "unknown", modelId: "missing", variant: "high" }, [customProvider]))

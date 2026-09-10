@@ -16,6 +16,7 @@ const DEFAULT_RATES = {
 export const OPENAI_OAUTH_CATALOG_MIGRATION = "v13-openai-oauth-chat-models";
 export const OPENAI_OAUTH_PROVIDER_POLICY_MIGRATION = "v13-openai-oauth-provider-policy";
 export const DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION = "v36-den-server-exclusive";
+export const DEN_SERVER_CATALOG_PURGE_MIGRATION = "v38-den-server-catalog-purge";
 
 function defaultModel(input: {
   sku: string;
@@ -49,7 +50,7 @@ function defaultModel(input: {
     priceMultiplierBps: multiplierBps,
     rates: { ...DEFAULT_RATES },
     promotion: null,
-    allowedPlanIds: ["free", "individual", "enterprise"],
+    allowedPlanIds: ["individual", "enterprise"],
     routes: [{
       id: `route-${sku}`,
       providerId: "openrouter-primary",
@@ -67,44 +68,9 @@ function defaultModel(input: {
   };
 }
 
-function openAIOAuthModel(input: {
-  sku: string;
-  upstreamModelId: string;
-  displayName: string;
-  description: string;
-  tier: RenWorkModelTier;
-  sortOrder: number;
-  tags?: string[];
-}): RenWorkAdminModel {
-  return {
-    sku: input.sku,
-    displayName: input.displayName,
-    description: input.description,
-    tier: input.tier,
-    sortOrder: input.sortOrder,
-    autoEligible: false,
-    status: "published",
-    contextWindow: null,
-    tags: ["openai", "oauth", "personal-device", ...(input.tags ?? [])],
-    displayMultiplierBps: 10_000,
-    priceMultiplierBps: 10_000,
-    rates: { ...DEFAULT_RATES },
-    promotion: null,
-    allowedPlanIds: ["individual", "enterprise"],
-    routes: [{
-      id: `route-${input.sku}-personal`,
-      providerId: "openai",
-      upstreamModelId: input.upstreamModelId,
-      priority: 10,
-      enabled: true,
-      source: "local",
-    }],
-  };
-}
-
 export function createDefaultRenWorkModelCatalog(now = new Date()): RenWorkAdminModelCatalog {
   return {
-    version: "renwork-model-catalog-v13",
+    version: "renwork-model-catalog-v38",
     status: "active",
     currency: "REN_CREDIT",
     billingPolicy: {
@@ -128,40 +94,17 @@ export function createDefaultRenWorkModelCatalog(now = new Date()): RenWorkAdmin
       enabled: true,
       health: "unknown",
     }, {
-      id: "openai-codex-personal",
-      displayName: "OpenAI Codex OAuth（个人设备）",
-      kind: "runtime",
-      protocol: "codex_cli",
-      baseUrl: null,
-      credentialRef: null,
-      authMode: "device_oauth",
-      credentialStore: "device_vault",
-      executionScope: "personal_device",
-      sharingScope: "user_private",
-      deviceOAuthPolicy: {
-        maxDevicesPerUser: 3,
-        maxConcurrentRunsPerUser: 1,
-      },
-      enabled: true,
-      health: "unknown",
-    }, {
-      // This ID deliberately matches OpenCode's built-in OpenAI provider. The
-      // OAuth credential remains in the signed-in user's device vault; Den
-      // returns only this provider/model route in the execution grant.
-      id: "openai",
-      displayName: "OpenAI ChatGPT OAuth（个人设备）",
-      kind: "runtime",
-      protocol: "opencode",
-      baseUrl: null,
-      credentialRef: null,
-      authMode: "device_oauth",
-      credentialStore: "device_vault",
-      executionScope: "personal_device",
-      sharingScope: "user_private",
-      deviceOAuthPolicy: {
-        maxDevicesPerUser: 3,
-        maxConcurrentRunsPerUser: 1,
-      },
+      id: "opencode-go-primary",
+      displayName: "OpenCode Go",
+      kind: "relay",
+      protocol: "openai_compatible",
+      baseUrl: "https://opencode.ai/zen/go/v1",
+      credentialRef: "env://OPENCODE_GO_API_KEY",
+      authMode: "service_secret",
+      credentialStore: "server_secret",
+      executionScope: "cloud_gateway",
+      sharingScope: "organization",
+      deviceOAuthPolicy: null,
       enabled: true,
       health: "unknown",
     }],
@@ -203,78 +146,29 @@ export function createDefaultRenWorkModelCatalog(now = new Date()): RenWorkAdmin
         autoEligible: false,
       }),
       {
-        sku: "renwork-codex",
-        displayName: "Codex CLI OAuth",
-        description: "在已批准的个人设备上使用 ChatGPT Plus / Pro 的 Codex CLI，并按实际 Token 结算 RenCredit",
+        sku: "renwork-code-kimi-k3",
+        displayName: "Kimi K3",
+        description: "通过 RenWork 云端计费网关提供的代码与智能体模型",
         tier: "professional",
         sortOrder: 40,
         autoEligible: false,
         status: "published",
         contextWindow: null,
-        tags: ["codex", "oauth", "personal-device"],
+        tags: ["coding", "agent"],
         displayMultiplierBps: 10_000,
         priceMultiplierBps: 10_000,
         rates: { ...DEFAULT_RATES },
         promotion: null,
         allowedPlanIds: ["individual", "enterprise"],
         routes: [{
-          id: "route-renwork-codex-personal",
-          providerId: "openai-codex-personal",
-          upstreamModelId: "gpt-5.6-luna",
+          id: "route-renwork-code-kimi-k3",
+          providerId: "opencode-go-primary",
+          upstreamModelId: "kimi-k3",
           priority: 10,
           enabled: true,
-          source: "local",
+          source: "official",
         }],
       },
-      openAIOAuthModel({
-        sku: "renwork-openai-gpt-5-6-luna",
-        upstreamModelId: "gpt-5.6-luna",
-        displayName: "GPT-5.6 Luna",
-        description: "使用本机 ChatGPT OAuth，适合快速日常任务",
-        tier: "standard",
-        sortOrder: 15,
-      }),
-      openAIOAuthModel({
-        sku: "renwork-openai-gpt-5-5",
-        upstreamModelId: "gpt-5.5",
-        displayName: "GPT-5.5",
-        description: "使用本机 ChatGPT OAuth，适合通用编程与知识工作",
-        tier: "professional",
-        sortOrder: 41,
-      }),
-      openAIOAuthModel({
-        sku: "renwork-openai-gpt-5-6",
-        upstreamModelId: "gpt-5.6",
-        displayName: "GPT-5.6",
-        description: "使用本机 ChatGPT OAuth 的 GPT-5.6 通用模型",
-        tier: "professional",
-        sortOrder: 42,
-      }),
-      openAIOAuthModel({
-        sku: "renwork-openai-gpt-5-6-terra",
-        upstreamModelId: "gpt-5.6-terra",
-        displayName: "GPT-5.6 Terra",
-        description: "使用本机 ChatGPT OAuth，平衡速度与复杂任务能力",
-        tier: "professional",
-        sortOrder: 43,
-      }),
-      openAIOAuthModel({
-        sku: "renwork-openai-gpt-5-3-codex-spark",
-        upstreamModelId: "gpt-5.3-codex-spark",
-        displayName: "GPT-5.3 Codex Spark",
-        description: "使用本机 ChatGPT Pro OAuth 的高速代码模型",
-        tier: "professional",
-        sortOrder: 44,
-        tags: ["codex", "pro-only"],
-      }),
-      openAIOAuthModel({
-        sku: "renwork-openai-gpt-5-6-sol",
-        upstreamModelId: "gpt-5.6-sol",
-        displayName: "GPT-5.6 Sol",
-        description: "使用本机 ChatGPT OAuth，适合可靠的高强度任务",
-        tier: "ultimate",
-        sortOrder: 31,
-      }),
     ],
   };
 }
@@ -419,6 +313,57 @@ export function migrateToDenServerExclusiveCatalog(
     catalog: {
       ...persisted,
       version: `${persisted.version}-${DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION}`,
+      updatedAt: now.toISOString(),
+      billingPolicy,
+      providers,
+      models,
+    },
+  };
+}
+
+/**
+ * Permanently removes legacy client-side credentials and routes. Unlike the
+ * V36 audit migration, this leaves no dormant BYOK/local row that a later UI
+ * or configuration change could accidentally reactivate.
+ */
+export function purgeNonDenCatalogEntries(
+  persisted: RenWorkAdminModelCatalog,
+  now = new Date(),
+): { catalog: RenWorkAdminModelCatalog; changed: boolean } {
+  const providers = persisted.providers.filter(isDenServerProvider);
+  const providerIds = new Set(providers.map((provider) => provider.id));
+  const blockedTags = new Set(["oauth", "personal-device", "local", "byok", "device-vault"]);
+  const models = persisted.models.flatMap((model) => {
+    const routes = model.routes.filter((route) => route.source === "official" && providerIds.has(route.providerId));
+    const removedEveryConfiguredRoute = model.routes.length > 0 && routes.length === 0;
+    if (removedEveryConfiguredRoute) return [];
+    const allowedPlanIds = model.allowedPlanIds.filter((planId) => planId !== "free");
+    const tags = model.tags.filter((tag) => !blockedTags.has(tag.trim().toLowerCase()));
+    const hasEnabledRoute = routes.some((route) => route.enabled);
+    const description = /oauth|personal[ -]?device|local model|api key|byok|本机|个人设备|自有\s*key/i.test(model.description)
+      ? "通过 RenWork 云端计费网关提供的模型。"
+      : model.description;
+    return [{
+      ...model,
+      description,
+      allowedPlanIds: allowedPlanIds.length > 0 ? allowedPlanIds : ["individual", "enterprise"],
+      tags,
+      routes,
+      status: model.status === "published" && !hasEnabledRoute ? "paused" as const : model.status,
+    }];
+  });
+  const billingPolicy = { official: "token_metered", byok: "token_metered", local: "token_metered" } as const;
+  const changed = JSON.stringify({ providers, models, billingPolicy }) !== JSON.stringify({
+    providers: persisted.providers,
+    models: persisted.models,
+    billingPolicy: persisted.billingPolicy,
+  });
+  if (!changed) return { catalog: persisted, changed: false };
+  return {
+    changed: true,
+    catalog: {
+      ...persisted,
+      version: `${persisted.version}-${DEN_SERVER_CATALOG_PURGE_MIGRATION}`,
       updatedAt: now.toISOString(),
       billingPolicy,
       providers,

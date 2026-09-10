@@ -1,6 +1,6 @@
 import {
   toPublicModelCatalog,
-  validateAdminModelCatalog,
+  validateDenServerCatalog,
 } from "@openwork/rencredit-metering"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
@@ -59,7 +59,7 @@ export function registerAdminModelCatalogRoutes<T extends { Variables: AuthConte
         if (!parsed.success) {
           return c.json({ error: "MODEL_CATALOG_INVALID_RESPONSE", message: "Model catalog service returned an invalid catalog." }, 503)
         }
-        validateAdminModelCatalog(parsed.data)
+        validateDenServerCatalog(parsed.data)
         return c.json({ catalog: parsed.data, publicCatalog: toPublicModelCatalog(parsed.data) })
       } catch (error) {
         const message = error instanceof Error ? error.message : "Model catalog service is unavailable."
@@ -88,7 +88,7 @@ export function registerAdminModelCatalogRoutes<T extends { Variables: AuthConte
         return c.json({ error: "VALIDATION_FAILED", message: parsedBody.error.issues[0]?.message ?? "Invalid model catalog." }, 400)
       }
       try {
-        validateAdminModelCatalog(parsedBody.data.catalog)
+        validateDenServerCatalog(parsedBody.data.catalog)
         const upstream = await requestModelCatalog("/v1/admin/models/catalog", {
           method: "PUT",
           body: JSON.stringify(parsedBody.data),
@@ -104,6 +104,7 @@ export function registerAdminModelCatalogRoutes<T extends { Variables: AuthConte
         if (!parsedCatalog.success) {
           return c.json({ error: "MODEL_CATALOG_INVALID_RESPONSE", message: "Model catalog service returned an invalid catalog." }, 503)
         }
+        validateDenServerCatalog(parsedCatalog.data)
         return c.json({ catalog: parsedCatalog.data, publicCatalog: toPublicModelCatalog(parsedCatalog.data) })
       } catch (error) {
         const message = error instanceof Error ? error.message : "Model catalog update failed."

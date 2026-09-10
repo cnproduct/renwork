@@ -4,12 +4,12 @@ import { shouldApplyAutomationModelAccessFailure } from "../src/automations/mode
 const legacyFreeModel = { providerId: "opencode", modelId: "big-pickle" }
 
 describe("Automation model-attention rollout", () => {
-  test("keeps the legacy free model runnable for published clients", () => {
+  test("blocks the legacy free model for published clients", () => {
     expect(shouldApplyAutomationModelAccessFailure({
       model: legacyFreeModel,
       failure: { code: "model_access_lost" },
       modelAttentionCapable: false,
-    })).toBe(false)
+    })).toBe(true)
   })
 
   test("applies the legacy free-model policy loss after capability advertisement", () => {

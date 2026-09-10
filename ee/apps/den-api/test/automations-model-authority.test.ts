@@ -45,7 +45,6 @@ function authorityStore(overrides: Partial<AutomationModelAuthorityStore> = {}):
     async findProvider() { return customProvider },
     async findModel() { return customModel },
     async canAccessProvider() { return true },
-    async allowsZenModel() { return true },
     ...overrides,
   }
 }
@@ -53,7 +52,7 @@ function authorityStore(overrides: Partial<AutomationModelAuthorityStore> = {}):
 const base = { organizationId: "org_test", ownerMemberId: member.id }
 
 describe("Automation normalized model authority", () => {
-  test("accepts only the exact free starter model without resolving a credential", async () => {
+  test("rejects the legacy free starter model because it bypasses Den billing", async () => {
     let providerLookups = 0
     const store = authorityStore({
       async findProvider() {
@@ -68,15 +67,7 @@ describe("Automation normalized model authority", () => {
       modelId: "big-pickle",
     }, store)
 
-    expect(result).toMatchObject({
-      ok: true,
-      value: {
-        accessKind: "free",
-        providerRecordId: null,
-        providerId: "opencode",
-        modelId: "big-pickle",
-      },
-    })
+    expect(result).toMatchObject({ ok: false, code: "model_access_lost" })
     expect(providerLookups).toBe(0)
 
     expect(await resolveAutomationModelAccessWithStore({
@@ -84,20 +75,6 @@ describe("Automation normalized model authority", () => {
       providerId: "opencode",
       modelId: "not-a-free-model",
     }, store)).toMatchObject({ ok: false, code: "model_access_lost" })
-  })
-
-  test("rejects the legacy free starter model when desktop policy disables OpenCode Zen", async () => {
-    const result = await resolveAutomationModelAccessWithStore({
-      ...base,
-      providerId: "opencode",
-      modelId: "big-pickle",
-    }, authorityStore({ async allowsZenModel() { return false } }))
-
-    expect(result).toMatchObject({
-      ok: false,
-      code: "model_access_lost",
-      message: expect.stringContaining("Choose a supported model"),
-    })
   })
 
   test("resolves enabled OpenWork aliases through the owner's managed provider", async () => {

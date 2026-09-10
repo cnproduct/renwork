@@ -87,15 +87,12 @@ export const automationActionSchema = z.discriminatedUnion("kind", [
 ])
 export type AutomationAction = z.infer<typeof automationActionSchema>
 
-/**
- * Canonical identity for the free Automation starter model. Runtime provider
- * configuration belongs to the desktop's OpenCode installation, not Den.
- */
-export const AUTOMATION_FREE_MODEL = {
-  providerId: "opencode",
-  modelId: "big-pickle",
-  providerName: "OpenCode Zen",
-  modelName: "Big Pickle",
+/** Canonical Den-managed default for newly-created Automation revisions. */
+export const AUTOMATION_DEFAULT_MODEL = {
+  providerId: "renwork",
+  modelId: "renwork-auto",
+  providerName: "RenWork Models",
+  modelName: "智能 Auto",
 } as const
 
 export const automationNeedsAttentionReasonSchema = z.object({

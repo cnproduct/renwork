@@ -10,7 +10,7 @@ import {
 } from "@/app/lib/den";
 import { denSettingsChangedEvent } from "@/app/lib/den-session-events";
 import {
-  isServer2016CloudDesktopRuntime,
+  readDesktopDistributionInfo,
   resolveWorkspaceListSelectedId,
   workspaceBootstrap,
   workspaceCreateRemote,
@@ -99,7 +99,7 @@ export function Server2016CloudWorkspaceConnector() {
     () => createDenClient({ baseUrl: settings.baseUrl, token: authToken }),
     [authToken, settings.baseUrl],
   );
-  const enabled = isServer2016CloudDesktopRuntime();
+  const enabled = readDesktopDistributionInfo().cloudWorkspaceRequired;
 
   const connect = useCallback(async (signal: AbortSignal) => {
     if (!enabled || !denAuth.isSignedIn || !authToken || !orgId || cloud.instance?.status !== "ready") return;

@@ -3,7 +3,7 @@ import {
   RENWORK_MODEL_TIERS,
   toPublicModelCatalog,
   toPublicModelCatalogForPlan,
-  validateAdminModelCatalog,
+  validateDenServerCatalog,
 } from "@openwork/rencredit-metering"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
@@ -89,7 +89,7 @@ export function registerOrgModelCatalogRoutes<T extends { Variables: OrgRouteVar
         if (!parsed.success) {
           return c.json({ error: "MODEL_CATALOG_INVALID_RESPONSE", message: "RenWork model catalog is temporarily unavailable." }, 503)
         }
-        validateAdminModelCatalog(parsed.data)
+        validateDenServerCatalog(parsed.data)
         if (parsed.data.status !== "active") {
           return c.json({ error: "MODEL_CATALOG_NOT_ACTIVE", message: "RenWork model catalog is temporarily unavailable." }, 503)
         }

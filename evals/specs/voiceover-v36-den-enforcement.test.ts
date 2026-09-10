@@ -49,8 +49,8 @@ test("Voiceover V36 makes Den the only production execution and billing boundary
   expect(admin).not.toContain('<option value="device_oauth">');
   expect(admin).not.toContain('<option value="free">');
   expect(admin).toContain("超出预冻结");
-  expect(new Set([rootPackage.version, appPackage.version, desktopPackage.version, serverPackage.version])).toEqual(new Set(["0.18.64"]));
-  expect(versions).toContain('"0.18.64"');
+  expect(new Set([rootPackage.version, appPackage.version, desktopPackage.version, serverPackage.version])).toEqual(new Set(["0.18.65"]));
+  expect(versions).toContain('"0.18.65"');
 
   evidence.fact(
     "Only Den-routed models are selectable",

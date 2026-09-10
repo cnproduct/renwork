@@ -7,7 +7,7 @@ import { useNavigate } from "react-router"
 import { toast } from "sonner"
 import { useQuery } from "@tanstack/react-query"
 
-import { automationProposalSchema, AUTOMATION_FREE_MODEL, type AutomationProposal } from "@openwork/types/automations"
+import { automationProposalSchema, AUTOMATION_DEFAULT_MODEL, type AutomationProposal } from "@openwork/types/automations"
 
 import { createDenClient, readDenSettings } from "@/app/lib/den"
 import { Button } from "@/components/ui/button"
@@ -93,8 +93,8 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
         instructions: proposal.instructions,
         schedule: proposal.schedule,
         model: resolved?.model ?? proposal.model ?? {
-          providerId: AUTOMATION_FREE_MODEL.providerId,
-          modelId: AUTOMATION_FREE_MODEL.modelId,
+          providerId: AUTOMATION_DEFAULT_MODEL.providerId,
+          modelId: AUTOMATION_DEFAULT_MODEL.modelId,
         },
         workspaceId: proposal.workspaceId ?? null,
         connectors: proposal.connectors ?? [],

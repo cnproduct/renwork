@@ -15,7 +15,7 @@ import { createDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
 import {
   toPublicModelCatalog,
   toPublicModelCatalogForPlan,
-  validateAdminModelCatalog,
+  validateDenServerCatalog,
 } from "@openwork/rencredit-metering"
 import {
   INFERENCE_RESET_STRATEGY_BY_WINDOW_TYPE,
@@ -150,7 +150,7 @@ async function loadManagedRenWorkModels(organizationId: OrgId): Promise<ManagedR
   if (!upstream.configured || !upstream.response?.ok) throw new Error("MODEL_CATALOG_UNAVAILABLE")
   const parsed = modelCatalogSchema.safeParse(upstream.payload)
   if (!parsed.success || parsed.data.status !== "active") throw new Error("MODEL_CATALOG_UNAVAILABLE")
-  validateAdminModelCatalog(parsed.data)
+  validateDenServerCatalog(parsed.data)
 
   const publicCatalog = access.source === "subscription" || access.source === "offline_payment"
     ? toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier)
