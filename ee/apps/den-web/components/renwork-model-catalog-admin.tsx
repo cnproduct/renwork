@@ -17,7 +17,7 @@ import { CheckCircle2, CircleAlert, Plus, RefreshCw, Save, ServerCog, ShieldChec
 import { useEffect, useMemo, useState } from "react";
 
 type AccessState = "loading" | "ready" | "signed-out" | "forbidden" | "error";
-type AdminTab = "policy" | "providers" | "models" | "settlements" | "preview";
+type AdminTab = "policy" | "providers" | "models" | "monitoring" | "settlements" | "preview";
 
 type ProviderTestResult = {
   ok: boolean;
@@ -33,10 +33,54 @@ type MeteredRuntimeDevice = {
   organizationId: string;
   memberId: string;
   deviceId: string;
+  clientVersion: string | null;
   publicKeyFingerprint: string;
   status: "pending" | "active" | "revoked";
   lastSeenAt: string;
   createdAt: string;
+};
+
+type RuntimeHealthPayload = {
+  generatedAt: string;
+  windowHours: number;
+  currentClientVersion: string;
+  summary: {
+    organizations: number;
+    healthy: number;
+    warning: number;
+    critical: number;
+    idle: number;
+    reservations24h: number;
+    captures24h: number;
+    releases24h: number;
+    expiredReservations: number;
+    failureRate24h: number;
+    activeDevices: number;
+    onlineDevices: number;
+    outdatedDevices: number;
+    unknownVersionDevices: number;
+  };
+  clientVersions: Array<{ version: string | null; count: number; classification: "current" | "outdated" | "ahead" | "unknown" }>;
+  organizations: Array<{
+    organizationId: string;
+    organizationName: string;
+    status: "healthy" | "warning" | "critical" | "idle";
+    wallet: { status: string; availableMicroCredits: number; reservedMicroCredits: number; updatedAt: string | null } | null;
+    reservations24h: number;
+    captures24h: number;
+    releases24h: number;
+    failures24h: number;
+    expiredReservations: number;
+    activeDevices: number;
+    pendingDevices: number;
+    onlineDevices: number;
+    outdatedDevices: number;
+    unknownVersionDevices: number;
+    failureRate24h: number;
+    latestSeenAt: string | null;
+    latestReservationAt: string | null;
+    clientVersions: Array<{ version: string | null; count: number; classification: "current" | "outdated" | "ahead" | "unknown" }>;
+  }>;
 };
 
 type RenCreditSettlement = {
@@ -391,6 +435,8 @@ export function RenWorkModelCatalogAdmin() {
   const [settlementsLoading, setSettlementsLoading] = useState(false);
   const [settlementOrganizationId, setSettlementOrganizationId] = useState("");
   const [settlementStatus, setSettlementStatus] = useState("");
+  const [runtimeHealth, setRuntimeHealth] = useState<RuntimeHealthPayload | null>(null);
+  const [runtimeHealthLoading, setRuntimeHealthLoading] = useState(false);
 
   const publicPreview = useMemo(() => {
     if (!catalog) return null;
@@ -478,6 +524,26 @@ export function RenWorkModelCatalogAdmin() {
 
   useEffect(() => {
     if (accessState === "ready" && activeTab === "settlements" && !settlementAudit) void loadSettlements();
+  }, [accessState, activeTab]);
+
+  const loadRuntimeHealth = async () => {
+    setRuntimeHealthLoading(true);
+    setPageError(null);
+    try {
+      const { response, payload } = await requestJson("/v1/admin/rencredit/runtime-health?limit=200");
+      if (!response.ok || !isRecord(payload) || !isRecord(payload.summary) || !Array.isArray(payload.organizations) || !Array.isArray(payload.clientVersions)) {
+        throw new Error(errorMessage(payload, `运行监控加载失败（${response.status}）。`));
+      }
+      setRuntimeHealth(payload as unknown as RuntimeHealthPayload);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "运行监控加载失败。");
+    } finally {
+      setRuntimeHealthLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (accessState === "ready" && activeTab === "monitoring" && !runtimeHealth) void loadRuntimeHealth();
   }, [accessState, activeTab]);
 
   const updateDeviceStatus = async (device: MeteredRuntimeDevice, status: "active" | "revoked") => {
@@ -634,6 +700,7 @@ export function RenWorkModelCatalogAdmin() {
           ["policy", "计费策略"],
           ["providers", "供应商网关"],
           ["models", "模型与路由"],
+          ["monitoring", "运行监控"],
           ["settlements", "结算审计"],
           ["preview", "用户预览"],
         ] as const).map(([value, label]) => (
@@ -914,6 +981,38 @@ export function RenWorkModelCatalogAdmin() {
             </article>
           ))}
           <button type="button" onClick={() => setCatalog({ ...catalog, models: [...catalog.models, newModel(catalog.models.length, catalog.providers[0]?.id ?? "")] })} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white"><Plus className="size-4" />新增模型</button>
+        </div>
+      ) : null}
+
+      {activeTab === "monitoring" ? (
+        <div className="mt-5 space-y-5" data-testid="rencredit-runtime-monitoring">
+          <div className="rounded-3xl border border-orange-100 bg-white p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">组织运行与计费健康</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">汇总最近 24 小时冻结、扣费、失败释放、过期冻结、设备在线状态和客户端版本。仅显示运行元数据，不显示密钥、提示词或回复内容。</p>
+              </div>
+              <button type="button" onClick={() => void loadRuntimeHealth()} disabled={runtimeHealthLoading} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                <RefreshCw className={`size-4 ${runtimeHealthLoading ? "animate-spin" : ""}`} />刷新监控
+              </button>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard label="组织状态" value={`${runtimeHealth?.summary.healthy ?? 0} 健康`} detail={`${runtimeHealth?.summary.warning ?? 0} 警告 · ${runtimeHealth?.summary.critical ?? 0} 严重`} />
+              <StatCard label="计费任务（24h）" value={`${runtimeHealth?.summary.captures24h ?? 0} 已扣费`} detail={`${runtimeHealth?.summary.releases24h ?? 0} 已释放 · ${(100 * (runtimeHealth?.summary.failureRate24h ?? 0)).toFixed(1)}% 失败率`} />
+              <StatCard label="过期冻结" value={`${runtimeHealth?.summary.expiredReservations ?? 0}`} detail="必须保持为 0" />
+              <StatCard label="客户端版本" value={`v${runtimeHealth?.currentClientVersion ?? "—"}`} detail={`${runtimeHealth?.summary.outdatedDevices ?? 0} 旧版 · ${runtimeHealth?.summary.unknownVersionDevices ?? 0} 未上报`} />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs">
+              {(runtimeHealth?.clientVersions ?? []).map((entry) => <span key={entry.version ?? "unknown"} className={`rounded-full px-3 py-1.5 font-medium ${entry.classification === "current" ? "bg-emerald-50 text-emerald-700" : entry.classification === "outdated" ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600"}`}>{entry.version ? `v${entry.version}` : "未上报版本"} · {entry.count} 台</span>)}
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-3xl border border-orange-100 bg-white">
+            <div className="border-b border-slate-100 px-6 py-4"><h3 className="font-semibold text-slate-950">逐组织健康状态</h3><p className="mt-1 text-xs text-slate-500">严重：存在过期冻结或钱包暂停；警告：失败率达到 20%、存在旧版客户端或版本未上报。</p></div>
+            <div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-100 text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-4 py-3">组织</th><th className="px-4 py-3">状态</th><th className="px-4 py-3">钱包</th><th className="px-4 py-3">24h 结算</th><th className="px-4 py-3">设备 / 版本</th><th className="px-4 py-3">最近活动</th></tr></thead><tbody className="divide-y divide-slate-100">
+              {(runtimeHealth?.organizations ?? []).map((organization) => <tr key={organization.organizationId} data-runtime-health={organization.status}><td className="px-4 py-3"><p className="font-medium text-slate-900">{organization.organizationName}</p><p className="mt-1 font-mono text-[10px] text-slate-500">{organization.organizationId}</p></td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 font-semibold ${organization.status === "healthy" ? "bg-emerald-50 text-emerald-700" : organization.status === "critical" ? "bg-red-50 text-red-700" : organization.status === "warning" ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600"}`}>{organization.status === "healthy" ? "健康" : organization.status === "critical" ? "严重" : organization.status === "warning" ? "警告" : "未启用"}</span>{organization.expiredReservations > 0 ? <p className="mt-2 text-red-600">{organization.expiredReservations} 笔过期冻结</p> : null}</td><td className="whitespace-nowrap px-4 py-3 text-slate-700">{organization.wallet ? <>{formatMicroCredits(organization.wallet.availableMicroCredits)}<br /><span className="text-amber-700">冻结 {formatMicroCredits(organization.wallet.reservedMicroCredits)}</span></> : "未开通"}</td><td className="whitespace-nowrap px-4 py-3 text-slate-700">{organization.captures24h} 扣费 / {organization.releases24h} 释放<br /><span className={organization.failureRate24h >= 0.2 ? "text-red-600" : "text-slate-500"}>{(organization.failureRate24h * 100).toFixed(1)}% 失败</span></td><td className="px-4 py-3 text-slate-700">{organization.onlineDevices}/{organization.activeDevices} 在线<br /><span className="text-slate-500">{organization.clientVersions.map((entry) => `${entry.version ?? "未知"} ×${entry.count}`).join(" · ") || "无计费设备"}</span></td><td className="whitespace-nowrap px-4 py-3 text-slate-500">{organization.latestSeenAt ? new Date(organization.latestSeenAt).toLocaleString() : organization.latestReservationAt ? new Date(organization.latestReservationAt).toLocaleString() : "—"}</td></tr>)}
+            </tbody></table></div>
+          </div>
         </div>
       ) : null}
 

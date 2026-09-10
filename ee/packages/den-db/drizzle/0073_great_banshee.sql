@@ -1,0 +1,1 @@
+ALTER TABLE `rencredit_runtime_devices` ADD `client_version` varchar(80);

@@ -4,13 +4,19 @@ import { aggregateReportedUsage, estimatePromptUsage, RenCreditLocalRuntimeClien
 
 describe("RenCredit local OAuth runtime", () => {
   test("registers, reserves, signs reported usage, and releases failures", async () => {
-    const requests: Array<{ path: string; method: string; body: unknown; idempotency: string | null }> = [];
+    const requests: Array<{ path: string; method: string; body: unknown; idempotency: string | null; clientVersion: string | null }> = [];
     const server = Bun.serve({
       port: 0,
       async fetch(request) {
         const url = new URL(request.url);
         const body = request.method === "GET" ? null : await request.json().catch(() => null);
-        requests.push({ path: url.pathname, method: request.method, body, idempotency: request.headers.get("Idempotency-Key") });
+        requests.push({
+          path: url.pathname,
+          method: request.method,
+          body,
+          idempotency: request.headers.get("Idempotency-Key"),
+          clientVersion: request.headers.get("X-RenWork-Client-Version"),
+        });
         expect(request.headers.get("Authorization")).toBe("Bearer member-inference-key");
         if (url.pathname.endsWith("/reservations")) {
           if (!requests.some((entry) => entry.method === "PUT")) {
@@ -40,6 +46,7 @@ describe("RenCredit local OAuth runtime", () => {
     });
     const client = new RenCreditLocalRuntimeClient({
       credentials: () => ({ baseUrl: `http://127.0.0.1:${server.port}`, apiKey: "member-inference-key", orgId: "org_1" }),
+      clientVersion: "0.18.62",
       signer: async () => ({
         deviceId: "device_1",
         publicKeyPem: publicKey,
@@ -57,6 +64,7 @@ describe("RenCredit local OAuth runtime", () => {
       expect(requests[0]?.idempotency).toBe("desktop:device_1:run_1");
       expect(requests[1]?.method).toBe("PUT");
       expect(requests[2]?.idempotency).toBe("desktop:device_1:run_1");
+      expect(requests.every((request) => request.clientVersion === "0.18.62")).toBe(true);
 
       await client.settle(reservation, {
         usage: { inputTokens: 11, outputTokens: 7, reasoningTokens: 3, cacheReadTokens: 2, cacheWriteTokens: 1 },
