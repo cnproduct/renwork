@@ -34,7 +34,8 @@ test("Voiceover V7 is enforced by server and desktop gates", async ({ evidence }
   expect(access).toContain("organizationHasActiveInferenceSubscription");
   expect(access).toContain("expiresAt");
   expect(desktopPolicy).toContain("return false");
-  expect(session).toContain("sendModelAllowed");
+  expect(session).toContain("resolveEntitledSessionModel");
+  expect(session).toContain("if (!sendModel)");
   expect(session).toContain("options={entitledPickerOptions}");
   expect(welcome).not.toContain('data-testid="welcome-model-source-byok"');
   expect(welcome).not.toContain('data-testid="welcome-model-source-local"');

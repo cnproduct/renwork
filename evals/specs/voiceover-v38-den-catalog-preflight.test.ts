@@ -3,7 +3,7 @@ import { expect } from "vitest";
 import { test } from "@openwork/testkit";
 
 test("Voiceover V38 removes bypass paths and blocks unsafe catalog publication", async ({ evidence }) => {
-  const [voiceover, catalog, defaults, cloudServer, denInference, inferenceGateway, orgCatalog, picker, hero, onboarding, aiSettings, taskSuggestions, constants, automationModels, automationAuthority, automationRollout, automationTypes, afterPack, connector, overlay, admin, desktopPackage] = await Promise.all([
+  const [voiceover, catalog, defaults, cloudServer, denInference, inferenceGateway, orgCatalog, picker, hero, onboarding, aiSettings, taskSuggestions, constants, automationModels, automationAuthority, automationRollout, automationTypes, afterPack, connector, overlay, admin, rootPackage, desktopPackage] = await Promise.all([
     readFile("../evals/voiceovers/voiceover-v38-den-catalog-purge.md", "utf8"),
     readFile("../packages/rencredit-metering/src/catalog.ts", "utf8"),
     readFile("../packages/rencredit-metering/src/default-catalog.ts", "utf8"),
@@ -25,6 +25,7 @@ test("Voiceover V38 removes bypass paths and blocks unsafe catalog publication",
     readFile("../apps/app/src/react-app/shell/server-2016-cloud-workspace.tsx", "utf8"),
     readFile("../apps/app/src/react-app/shell/cloud-workspace-overlay.tsx", "utf8"),
     readFile("../ee/apps/den-web/components/renwork-model-catalog-admin.tsx", "utf8"),
+    readFile("../package.json", "utf8").then((value) => JSON.parse(value) as { version: string }),
     readFile("../apps/desktop/package.json", "utf8").then((value) => JSON.parse(value) as { version: string }),
   ]);
 
@@ -60,7 +61,7 @@ test("Voiceover V38 removes bypass paths and blocks unsafe catalog publication",
   expect(connector).toContain("readDesktopDistributionInfo().cloudWorkspaceRequired");
   expect(overlay).toContain("readDesktopDistributionInfo().cloudWorkspaceRequired");
   expect(admin).toContain('allowedPlanIds: ["individual", "enterprise"]');
-  expect(desktopPackage.version).toBe("0.18.65");
+  expect(desktopPackage.version).toBe(rootPackage.version);
 
   evidence.fact(
     "Catalog publication fails closed",

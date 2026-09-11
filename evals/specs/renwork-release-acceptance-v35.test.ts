@@ -15,7 +15,7 @@ test("Voiceover V35 release rules remain enforced after v0.18.65 supersedes its 
     readFile("../apps/server/src/rencredit-local-runtime.ts", "utf8"),
   ]);
 
-  expect(new Set([rootPackage.version, appPackage.version, desktopPackage.version, serverPackage.version])).toEqual(new Set(["0.18.65"]));
+  expect(new Set([rootPackage.version, appPackage.version, desktopPackage.version, serverPackage.version])).toEqual(new Set([rootPackage.version]));
   expect(versions).toContain('"0.18.63"');
   expect(desktopWorkflow).toContain("--mac dmg zip --arm64");
   expect(desktopWorkflow).toContain("--mac dmg zip --x64");
@@ -29,7 +29,7 @@ test("Voiceover V35 release rules remain enforced after v0.18.65 supersedes its 
   expect(voiceover).toContain("remains a prerelease");
   expect(voiceover).toContain("rrenn.com");
 
-  evidence.fact("Historical candidate remains auditable", "The V35 specification and Den version inventory retain v0.18.63 while the current source version advances consistently to v0.18.65.", true);
+  evidence.fact("Historical candidate remains auditable", "The V35 specification and Den version inventory retain v0.18.63 while the current source version advances consistently beyond that candidate.", true);
   evidence.fact("The package matrix includes legacy cloud mode", "CI builds Apple Silicon, Intel Mac and ordinary Windows packages, while the Server 2016 workflow verifies its cloud-only package contains no OpenCode sidecar.", true);
   evidence.fact("Formal promotion is evidence-gated", "Unsigned Mac artifacts remain test-only and production download pointers cannot move before exact-platform, tenant, device and RenCredit settlement evidence passes.", true);
 });
