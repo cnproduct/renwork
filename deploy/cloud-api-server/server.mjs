@@ -173,6 +173,19 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   const pathname = parsedUrl.pathname.replace(/\/+$/, "");
 
+  if (pathname === "/api/v1/credits" || pathname.startsWith("/api/v1/credits/")) {
+    res.setHeader("Cache-Control", "no-store");
+    return sendJson(res, 410, {
+      ok: false,
+      error: "LEGACY_RENCREDIT_API_RETIRED",
+      message: "This unauthenticated legacy RenCredit API has been retired.",
+      replacements: {
+        wallet: "/api/den/v1/rencredit/wallet",
+        ledger: "/api/den/v1/rencredit/ledger",
+      },
+    });
+  }
+
   // Health
   if (pathname === "/health" || pathname === "/healthz" || pathname === "/v1/health") {
     return sendJson(res, 200, {
@@ -241,8 +254,8 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // 2. GET /api/v1/credits/balance or /v1/rencredit/wallet
-  if (req.method === "GET" && (pathname === "/api/v1/credits/balance" || pathname === "/v1/rencredit/wallet")) {
+  // 2. GET /v1/rencredit/wallet
+  if (req.method === "GET" && pathname === "/v1/rencredit/wallet") {
     return sendJson(res, 200, {
       workspace_id: "WS-DEFAULT-001",
       total_quota: 5000,
