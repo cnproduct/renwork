@@ -33,7 +33,7 @@ describe("filterEntitledModelOptions", () => {
     ).toEqual(["openai", "lpr_team", "opencode"]);
   });
 
-  test("keeps only org-managed providers plus Zen when custom providers are restricted", () => {
+  test("keeps only org-managed providers when custom providers are restricted", () => {
     const options = [modelOption("openai"), modelOption("lpr_team"), modelOption("openwork"), modelOption("opencode")];
 
     expect(
@@ -41,7 +41,7 @@ describe("filterEntitledModelOptions", () => {
         restrictToCloud: true,
         checkRestriction: restrictionChecker(["allowCustomProviders"]),
       }).map((option) => option.providerID),
-    ).toEqual(["lpr_team", "openwork", "opencode"]);
+    ).toEqual(["lpr_team", "openwork"]);
   });
 
   test("drops Zen when the Zen desktop policy blocks it", () => {

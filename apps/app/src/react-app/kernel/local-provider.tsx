@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { THINKING_PREF_KEY } from "../../app/constants";
+import { readDesktopDistributionInfo } from "../../app/lib/desktop";
 import { coerceReleaseChannel } from "../../app/lib/release-channels";
 import type { ModelRef, ReleaseChannel, SettingsTab, View } from "../../app/types";
 import {
@@ -19,6 +20,7 @@ import {
   type DesktopNotificationPreference,
 } from "./desktop-notification-preferences";
 import { LOCAL_PREFERENCES_KEY } from "./local-preferences-storage";
+import { migrateDenOnlyModelStateForDistributedDesktop } from "./den-only-model-migration";
 import {
   readStoredDefaultModel,
   storedDefaultModelChangedEvent,
@@ -130,6 +132,9 @@ type LocalProviderProps = {
 };
 
 export function LocalProvider({ children }: LocalProviderProps) {
+  migrateDenOnlyModelStateForDistributedDesktop(
+    readDesktopDistributionInfo().cloudWorkspaceRequired,
+  );
   const [ui, setUiRaw] = useState<LocalUIState>(() =>
     readPersisted(UI_STORAGE_KEY, INITIAL_UI),
   );

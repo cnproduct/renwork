@@ -75,7 +75,7 @@ describe("computePolicyProviderReconcilePlan", () => {
     ).toEqual(["openai"]);
   });
 
-  test("respects the Zen policy while custom providers are restricted", () => {
+  test("disables the raw Zen provider whenever custom providers are restricted", () => {
     expect(
       computePolicyProviderReconcilePlan({
         allProviders: [provider("opencode")],
@@ -84,7 +84,7 @@ describe("computePolicyProviderReconcilePlan", () => {
         markedDisabledProviderIds: [],
         checkRestriction: restrictionChecker(["allowCustomProviders"]),
       }).toDisable,
-    ).toEqual([]);
+    ).toEqual(["opencode"]);
 
     expect(
       computePolicyProviderReconcilePlan({
