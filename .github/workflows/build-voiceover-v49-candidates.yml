@@ -2,6 +2,9 @@ name: Build Voiceover V49 six-device candidates
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - release/voiceover-v48-desktop
 
 permissions:
   contents: read
@@ -97,4 +100,3 @@ jobs:
             ${{ matrix.output }}/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
-
