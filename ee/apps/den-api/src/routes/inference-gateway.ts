@@ -27,6 +27,9 @@ import {
 } from "../organization-model-policy.js"
 import { accessAllowsModel, resolveRenworkModelAccess } from "../renwork-access.js"
 import {
+  hasTokenConsumption,
+} from "../rencredit-settlement-plan.js"
+import {
   authenticateInferenceKey,
   releaseInferenceCredits,
   reserveInferenceCredits,
@@ -429,6 +432,10 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
       finalized = true
       await releaseInferenceCredits({ reservationId: reservation.id, failureCode })
     }
+    const settleObservedUsageOrRelease = async (failureCode: string) => {
+      if (usageReported && hasTokenConsumption(usage)) return settleOnce()
+      return releaseOnce(failureCode)
+    }
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         void (async () => {
@@ -454,14 +461,14 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
               if (sanitized) controller.enqueue(new TextEncoder().encode(sanitized))
             }
           } catch (error) {
-            await releaseOnce("STREAM_ABORTED").catch(() => undefined)
+            await settleObservedUsageOrRelease("STREAM_ABORTED").catch(() => undefined)
             controller.error(error)
           }
         })()
       },
       async cancel() {
         await reader.cancel().catch(() => undefined)
-        await releaseOnce("CLIENT_ABORTED").catch(() => undefined)
+        await settleObservedUsageOrRelease("CLIENT_ABORTED").catch(() => undefined)
       },
     })
     return new Response(stream, { status: 200, headers: copySafeUpstreamHeaders(upstream) })
