@@ -34,6 +34,7 @@ jobs:
       OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU: ${{ secrets.RENWORK_V49_NO_RESULT_MODEL_SKU }}
       OPENWORK_EVAL_INFERENCE_KEY: ${{ secrets.RENWORK_V49_INFERENCE_KEY }}
       OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS: ${{ inputs.max_microcredits || vars.RENWORK_V49_MAX_MICROCREDITS || 50000 }}
+      OPENWORK_EVAL_HOSTED_EVIDENCE_PATH: ${{ github.workspace }}/evals/.results/voiceover-v49-real-den-no-result.json
     steps:
       - name: Fail closed when a real Den input is missing
         shell: bash
