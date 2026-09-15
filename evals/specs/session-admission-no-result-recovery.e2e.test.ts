@@ -1,9 +1,7 @@
 import { expect } from "vitest";
 import { mkdir, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import {
-  createAndSelectWorkspace,
   denFetch,
   evalIn,
   readAvailableModels,
@@ -250,11 +248,16 @@ async function launchRealDenDesktop(den: Den, place: Place, organizationId: stri
   });
   try {
     await signInDesktopAs(surface, den.ref, den.admin);
-    await createAndSelectWorkspace(surface, {
-      path: join(
-        tmpdir(),
-        `renwork-v49-real-den-${process.env.OPENWORK_EVAL_DEVICE_TARGET_ID?.trim() || "functional"}-${Date.now()}`,
-      ),
+    await waitFor(surface, `(() => {
+      const text = document.body.innerText;
+      const runTask = [...document.querySelectorAll("button")]
+        .some((button) => ["Run task", "运行任务"].includes((button.textContent ?? "").trim()));
+      return window.location.hash.includes("/session") && (runTask
+        || text.includes("What do you need done?")
+        || text.includes("今天需要为您完成什么外贸任务？"));
+    })()`, {
+      timeoutMs: 120_000,
+      label: "Den-only cloud session task UI",
     });
     return surface;
   } catch (error) {
