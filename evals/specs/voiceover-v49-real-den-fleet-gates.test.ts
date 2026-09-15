@@ -80,14 +80,19 @@ test("Voiceover V49 replaces the simulated no-result test and guards release wit
   expect(liveSpec).not.toContain("createServer");
   expect(liveSpec).not.toContain("admission-no-result-mock");
   expect(liveWorkflow).toContain("Fail closed when a real Den input is missing");
+  expect(liveWorkflow).toContain("push:\n    branches:");
   for (const targetId of Object.keys(REQUIRED_TARGETS)) expect(fleetWorkflow).toContain(`target: ${targetId}`);
   expect(fleetWorkflow).toContain("max-parallel: 1");
+  expect(fleetWorkflow).toContain("Resolve the exact candidate build");
+  expect(fleetWorkflow).toContain("push:\n    branches:");
   expect(candidateWorkflow.match(/artifact: RenWork-V49-/g)).toHaveLength(6);
   expect(finalizer).toContain("validateFleetEvidence(entries");
   expect(finalizer).toContain("No mutation occurs before this line");
   expect(finalizer).toContain('["pr", "merge", "80"');
   expect(finalizer).toContain('"-f", "prerelease=true"');
   expect(baseReleaseWorkflow).not.toContain("push:\n    tags:");
+  expect(baseReleaseWorkflow).toContain("electron-builder.server2016-cloud.yml");
+  expect(baseReleaseWorkflow).toContain("Expected 7 signed Windows installers");
   expect(voiceover).toContain("Hosted build VMs prove packaging only");
 
   const complete = Object.keys(REQUIRED_TARGETS).map((targetId, index) => deviceEvidence(targetId, index + 1));

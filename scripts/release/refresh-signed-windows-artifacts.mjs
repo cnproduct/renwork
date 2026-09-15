@@ -43,6 +43,7 @@ async function regenerateBlockmap(installerPath) {
 }
 
 function manifestName(installerName) {
+  if (/^RenWork-v.+-Windows-Server-2016-Cloud-x64\.exe$/i.test(installerName)) return "server2016-cloud.yml";
   if (installerName.startsWith("renwork-cloud-win-")) return "cloud.yml";
   if (installerName.startsWith("renwork-enterprise-win-")) return "enterprise.yml";
   if (installerName.startsWith("renwork-win-")) return "latest.yml";
@@ -90,7 +91,7 @@ if (!existsSync(distRoot)) {
 }
 
 const installers = walk(distRoot).filter((file) =>
-  /^(?:renwork(?:-(?:cloud|enterprise))?|openwork(?:-(?:cloud|enterprise))?)-win-(?:x64|arm64)-.+\.exe$/i.test(basename(file)),
+  /^(?:(?:renwork(?:-(?:cloud|enterprise))?|openwork(?:-(?:cloud|enterprise))?)-win-(?:x64|arm64)-.+|RenWork-v.+-Windows-Server-2016-Cloud-x64)\.exe$/i.test(basename(file)),
 );
 
 if (installers.length !== expectedCount) {

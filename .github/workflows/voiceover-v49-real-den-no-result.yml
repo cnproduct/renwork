@@ -12,6 +12,9 @@ on:
         required: true
         type: number
         default: 50000
+  push:
+    branches:
+      - release/voiceover-v48-desktop
 
 permissions:
   contents: read
@@ -29,12 +32,12 @@ jobs:
       OPENWORK_EVAL_DEMO_PASSWORD: ${{ secrets.RENWORK_V49_TEST_PASSWORD }}
       OPENWORK_EVAL_DEN_ORG_ID: ${{ secrets.RENWORK_V49_ORG_ID }}
       OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU: ${{ secrets.RENWORK_V49_NO_RESULT_MODEL_SKU }}
-      OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS: ${{ inputs.max_microcredits }}
+      OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS: ${{ inputs.max_microcredits || vars.RENWORK_V49_MAX_MICROCREDITS || 50000 }}
     steps:
       - name: Fail closed when a real Den input is missing
         shell: bash
         env:
-          GUARDED_COMMIT: ${{ inputs.guarded_commit }}
+          GUARDED_COMMIT: ${{ inputs.guarded_commit || github.sha }}
         run: |
           set -euo pipefail
           [[ "$GUARDED_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "guarded_commit must be a full SHA" >&2; exit 1; }
@@ -46,7 +49,7 @@ jobs:
           [[ "$OPENWORK_EVAL_DEN_WEB_URL" == https://* ]] || { echo "Den Web must use HTTPS" >&2; exit 1; }
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.guarded_commit }}
+          ref: ${{ inputs.guarded_commit || github.sha }}
       - uses: pnpm/action-setup@v4
         with:
           version: 11.4.0
@@ -61,7 +64,7 @@ jobs:
       - name: Verify checkout is the guarded commit
         shell: bash
         env:
-          GUARDED_COMMIT: ${{ inputs.guarded_commit }}
+          GUARDED_COMMIT: ${{ inputs.guarded_commit || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$GUARDED_COMMIT"
       - name: Run the real Den no-result capture gate
         run: pnpm --dir evals exec vitest run --config vitest.config.ts --project pr specs/session-admission-no-result-recovery.e2e.test.ts
@@ -69,11 +72,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: RenWork-V49-real-Den-no-result-${{ inputs.guarded_commit }}
+          name: RenWork-V49-real-Den-no-result-${{ inputs.guarded_commit || github.sha }}
           path: |
             evals/.results/**
             evals/.artifacts/**
             .openwork/evals/**
           if-no-files-found: warn
           retention-days: 30
-

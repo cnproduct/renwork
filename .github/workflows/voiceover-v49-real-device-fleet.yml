@@ -16,12 +16,64 @@ on:
         required: true
         type: number
         default: 50000
+  push:
+    branches:
+      - release/voiceover-v48-desktop
 
 permissions:
   actions: read
   contents: read
 
 jobs:
+  resolve-candidate:
+    name: Resolve the exact candidate build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    outputs:
+      run_id: ${{ steps.resolve.outputs.run_id }}
+    steps:
+      - name: Wait for the successful candidate build at this exact commit
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ inputs.guarded_commit || github.sha }}
+          INPUT_RUN_ID: ${{ inputs.candidate_run_id || '' }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || exit 1
+          if [[ -n "$INPUT_RUN_ID" ]]; then
+            [[ "$INPUT_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+            run_id="$INPUT_RUN_ID"
+          else
+            run_id=""
+            for attempt in $(seq 1 70); do
+              run_id="$(gh run list \
+                --repo "$GITHUB_REPOSITORY" \
+                --workflow build-voiceover-v49-candidates.yml \
+                --commit "$SOURCE_COMMIT" \
+                --limit 10 \
+                --json databaseId,headSha \
+                --jq '.[0].databaseId // empty')"
+              [[ -n "$run_id" ]] && break
+              sleep 30
+            done
+          fi
+          [[ "$run_id" =~ ^[0-9]+$ ]] || { echo "No candidate run found for $SOURCE_COMMIT" >&2; exit 1; }
+          for attempt in $(seq 1 70); do
+            state="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq '[.head_sha,.status,(.conclusion // "")]|@tsv')"
+            IFS=$'\t' read -r head_sha status conclusion <<< "$state"
+            test "$head_sha" = "$SOURCE_COMMIT" || { echo "Candidate run belongs to $head_sha" >&2; exit 1; }
+            if [[ "$status" == completed ]]; then
+              test "$conclusion" = success || { echo "Candidate run concluded $conclusion" >&2; exit 1; }
+              echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "Candidate run $run_id did not complete in time" >&2
+          exit 1
+
   accept:
     name: ${{ matrix.target }} on a physical test device
     strategy:
@@ -60,6 +112,7 @@ jobs:
             os: linux
             arch: arm64
             artifact: RenWork-V49-Linux-arm64
+    needs: resolve-candidate
     runs-on: ${{ fromJSON(matrix.runsOn) }}
     timeout-minutes: 45
     env:
@@ -70,8 +123,8 @@ jobs:
       OPENWORK_EVAL_DEMO_PASSWORD: ${{ secrets.RENWORK_V49_TEST_PASSWORD }}
       OPENWORK_EVAL_DEN_ORG_ID: ${{ secrets.RENWORK_V49_ORG_ID }}
       OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU: ${{ secrets.RENWORK_V49_NO_RESULT_MODEL_SKU }}
-      OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS: ${{ inputs.max_microcredits_per_device }}
-      OPENWORK_EVAL_SOURCE_COMMIT: ${{ inputs.guarded_commit }}
+      OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS: ${{ inputs.max_microcredits_per_device || vars.RENWORK_V49_MAX_MICROCREDITS || 50000 }}
+      OPENWORK_EVAL_SOURCE_COMMIT: ${{ inputs.guarded_commit || github.sha }}
       OPENWORK_EVAL_DEVICE_TARGET_ID: ${{ matrix.target }}
       OPENWORK_EVAL_DEVICE_OS: ${{ matrix.os }}
       OPENWORK_EVAL_DEVICE_ARCH: ${{ matrix.arch }}
@@ -82,8 +135,8 @@ jobs:
       - name: Fail closed before spending RenCredit
         shell: bash
         env:
-          GUARDED_COMMIT: ${{ inputs.guarded_commit }}
-          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+          GUARDED_COMMIT: ${{ inputs.guarded_commit || github.sha }}
+          CANDIDATE_RUN_ID: ${{ needs.resolve-candidate.outputs.run_id }}
         run: |
           set -euo pipefail
           [[ "$GUARDED_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || exit 1
@@ -96,19 +149,19 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          GUARDED_COMMIT: ${{ inputs.guarded_commit }}
-          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+          GUARDED_COMMIT: ${{ inputs.guarded_commit || github.sha }}
+          CANDIDATE_RUN_ID: ${{ needs.resolve-candidate.outputs.run_id }}
         run: |
           set -euo pipefail
           test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_RUN_ID" --jq .head_sha)" = "$GUARDED_COMMIT"
           test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_RUN_ID" --jq .conclusion)" = success
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.guarded_commit }}
+          ref: ${{ inputs.guarded_commit || github.sha }}
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
-          run-id: ${{ inputs.candidate_run_id }}
+          run-id: ${{ needs.resolve-candidate.outputs.run_id }}
           name: ${{ matrix.artifact }}
           path: candidate
       - name: Install candidate on macOS
