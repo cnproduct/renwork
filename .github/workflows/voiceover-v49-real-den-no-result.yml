@@ -34,7 +34,7 @@ jobs:
       OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU: ${{ secrets.RENWORK_V49_NO_RESULT_MODEL_SKU }}
       OPENWORK_EVAL_INFERENCE_KEY: ${{ secrets.RENWORK_V49_INFERENCE_KEY }}
       OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS: ${{ inputs.max_microcredits || vars.RENWORK_V49_MAX_MICROCREDITS || 50000 }}
-      OPENWORK_EVAL_HOSTED_EVIDENCE_PATH: ${{ github.workspace }}/evals/.results/voiceover-v49-real-den-no-result.json
+      OPENWORK_EVAL_HOSTED_EVIDENCE_PATH: ${{ runner.temp }}/voiceover-v49-real-den-no-result.json
     steps:
       - name: Fail closed when a real Den input is missing
         shell: bash
@@ -70,6 +70,13 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "$GUARDED_COMMIT"
       - name: Run the real Den no-result capture gate
         run: pnpm --dir evals exec vitest run --config vitest.config.ts --project pr specs/session-admission-no-result-recovery.e2e.test.ts
+      - name: Materialize the durable settlement evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OPENWORK_EVAL_HOSTED_EVIDENCE_PATH"
+          mkdir -p evals/.results
+          cp "$OPENWORK_EVAL_HOSTED_EVIDENCE_PATH" evals/.results/voiceover-v49-real-den-no-result.json
       - name: Upload real Den evidence
         if: always()
         uses: actions/upload-artifact@v4
