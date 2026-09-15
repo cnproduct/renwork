@@ -64,13 +64,13 @@ function deviceEvidence(targetId: string, index: number) {
 }
 
 test("Voiceover V49 replaces the simulated no-result test and guards release with exact-device evidence", async ({ evidence }) => {
-  const [voiceover, liveSpec, liveWorkflow, fleetWorkflow, candidateWorkflow, releaseWorkflow, baseReleaseWorkflow] = await Promise.all([
+  const [voiceover, liveSpec, liveWorkflow, fleetWorkflow, candidateWorkflow, finalizer, baseReleaseWorkflow] = await Promise.all([
     readFile(new URL("../voiceovers/voiceover-v49-real-den-fleet-acceptance.md", import.meta.url), "utf8"),
     readFile(new URL("./session-admission-no-result-recovery.e2e.test.ts", import.meta.url), "utf8"),
     readFile(new URL("../../.github/workflows/voiceover-v49-real-den-no-result.yml", import.meta.url), "utf8"),
     readFile(new URL("../../.github/workflows/voiceover-v49-real-device-fleet.yml", import.meta.url), "utf8"),
     readFile(new URL("../../.github/workflows/build-voiceover-v49-candidates.yml", import.meta.url), "utf8"),
-    readFile(new URL("../../.github/workflows/voiceover-v49-signed-prerelease.yml", import.meta.url), "utf8"),
+    readFile(new URL("../../scripts/acceptance/finalize-v49.mjs", import.meta.url), "utf8"),
     readFile(new URL("../../.github/workflows/release-macos-aarch64.yml", import.meta.url), "utf8"),
   ]);
 
@@ -83,10 +83,10 @@ test("Voiceover V49 replaces the simulated no-result test and guards release wit
   for (const targetId of Object.keys(REQUIRED_TARGETS)) expect(fleetWorkflow).toContain(`target: ${targetId}`);
   expect(fleetWorkflow).toContain("max-parallel: 1");
   expect(candidateWorkflow.match(/artifact: RenWork-V49-/g)).toHaveLength(6);
-  expect(releaseWorkflow).toContain("Validate six real-device evidence records");
-  expect(releaseWorkflow).toContain("Merge PR #80 after every acceptance gate passed");
-  expect(releaseWorkflow).toContain("Verify PR #80 is merged at this exact commit");
-  expect(releaseWorkflow).toContain("-f prerelease=true");
+  expect(finalizer).toContain("validateFleetEvidence(entries");
+  expect(finalizer).toContain("No mutation occurs before this line");
+  expect(finalizer).toContain('["pr", "merge", "80"');
+  expect(finalizer).toContain('"-f", "prerelease=true"');
   expect(baseReleaseWorkflow).not.toContain("push:\n    tags:");
   expect(voiceover).toContain("Hosted build VMs prove packaging only");
 
