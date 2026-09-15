@@ -17,6 +17,7 @@ const installers = [
   ["renwork-cloud-win-arm64-1.2.3.exe", "cloud.yml"],
   ["openwork-enterprise-win-x64-1.2.3.exe", "enterprise.yml"],
   ["openwork-enterprise-win-arm64-1.2.3.exe", "enterprise.yml"],
+  ["RenWork-v1.2.3-Windows-Server-2016-Cloud-x64.exe", "server2016-cloud.yml"],
 ] as const;
 
 const unsignedArtifactNames = [
@@ -26,6 +27,7 @@ const unsignedArtifactNames = [
   "unsigned-electron-cloud-windows-arm64",
   "unsigned-electron-enterprise-windows-x64",
   "unsigned-electron-enterprise-windows-arm64",
+  "unsigned-electron-server2016-cloud-windows-x64",
 ] as const;
 
 test("one Azure OIDC job signs and publishes every Windows installer", async ({ evidence }) => {
@@ -39,7 +41,7 @@ test("one Azure OIDC job signs and publishes every Windows installer", async ({ 
   expect(workflow).toContain("environment: windows-signing");
   expect(workflow).toContain("id-token: write");
   expect(workflow).toContain("files-folder-recurse: true");
-  expect(workflow).toContain("Expected 6 signed Windows installers");
+  expect(workflow).toContain("Expected 7 signed Windows installers");
   expect(workflow).toContain("needs.sign-and-publish-windows.result == 'success'");
   expect(workflow).toContain("needs.resolve-release.outputs.build_electron != 'true' || needs.publish-electron-assets.result == 'success'");
   expect(workflow).toContain("vars.AZURE_CLIENT_ID || secrets.AZURE_CLIENT_ID");
@@ -47,7 +49,7 @@ test("one Azure OIDC job signs and publishes every Windows installer", async ({ 
 
   evidence.fact(
     "A single protected Azure OIDC job gates publication of all Windows installers",
-    "The release workflow has one Artifact Signing action on windows-2022, recursively signs six installers, verifies every signature, blocks merged-manifest publication until signing succeeds, blocks public release publication until merged Electron assets publish, and keeps Azure config out of job-wide environment scope.",
+    "The release workflow has one Artifact Signing action on windows-2022, recursively signs seven installers including the Server 2016 cloud-only build, verifies every signature, blocks merged-manifest publication until signing succeeds, blocks public release publication until merged Electron assets publish, and keeps Azure config out of job-wide environment scope.",
     true,
   );
 });
@@ -89,7 +91,7 @@ test("signed Windows metadata is regenerated for every distribution and architec
     );
   }
 
-  const result = spawnSync(process.execPath, [refreshScriptPath, fixtureRoot, "6"], {
+  const result = spawnSync(process.execPath, [refreshScriptPath, fixtureRoot, "7"], {
     cwd: repoRoot,
     encoding: "utf8",
   });
@@ -105,7 +107,7 @@ test("signed Windows metadata is regenerated for every distribution and architec
   }
 
   evidence.fact(
-    "All six signed installers receive byte-accurate updater metadata",
+    "All seven signed installers receive byte-accurate updater metadata",
     `The refresh helper regenerated blockmaps and SHA-512 manifest entries for ${installers.map(([name]) => basename(name)).join(", ")}.`,
     true,
   );

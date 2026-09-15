@@ -1,0 +1,102 @@
+name: Build Voiceover V49 six-device candidates
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - release/voiceover-v48-desktop
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Apple Silicon
+            os: macos-14
+            command: pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml --mac dmg zip --arm64 --publish never
+            output: apps/desktop/dist-electron
+            artifact: RenWork-V49-macOS-Apple-Silicon
+          - name: macOS Intel
+            os: macos-14
+            command: pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml --mac dmg zip --x64 --publish never
+            output: apps/desktop/dist-electron
+            artifact: RenWork-V49-macOS-Intel
+          - name: Windows x64
+            os: windows-2022
+            command: pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml --win nsis zip --x64 --publish never
+            output: apps/desktop/dist-electron
+            artifact: RenWork-V49-Windows-x64
+          - name: Windows Server 2016 cloud-only
+            os: windows-2022
+            command: pnpm --dir apps/desktop exec electron-builder --config electron-builder.server2016-cloud.yml --win nsis zip --x64 --publish never
+            output: apps/desktop/dist-electron-server2016-cloud
+            artifact: RenWork-V49-Windows-Server-2016-Cloud-x64
+          - name: Linux x64
+            os: ubuntu-22.04
+            command: pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml --linux AppImage tar.gz --x64 --publish never
+            output: apps/desktop/dist-electron
+            artifact: RenWork-V49-Linux-x64
+          - name: Linux arm64
+            os: ubuntu-22.04-arm
+            command: pnpm --dir apps/desktop exec electron-builder --config electron-builder.yml --linux AppImage tar.gz --arm64 --publish never
+            output: apps/desktop/dist-electron
+            artifact: RenWork-V49-Linux-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.4.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: pnpm install --frozen-lockfile
+      - name: Verify V49 candidate and release gates
+        run: |
+          pnpm --dir evals exec vitest run --config vitest.config.ts --project pr specs/voiceover-v49-real-den-fleet-gates.test.ts specs/session-admission-terminal-invariant.test.ts specs/server-2016-self-hosted-cloud-v23.test.ts
+          pnpm --dir apps/desktop exec node --test electron/desktop-distribution.test.mjs electron/electron-builder-config.test.mjs
+      - name: Build Electron application
+        run: pnpm --filter @openwork/desktop run build:electron
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          OPENWORK_DESKTOP_SENTRY_DSN: ""
+          OPENWORK_DESKTOP_SENTRY_TRACES_SAMPLE_RATE: "0.01"
+      - name: Package private unsigned acceptance candidate
+        shell: bash
+        run: ${{ matrix.command }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Verify Den-only package
+        shell: bash
+        run: |
+          if find "${{ matrix.output }}" -type f \( -iname 'opencode.exe' -o -iname 'opencode-*' \) | grep -q .; then
+            echo "Den-only package contains a forbidden OpenCode sidecar" >&2
+            exit 1
+          fi
+      - name: Write checksums
+        shell: bash
+        run: |
+          if command -v shasum >/dev/null 2>&1; then checksum=(shasum -a 256); else checksum=(sha256sum); fi
+          find "${{ matrix.output }}" -maxdepth 1 -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.tar.gz' \) -print0 |
+            sort -z | xargs -0 "${checksum[@]}" > "${{ matrix.output }}/SHA256SUMS.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.output }}/*.dmg
+            ${{ matrix.output }}/*.zip
+            ${{ matrix.output }}/*.exe
+            ${{ matrix.output }}/*.AppImage
+            ${{ matrix.output }}/*.tar.gz
+            ${{ matrix.output }}/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30

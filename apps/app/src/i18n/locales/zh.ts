@@ -7,6 +7,7 @@
  */
 
 export default {
+  "session.admission_outcome_unknown": "没有收到可见答案。供应商已报告的 Token 仍会结算 RenCredit，请查看用量收据。",
   "app.compact_command_desc": "压缩此会话以减少上下文大小。",
   "app.error_audit_load": "加载审计日志失败。",
   "app.error_auth_failed": "认证失败",

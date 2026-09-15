@@ -1,0 +1,254 @@
+name: Voiceover V49 six real-device acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      guarded_commit:
+        description: Full PR #80 head commit contained in the candidate artifacts
+        required: true
+        type: string
+      candidate_run_id:
+        description: Successful candidate-build Actions run ID for the guarded commit
+        required: true
+        type: string
+      max_microcredits_per_device:
+        description: Maximum RenCredit microcredits each real device may capture
+        required: true
+        type: number
+        default: 50000
+  push:
+    branches:
+      - release/voiceover-v48-desktop
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  resolve-candidate:
+    name: Resolve the exact candidate build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    outputs:
+      run_id: ${{ steps.resolve.outputs.run_id }}
+    steps:
+      - name: Wait for the successful candidate build at this exact commit
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ inputs.guarded_commit || github.sha }}
+          INPUT_RUN_ID: ${{ inputs.candidate_run_id || '' }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || exit 1
+          if [[ -n "$INPUT_RUN_ID" ]]; then
+            [[ "$INPUT_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+            run_id="$INPUT_RUN_ID"
+          else
+            run_id=""
+            for attempt in $(seq 1 70); do
+              run_id="$(gh run list \
+                --repo "$GITHUB_REPOSITORY" \
+                --workflow build-voiceover-v49-candidates.yml \
+                --commit "$SOURCE_COMMIT" \
+                --limit 10 \
+                --json databaseId,headSha \
+                --jq '.[0].databaseId // empty')"
+              [[ -n "$run_id" ]] && break
+              sleep 30
+            done
+          fi
+          [[ "$run_id" =~ ^[0-9]+$ ]] || { echo "No candidate run found for $SOURCE_COMMIT" >&2; exit 1; }
+          for attempt in $(seq 1 70); do
+            state="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq '[.head_sha,.status,(.conclusion // "")]|@tsv')"
+            IFS=$'\t' read -r head_sha status conclusion <<< "$state"
+            test "$head_sha" = "$SOURCE_COMMIT" || { echo "Candidate run belongs to $head_sha" >&2; exit 1; }
+            if [[ "$status" == completed ]]; then
+              test "$conclusion" = success || { echo "Candidate run concluded $conclusion" >&2; exit 1; }
+              echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "Candidate run $run_id did not complete in time" >&2
+          exit 1
+
+  accept:
+    name: ${{ matrix.target }} on a physical test device
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - target: macos-arm64
+            runsOn: '["self-hosted","renwork-v49","macos","arm64"]'
+            os: macos
+            arch: arm64
+            artifact: RenWork-V49-macOS-Apple-Silicon
+          - target: macos-x64
+            runsOn: '["self-hosted","renwork-v49","macos","x64"]'
+            os: macos
+            arch: x64
+            artifact: RenWork-V49-macOS-Intel
+          - target: windows-x64
+            runsOn: '["self-hosted","renwork-v49","windows","x64"]'
+            os: windows
+            arch: x64
+            artifact: RenWork-V49-Windows-x64
+          - target: windows-server-2016-x64
+            runsOn: '["self-hosted","renwork-v49","windows-server-2016","x64"]'
+            os: windows-server-2016
+            arch: x64
+            artifact: RenWork-V49-Windows-Server-2016-Cloud-x64
+            cloudOnly: "1"
+          - target: linux-x64
+            runsOn: '["self-hosted","renwork-v49","linux","x64"]'
+            os: linux
+            arch: x64
+            artifact: RenWork-V49-Linux-x64
+          - target: linux-arm64
+            runsOn: '["self-hosted","renwork-v49","linux","arm64"]'
+            os: linux
+            arch: arm64
+            artifact: RenWork-V49-Linux-arm64
+    needs: resolve-candidate
+    runs-on: ${{ fromJSON(matrix.runsOn) }}
+    timeout-minutes: 45
+    env:
+      OPENWORK_EVAL_E2E_TESTS: "1"
+      OPENWORK_EVAL_DEN_API_URL: ${{ secrets.RENWORK_V49_DEN_API_URL }}
+      OPENWORK_EVAL_DEN_WEB_URL: ${{ secrets.RENWORK_V49_DEN_WEB_URL }}
+      OPENWORK_EVAL_DEMO_EMAIL: ${{ secrets.RENWORK_V49_TEST_EMAIL }}
+      OPENWORK_EVAL_DEMO_PASSWORD: ${{ secrets.RENWORK_V49_TEST_PASSWORD }}
+      OPENWORK_EVAL_DEN_ORG_ID: ${{ secrets.RENWORK_V49_ORG_ID }}
+      OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU: ${{ secrets.RENWORK_V49_NO_RESULT_MODEL_SKU }}
+      OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS: ${{ inputs.max_microcredits_per_device || vars.RENWORK_V49_MAX_MICROCREDITS || 50000 }}
+      OPENWORK_EVAL_SOURCE_COMMIT: ${{ inputs.guarded_commit || github.sha }}
+      OPENWORK_EVAL_DEVICE_TARGET_ID: ${{ matrix.target }}
+      OPENWORK_EVAL_DEVICE_OS: ${{ matrix.os }}
+      OPENWORK_EVAL_DEVICE_ARCH: ${{ matrix.arch }}
+      OPENWORK_EVAL_ARTIFACT_NAME: ${{ matrix.artifact }}
+      OPENWORK_EVAL_CLOUD_ONLY_FLEET: ${{ matrix.cloudOnly || '0' }}
+      OPENWORK_EVAL_DEVICE_EVIDENCE_PATH: ${{ github.workspace }}/v49-evidence/${{ matrix.target }}.json
+    steps:
+      - name: Fail closed before spending RenCredit
+        shell: bash
+        env:
+          GUARDED_COMMIT: ${{ inputs.guarded_commit || github.sha }}
+          CANDIDATE_RUN_ID: ${{ needs.resolve-candidate.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$GUARDED_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || exit 1
+          [[ "$CANDIDATE_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          test "$OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS" -gt 0
+          for name in OPENWORK_EVAL_DEN_API_URL OPENWORK_EVAL_DEN_WEB_URL OPENWORK_EVAL_DEMO_EMAIL OPENWORK_EVAL_DEMO_PASSWORD OPENWORK_EVAL_DEN_ORG_ID OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU; do
+            test -n "${!name:-}" || { echo "$name is not configured" >&2; exit 1; }
+          done
+      - name: Verify candidate run belongs to the guarded commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GUARDED_COMMIT: ${{ inputs.guarded_commit || github.sha }}
+          CANDIDATE_RUN_ID: ${{ needs.resolve-candidate.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_RUN_ID" --jq .head_sha)" = "$GUARDED_COMMIT"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_RUN_ID" --jq .conclusion)" = success
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.guarded_commit || github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.resolve-candidate.outputs.run_id }}
+          name: ${{ matrix.artifact }}
+          path: candidate
+      - name: Install candidate on macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          installer="$(find candidate -maxdepth 1 -type f -name '*.dmg' | head -1)"
+          test -n "$installer"
+          install_root="$RUNNER_TEMP/renwork-v49-installed"
+          mount_root="$RUNNER_TEMP/renwork-v49-mount"
+          rm -rf "$install_root" "$mount_root"
+          mkdir -p "$install_root" "$mount_root"
+          hdiutil attach "$installer" -nobrowse -mountpoint "$mount_root"
+          trap 'hdiutil detach "$mount_root" >/dev/null 2>&1 || true' EXIT
+          app_bundle="$(find "$mount_root" -maxdepth 1 -type d -name '*.app' | head -1)"
+          test -n "$app_bundle"
+          ditto "$app_bundle" "$install_root/RenWork.app"
+          hdiutil detach "$mount_root"
+          trap - EXIT
+          binary="$(find "$install_root/RenWork.app/Contents/MacOS" -type f -perm -111 | head -1)"
+          test -x "$binary"
+          echo "OPENWORK_EVAL_ELECTRON_BINARY=$binary" >> "$GITHUB_ENV"
+          echo "OPENWORK_EVAL_ARTIFACT_SHA256=$(shasum -a 256 "$installer" | awk '{print $1}')" >> "$GITHUB_ENV"
+          echo "OPENWORK_EVAL_DEVICE_OS_VERSION=$(sw_vers -productVersion)" >> "$GITHUB_ENV"
+          device_id="$(ioreg -rd1 -c IOPlatformExpertDevice | awk -F\" '/IOPlatformUUID/{print $(NF-1)}')"
+          test -n "$device_id"
+          echo "OPENWORK_EVAL_DEVICE_ID=$device_id" >> "$GITHUB_ENV"
+      - name: Install candidate on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem candidate -Filter *.exe | Select-Object -First 1
+          if (-not $installer) { throw 'Windows candidate installer is missing' }
+          $installRoot = Join-Path $env:RUNNER_TEMP 'renwork-v49-installed'
+          if (Test-Path $installRoot) { Remove-Item $installRoot -Recurse -Force }
+          New-Item -ItemType Directory -Path $installRoot | Out-Null
+          $process = Start-Process -FilePath $installer.FullName -ArgumentList '/S', "/D=$installRoot" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "RenWork installer exited with $($process.ExitCode)" }
+          $binary = Get-ChildItem $installRoot -Recurse -Filter 'RenWork*.exe' | Where-Object { $_.Name -notmatch 'Uninstall' } | Select-Object -First 1
+          if (-not $binary) { throw 'Installed RenWork executable is missing' }
+          "OPENWORK_EVAL_ELECTRON_BINARY=$($binary.FullName)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "OPENWORK_EVAL_ARTIFACT_SHA256=$((Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant())" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "OPENWORK_EVAL_DEVICE_OS_VERSION=$([Environment]::OSVersion.VersionString)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          $deviceId = (Get-CimInstance Win32_ComputerSystemProduct).UUID
+          if (-not $deviceId) { throw 'Hardware UUID is unavailable' }
+          "OPENWORK_EVAL_DEVICE_ID=$deviceId" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Install candidate on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          installer="$(find candidate -maxdepth 1 -type f -name '*.AppImage' | head -1)"
+          test -n "$installer"
+          install_root="$RUNNER_TEMP/renwork-v49-installed"
+          rm -rf "$install_root"
+          mkdir -p "$install_root"
+          binary="$install_root/RenWork.AppImage"
+          cp "$installer" "$binary"
+          chmod 755 "$binary"
+          test -x "$binary"
+          echo "OPENWORK_EVAL_ELECTRON_BINARY=$binary" >> "$GITHUB_ENV"
+          echo "OPENWORK_EVAL_ARTIFACT_SHA256=$(sha256sum "$installer" | awk '{print $1}')" >> "$GITHUB_ENV"
+          echo "OPENWORK_EVAL_DEVICE_OS_VERSION=$(uname -srv)" >> "$GITHUB_ENV"
+          device_id="$(cat /etc/machine-id)"
+          test -n "$device_id"
+          echo "OPENWORK_EVAL_DEVICE_ID=$device_id" >> "$GITHUB_ENV"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.4.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20.18.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Exercise installed UI against real Den
+        run: pnpm --dir evals exec vitest run --config vitest.config.ts --project pr specs/session-admission-no-result-recovery.e2e.test.ts
+      - name: Upload this physical device evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RenWork-V49-device-${{ matrix.target }}
+          path: |
+            v49-evidence/${{ matrix.target }}.json
+            evals/.results/**
+            evals/.artifacts/**
+            .openwork/evals/**
+          if-no-files-found: error
+          retention-days: 30

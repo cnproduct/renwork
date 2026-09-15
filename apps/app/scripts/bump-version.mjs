@@ -58,17 +58,21 @@ const targetVersion = async () => {
 };
 
 const updatePackageJson = async (nextVersion) => {
+  const rootPath = path.join(REPO_ROOT, "package.json");
   const uiPath = path.join(ROOT, "package.json");
   const tauriPath = path.join(REPO_ROOT, "apps", "desktop", "package.json");
   const serverPath = path.join(REPO_ROOT, "apps", "server", "package.json");
+  const rootData = await readJson(rootPath);
   const uiData = await readJson(uiPath);
   const tauriData = await readJson(tauriPath);
   const serverData = await readJson(serverPath);
+  rootData.version = nextVersion;
   uiData.version = nextVersion;
   tauriData.version = nextVersion;
 
   serverData.version = nextVersion;
   if (!isDryRun) {
+    await writeFile(rootPath, JSON.stringify(rootData, null, 2) + "\n");
     await writeFile(uiPath, JSON.stringify(uiData, null, 2) + "\n");
     await writeFile(tauriPath, JSON.stringify(tauriData, null, 2) + "\n");
     await writeFile(serverPath, JSON.stringify(serverData, null, 2) + "\n");
@@ -113,6 +117,7 @@ const main = async () => {
         version: nextVersion,
         dryRun: isDryRun,
         files: [
+          "package.json",
           "apps/app/package.json",
           "apps/desktop/package.json",
           "apps/server/package.json",

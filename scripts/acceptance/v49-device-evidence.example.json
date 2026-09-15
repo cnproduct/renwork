@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "voiceover": "V49",
+  "sourceCommit": "0000000000000000000000000000000000000000",
+  "observedAt": "2026-09-15T00:00:00.000Z",
+  "target": {
+    "id": "macos-arm64",
+    "os": "macos",
+    "osVersion": "15.6.1",
+    "arch": "arm64",
+    "deviceId": "redacted-real-device-id"
+  },
+  "artifact": {
+    "name": "RenWork-V49-macOS-Apple-Silicon.zip",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "executionChannel": "installed-renwork-ui",
+  "checks": {
+    "installed": true,
+    "launchedInstalledBinary": true,
+    "organizationLogin": true,
+    "authoritativeCatalogLoaded": true,
+    "modelSelected": true,
+    "modelCallCompleted": true,
+    "cloudOnlyRuntime": false
+  },
+  "den": {
+    "origin": "https://example.invalid",
+    "organizationId": "org_redacted",
+    "memberId": "member_redacted",
+    "catalogVersion": "catalog-redacted"
+  },
+  "modelSku": "renwork-example",
+  "rencredit": {
+    "reservationId": "reservation_redacted",
+    "receiptId": "reservation_redacted",
+    "status": "captured",
+    "reservedMicroCredits": 100,
+    "capturedMicroCredits": 10,
+    "releasedMicroCredits": 90,
+    "approvedMaxMicroCredits": 100,
+    "walletBeforeAvailable": 2000,
+    "walletAfterAvailable": 1990,
+    "walletBeforeReserved": 0,
+    "walletAfterReserved": 0,
+    "usage": {
+      "inputTokens": 8,
+      "outputTokens": 2,
+      "reasoningTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0
+    },
+    "ledgerEntryIds": ["ledger_reserve_redacted", "ledger_capture_redacted"]
+  },
+  "evidence": {
+    "install": "artifact://install-log",
+    "login": "artifact://login-screenshot",
+    "modelCatalog": "artifact://catalog-screenshot",
+    "receipt": "artifact://receipt-json-and-screenshot"
+  }
+}

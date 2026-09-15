@@ -1,9 +1,6 @@
 name: Release App
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       tag:
@@ -263,6 +260,7 @@ jobs:
       RELEASE_TAG: ${{ needs.resolve-release.outputs.release_tag }}
       MACOS_NOTARIZE: ${{ needs.resolve-release.outputs.notarize }}
       SIGN_WINDOWS: ${{ needs.resolve-release.outputs.sign_windows }}
+      DIST_DIR: ${{ matrix.dist_dir || 'apps/desktop/dist-electron' }}
       OPENWORK_DESKTOP_SENTRY_DSN: ${{ secrets.OPENWORK_DESKTOP_SENTRY_DSN || vars.OPENWORK_DESKTOP_SENTRY_DSN }}
       OPENWORK_DESKTOP_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.OPENWORK_DESKTOP_SENTRY_TRACES_SAMPLE_RATE || '0.01' }}
 
@@ -414,6 +412,16 @@ jobs:
             manifest_pattern: enterprise*.yml
             electron_args: "--win --arm64"
             target_triple: aarch64-pc-windows-msvc
+          - platform: windows-2022
+            os_type: windows
+            artifact: electron-server2016-cloud-windows-x64
+            builder_config: electron-builder.server2016-cloud.yml
+            asset_prefix: RenWork
+            manifest_pattern: server2016-cloud*.yml
+            electron_args: "--win --x64"
+            target_triple: x86_64-pc-windows-msvc
+            dist_dir: apps/desktop/dist-electron-server2016-cloud
+            skip_normalize: "true"
 
     steps:
       - name: Checkout
@@ -554,11 +562,11 @@ jobs:
       # electron-builder may still emit latest*.yml for a custom distribution.
       # Normalize each non-public feed so it cannot update into another flavor.
       - name: Normalize custom distribution updater manifests
-        if: matrix.asset_prefix != 'renwork'
+        if: matrix.skip_normalize != 'true' && matrix.asset_prefix != 'renwork'
         shell: bash
         run: |
           set -euo pipefail
-          cd apps/desktop/dist-electron
+          cd "$DIST_DIR"
           shopt -s nullglob
           channel="${{ matrix.asset_prefix }}"
           channel="${channel#renwork-}"
@@ -583,8 +591,8 @@ jobs:
         with:
           name: unsigned-${{ matrix.artifact }}
           path: |
-            apps/desktop/dist-electron/${{ matrix.asset_prefix }}-*
-            apps/desktop/dist-electron/${{ matrix.manifest_pattern }}
+            ${{ matrix.dist_dir || 'apps/desktop/dist-electron' }}/${{ matrix.asset_prefix }}-*
+            ${{ matrix.dist_dir || 'apps/desktop/dist-electron' }}/${{ matrix.manifest_pattern }}
           if-no-files-found: error
           retention-days: 1
 
@@ -596,9 +604,9 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          assets=(apps/desktop/dist-electron/${{ matrix.asset_prefix }}-*)
+          assets=("$DIST_DIR"/${{ matrix.asset_prefix }}-*)
           if [ ${#assets[@]} -eq 0 ]; then
-            echo "No Electron release assets found in apps/desktop/dist-electron" >&2
+            echo "No Electron release assets found in $DIST_DIR" >&2
             exit 1
           fi
           gh release upload "$RELEASE_TAG" "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
@@ -608,7 +616,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: apps/desktop/dist-electron/${{ matrix.manifest_pattern }}
+          path: ${{ matrix.dist_dir || 'apps/desktop/dist-electron' }}/${{ matrix.manifest_pattern }}
           if-no-files-found: error
 
   sign-and-publish-windows:
@@ -694,8 +702,8 @@ jobs:
           }
 
           $installers = Get-ChildItem "$env:RUNNER_TEMP/windows-artifacts" -Recurse -Filter "*.exe"
-          if ($installers.Count -ne 6) {
-            throw "Expected 6 unsigned Windows installers, found $($installers.Count)"
+          if ($installers.Count -ne 7) {
+            throw "Expected 7 unsigned Windows installers, found $($installers.Count)"
           }
 
       - name: Azure login with GitHub OIDC
@@ -722,8 +730,8 @@ jobs:
         shell: pwsh
         run: |
           $installers = Get-ChildItem "$env:RUNNER_TEMP/windows-artifacts" -Recurse -Filter "*.exe"
-          if ($installers.Count -ne 6) {
-            throw "Expected 6 signed Windows installers, found $($installers.Count)"
+          if ($installers.Count -ne 7) {
+            throw "Expected 7 signed Windows installers, found $($installers.Count)"
           }
 
           foreach ($installer in $installers) {
@@ -736,7 +744,7 @@ jobs:
 
       - name: Refresh signed installer blockmaps and manifests
         shell: bash
-        run: node scripts/release/refresh-signed-windows-artifacts.mjs "$RUNNER_TEMP/windows-artifacts" 6
+        run: node scripts/release/refresh-signed-windows-artifacts.mjs "$RUNNER_TEMP/windows-artifacts" 7
 
       - name: Publish signed Windows assets
         env:
