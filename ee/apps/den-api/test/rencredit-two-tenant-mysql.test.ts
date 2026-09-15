@@ -216,6 +216,35 @@ test("two tenants isolate balances, replay safely, release failures and serializ
     reservationId: firstA.reservation.id,
     expiresAt: new Date(Date.now() + 120_000),
   })).rejects.toThrow("RENCREDIT_RESERVATION_NOT_ACTIVE")
+  const reasoningOnlyA = await ledger.reserveInferenceCredits({
+    organizationId: organizationAId,
+    memberId: memberAId,
+    inferenceKeyId: inferenceKeyAId,
+    runId: "tenant-a-reasoning-only",
+    idempotencyKey: "tenant-a-reasoning-only-v47",
+    catalogVersion: "v47-test",
+    model,
+    route,
+    providerId: route.providerId,
+    billingMode: "token_metered",
+    estimatedUsage: zeroUsage,
+    reservedMicroCredits: 200_000,
+    expiresAt: new Date(Date.now() + 60_000),
+  })
+  await ledger.settleInferenceCredits({
+    reservationId: reasoningOnlyA.reservation.id,
+    usage: { ...zeroUsage, inputTokens: 18_000, reasoningTokens: 32_000 },
+    providerResponseId: "tenant-a-reasoning-usage",
+    accuracy: "reported",
+    hasResult: false,
+  })
+  await ledger.settleInferenceCredits({
+    reservationId: reasoningOnlyA.reservation.id,
+    usage: { ...zeroUsage, inputTokens: 100_000 },
+    providerResponseId: "tenant-a-reasoning-usage-replay",
+    accuracy: "reported",
+    hasResult: true,
+  })
   await ledger.settleInferenceCredits({
     reservationId: acceptedB[0]!.value.reservation.id,
     usage: { ...zeroUsage, inputTokens: 100_000 },
@@ -231,7 +260,7 @@ test("two tenants isolate balances, replay safely, release failures and serializ
     hasResult: true,
   })
 
-  expect(await ledger.getRenCreditWallet(organizationAId)).toMatchObject({ available_microcredits: 1_000_000, reserved_microcredits: 0 })
+  expect(await ledger.getRenCreditWallet(organizationAId)).toMatchObject({ available_microcredits: 950_000, reserved_microcredits: 0 })
   expect(await ledger.getRenCreditWallet(organizationBId)).toMatchObject({ available_microcredits: 900_000, reserved_microcredits: 0 })
 
   const [receiptsA, receiptsB, ledgerA, ledgerB] = await Promise.all([
@@ -240,8 +269,18 @@ test("two tenants isolate balances, replay safely, release failures and serializ
     ledger.listRenCreditLedger(organizationAId),
     ledger.listRenCreditLedger(organizationBId),
   ])
-  expect(receiptsA).toHaveLength(1)
-  expect(receiptsA[0]).toMatchObject({ run_id: "tenant-a-run", status: "released", captured_microcredits: 0, released_microcredits: 250_000 })
+  expect(receiptsA).toHaveLength(2)
+  expect(receiptsA.find((receipt) => receipt.run_id === "tenant-a-run")).toMatchObject({
+    status: "released",
+    captured_microcredits: 0,
+    released_microcredits: 250_000,
+  })
+  expect(receiptsA.find((receipt) => receipt.run_id === "tenant-a-reasoning-only")).toMatchObject({
+    status: "captured",
+    captured_microcredits: 50_000,
+    released_microcredits: 150_000,
+    has_result: false,
+  })
   expect(receiptsB).toHaveLength(1)
   expect(receiptsB[0]).toMatchObject({ status: "captured", captured_microcredits: 100_000, released_microcredits: 500_000 })
   expect(receiptsA.some((receipt) => receipt.run_id.startsWith("tenant-b"))).toBe(false)

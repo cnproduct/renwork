@@ -24,7 +24,8 @@ test("Voiceover V23 provides a free self-hosted cloud runtime without bypassing 
   expect(heartbeat).toContain('provider === "self_hosted"');
   expect(workflow).toContain("openwork-self-hosted-runner");
   expect(workflow).toContain("openwork-self-hosted-worker");
-  expect(gatewayTest).toContain("reserves before egress and releases every failed or empty result");
+  expect(gatewayTest).toContain("reserves before egress and releases failed requests without measured usage");
+  expect(gatewayTest).toContain("settleObservedUsageOrRelease");
   expect(gatewayTest).toContain("scopes idempotency and usage uniqueness by organization");
 
   evidence.fact(

@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { planInferenceSettlement } from "../src/rencredit-settlement-plan.js"
+import {
+  planInferenceSettlement,
+  shouldCaptureInferenceUsage,
+} from "../src/rencredit-settlement-plan.js"
+
+const zeroUsage = { inputTokens: 0, outputTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
 
 describe("RenCredit inference settlement plan", () => {
   test("captures inside the reservation and releases the unused balance", () => {
@@ -9,7 +14,7 @@ describe("RenCredit inference settlement plan", () => {
       walletVersion: 4,
       reservationReservedMicroCredits: 100,
       computedMicroCredits: 60,
-      hasResult: true,
+      captureUsage: true,
     })).toEqual({
       capturedMicroCredits: 60,
       capturedFromReservationMicroCredits: 60,
@@ -30,7 +35,7 @@ describe("RenCredit inference settlement plan", () => {
       walletVersion: 4,
       reservationReservedMicroCredits: 100,
       computedMicroCredits: 140,
-      hasResult: true,
+      captureUsage: true,
     })).toEqual({
       capturedMicroCredits: 140,
       capturedFromReservationMicroCredits: 100,
@@ -51,11 +56,44 @@ describe("RenCredit inference settlement plan", () => {
       walletVersion: 4,
       reservationReservedMicroCredits: 100,
       computedMicroCredits: 140,
-      hasResult: false,
+      captureUsage: false,
     })
     expect(plan.capturedMicroCredits).toBe(0)
     expect(plan.additionalChargeMicroCredits).toBe(0)
     expect(plan.releasedMicroCredits).toBe(100)
     expect(plan.availableBalanceAfterSettlement).toBe(1_000)
+  })
+
+  test("captures provider-reported reasoning tokens without visible content", () => {
+    expect(shouldCaptureInferenceUsage({
+      usage: { ...zeroUsage, inputTokens: 12, reasoningTokens: 32 },
+      accuracy: "reported",
+      hasResult: false,
+    })).toBe(true)
+  })
+
+  test("captures tokenizer-measured usage after a local runtime truncation", () => {
+    expect(shouldCaptureInferenceUsage({
+      usage: { ...zeroUsage, outputTokens: 8 },
+      accuracy: "tokenizer",
+      hasResult: false,
+    })).toBe(true)
+  })
+
+  test("releases when neither a result nor measured token use exists", () => {
+    expect(shouldCaptureInferenceUsage({ usage: zeroUsage, accuracy: "reported", hasResult: false })).toBe(false)
+    expect(shouldCaptureInferenceUsage({
+      usage: { ...zeroUsage, inputTokens: 100 },
+      accuracy: "estimated",
+      hasResult: false,
+    })).toBe(false)
+  })
+
+  test("captures an estimated response when user-visible content exists", () => {
+    expect(shouldCaptureInferenceUsage({
+      usage: { ...zeroUsage, inputTokens: 100 },
+      accuracy: "estimated",
+      hasResult: true,
+    })).toBe(true)
   })
 })

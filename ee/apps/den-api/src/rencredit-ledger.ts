@@ -12,7 +12,7 @@ import type { RenWorkAdminModel, RenWorkAdminModelRoute, RenWorkTokenUsage } fro
 import { calculateRenCreditMicroCharge } from "@openwork/rencredit-metering"
 import { createHash } from "node:crypto"
 import { db } from "./db.js"
-import { planInferenceSettlement } from "./rencredit-settlement-plan.js"
+import { planInferenceSettlement, shouldCaptureInferenceUsage } from "./rencredit-settlement-plan.js"
 
 type OrganizationId = typeof RenCreditWalletTable.$inferSelect.organization_id
 type MemberId = typeof InferenceKeyTable.$inferSelect.org_membership_id
@@ -592,7 +592,8 @@ export async function settleInferenceCredits(input: {
     if (!wallet) throw new Error("RENCREDIT_WALLET_UNAVAILABLE")
 
     const snapshot = reservation.pricing_snapshot as Pick<RenWorkAdminModel, "rates" | "priceMultiplierBps" | "promotion">
-    const computed = reservation.billing_mode === "free" || !input.hasResult
+    const captureUsage = shouldCaptureInferenceUsage(input)
+    const computed = reservation.billing_mode === "free" || !captureUsage
       ? 0
       : calculateRenCreditMicroCharge(input.usage, snapshot, reservation.created_at)
     const settlement = planInferenceSettlement({
@@ -601,12 +602,12 @@ export async function settleInferenceCredits(input: {
       walletVersion: wallet.version,
       reservationReservedMicroCredits: reservation.reserved_microcredits,
       computedMicroCredits: computed,
-      hasResult: input.hasResult,
+      captureUsage,
     })
     const captured = settlement.capturedMicroCredits
     const released = settlement.releasedMicroCredits
     const additionalCharge = settlement.additionalChargeMicroCredits
-    const nextStatus = input.hasResult ? "captured" as const : "released" as const
+    const nextStatus = captureUsage ? "captured" as const : "released" as const
     // Provider-reported usage is authoritative. Any amount above the estimate
     // is an explicit adjustment row; a negative balance remains visible debt
     // and blocks the next reservation instead of silently forgiving tokens.
@@ -614,7 +615,7 @@ export async function settleInferenceCredits(input: {
     const reserved = settlement.reservedBalanceAfter
     const version = settlement.finalWalletVersion
 
-    if (input.hasResult) {
+    if (captureUsage) {
       await tx.insert(RenCreditUsageEventTable).values({
         id: createDenTypeId("renCreditUsageEvent"),
         organization_id: reservation.organization_id,
@@ -649,7 +650,7 @@ export async function settleInferenceCredits(input: {
       id: createDenTypeId("renCreditLedgerEntry"),
       organization_id: reservation.organization_id,
       reservation_id: reservation.id,
-      entry_type: input.hasResult ? "capture" : "release",
+      entry_type: captureUsage ? "capture" : "release",
       idempotency_key: `${reservation.id}:settle`,
       amount_microcredits: settlement.capturedFromReservationMicroCredits,
       available_delta_microcredits: released,
@@ -657,10 +658,12 @@ export async function settleInferenceCredits(input: {
       available_balance_after: settlement.availableBalanceAfterCapture,
       reserved_balance_after: reserved,
       wallet_version_after: settlement.captureWalletVersion,
-      reason_code: input.hasResult ? "INFERENCE_TOKEN_CAPTURE" : "INFERENCE_NO_RESULT_RELEASE",
+      reason_code: captureUsage ? "INFERENCE_TOKEN_CAPTURE" : "INFERENCE_NO_RESULT_RELEASE",
       metadata: {
         providerResponseId: input.providerResponseId,
         usage: input.usage,
+        hasResult: input.hasResult,
+        captureReason: input.hasResult ? "result" : captureUsage ? "measured_token_consumption" : "no_result_or_usage",
         capturedFromReservationMicroCredits: settlement.capturedFromReservationMicroCredits,
         additionalChargeMicroCredits: additionalCharge,
       },

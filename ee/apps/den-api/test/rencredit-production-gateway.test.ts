@@ -33,11 +33,12 @@ describe("RenWork production inference gateway", () => {
     expect(gateway).toContain('headers.set("x-opencode-session", upstreamSessionId)')
   })
 
-  test("reserves before egress and releases every failed or empty result", () => {
+  test("reserves before egress and releases failed requests without measured usage", () => {
     expect(gateway.indexOf("reserveInferenceCredits({")).toBeLessThan(gateway.indexOf("await fetch(chatCompletionsUrl"))
     expect(gateway).toContain("UPSTREAM_NETWORK_ERROR")
     expect(gateway).toContain("UPSTREAM_EMPTY_STREAM")
-    expect(ledger).toContain('reason_code: input.hasResult ? "INFERENCE_TOKEN_CAPTURE" : "INFERENCE_NO_RESULT_RELEASE"')
+    expect(ledger).toContain('reason_code: captureUsage ? "INFERENCE_TOKEN_CAPTURE" : "INFERENCE_NO_RESULT_RELEASE"')
+    expect(ledger).toContain("shouldCaptureInferenceUsage(input)")
   })
 
   test("requests stream usage and hides the upstream model id", () => {
@@ -50,7 +51,8 @@ describe("RenWork production inference gateway", () => {
     expect(gateway).toContain("normalizeOpenAiStreamPayload")
     expect(gateway).toContain("Object.entries(choice.delta).filter(([, value]) => value !== null)")
     expect(gateway).toContain('controller.enqueue(new TextEncoder().encode("data: [DONE]\\n\\n"))')
-    expect(gateway).toContain('releaseOnce("CLIENT_ABORTED")')
+    expect(gateway).toContain('settleObservedUsageOrRelease("CLIENT_ABORTED")')
+    expect(gateway).toContain("usageReported && hasTokenConsumption(usage)")
     expect(gateway).not.toContain("async pull(controller)")
   })
 

@@ -1,3 +1,5 @@
+import type { RenWorkTokenUsage } from "@openwork/rencredit-metering"
+
 export type InferenceSettlementPlan = {
   capturedMicroCredits: number
   capturedFromReservationMicroCredits: number
@@ -8,6 +10,26 @@ export type InferenceSettlementPlan = {
   availableBalanceAfterSettlement: number
   captureWalletVersion: number
   finalWalletVersion: number
+}
+
+export function hasTokenConsumption(usage: RenWorkTokenUsage) {
+  return usage.inputTokens > 0
+    || usage.outputTokens > 0
+    || usage.reasoningTokens > 0
+    || usage.cacheReadTokens > 0
+    || usage.cacheWriteTokens > 0
+}
+
+export function shouldCaptureInferenceUsage(input: {
+  usage: RenWorkTokenUsage
+  accuracy: "reported" | "estimated" | "tokenizer"
+  hasResult: boolean
+}) {
+  // A visible result without a provider usage block is billed from the
+  // reservation estimate. A provider/tokenizer measurement is authoritative
+  // even when the response contains reasoning only or ends due to a length
+  // limit before user-visible content is emitted.
+  return input.hasResult || (input.accuracy !== "estimated" && hasTokenConsumption(input.usage))
 }
 
 function nonNegativeSafeInteger(value: number, field: string) {
@@ -25,7 +47,7 @@ export function planInferenceSettlement(input: {
   walletVersion: number
   reservationReservedMicroCredits: number
   computedMicroCredits: number
-  hasResult: boolean
+  captureUsage: boolean
 }): InferenceSettlementPlan {
   nonNegativeSafeInteger(input.walletReservedMicroCredits, "walletReservedMicroCredits")
   nonNegativeSafeInteger(input.walletVersion, "walletVersion")
@@ -36,7 +58,7 @@ export function planInferenceSettlement(input: {
     throw new Error("RENCREDIT_RESERVED_BALANCE_INVALID")
   }
 
-  const capturedMicroCredits = input.hasResult ? input.computedMicroCredits : 0
+  const capturedMicroCredits = input.captureUsage ? input.computedMicroCredits : 0
   const capturedFromReservationMicroCredits = Math.min(capturedMicroCredits, input.reservationReservedMicroCredits)
   const additionalChargeMicroCredits = capturedMicroCredits - capturedFromReservationMicroCredits
   const releasedMicroCredits = input.reservationReservedMicroCredits - capturedFromReservationMicroCredits
