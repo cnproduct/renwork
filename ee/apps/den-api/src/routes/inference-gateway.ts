@@ -19,7 +19,12 @@ import { parseOrganizationPlan } from "../entitlements.js"
 import { env } from "../env.js"
 import { publicRoute } from "../middleware/index.js"
 import { appLogger } from "../observability/logger.js"
-import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
+import {
+  modelAllowedForMember,
+  providerAssignmentAllowsModel,
+  readOrganizationModelPolicy,
+  resolveMemberMonthlyBudget,
+} from "../organization-model-policy.js"
 import { accessAllowsModel, resolveRenworkModelAccess } from "../renwork-access.js"
 import {
   authenticateInferenceKey,
@@ -268,16 +273,24 @@ export function registerInferenceGatewayRoutes<T extends { Variables: Record<str
     }
     const modelPolicy = readOrganizationModelPolicy(organization?.metadata)
     if (modelPolicy.allowedModelSkus && !modelPolicy.allowedModelSkus.includes(model.sku)) {
-      return c.json({ error: { code: "MODEL_NOT_ALLOWED_BY_ORGANIZATION", message: "This model is not enabled by the organization owner." } }, 403)
+      return c.json({ error: { code: "MODEL_NOT_ALLOWED_BY_ORGANIZATION", message: "This model is not enabled for the organization." } }, 403)
+    }
+    if (!modelAllowedForMember(modelPolicy, principal.memberId, model.sku)) {
+      return c.json({ error: { code: "MODEL_NOT_ALLOWED_FOR_MEMBER", message: "This model is not enabled for this organization member." } }, 403)
     }
 
     const providers = new Map(catalog.providers.map((provider) => [provider.id, provider]))
     const route = model.routes
       .filter((candidate) => isDenServerRoute(candidate, providers))
+      .filter((candidate) => providerAssignmentAllowsModel(modelPolicy, {
+        providerId: candidate.providerId,
+        modelSku: model.sku,
+        memberId: principal.memberId,
+      }))
       .sort((left, right) => left.priority - right.priority)[0]
     const provider = route ? providers.get(route.providerId) : null
     if (!route || !provider?.baseUrl) {
-      return c.json({ error: { code: "MODEL_ROUTE_UNAVAILABLE", message: "No healthy RenWork route is available for this model." } }, 503)
+      return c.json({ error: { code: "MODEL_PROVIDER_NOT_ASSIGNED", message: "A platform administrator must authorize a server provider for this member and model." } }, 403)
     }
     const credential = providerCredential(provider)
     if (provider.credentialRef && !credential) {

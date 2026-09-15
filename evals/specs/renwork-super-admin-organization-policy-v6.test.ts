@@ -10,9 +10,10 @@ test("V6 gives the platform super admin one cross-organization model governance 
   expect(panel).toContain("模型与额度策略");
   expect(dialog).toContain("模型白名单与默认模型");
   expect(dialog).toContain("组织 RenCredit 预算");
-  expect(dialog).toContain("成员月额度");
+  expect(dialog).toContain("成员额度与模型白名单");
+  expect(dialog).toContain("超级管理员供应商授权");
   expect(route.match(/adminRoute\(\)/g)?.length ?? 0).toBe(2);
-  expect(route).toContain("loadAvailableModels");
+  expect(route).toContain("loadAvailableCatalog");
   expect(route).toContain("loadActiveMembers");
 
   evidence.fact("Cross-organization governance is visible", "Every organization row opens one RenWork-branded model, budget, and member quota dialog.", true);

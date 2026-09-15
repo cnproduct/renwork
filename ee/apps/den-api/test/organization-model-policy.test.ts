@@ -1,9 +1,14 @@
 import { describe, expect, test } from "bun:test"
 import {
+  applyOrganizationOwnerModelPolicy,
   DEFAULT_ORGANIZATION_MODEL_POLICY,
   organizationModelPolicyInputSchema,
+  organizationOwnerModelPolicyInputSchema,
   readOrganizationModelPolicy,
+  modelAllowedForMember,
+  providerAssignmentAllowsModel,
   resolveMemberMonthlyBudget,
+  toOrganizationOwnerModelPolicy,
   writeOrganizationModelPolicy,
 } from "../src/organization-model-policy"
 
@@ -32,5 +37,87 @@ describe("organization model policy", () => {
     expect(resolveMemberMonthlyBudget(policy, "member_a")).toBe(5_000_000)
     expect(resolveMemberMonthlyBudget(policy, "member_b")).toBeNull()
     expect(resolveMemberMonthlyBudget(policy, "member_c")).toBeNull()
+  })
+
+  test("intersects member model permissions with active provider authorizations", () => {
+    const policy = {
+      ...DEFAULT_ORGANIZATION_MODEL_POLICY,
+      memberAllowedModelSkus: { member_a: ["renwork-code-kimi-k3"] },
+      providerAssignments: [{
+        id: "assignment_opencode_go",
+        providerId: "opencode-go-primary",
+        label: "OpenCode Go production authorization",
+        allowedModelSkus: ["renwork-code-kimi-k3"],
+        allowedMemberIds: ["member_a"],
+        startsAt: "2026-01-01T00:00:00.000Z",
+        expiresAt: "2027-01-01T00:00:00.000Z",
+        enabled: true,
+      }],
+    }
+
+    expect(modelAllowedForMember(policy, "member_a", "renwork-code-kimi-k3")).toBe(true)
+    expect(modelAllowedForMember(policy, "member_a", "renwork-standard")).toBe(false)
+    expect(providerAssignmentAllowsModel(policy, {
+      providerId: "opencode-go-primary",
+      modelSku: "renwork-code-kimi-k3",
+      memberId: "member_a",
+      now: new Date("2026-09-15T00:00:00.000Z"),
+    })).toBe(true)
+    expect(providerAssignmentAllowsModel(policy, {
+      providerId: "opencode-go-primary",
+      modelSku: "renwork-code-kimi-k3",
+      memberId: "member_b",
+      now: new Date("2026-09-15T00:00:00.000Z"),
+    })).toBe(false)
+  })
+
+  test("fails closed when an organization has no super-admin provider authorization", () => {
+    expect(providerAssignmentAllowsModel(DEFAULT_ORGANIZATION_MODEL_POLICY, {
+      providerId: "openrouter-primary",
+      modelSku: "renwork-standard",
+      memberId: "member_a",
+    })).toBe(false)
+  })
+
+  test("strips platform-admin routing from the organization Owner policy", () => {
+    const policy = {
+      ...DEFAULT_ORGANIZATION_MODEL_POLICY,
+      allowedModelSkus: ["renwork-code-kimi-k3"],
+      providerAssignments: [{
+        id: "assignment_opencode_go",
+        providerId: "opencode-go-primary",
+        label: "Server-only OpenCode Go",
+        allowedModelSkus: null,
+        allowedMemberIds: null,
+        startsAt: null,
+        expiresAt: null,
+        enabled: true,
+      }],
+    }
+
+    expect(toOrganizationOwnerModelPolicy(policy)).toEqual({
+      allowedModelSkus: ["renwork-code-kimi-k3"],
+      defaultModelSku: null,
+      dailyBudgetMicroCredits: null,
+      monthlyBudgetMicroCredits: null,
+      memberMonthlyBudgetMicroCredits: {},
+    })
+    expect(organizationOwnerModelPolicyInputSchema.parse({
+      ...toOrganizationOwnerModelPolicy(policy),
+      providerAssignments: [],
+      memberAllowedModelSkus: { attacker: ["renwork-code-kimi-k3"] },
+    })).toEqual(toOrganizationOwnerModelPolicy(policy))
+    expect(applyOrganizationOwnerModelPolicy(
+      policy,
+      organizationOwnerModelPolicyInputSchema.parse({
+        ...toOrganizationOwnerModelPolicy(policy),
+        allowedModelSkus: ["renwork-standard"],
+        providerAssignments: [],
+        memberAllowedModelSkus: {},
+      }),
+    )).toEqual({
+      ...policy,
+      allowedModelSkus: ["renwork-standard"],
+    })
   })
 })
