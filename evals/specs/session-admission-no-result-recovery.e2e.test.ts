@@ -283,7 +283,7 @@ async function writeHostedEvidence(input: {
   walletAfter: ReturnType<typeof wallet>;
   gatewayStatus: number;
 }) {
-  const outputPath = "evals/.results/voiceover-v49-real-den-no-result.json";
+  const outputPath = ".results/voiceover-v49-real-den-no-result.json";
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify({
     schemaVersion: 1,
