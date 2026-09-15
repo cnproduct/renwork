@@ -11,7 +11,12 @@ import { z } from "zod"
 import { parseOrganizationPlan } from "../../entitlements.js"
 import { orgRoleRoute } from "../../middleware/index.js"
 import { modelCatalogSchema, requestModelCatalog } from "../../model-catalog-service.js"
-import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../../organization-model-policy.js"
+import {
+  modelAllowedForMember,
+  providerAssignmentAllowsModel,
+  readOrganizationModelPolicy,
+  resolveMemberMonthlyBudget,
+} from "../../organization-model-policy.js"
 import { resolveRenworkModelAccess } from "../../renwork-access.js"
 import { forbiddenSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
 import type { OrgRouteVariables } from "./shared.js"
@@ -102,10 +107,23 @@ export function registerOrgModelCatalogRoutes<T extends { Variables: OrgRouteVar
         const policyModels = allowed
           ? publicCatalog.models.filter((model) => allowed.has(model.sku))
           : publicCatalog.models
+        const memberModels = policyModels.filter((model) => modelAllowedForMember(
+          policy,
+          organizationContext.currentMember.id,
+          model.sku,
+        ))
+        const providerModels = memberModels.filter((model) => {
+          const adminModel = parsed.data.models.find((candidate) => candidate.sku === model.sku)
+          return adminModel?.routes.some((route) => providerAssignmentAllowsModel(policy, {
+            providerId: route.providerId,
+            modelSku: model.sku,
+            memberId: organizationContext.currentMember.id,
+          })) ?? false
+        })
         const grantModels = access.allowedModelSkus ? new Set(access.allowedModelSkus) : null
         const models = grantModels
-          ? policyModels.filter((model) => grantModels.has(model.sku))
-          : policyModels
+          ? providerModels.filter((model) => grantModels.has(model.sku))
+          : providerModels
         const defaultModelSku = policy.defaultModelSku && models.some((model) => model.sku === policy.defaultModelSku)
           ? policy.defaultModelSku
           : models[0]?.sku ?? null

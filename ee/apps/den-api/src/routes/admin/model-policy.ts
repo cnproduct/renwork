@@ -37,7 +37,7 @@ async function loadActiveMembers(organizationId: typeof OrganizationTable.$infer
     .where(and(eq(MemberTable.organizationId, organizationId), isNull(MemberTable.removedAt)))
 }
 
-async function loadAvailableModels(metadata: Record<string, unknown> | null) {
+async function loadAvailableCatalog(metadata: Record<string, unknown> | null) {
   const upstream = await requestModelCatalog("/v1/admin/models/catalog").catch(() => null)
   if (!upstream?.configured || !upstream.response.ok) return null
   const parsed = modelCatalogSchema.safeParse(upstream.payload)
@@ -47,23 +47,44 @@ async function loadAvailableModels(metadata: Record<string, unknown> | null) {
   } catch {
     return null
   }
-  return toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(metadata).tier).models
+  const publicModels = toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(metadata).tier).models
+  const availableModelSkus = new Set(publicModels.map((model) => model.sku))
+  return {
+    models: publicModels.map((model) => ({
+      ...model,
+      providerIds: parsed.data.models
+        .find((candidate) => candidate.sku === model.sku)
+        ?.routes.filter((route) => route.enabled).map((route) => route.providerId) ?? [],
+    })),
+    providers: parsed.data.providers
+      .filter((provider) => provider.enabled)
+      .map((provider) => ({
+        id: provider.id,
+        displayName: provider.displayName,
+        health: provider.health,
+        modelSkus: parsed.data.models
+          .filter((model) => availableModelSkus.has(model.sku))
+          .filter((model) => model.routes.some((route) => route.enabled && route.providerId === provider.id))
+          .map((model) => model.sku),
+      })),
+  }
 }
 
 export function registerAdminOrganizationModelPolicyRoutes<T extends { Variables: AuthContextVariables }>(app: Hono<T>) {
   app.get("/v1/admin/organizations/:organizationId/model-policy", adminRoute(), async (c) => {
     const organization = await loadOrganization(c.req.param("organizationId"))
     if (!organization) return c.json({ error: "not_found", message: "Organization not found." }, 404)
-    const [members, availableModels] = await Promise.all([
+    const [members, availableCatalog] = await Promise.all([
       loadActiveMembers(organization.id),
-      loadAvailableModels(organization.metadata),
+      loadAvailableCatalog(organization.metadata),
     ])
     c.header("Cache-Control", "private, no-store")
     return c.json({
       organization: { id: organization.id, name: organization.name },
       policy: readOrganizationModelPolicy(organization.metadata),
-      availableModels: availableModels ?? [],
-      catalogAvailable: availableModels !== null,
+      availableModels: availableCatalog?.models ?? [],
+      availableProviders: availableCatalog?.providers ?? [],
+      catalogAvailable: availableCatalog !== null,
       members,
     })
   })
@@ -75,11 +96,49 @@ export function registerAdminOrganizationModelPolicyRoutes<T extends { Variables
     if (!body.success) {
       return c.json({ error: "invalid_request", message: body.error.issues[0]?.message ?? "Invalid organization model policy." }, 400)
     }
-    const activeMemberIds = new Set((await loadActiveMembers(organization.id)).map((member) => member.id))
-    const unknownMember = Object.keys(body.data.memberMonthlyBudgetMicroCredits)
+    const [members, availableCatalog] = await Promise.all([
+      loadActiveMembers(organization.id),
+      loadAvailableCatalog(organization.metadata),
+    ])
+    const activeMemberIds = new Set(members.map((member) => member.id))
+    const referencedMemberIds = new Set([
+      ...Object.keys(body.data.memberMonthlyBudgetMicroCredits),
+      ...Object.keys(body.data.memberAllowedModelSkus),
+      ...body.data.providerAssignments.flatMap((assignment) => assignment.allowedMemberIds ?? []),
+    ])
+    const unknownMember = [...referencedMemberIds]
       .find((memberId) => !isDenTypeId("member", memberId) || !activeMemberIds.has(memberId))
     if (unknownMember) {
-      return c.json({ error: "invalid_request", message: "A member quota references an unknown organization member." }, 400)
+      return c.json({ error: "invalid_request", message: "A member policy references an unknown organization member." }, 400)
+    }
+    if (availableCatalog) {
+      const availableModelSkus = new Set(availableCatalog.models.map((model) => model.sku))
+      const availableProviderIds = new Set(availableCatalog.providers.map((provider) => provider.id))
+      const referencedModelSkus = new Set([
+        ...(body.data.allowedModelSkus ?? []),
+        ...(body.data.defaultModelSku ? [body.data.defaultModelSku] : []),
+        ...Object.values(body.data.memberAllowedModelSkus).flatMap((modelSkus) => modelSkus ?? []),
+        ...body.data.providerAssignments.flatMap((assignment) => assignment.allowedModelSkus ?? []),
+      ])
+      if ([...referencedModelSkus].some((modelSku) => !availableModelSkus.has(modelSku))) {
+        return c.json({ error: "invalid_request", message: "A model policy references a model outside the current paid catalog." }, 400)
+      }
+      if (body.data.providerAssignments.some((assignment) => !availableProviderIds.has(assignment.providerId))) {
+        return c.json({ error: "invalid_request", message: "A provider authorization references an unavailable server provider." }, 400)
+      }
+      const providerModelSkus = new Map(
+        availableCatalog.providers.map((provider) => [provider.id, new Set(provider.modelSkus)]),
+      )
+      const assignmentWithInvalidModel = body.data.providerAssignments.find((assignment) => (
+        assignment.allowedModelSkus !== null &&
+        assignment.allowedModelSkus.some((modelSku) => !providerModelSkus.get(assignment.providerId)?.has(modelSku))
+      ))
+      if (assignmentWithInvalidModel) {
+        return c.json({
+          error: "invalid_request",
+          message: "A provider authorization references a model that is not routed through that provider.",
+        }, 400)
+      }
     }
     await db.update(OrganizationTable)
       .set({ metadata: writeOrganizationModelPolicy(organization.metadata, body.data) })

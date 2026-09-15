@@ -14,7 +14,7 @@ describe("Voiceover V13 release governance", () => {
 
     expect(catalog.match(/adminRoute\(\)/g)?.length).toBe(3)
     expect(runtime.match(/adminRoute\(\)/g)?.length).toBe(2)
-    expect(rencredit.match(/adminRoute\(\)/g)?.length).toBe(2)
+    expect(rencredit.match(/adminRoute\(\)/g)?.length).toBe(3)
     expect(rencredit).toContain('"/v1/admin/rencredit/settlements"')
     expect(rencredit).toContain("RenCreditReservationTable.provider_id")
     expect(rencredit).toContain("RenCreditLedgerEntryTable.entry_type")
