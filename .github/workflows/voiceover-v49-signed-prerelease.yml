@@ -1,0 +1,135 @@
+name: Voiceover V49 guarded merge and signed prerelease
+
+on:
+  workflow_dispatch:
+    inputs:
+      guarded_commit:
+        description: Exact PR #80 head commit accepted by every gate
+        required: true
+        type: string
+      real_den_run_id:
+        description: Successful V49 real-Den no-result workflow run ID
+        required: true
+        type: string
+      fleet_run_id:
+        description: Successful V49 six-real-device workflow run ID
+        required: true
+        type: string
+      tag:
+        description: Signed prerelease tag matching the package version
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  gate:
+    name: Refuse merge until every V49 proof is complete
+    runs-on: ubuntu-22.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GUARDED_COMMIT: ${{ inputs.guarded_commit }}
+      REAL_DEN_RUN_ID: ${{ inputs.real_den_run_id }}
+      FLEET_RUN_ID: ${{ inputs.fleet_run_id }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      APPLE_CODESIGN_CERT_P12_BASE64: ${{ secrets.APPLE_CODESIGN_CERT_P12_BASE64 }}
+      APPLE_CODESIGN_CERT_PASSWORD: ${{ secrets.APPLE_CODESIGN_CERT_PASSWORD }}
+      APPLE_NOTARY_API_KEY_P8_BASE64: ${{ secrets.APPLE_NOTARY_API_KEY_P8_BASE64 }}
+      APPLE_NOTARY_API_KEY_ID: ${{ secrets.APPLE_NOTARY_API_KEY_ID }}
+      APPLE_NOTARY_API_ISSUER_ID: ${{ secrets.APPLE_NOTARY_API_ISSUER_ID }}
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID || secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID || secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID || secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_ARTIFACT_SIGNING_ENDPOINT: ${{ vars.AZURE_ARTIFACT_SIGNING_ENDPOINT || secrets.AZURE_ARTIFACT_SIGNING_ENDPOINT }}
+      AZURE_ARTIFACT_SIGNING_ACCOUNT: ${{ vars.AZURE_ARTIFACT_SIGNING_ACCOUNT || secrets.AZURE_ARTIFACT_SIGNING_ACCOUNT }}
+      AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE: ${{ vars.AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE || secrets.AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE }}
+    steps:
+      - name: Fail closed on gate inputs and signing identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GUARDED_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || exit 1
+          [[ "$REAL_DEN_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          [[ "$FLEET_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          for name in APPLE_CODESIGN_CERT_P12_BASE64 APPLE_CODESIGN_CERT_PASSWORD APPLE_NOTARY_API_KEY_P8_BASE64 APPLE_NOTARY_API_KEY_ID APPLE_NOTARY_API_ISSUER_ID AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_ARTIFACT_SIGNING_ENDPOINT AZURE_ARTIFACT_SIGNING_ACCOUNT AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE; do
+            test -n "${!name:-}" || { echo "$name is not configured; no release was created" >&2; exit 1; }
+          done
+      - name: Checkout the guarded PR head
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.guarded_commit }}
+          fetch-depth: 0
+      - name: Verify real Den workflow used this exact commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$REAL_DEN_RUN_ID")"
+          test "$(jq -r .conclusion <<<"$run")" = success
+          test "$(jq -r .head_sha <<<"$run")" = "$GUARDED_COMMIT"
+          test "$(jq -r .path <<<"$run")" = ".github/workflows/voiceover-v49-real-den-no-result.yml"
+      - name: Verify six-device run used this exact commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          run="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$FLEET_RUN_ID")"
+          test "$(jq -r .conclusion <<<"$run")" = success
+          test "$(jq -r .head_sha <<<"$run")" = "$GUARDED_COMMIT"
+          test "$(jq -r .path <<<"$run")" = ".github/workflows/voiceover-v49-real-device-fleet.yml"
+      - name: Download all six physical-device evidence records
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.fleet_run_id }}
+          pattern: RenWork-V49-device-*
+          path: v49-fleet-download
+          merge-multiple: true
+      - name: Validate six real-device evidence records
+        shell: bash
+        run: node scripts/acceptance/validate-v49-fleet-evidence.mjs --dir v49-fleet-download/v49-evidence --commit "$GUARDED_COMMIT" --max-age-hours 168
+      - name: Verify package version matches the prerelease tag
+        shell: bash
+        run: node scripts/release/verify-tag.mjs --tag "$RELEASE_TAG"
+      - name: Merge PR #80 after every acceptance gate passed
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr="$(gh pr view 80 --repo "$GITHUB_REPOSITORY" --json state,headRefOid)"
+          test "$(jq -r .state <<<"$pr")" = OPEN
+          test "$(jq -r .headRefOid <<<"$pr")" = "$GUARDED_COMMIT"
+          gh pr merge 80 --repo "$GITHUB_REPOSITORY" --merge
+      - name: Verify PR #80 is merged at this exact commit
+        id: pr
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr="$(gh pr view 80 --repo "$GITHUB_REPOSITORY" --json state,headRefOid,mergeCommit)"
+          test "$(jq -r .state <<<"$pr")" = MERGED
+          test "$(jq -r .headRefOid <<<"$pr")" = "$GUARDED_COMMIT"
+          merge_commit="$(jq -r .mergeCommit.oid <<<"$pr")"
+          [[ "$merge_commit" =~ ^[0-9a-fA-F]{40}$ ]]
+          echo "merge_commit=$merge_commit" >> "$GITHUB_OUTPUT"
+      - name: Create guarded tag and start signed prerelease pipeline
+        shell: bash
+        env:
+          MERGE_COMMIT: ${{ steps.pr.outputs.merge_commit }}
+        run: |
+          set -euo pipefail
+          git fetch origin "$MERGE_COMMIT"
+          git tag -a "$RELEASE_TAG" "$MERGE_COMMIT" -m "RenWork $RELEASE_TAG signed prerelease"
+          git push origin "$RELEASE_TAG"
+          gh workflow run release-macos-aarch64.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$RELEASE_TAG" \
+            -f tag="$RELEASE_TAG" \
+            -f release_name="RenWork $RELEASE_TAG prerelease" \
+            -f draft=false \
+            -f prerelease=true \
+            -f notarize=true \
+            -f build_electron=true \
+            -f sign_windows=true \
+            -f publish_npm=false \
+            -f publish_daytona_snapshot=false

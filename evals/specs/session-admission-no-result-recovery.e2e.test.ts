@@ -1,259 +1,389 @@
-import { createServer } from "node:http";
-import { expect, onTestFinished } from "vitest";
-import { control, createAndSelectWorkspace, evalIn, selectModel, waitFor, waitForText } from "@openwork/behaviors";
-import { screenshot, validate } from "@openwork/fraimz";
+import { expect } from "vitest";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import {
+  denFetch,
+  evalIn,
+  readAvailableModels,
+  selectModel,
+  sendComposerMessage,
+  signInDesktopAs,
+  waitFor,
+} from "@openwork/behaviors";
+import type { DenSession } from "@openwork/behaviors";
+import { screenshot } from "@openwork/fraimz";
 import { desktop } from "@openwork/hosts";
-import { needs, test } from "@openwork/testkit";
+import { needs, server, test, unmetNeeds } from "@openwork/testkit";
+import type { Den } from "@openwork/testkit";
+import type { Place } from "@openwork/testkit";
+import type { NeedsSpec } from "@openwork/testkit";
 
-const providerId = "admission-no-result-mock";
-const modelId = "admission-no-result-model";
-const prompt = "Run the admission no result reproduction task";
-const resumedReply = "admission recovery proof reply";
-// First sentence of the interrupted-task recovery prompt sent by Resume.
-const recoveryPromptMarker = "Continue the interrupted task from the current state.";
-const e2eTestsEnabled = process.env.OPENWORK_EVAL_E2E_TESTS === "1";
-const title = e2eTestsEnabled
-  ? "accepted admission that goes idle with no assistant result shows a reload-safe recovery card whose Resume admits exactly one prompt"
-  : "session admission no-result recovery skipped — needs: set OPENWORK_EVAL_E2E_TESTS=1";
+/**
+ * LIVE RELEASE GATE — no local provider, no mock Den, no BYOK fallback.
+ *
+ * The configured Den test tenant owns a dedicated model route that returns no
+ * visible assistant text while still reporting provider Token usage. This spec
+ * signs a fresh packaged/source desktop into that tenant, runs the model, and
+ * proves the durable reserve -> capture ledger path. A missing environment
+ * input is a skip in the broad stack suite, but the dedicated V49 workflow
+ * performs a fail-closed preflight before it invokes this file.
+ */
 
-const cardExpression = (present: boolean) => `(() => {
-  const card = document.querySelector('[data-testid="admission-outcome-unknown"]');
-  return ${present ? "Boolean(card)" : "!card"};
-})()`;
+const requirements: NeedsSpec = {
+  env: [
+    "OPENWORK_EVAL_DEN_API_URL",
+    "OPENWORK_EVAL_DEN_WEB_URL",
+    "OPENWORK_EVAL_DEMO_EMAIL",
+    "OPENWORK_EVAL_DEMO_PASSWORD",
+    "OPENWORK_EVAL_DEN_ORG_ID",
+    "OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU",
+    "OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS",
+  ],
+  optIn: ["OPENWORK_EVAL_E2E_TESTS"],
+};
+const missingRequirements = unmetNeeds(requirements, process.env);
+const title = missingRequirements.length > 0
+  ? `real Den no-result settlement skipped — needs: ${missingRequirements.join(", ")}`
+  : "a real Den tenant captures provider-reported Token usage when the installed desktop receives no visible result";
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+const REQUEST_TIMEOUT_MS = 30_000;
+const TERMINAL_RECEIPT_TIMEOUT_MS = 180_000;
 
-test.skipIf(!e2eTestsEnabled)(title, { timeout: 600_000 }, async ({ evidence }) => {
-  needs({ optIn: ["OPENWORK_EVAL_E2E_TESTS"] });
+type JsonRecord = Record<string, unknown>;
 
-  // The completion for the reproduction prompt returns an SSE stream with no
-  // visible assistant content (whitespace only), reproducing "accepted, then
-  // idle, but no assistant result". Every other completion — title
-  // generation and the post-Resume turn (whose conversation contains the
-  // recovery prompt) — answers normally so Resume can finish the task.
-  const mock = createServer((request, response) => {
-    const url = request.url ?? "";
-    if (request.method === "GET" && url.startsWith("/v1/models")) {
-      response.writeHead(200, { "content-type": "application/json" });
-      response.end(JSON.stringify({ object: "list", data: [{ id: modelId, object: "model" }] }));
-      return;
-    }
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
-    if (request.method === "POST" && (url === "/v1/chat/completions" || url === "/chat/completions")) {
-      let body = "";
-      request.setEncoding("utf8");
-      request.on("data", (chunk: string) => { body += chunk; });
-      request.on("end", () => {
-        const empty = body.includes(prompt) && !body.includes(recoveryPromptMarker);
-        const chunks = [
-          { id: "chatcmpl-admission-no-result", object: "chat.completion.chunk", choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }] },
-          { id: "chatcmpl-admission-no-result", object: "chat.completion.chunk", choices: [{ index: 0, delta: { content: empty ? " " : resumedReply }, finish_reason: null }] },
-          { id: "chatcmpl-admission-no-result", object: "chat.completion.chunk", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] },
-        ];
-        response.writeHead(200, {
-          "content-type": "text/event-stream",
-          "cache-control": "no-cache",
-          connection: "keep-alive",
-        });
-        for (const chunk of chunks) response.write(`data: ${JSON.stringify(chunk)}\n\n`);
-        response.write("data: [DONE]\n\n");
-        response.end();
-      });
-      return;
-    }
+function auth(session: DenSession, organizationId: string): Record<string, string> {
+  return {
+    authorization: `Bearer ${session.token}`,
+    "x-openwork-org-id": organizationId,
+  };
+}
 
-    response.writeHead(404, { "content-type": "application/json" });
-    response.end(JSON.stringify({ error: { message: "not found" } }));
+async function orgRequest(session: DenSession, organizationId: string, path: string) {
+  const result = await denFetch(session, path, {
+    headers: auth(session, organizationId),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
-  await new Promise<void>((resolve, reject) => {
-    mock.once("error", reject);
-    mock.listen(0, "127.0.0.1", resolve);
-  });
-  onTestFinished(async () => {
-    await new Promise<void>((resolve, reject) => mock.close((error) => error ? reject(error) : resolve()));
-  });
-  const address = mock.address();
-  if (!address || typeof address === "string") throw new Error("Mock provider did not bind a TCP port.");
-  const baseUrl = `http://127.0.0.1:${address.port}/v1`;
+  if (!result.response.ok) {
+    throw new Error(`${path} failed: HTTP ${result.response.status} ${result.text.slice(0, 500)}`);
+  }
+  return result.body;
+}
 
-  // Blank ambient provider keys so the run cannot fall back to a real model:
-  // this reproduction depends on the mock provider producing no visible
-  // assistant result.
-  await using app = await desktop({
-    name: "admission-no-result",
-    env: {
-      ANTHROPIC_API_KEY: "",
-      OPENAI_API_KEY: "",
-      OPENROUTER_API_KEY: "",
-      GOOGLE_GENERATIVE_AI_API_KEY: "",
-      OPENWORK_API_KEY: "",
-      OPENWORK_INFERENCE_BASE_URL: "",
+function wallet(value: unknown) {
+  const row = isRecord(value) && isRecord(value.wallet) ? value.wallet : null;
+  const available = row?.available_microcredits;
+  const reserved = row?.reserved_microcredits;
+  const version = row?.version;
+  if (!row || typeof row.organization_id !== "string"
+    || typeof available !== "number" || !Number.isSafeInteger(available)
+    || typeof reserved !== "number" || !Number.isSafeInteger(reserved)
+    || typeof version !== "number" || !Number.isSafeInteger(version)) {
+    throw new Error(`Invalid RenCredit wallet payload: ${JSON.stringify(value).slice(0, 500)}`);
+  }
+  return { organizationId: row.organization_id, available, reserved, version };
+}
+
+function receipts(value: unknown): JsonRecord[] {
+  if (!isRecord(value) || !Array.isArray(value.receipts)) {
+    throw new Error(`Invalid RenCredit receipts payload: ${JSON.stringify(value).slice(0, 500)}`);
+  }
+  return value.receipts.filter(isRecord);
+}
+
+function ledger(value: unknown): JsonRecord[] {
+  if (!isRecord(value) || !Array.isArray(value.entries)) {
+    throw new Error(`Invalid RenCredit ledger payload: ${JSON.stringify(value).slice(0, 500)}`);
+  }
+  return value.entries.filter(isRecord);
+}
+
+function usageTotal(receipt: JsonRecord): number {
+  const usage = isRecord(receipt.actual_usage) ? receipt.actual_usage : null;
+  if (!usage) return 0;
+  return ["inputTokens", "outputTokens", "reasoningTokens", "cacheReadTokens", "cacheWriteTokens"]
+    .reduce((sum, key) => sum + (typeof usage[key] === "number" ? usage[key] : 0), 0);
+}
+
+function requiredEnv(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required when writing V49 real-device evidence.`);
+  return value;
+}
+
+function integerField(row: JsonRecord, key: string): number {
+  const value = row[key];
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    throw new Error(`Expected integer ${key} in ${JSON.stringify(row).slice(0, 500)}`);
+  }
+  return value;
+}
+
+async function writeDeviceEvidence(input: {
+  outputPath: string;
+  organizationId: string;
+  membership: JsonRecord;
+  modelSku: string;
+  catalog: JsonRecord;
+  receipt: JsonRecord;
+  ledgerRows: JsonRecord[];
+  walletBefore: ReturnType<typeof wallet>;
+  walletAfter: ReturnType<typeof wallet>;
+  loginShotHash: string;
+  catalogShotHash: string;
+  receiptShotHash: string;
+  maxSpend: number;
+}) {
+  const usage = isRecord(input.receipt.actual_usage) ? input.receipt.actual_usage : {};
+  const correlated = input.ledgerRows.filter((entry) => entry.reservation_id === input.receipt.id);
+  const payload = {
+    schemaVersion: 1,
+    voiceover: "V49",
+    sourceCommit: requiredEnv("OPENWORK_EVAL_SOURCE_COMMIT"),
+    observedAt: new Date().toISOString(),
+    target: {
+      id: requiredEnv("OPENWORK_EVAL_DEVICE_TARGET_ID"),
+      os: requiredEnv("OPENWORK_EVAL_DEVICE_OS"),
+      osVersion: requiredEnv("OPENWORK_EVAL_DEVICE_OS_VERSION"),
+      arch: requiredEnv("OPENWORK_EVAL_DEVICE_ARCH"),
+      deviceId: requiredEnv("OPENWORK_EVAL_DEVICE_ID"),
+    },
+    artifact: {
+      name: requiredEnv("OPENWORK_EVAL_ARTIFACT_NAME"),
+      sha256: requiredEnv("OPENWORK_EVAL_ARTIFACT_SHA256"),
+    },
+    executionChannel: "installed-renwork-ui",
+    checks: {
+      installed: true,
+      launchedInstalledBinary: true,
+      organizationLogin: true,
+      authoritativeCatalogLoaded: true,
+      modelSelected: true,
+      modelCallCompleted: true,
+      cloudOnlyRuntime: process.env.OPENWORK_EVAL_CLOUD_ONLY_FLEET === "1",
+    },
+    den: {
+      origin: requiredEnv("OPENWORK_EVAL_DEN_API_URL"),
+      organizationId: input.organizationId,
+      memberId: String(input.membership.orgMemberId ?? input.membership.membershipId ?? ""),
+      catalogVersion: String(input.catalog.version ?? ""),
+    },
+    modelSku: input.modelSku,
+    rencredit: {
+      reservationId: String(input.receipt.id ?? ""),
+      receiptId: String(input.receipt.id ?? ""),
+      status: input.receipt.status,
+      reservedMicroCredits: integerField(input.receipt, "reserved_microcredits"),
+      capturedMicroCredits: integerField(input.receipt, "captured_microcredits"),
+      releasedMicroCredits: integerField(input.receipt, "released_microcredits"),
+      approvedMaxMicroCredits: input.maxSpend,
+      walletBeforeAvailable: input.walletBefore.available,
+      walletAfterAvailable: input.walletAfter.available,
+      walletBeforeReserved: input.walletBefore.reserved,
+      walletAfterReserved: input.walletAfter.reserved,
+      usage: {
+        inputTokens: Number(usage.inputTokens ?? 0),
+        outputTokens: Number(usage.outputTokens ?? 0),
+        reasoningTokens: Number(usage.reasoningTokens ?? 0),
+        cacheReadTokens: Number(usage.cacheReadTokens ?? 0),
+        cacheWriteTokens: Number(usage.cacheWriteTokens ?? 0),
+      },
+      ledgerEntryIds: correlated.map((entry) => String(entry.id ?? "")).filter(Boolean),
+    },
+    evidence: {
+      install: `sha256:${requiredEnv("OPENWORK_EVAL_ARTIFACT_SHA256")}`,
+      login: `sha256:${input.loginShotHash}`,
+      modelCatalog: `sha256:${input.catalogShotHash}`,
+      receipt: `sha256:${input.receiptShotHash}`,
+    },
+  };
+  await mkdir(dirname(input.outputPath), { recursive: true });
+  await writeFile(input.outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+async function waitForNewTerminalReceipt(input: {
+  session: DenSession;
+  organizationId: string;
+  beforeIds: Set<string>;
+  modelSku: string;
+}): Promise<JsonRecord> {
+  const deadline = Date.now() + TERMINAL_RECEIPT_TIMEOUT_MS;
+  let last: JsonRecord[] = [];
+  while (Date.now() < deadline) {
+    last = receipts(await orgRequest(input.session, input.organizationId, "/v1/rencredit/receipts?limit=50"));
+    const match = last.find((receipt) => {
+      const id = typeof receipt.id === "string" ? receipt.id : "";
+      return id && !input.beforeIds.has(id)
+        && receipt.model_sku === input.modelSku
+        && (receipt.status === "captured" || receipt.status === "released");
+    });
+    if (match) return match;
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  throw new Error(`No new terminal receipt for ${input.modelSku}; last receipts: ${JSON.stringify(last).slice(0, 2_000)}`);
+}
+
+async function launchRealDenDesktop(den: Den, place: Place, organizationId: string) {
+  const activate = await denFetch(den.admin, "/v1/me/active-organization", {
+    method: "POST",
+    headers: { authorization: `Bearer ${den.admin.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ organizationId }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!activate.response.ok) {
+    throw new Error(`Could not activate ${organizationId}: HTTP ${activate.response.status} ${activate.text.slice(0, 500)}`);
+  }
+
+  const surface = await desktop({
+    name: `v49-real-den-${process.env.OPENWORK_EVAL_DEVICE_TARGET_ID?.trim() || "functional"}`,
+    host: place.host(),
+    bootstrap: {
+      baseUrl: den.ref.webUrl,
+      apiBaseUrl: den.ref.webUrl,
+      requireSignin: true,
     },
   });
-  const workspace = await createAndSelectWorkspace(app, {
-    path: `/tmp/openwork-admission-no-result-${Date.now()}`,
-  });
-
-  const configured = await evalIn(app, `(async () => {
-    const port = localStorage.getItem("openwork.server.port");
-    const token = localStorage.getItem("openwork.server.token");
-    if (!port || !token) return "missing local server credentials";
-    const request = async (path, init) => {
-      const response = await fetch("http://127.0.0.1:" + port + path, {
-        ...init,
-        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-      });
-      if (!response.ok) return path + " failed: " + response.status + " " + (await response.text()).slice(0, 500);
-      return "ok";
-    };
-    const workspaceId = ${JSON.stringify(workspace.workspaceId)};
-    const patched = await request("/workspace/" + encodeURIComponent(workspaceId) + "/config", {
-      method: "PATCH",
-      body: JSON.stringify({
-        opencode: {
-          provider: {
-            [${JSON.stringify(providerId)}]: {
-              npm: "@ai-sdk/openai-compatible",
-              name: "Admission no result mock",
-              options: { baseURL: ${JSON.stringify(baseUrl)}, apiKey: "sk-admission-no-result" },
-              models: {
-                [${JSON.stringify(modelId)}]: { name: "Admission no result model" },
-              },
-            },
-          },
-        },
-      }),
-    });
-    if (patched !== "ok") return patched;
-    const reloaded = await request("/workspace/" + encodeURIComponent(workspaceId) + "/engine/reload", { method: "POST" });
-    if (reloaded !== "ok") return reloaded;
-    const raw = localStorage.getItem("openwork.preferences");
-    let preferences = {};
-    try { preferences = raw ? JSON.parse(raw) : {}; } catch { preferences = {}; }
-    if (!preferences || typeof preferences !== "object" || Array.isArray(preferences)) preferences = {};
-    localStorage.setItem("openwork.preferences", JSON.stringify({
-      ...preferences,
-      defaultModel: { providerID: ${JSON.stringify(providerId)}, modelID: ${JSON.stringify(modelId)} },
-      modelVariant: null,
-      providerStepCompleted: true,
-    }));
-    localStorage.setItem("openwork.defaultModel", ${JSON.stringify(`${providerId}/${modelId}`)});
-    localStorage.removeItem("openwork.sessionModels." + workspaceId);
-    return "ok";
-  })()`, { awaitPromise: true, timeoutMs: 30_000 });
-  expect(configured).toBe("ok");
-
-  await control(app, "session.create_task");
-  await waitFor(app, `window.__openworkControl.listActions().some((action) => action.id === "composer.set_text" && !action.disabled)`, {
-    timeoutMs: 30_000,
-    label: "composer text action enabled",
-  });
-  // Pin the session to the mock model through the picker: ambient free models
-  // can otherwise win the default-model resolution and answer for real.
-  const pinned = await selectModel(app, "Admission no result model");
-  expect(pinned.selected, `mock model not selected: ${JSON.stringify(pinned)}`).toBe(true);
-  await control(app, "composer.set_text", { text: prompt });
-  await waitFor(app, `window.__openworkControl.listActions().some((action) => action.id === "composer.send" && !action.disabled)`, {
-    timeoutMs: 30_000,
-    label: "composer send action enabled",
-  });
-  const admittedAt = Date.now();
-  await control(app, "composer.send");
-
-  // Admission accepted: the user message was created and is rendered.
-  await waitForText(app, prompt, { timeoutMs: 60_000 });
-  evidence.fact(
-    "The session, admission, and user message were created",
-    "After composer.send the prompt text was rendered as a user message in the new session's transcript.",
-    true,
-  );
-
-  // The run goes idle with no assistant result (whitespace-only completion).
-  // The terminal invariant must produce an actionable recovery card instead
-  // of silently clearing the wait state.
-  await waitFor(app, cardExpression(true), {
-    timeoutMs: 60_000,
-    label: "admission outcome recovery card appeared after idle with no assistant result",
-  });
-  const cardShownAfterMs = Date.now() - admittedAt;
-  const assistantReplyVisible = await evalIn(app, `document.body.innerText.includes(${JSON.stringify(resumedReply)})`);
-  expect(assistantReplyVisible, "no assistant reply must be visible before resume").toBe(false);
-  evidence.fact(
-    "Idle without an assistant result surfaces an actionable recovery card",
-    `The session reached idle with no visible assistant output and the accepted-but-outcome-unknown recovery card appeared ${Math.round(cardShownAfterMs / 100) / 10}s after admission, instead of silently clearing the wait state.`,
-    true,
-  );
-  {
-    const shot = await screenshot(app);
-    const seen = await validate(shot, [
-      `The user's message '${prompt}' is visible in the conversation with no assistant reply below it`,
-      "A status line saying the task was accepted but no result arrived is visible with a Resume action",
-      "No crash or blank screen is visible",
-    ]);
-    expect(seen.ok, seen.why).toBe(true);
-  }
-
-  // Reload before resuming: the recovery information must survive because it
-  // derives from the server-persisted transcript, not component memory.
-  const previousTimeOrigin = await evalIn(app, "performance.timeOrigin");
-  expect(typeof previousTimeOrigin).toBe("number");
-  await evalIn(app, "location.reload(); true").catch(() => undefined);
-  await waitFor(app, `performance.timeOrigin !== ${JSON.stringify(previousTimeOrigin)}`, {
-    timeoutMs: 30_000,
-    label: "renderer reloaded",
-  });
-  await waitForText(app, prompt, { timeoutMs: 60_000 });
-  await waitFor(app, cardExpression(true), {
-    timeoutMs: 60_000,
-    label: "recovery card re-derived after reload",
-  });
-  evidence.fact(
-    "The recovery state survives a reload before resuming",
-    "After location.reload() the rehydrated transcript re-derived the same accepted-but-outcome-unknown recovery card for the unanswered user message.",
-    true,
-  );
-
-  // Rapid double click on Resume: the single-flight guard must admit exactly
-  // one recovery prompt.
-  const clicked = await evalIn(app, `(() => {
-    const button = document.querySelector('[data-testid="admission-outcome-resume"]');
-    if (!button) return "missing resume button";
-    button.click();
-    button.click();
-    return "ok";
-  })()`);
-  expect(clicked).toBe("ok");
-
-  await waitForText(app, resumedReply, { timeoutMs: 120_000 });
-  await waitFor(app, cardExpression(false), {
-    timeoutMs: 30_000,
-    label: "recovery card cleared after assistant output arrived",
-  });
-  await sleep(2_000);
-  const recoveryPromptCount = await evalIn(app, `(() => {
-    const text = document.body.innerText;
-    let count = 0;
-    let index = text.indexOf(${JSON.stringify(recoveryPromptMarker)});
-    while (index !== -1) {
-      count += 1;
-      index = text.indexOf(${JSON.stringify(recoveryPromptMarker)}, index + 1);
+  try {
+    await signInDesktopAs(surface, den.ref, den.admin);
+    const deadline = Date.now() + 180_000;
+    while (Date.now() < deadline) {
+      const ready = await evalIn(surface, `(() => {
+        const labels = [...document.querySelectorAll("button")]
+          .filter((button) => !button.disabled)
+          .map((button) => (button.textContent ?? "").trim());
+        if (labels.some((label) => ["Run task", "运行任务"].includes(label))) return "ready";
+        const candidate = [
+          "Continue with organization", "Continue to workspace",
+          "Continue without OpenWork Models", "Continue", "继续",
+        ].find((label) => labels.includes(label));
+        if (candidate) {
+          const button = [...document.querySelectorAll("button")]
+            .find((entry) => (entry.textContent ?? "").trim() === candidate && !entry.disabled);
+          button?.click();
+          return "advanced";
+        }
+        return "waiting";
+      })()`);
+      if (ready === "ready") return surface;
+      await new Promise((resolve) => setTimeout(resolve, 750));
     }
-    return count;
-  })()`);
-  expect(recoveryPromptCount, "exactly one recovery prompt admitted for two rapid clicks").toBe(1);
+    throw new Error("The installed Den-only desktop did not reach its cloud task UI within 180 seconds.");
+  } catch (error) {
+    await surface[Symbol.asyncDispose]();
+    throw error;
+  }
+}
+
+test.skipIf(missingRequirements.length > 0)(title, { timeout: 600_000 }, async ({ evidence, place }) => {
+  needs(requirements);
+
+  const organizationId = process.env.OPENWORK_EVAL_DEN_ORG_ID!.trim();
+  const modelSku = process.env.OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU!.trim();
+  const maxSpend = Number(process.env.OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS);
+  if (!organizationId || !modelSku || !Number.isSafeInteger(maxSpend) || maxSpend <= 0) {
+    throw new Error("The organization, model SKU, and positive integer RenCredit spend cap must be explicit.");
+  }
+
+  await using den = await server({ place });
+  const orgs = await denFetch(den.admin, "/v1/me/orgs", {
+    headers: { authorization: `Bearer ${den.admin.token}` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  const memberships = isRecord(orgs.body) && Array.isArray(orgs.body.orgs) ? orgs.body.orgs.filter(isRecord) : [];
+  const membership = memberships.find((entry) => entry.id === organizationId);
+  if (!orgs.response.ok || !membership) {
+    throw new Error(`The test account is not a member of the required organization ${organizationId}.`);
+  }
+
+  const catalog = await orgRequest(den.admin, organizationId, "/v1/models/catalog");
+  if (!isRecord(catalog) || typeof catalog.version !== "string" || !Array.isArray(catalog.models)) {
+    throw new Error(`Invalid authoritative model catalog: ${JSON.stringify(catalog).slice(0, 500)}`);
+  }
+  if (!catalog.models.filter(isRecord).some((model) => model.sku === modelSku)) {
+    throw new Error(`The authoritative catalog does not grant ${modelSku} to ${organizationId}.`);
+  }
+
+  const walletBefore = wallet(await orgRequest(den.admin, organizationId, "/v1/rencredit/wallet"));
+  expect(walletBefore.organizationId).toBe(organizationId);
+  const receiptRowsBefore = receipts(await orgRequest(den.admin, organizationId, "/v1/rencredit/receipts?limit=50"));
+  const receiptIdsBefore = new Set(receiptRowsBefore.map((row) => typeof row.id === "string" ? row.id : "").filter(Boolean));
+
+  await using desktopApp = await launchRealDenDesktop(den, place, organizationId);
+  const activeOrgId = await evalIn(desktopApp, "localStorage.getItem('openwork.den.activeOrgId') ?? ''");
+  expect(activeOrgId).toBe(organizationId);
+  const loginShot = await screenshot(desktopApp);
+
+  const models = await readAvailableModels(desktopApp);
+  expect(models.some((model) => model.id === modelSku && model.selectable)).toBe(true);
+  const selected = await selectModel(desktopApp, modelSku);
+  expect(selected.id).toBe(modelSku);
+  expect(selected.selected).toBe(true);
+  const catalogShot = await screenshot(desktopApp);
+
+  const prompt = process.env.OPENWORK_EVAL_DEN_NO_RESULT_PROMPT?.trim()
+    || "V49 acceptance: return no visible assistant text through the dedicated test route.";
+  await sendComposerMessage(desktopApp, prompt);
+  await waitFor(desktopApp, "Boolean(document.querySelector('[data-testid=\"admission-outcome-unknown\"]'))", {
+    timeoutMs: TERMINAL_RECEIPT_TIMEOUT_MS,
+    label: "no-visible-result recovery card",
+  });
+
+  const receipt = await waitForNewTerminalReceipt({
+    session: den.admin,
+    organizationId,
+    beforeIds: receiptIdsBefore,
+    modelSku,
+  });
+  expect(receipt.status).toBe("captured");
+  expect(receipt.has_result).toBe(false);
+  expect(usageTotal(receipt)).toBeGreaterThan(0);
+  expect(receipt.reserved_microcredits).toEqual(expect.any(Number));
+  expect(Number(receipt.reserved_microcredits)).toBeGreaterThan(0);
+  expect(Number(receipt.captured_microcredits)).toBeGreaterThan(0);
+  expect(Number(receipt.captured_microcredits)).toBeLessThanOrEqual(maxSpend);
+
+  const reservationId = String(receipt.id ?? "");
+  const ledgerAfter = ledger(await orgRequest(den.admin, organizationId, "/v1/rencredit/ledger?limit=100"));
+  const correlated = ledgerAfter.filter((entry) => entry.reservation_id === reservationId);
+  expect(correlated.some((entry) => entry.entry_type === "reserve")).toBe(true);
+  expect(correlated.some((entry) => entry.entry_type === "capture")).toBe(true);
+
+  const walletAfter = wallet(await orgRequest(den.admin, organizationId, "/v1/rencredit/wallet"));
+  expect(walletAfter.reserved).toBe(walletBefore.reserved);
+  expect(walletAfter.available).toBe(walletBefore.available - Number(receipt.captured_microcredits));
+  expect(walletAfter.version).toBeGreaterThan(walletBefore.version);
+  const receiptShot = await screenshot(desktopApp);
+
+  const evidenceOutput = process.env.OPENWORK_EVAL_DEVICE_EVIDENCE_PATH?.trim();
+  if (evidenceOutput) {
+    await writeDeviceEvidence({
+      outputPath: evidenceOutput,
+      organizationId,
+      membership,
+      modelSku,
+      catalog,
+      receipt,
+      ledgerRows: ledgerAfter,
+      walletBefore,
+      walletAfter,
+      loginShotHash: loginShot.hash,
+      catalogShotHash: catalogShot.hash,
+      receiptShotHash: receiptShot.hash,
+      maxSpend,
+    });
+  }
+
   evidence.fact(
-    "Two rapid Resume clicks admit exactly one recovery prompt",
-    `After a rapid double click the transcript contains exactly one recovery prompt (count=${String(recoveryPromptCount)}), the assistant produced '${resumedReply}', and the recovery card cleared once assistant output arrived.`,
+    "The installed desktop used the real Den tenant",
+    `The signed-in organization ${organizationId} loaded and selected authoritative SKU ${modelSku}; no local provider or mock server exists in this spec.`,
     true,
   );
-
-  {
-    const shot = await screenshot(app);
-    const seen = await validate(shot, [
-      `The assistant reply '${resumedReply}' is visible in the conversation`,
-      "Exactly one resume/recovery user message is visible between the original prompt and the assistant reply",
-      "No status line about a missing result is visible anymore",
-    ]);
-    expect(seen.ok, seen.why).toBe(true);
-  }
+  evidence.fact(
+    "No-visible-result Token usage was captured",
+    `Receipt ${reservationId} reported ${usageTotal(receipt)} Token units, captured ${receipt.captured_microcredits} microcredits within the ${maxSpend} cap, and returned frozen balance to ${walletAfter.reserved}.`,
+    true,
+  );
 });

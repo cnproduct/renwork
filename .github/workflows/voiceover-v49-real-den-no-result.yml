@@ -1,0 +1,79 @@
+name: Voiceover V49 real Den no-result settlement
+
+on:
+  workflow_dispatch:
+    inputs:
+      guarded_commit:
+        description: Full PR #80 head commit to test
+        required: true
+        type: string
+      max_microcredits:
+        description: Maximum RenCredit microcredits this one test may capture
+        required: true
+        type: number
+        default: 50000
+
+permissions:
+  contents: read
+
+jobs:
+  real-den:
+    name: Real Den login and no-result settlement
+    runs-on: macos-14
+    timeout-minutes: 30
+    env:
+      OPENWORK_EVAL_E2E_TESTS: "1"
+      OPENWORK_EVAL_DEN_API_URL: ${{ secrets.RENWORK_V49_DEN_API_URL }}
+      OPENWORK_EVAL_DEN_WEB_URL: ${{ secrets.RENWORK_V49_DEN_WEB_URL }}
+      OPENWORK_EVAL_DEMO_EMAIL: ${{ secrets.RENWORK_V49_TEST_EMAIL }}
+      OPENWORK_EVAL_DEMO_PASSWORD: ${{ secrets.RENWORK_V49_TEST_PASSWORD }}
+      OPENWORK_EVAL_DEN_ORG_ID: ${{ secrets.RENWORK_V49_ORG_ID }}
+      OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU: ${{ secrets.RENWORK_V49_NO_RESULT_MODEL_SKU }}
+      OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS: ${{ inputs.max_microcredits }}
+    steps:
+      - name: Fail closed when a real Den input is missing
+        shell: bash
+        env:
+          GUARDED_COMMIT: ${{ inputs.guarded_commit }}
+        run: |
+          set -euo pipefail
+          [[ "$GUARDED_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "guarded_commit must be a full SHA" >&2; exit 1; }
+          test "${OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS}" -gt 0
+          for name in OPENWORK_EVAL_DEN_API_URL OPENWORK_EVAL_DEN_WEB_URL OPENWORK_EVAL_DEMO_EMAIL OPENWORK_EVAL_DEMO_PASSWORD OPENWORK_EVAL_DEN_ORG_ID OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU; do
+            test -n "${!name:-}" || { echo "$name is not configured" >&2; exit 1; }
+          done
+          [[ "$OPENWORK_EVAL_DEN_API_URL" == https://* ]] || { echo "Den API must use HTTPS" >&2; exit 1; }
+          [[ "$OPENWORK_EVAL_DEN_WEB_URL" == https://* ]] || { echo "Den Web must use HTTPS" >&2; exit 1; }
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.guarded_commit }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.4.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: pnpm install --frozen-lockfile
+      - name: Verify checkout is the guarded commit
+        shell: bash
+        env:
+          GUARDED_COMMIT: ${{ inputs.guarded_commit }}
+        run: test "$(git rev-parse HEAD)" = "$GUARDED_COMMIT"
+      - name: Run the real Den no-result capture gate
+        run: pnpm --dir evals exec vitest run --config vitest.config.ts --project pr specs/session-admission-no-result-recovery.e2e.test.ts
+      - name: Upload real Den evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RenWork-V49-real-Den-no-result-${{ inputs.guarded_commit }}
+          path: |
+            evals/.results/**
+            evals/.artifacts/**
+            .openwork/evals/**
+          if-no-files-found: warn
+          retention-days: 30
+

@@ -170,17 +170,17 @@ export async function sendComposerMessage(app: Surface, text: string): Promise<C
   const before = await readComposerState(app);
   await writeComposerText(app, text);
   await waitFor(app, `Boolean([...document.querySelectorAll("button")]
-    .find((button) => (button.textContent ?? "").trim() === "Run task" && !button.disabled))`, {
+    .find((button) => ["Run task", "运行任务"].includes((button.textContent ?? "").trim()) && !button.disabled))`, {
     timeoutMs: 30_000,
-    label: "enabled Run task button",
+    label: "enabled Run task/运行任务 button",
   });
   const clicked = await evalIn(app, `(() => {
     const button = [...document.querySelectorAll("button")]
-      .find((entry) => (entry.textContent ?? "").trim() === "Run task" && !entry.disabled);
+      .find((entry) => ["Run task", "运行任务"].includes((entry.textContent ?? "").trim()) && !entry.disabled);
     button?.click();
     return Boolean(button);
   })()`);
-  if (clicked !== true) throw new Error("Could not click the enabled Run task button.");
+  if (clicked !== true) throw new Error("Could not click the enabled Run task/运行任务 button.");
   await waitFor(app, `document.querySelectorAll('[data-message-role="user"]').length > ${before.userMessageCount}`, {
     timeoutMs: 60_000,
     label: "sent user message",
