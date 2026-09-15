@@ -242,7 +242,7 @@ async function launchRealDenDesktop(den: Den, place: Place, organizationId: stri
     host: place.host(),
     bootstrap: {
       baseUrl: den.ref.webUrl,
-      apiBaseUrl: den.ref.webUrl,
+      apiBaseUrl: den.ref.apiUrl,
       requireSignin: true,
     },
   });
