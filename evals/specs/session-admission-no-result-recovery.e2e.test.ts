@@ -1,7 +1,9 @@
 import { expect } from "vitest";
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import {
+  createAndSelectWorkspace,
   denFetch,
   evalIn,
   readAvailableModels,
@@ -248,29 +250,13 @@ async function launchRealDenDesktop(den: Den, place: Place, organizationId: stri
   });
   try {
     await signInDesktopAs(surface, den.ref, den.admin);
-    const deadline = Date.now() + 180_000;
-    while (Date.now() < deadline) {
-      const ready = await evalIn(surface, `(() => {
-        const labels = [...document.querySelectorAll("button")]
-          .filter((button) => !button.disabled)
-          .map((button) => (button.textContent ?? "").trim());
-        if (labels.some((label) => ["Run task", "运行任务"].includes(label))) return "ready";
-        const candidate = [
-          "Continue with organization", "Continue to workspace",
-          "Continue without OpenWork Models", "Continue", "继续",
-        ].find((label) => labels.includes(label));
-        if (candidate) {
-          const button = [...document.querySelectorAll("button")]
-            .find((entry) => (entry.textContent ?? "").trim() === candidate && !entry.disabled);
-          button?.click();
-          return "advanced";
-        }
-        return "waiting";
-      })()`);
-      if (ready === "ready") return surface;
-      await new Promise((resolve) => setTimeout(resolve, 750));
-    }
-    throw new Error("The installed Den-only desktop did not reach its cloud task UI within 180 seconds.");
+    await createAndSelectWorkspace(surface, {
+      path: join(
+        tmpdir(),
+        `renwork-v49-real-den-${process.env.OPENWORK_EVAL_DEVICE_TARGET_ID?.trim() || "functional"}-${Date.now()}`,
+      ),
+    });
+    return surface;
   } catch (error) {
     await surface[Symbol.asyncDispose]();
     throw error;
