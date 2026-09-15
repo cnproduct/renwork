@@ -237,7 +237,21 @@ jobs:
         with:
           node-version: 24.20.0
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - name: Install acceptance harness dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if pnpm install --frozen-lockfile --prefer-offline; then
+              exit 0
+            fi
+            if [[ "$attempt" == 3 ]]; then
+              echo "Dependency installation failed after $attempt attempts" >&2
+              exit 1
+            fi
+            echo "Registry download failed on attempt $attempt; retrying with the local pnpm store." >&2
+            sleep $((attempt * 10))
+          done
       - name: Exercise installed UI against real Den
         run: pnpm --dir evals exec vitest run --config vitest.config.ts --project pr specs/session-admission-no-result-recovery.e2e.test.ts
       - name: Upload this physical device evidence
