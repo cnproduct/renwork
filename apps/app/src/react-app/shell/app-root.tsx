@@ -9,6 +9,7 @@ import {
   readDenBootstrapConfig,
   readDenSettings,
   setDenBootstrapConfig,
+  writeDenSettings,
 } from "../../app/lib/den";
 import { exchangeHandoffAndSignIn } from "../../app/lib/den-handoff";
 import {
@@ -226,9 +227,14 @@ function DenAuthControlActions() {
     args: [
       { name: "grant", type: "string", required: true, description: "The raw handoff grant string." },
       { name: "baseUrl", type: "string", required: false, description: "Optional Den base URL." },
+      { name: "organizationId", type: "string", required: false, description: "Optional organization to activate after sign-in." },
     ],
     execute: async (args) => {
-      const { grant, baseUrl: argBaseUrl } = (args ?? {}) as { grant?: string; baseUrl?: string };
+      const { grant, baseUrl: argBaseUrl, organizationId } = (args ?? {}) as {
+        grant?: string;
+        baseUrl?: string;
+        organizationId?: string;
+      };
       if (!grant?.trim()) return { ok: false, error: "grant is required" };
       const settings = readDenSettings();
       const targetBaseUrl = argBaseUrl?.trim() || settings.baseUrl;
@@ -242,7 +248,35 @@ function DenAuthControlActions() {
         fallbackErrorMessage: "No token returned",
       });
       if (!result.ok) return { ok: false, error: result.error };
-      return { email: result.exchange.user?.email };
+      const targetOrganizationId = organizationId?.trim() ?? "";
+      if (targetOrganizationId) {
+        const signedInSettings = readDenSettings();
+        const signedInToken = signedInSettings.authToken?.trim() ?? "";
+        if (!signedInToken) return { ok: false, error: "sign-in did not persist an auth token" };
+
+        const signedInClient = createDenClient({
+          baseUrl: targetBaseUrl,
+          token: signedInToken,
+        });
+        const organizations = await signedInClient.listOrgs();
+        const targetOrganization = organizations.orgs.find((org) => org.id === targetOrganizationId);
+        if (!targetOrganization) {
+          return { ok: false, error: `signed-in account cannot access organization ${targetOrganizationId}` };
+        }
+        await signedInClient.setActiveOrganization({ organizationId: targetOrganization.id });
+        writeDenSettings({
+          ...readDenSettings(),
+          baseUrl: targetBaseUrl,
+          authToken: signedInToken,
+          activeOrgId: targetOrganization.id,
+          activeOrgSlug: targetOrganization.slug,
+          activeOrgName: targetOrganization.name,
+        }, { persistBootstrap: false });
+      }
+      return {
+        email: result.exchange.user?.email,
+        organizationId: readDenSettings().activeOrgId ?? null,
+      };
     },
   }), []);
   useControlAction(exchangeGrantAction);

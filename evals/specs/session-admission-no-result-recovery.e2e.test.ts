@@ -327,7 +327,7 @@ async function launchRealDenDesktop(den: Den, place: Place, organizationId: stri
     },
   });
   try {
-    await signInDesktopAs(surface, den.ref, den.admin);
+    await signInDesktopAs(surface, den.ref, den.admin, { organizationId });
     await waitFor(surface, `(() => {
       const text = document.body.innerText;
       const runTask = [...document.querySelectorAll("button")]

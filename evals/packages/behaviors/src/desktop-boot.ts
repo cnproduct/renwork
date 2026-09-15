@@ -36,13 +36,22 @@ export interface SelectedWorkspaceFacts {
   route: string;
 }
 
-export async function signInDesktopAs(app: Surface, den: DenRef, member: DenSession): Promise<void> {
+export async function signInDesktopAs(
+  app: Surface,
+  den: DenRef,
+  member: DenSession,
+  options?: { organizationId?: string },
+): Promise<void> {
   await waitFor(app, "Boolean(window.__openworkControl?.listActions?.().some((action) => action.id === 'auth.exchange-grant'))", {
     timeoutMs: 60_000,
     label: "auth.exchange-grant action registered",
   });
   const grant = await createDesktopHandoffGrant(member);
-  await control(app, "auth.exchange-grant", { grant, baseUrl: den.webUrl });
+  await control(app, "auth.exchange-grant", {
+    grant,
+    baseUrl: den.webUrl,
+    organizationId: options?.organizationId,
+  });
   await waitForDenState(app, den, "Boolean((localStorage.getItem('openwork.den.authToken') ?? '').trim())", {
     timeoutMs: 45_000,
     label: "persisted den auth token",
@@ -51,6 +60,14 @@ export async function signInDesktopAs(app: Surface, den: DenRef, member: DenSess
     timeoutMs: 60_000,
     label: "active org resolved",
   });
+  if (options?.organizationId) {
+    await waitForDenState(
+      app,
+      den,
+      `localStorage.getItem('openwork.den.activeOrgId') === ${JSON.stringify(options.organizationId)}`,
+      { timeoutMs: 60_000, label: `active organization ${options.organizationId}` },
+    );
+  }
   // A first-time member lands on organization onboarding; a member whose app
   // already has a workspace can come straight back to it.
   await waitFor(app, `window.location.hash.includes("/onboarding") || /\\/(workspace|session)/.test(window.location.hash)`, {
