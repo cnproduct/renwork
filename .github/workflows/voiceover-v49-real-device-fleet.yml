@@ -237,12 +237,13 @@ jobs:
         with:
           node-version: 24.20.0
           cache: pnpm
+          cache-dependency-path: evals/pnpm-lock.yaml
       - name: Install acceptance harness dependencies
         shell: bash
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
-            if pnpm install --frozen-lockfile --prefer-offline; then
+            if pnpm --dir evals install --frozen-lockfile --prefer-offline; then
               exit 0
             fi
             if [[ "$attempt" == 3 ]]; then

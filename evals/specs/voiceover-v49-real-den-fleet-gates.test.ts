@@ -88,6 +88,8 @@ test("Voiceover V49 replaces the simulated no-result test and guards release wit
   expect(fleetWorkflow).toContain("max-parallel: 1");
   expect(fleetWorkflow).toContain("Resolve the exact candidate build");
   expect(fleetWorkflow).toContain("caffeinate -dimsu pnpm");
+  expect(fleetWorkflow).toContain("pnpm --dir evals install --frozen-lockfile --prefer-offline");
+  expect(fleetWorkflow).toContain("cache-dependency-path: evals/pnpm-lock.yaml");
   expect(fleetWorkflow).toContain("push:\n    branches:");
   expect(candidateWorkflow.match(/artifact: RenWork-V49-/g)).toHaveLength(6);
   expect(finalizer).toContain("validateFleetEvidence(entries");
