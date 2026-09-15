@@ -34,7 +34,6 @@ jobs:
       OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU: ${{ secrets.RENWORK_V49_NO_RESULT_MODEL_SKU }}
       OPENWORK_EVAL_INFERENCE_KEY: ${{ secrets.RENWORK_V49_INFERENCE_KEY }}
       OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS: ${{ inputs.max_microcredits || vars.RENWORK_V49_MAX_MICROCREDITS || 50000 }}
-      OPENWORK_EVAL_HOSTED_EVIDENCE_PATH: ${{ runner.temp }}/voiceover-v49-real-den-no-result.json
     steps:
       - name: Fail closed when a real Den input is missing
         shell: bash
@@ -68,6 +67,9 @@ jobs:
         env:
           GUARDED_COMMIT: ${{ inputs.guarded_commit || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$GUARDED_COMMIT"
+      - name: Prepare durable settlement evidence path
+        shell: bash
+        run: echo "OPENWORK_EVAL_HOSTED_EVIDENCE_PATH=$RUNNER_TEMP/voiceover-v49-real-den-no-result.json" >> "$GITHUB_ENV"
       - name: Run the real Den no-result capture gate
         run: pnpm --dir evals exec vitest run --config vitest.config.ts --project pr specs/session-admission-no-result-recovery.e2e.test.ts
       - name: Materialize the durable settlement evidence
