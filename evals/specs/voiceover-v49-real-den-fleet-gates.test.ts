@@ -75,11 +75,14 @@ test("Voiceover V49 replaces the simulated no-result test and guards release wit
   ]);
 
   expect(liveSpec).toContain("OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU");
+  expect(liveSpec).toContain("OPENWORK_EVAL_INFERENCE_KEY");
+  expect(liveSpec).toContain('executionChannel: "real-den-inference-gateway"');
   expect(liveSpec).toContain('"/v1/rencredit/ledger?limit=100"');
   expect(liveSpec).toContain('receipt.status).toBe("captured")');
   expect(liveSpec).not.toContain("createServer");
   expect(liveSpec).not.toContain("admission-no-result-mock");
   expect(liveWorkflow).toContain("Fail closed when a real Den input is missing");
+  expect(liveWorkflow).toContain("RENWORK_V49_INFERENCE_KEY");
   expect(liveWorkflow).toContain("push:\n    branches:");
   for (const targetId of Object.keys(REQUIRED_TARGETS)) expect(fleetWorkflow).toContain(`target: ${targetId}`);
   expect(fleetWorkflow).toContain("max-parallel: 1");

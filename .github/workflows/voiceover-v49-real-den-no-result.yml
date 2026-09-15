@@ -32,6 +32,7 @@ jobs:
       OPENWORK_EVAL_DEMO_PASSWORD: ${{ secrets.RENWORK_V49_TEST_PASSWORD }}
       OPENWORK_EVAL_DEN_ORG_ID: ${{ secrets.RENWORK_V49_ORG_ID }}
       OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU: ${{ secrets.RENWORK_V49_NO_RESULT_MODEL_SKU }}
+      OPENWORK_EVAL_INFERENCE_KEY: ${{ secrets.RENWORK_V49_INFERENCE_KEY }}
       OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS: ${{ inputs.max_microcredits || vars.RENWORK_V49_MAX_MICROCREDITS || 50000 }}
     steps:
       - name: Fail closed when a real Den input is missing
@@ -42,7 +43,7 @@ jobs:
           set -euo pipefail
           [[ "$GUARDED_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "guarded_commit must be a full SHA" >&2; exit 1; }
           test "${OPENWORK_EVAL_MAX_RENCREDIT_MICROCREDITS}" -gt 0
-          for name in OPENWORK_EVAL_DEN_API_URL OPENWORK_EVAL_DEN_WEB_URL OPENWORK_EVAL_DEMO_EMAIL OPENWORK_EVAL_DEMO_PASSWORD OPENWORK_EVAL_DEN_ORG_ID OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU; do
+          for name in OPENWORK_EVAL_DEN_API_URL OPENWORK_EVAL_DEN_WEB_URL OPENWORK_EVAL_DEMO_EMAIL OPENWORK_EVAL_DEMO_PASSWORD OPENWORK_EVAL_DEN_ORG_ID OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU OPENWORK_EVAL_INFERENCE_KEY; do
             test -n "${!name:-}" || { echo "$name is not configured" >&2; exit 1; }
           done
           [[ "$OPENWORK_EVAL_DEN_API_URL" == https://* ]] || { echo "Den API must use HTTPS" >&2; exit 1; }

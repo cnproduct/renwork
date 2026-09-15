@@ -1,4 +1,5 @@
 import { expect } from "vitest";
+import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
@@ -23,10 +24,12 @@ import type { NeedsSpec } from "@openwork/testkit";
  *
  * The configured Den test tenant owns a dedicated model route that returns no
  * visible assistant text while still reporting provider Token usage. This spec
- * signs a fresh packaged/source desktop into that tenant, runs the model, and
- * proves the durable reserve -> capture ledger path. A missing environment
- * input is a skip in the broad stack suite, but the dedicated V49 workflow
- * performs a fail-closed preflight before it invokes this file.
+ * signs into that tenant and proves the durable reserve -> capture ledger
+ * path. Hosted CI invokes the real Den gateway directly because a packaging VM
+ * is not a physical desktop acceptance target. Six self-hosted runners exercise
+ * the same tenant through installed RenWork binaries and write device evidence.
+ * A missing environment input is a skip in the broad stack suite, but the
+ * dedicated V49 workflow performs a fail-closed preflight before invoking it.
  */
 
 const requirements: NeedsSpec = {
@@ -44,7 +47,7 @@ const requirements: NeedsSpec = {
 const missingRequirements = unmetNeeds(requirements, process.env);
 const title = missingRequirements.length > 0
   ? `real Den no-result settlement skipped — needs: ${missingRequirements.join(", ")}`
-  : "a real Den tenant captures provider-reported Token usage when the installed desktop receives no visible result";
+  : "a real Den tenant captures provider-reported Token usage when the model returns no visible result";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 const TERMINAL_RECEIPT_TIMEOUT_MS = 180_000;
@@ -226,6 +229,82 @@ async function waitForNewTerminalReceipt(input: {
   throw new Error(`No new terminal receipt for ${input.modelSku}; last receipts: ${JSON.stringify(last).slice(0, 2_000)}`);
 }
 
+async function invokeNoResultGateway(input: {
+  apiBaseUrl: string;
+  inferenceKey: string;
+  organizationId: string;
+  modelSku: string;
+  prompt: string;
+}) {
+  const response = await fetch(`${input.apiBaseUrl.replace(/\/+$/, "")}/api/v1/chat/completions`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${input.inferenceKey}`,
+      "content-type": "application/json",
+      "idempotency-key": `v49-real-den:${randomUUID()}`,
+      "x-openwork-org-id": input.organizationId,
+    },
+    body: JSON.stringify({
+      model: input.modelSku,
+      stream: false,
+      max_tokens: 16,
+      messages: [{ role: "user", content: input.prompt }],
+    }),
+    signal: AbortSignal.timeout(TERMINAL_RECEIPT_TIMEOUT_MS),
+  });
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new Error(`Real Den gateway call failed: HTTP ${response.status} ${raw.slice(0, 1_000)}`);
+  }
+  let payload: unknown;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    throw new Error(`Real Den gateway returned invalid JSON: ${raw.slice(0, 1_000)}`);
+  }
+  if (!isRecord(payload) || responseHasVisibleResult(payload)) {
+    throw new Error(`Dedicated no-result route returned visible content: ${raw.slice(0, 1_000)}`);
+  }
+  return { payload, status: response.status };
+}
+
+function responseHasVisibleResult(payload: JsonRecord) {
+  const choices = Array.isArray(payload.choices) ? payload.choices : [];
+  return choices.some((choice) => isRecord(choice) && isRecord(choice.message)
+    && typeof choice.message.content === "string" && choice.message.content.length > 0);
+}
+
+async function writeHostedEvidence(input: {
+  organizationId: string;
+  modelSku: string;
+  catalog: JsonRecord;
+  receipt: JsonRecord;
+  walletBefore: ReturnType<typeof wallet>;
+  walletAfter: ReturnType<typeof wallet>;
+  gatewayStatus: number;
+}) {
+  const outputPath = "evals/.results/voiceover-v49-real-den-no-result.json";
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, `${JSON.stringify({
+    schemaVersion: 1,
+    voiceover: "V49",
+    observedAt: new Date().toISOString(),
+    executionChannel: "real-den-inference-gateway",
+    organizationId: input.organizationId,
+    modelSku: input.modelSku,
+    catalogVersion: input.catalog.version,
+    gatewayStatus: input.gatewayStatus,
+    receiptId: input.receipt.id,
+    receiptStatus: input.receipt.status,
+    hasResult: input.receipt.has_result,
+    capturedMicroCredits: input.receipt.captured_microcredits,
+    releasedMicroCredits: input.receipt.released_microcredits,
+    actualUsage: input.receipt.actual_usage,
+    walletBefore: input.walletBefore,
+    walletAfter: input.walletAfter,
+  }, null, 2)}\n`, "utf8");
+}
+
 async function launchRealDenDesktop(den: Den, place: Place, organizationId: string) {
   const activate = await denFetch(den.admin, "/v1/me/active-organization", {
     method: "POST",
@@ -299,26 +378,47 @@ test.skipIf(missingRequirements.length > 0)(title, { timeout: 600_000 }, async (
   expect(walletBefore.organizationId).toBe(organizationId);
   const receiptRowsBefore = receipts(await orgRequest(den.admin, organizationId, "/v1/rencredit/receipts?limit=50"));
   const receiptIdsBefore = new Set(receiptRowsBefore.map((row) => typeof row.id === "string" ? row.id : "").filter(Boolean));
-
-  await using desktopApp = await launchRealDenDesktop(den, place, organizationId);
-  const activeOrgId = await evalIn(desktopApp, "localStorage.getItem('openwork.den.activeOrgId') ?? ''");
-  expect(activeOrgId).toBe(organizationId);
-  const loginShot = await screenshot(desktopApp);
-
-  const models = await readAvailableModels(desktopApp);
-  expect(models.some((model) => model.id === modelSku && model.selectable)).toBe(true);
-  const selected = await selectModel(desktopApp, modelSku);
-  expect(selected.id).toBe(modelSku);
-  expect(selected.selected).toBe(true);
-  const catalogShot = await screenshot(desktopApp);
-
   const prompt = process.env.OPENWORK_EVAL_DEN_NO_RESULT_PROMPT?.trim()
     || "V49 acceptance: return no visible assistant text through the dedicated test route.";
-  await sendComposerMessage(desktopApp, prompt);
-  await waitFor(desktopApp, "Boolean(document.querySelector('[data-testid=\"admission-outcome-unknown\"]'))", {
-    timeoutMs: TERMINAL_RECEIPT_TIMEOUT_MS,
-    label: "no-visible-result recovery card",
-  });
+  const evidenceOutput = process.env.OPENWORK_EVAL_DEVICE_EVIDENCE_PATH?.trim();
+  let loginShotHash = "";
+  let catalogShotHash = "";
+  let receiptShotHash = "";
+  let gatewayStatus: number | null = null;
+
+  if (evidenceOutput) {
+    await using desktopApp = await launchRealDenDesktop(den, place, organizationId);
+    const activeOrgId = await evalIn(desktopApp, "localStorage.getItem('openwork.den.activeOrgId') ?? ''");
+    expect(activeOrgId).toBe(organizationId);
+    loginShotHash = (await screenshot(desktopApp)).hash;
+
+    const models = await readAvailableModels(desktopApp);
+    expect(models.some((model) => model.id === modelSku && model.selectable)).toBe(true);
+    const selected = await selectModel(desktopApp, modelSku);
+    expect(selected.id).toBe(modelSku);
+    expect(selected.selected).toBe(true);
+    catalogShotHash = (await screenshot(desktopApp)).hash;
+
+    await sendComposerMessage(desktopApp, prompt);
+    await waitFor(desktopApp, "Boolean(document.querySelector('[data-testid=\"admission-outcome-unknown\"]'))", {
+      timeoutMs: TERMINAL_RECEIPT_TIMEOUT_MS,
+      label: "no-visible-result recovery card",
+    });
+    receiptShotHash = (await screenshot(desktopApp)).hash;
+  } else {
+    const inferenceKey = process.env.OPENWORK_EVAL_INFERENCE_KEY?.trim();
+    if (!inferenceKey) {
+      throw new Error("OPENWORK_EVAL_INFERENCE_KEY is required for the hosted real-Den settlement gate.");
+    }
+    const gateway = await invokeNoResultGateway({
+      apiBaseUrl: den.ref.apiUrl,
+      inferenceKey,
+      organizationId,
+      modelSku,
+      prompt,
+    });
+    gatewayStatus = gateway.status;
+  }
 
   const receipt = await waitForNewTerminalReceipt({
     session: den.admin,
@@ -344,9 +444,6 @@ test.skipIf(missingRequirements.length > 0)(title, { timeout: 600_000 }, async (
   expect(walletAfter.reserved).toBe(walletBefore.reserved);
   expect(walletAfter.available).toBe(walletBefore.available - Number(receipt.captured_microcredits));
   expect(walletAfter.version).toBeGreaterThan(walletBefore.version);
-  const receiptShot = await screenshot(desktopApp);
-
-  const evidenceOutput = process.env.OPENWORK_EVAL_DEVICE_EVIDENCE_PATH?.trim();
   if (evidenceOutput) {
     await writeDeviceEvidence({
       outputPath: evidenceOutput,
@@ -358,16 +455,28 @@ test.skipIf(missingRequirements.length > 0)(title, { timeout: 600_000 }, async (
       ledgerRows: ledgerAfter,
       walletBefore,
       walletAfter,
-      loginShotHash: loginShot.hash,
-      catalogShotHash: catalogShot.hash,
-      receiptShotHash: receiptShot.hash,
+      loginShotHash,
+      catalogShotHash,
+      receiptShotHash,
       maxSpend,
+    });
+  } else {
+    await writeHostedEvidence({
+      organizationId,
+      modelSku,
+      catalog,
+      receipt,
+      walletBefore,
+      walletAfter,
+      gatewayStatus: gatewayStatus ?? 0,
     });
   }
 
   evidence.fact(
-    "The installed desktop used the real Den tenant",
-    `The signed-in organization ${organizationId} loaded and selected authoritative SKU ${modelSku}; no local provider or mock server exists in this spec.`,
+    evidenceOutput ? "The installed desktop used the real Den tenant" : "Hosted CI used the real Den inference gateway",
+    evidenceOutput
+      ? `The signed-in organization ${organizationId} loaded and selected authoritative SKU ${modelSku} through an installed binary.`
+      : `The signed-in organization ${organizationId} loaded authoritative SKU ${modelSku}, then invoked the production gateway with its revocable member inference key.`,
     true,
   );
   evidence.fact(
