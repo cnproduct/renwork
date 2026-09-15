@@ -5,11 +5,15 @@ import { test } from "@openwork/testkit";
 const read = (path: string) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("Voiceover V48 keeps test candidates separate from formal release evidence", async ({ evidence }) => {
-  const [voiceover, workflow, english, chinese] = await Promise.all([
+  const [voiceover, workflow, english, chinese, rootPackage, appPackage, desktopPackage, serverPackage] = await Promise.all([
     read("../voiceovers/voiceover-v48-cross-platform-candidates.md"),
     read("../../.github/workflows/build-voiceover-v48-candidates.yml"),
     read("../../apps/app/src/i18n/locales/en.ts"),
     read("../../apps/app/src/i18n/locales/zh.ts"),
+    read("../../package.json").then((value) => JSON.parse(value) as { version: string }),
+    read("../../apps/app/package.json").then((value) => JSON.parse(value) as { version: string }),
+    read("../../apps/desktop/package.json").then((value) => JSON.parse(value) as { version: string }),
+    read("../../apps/server/package.json").then((value) => JSON.parse(value) as { version: string }),
   ]);
 
   for (const target of [
@@ -31,6 +35,9 @@ test("Voiceover V48 keeps test candidates separate from formal release evidence"
   expect(workflow).toContain("forbidden OpenCode sidecar");
   expect(english).toContain("Provider-reported tokens are still settled in RenCredit");
   expect(chinese).toContain("供应商已报告的 Token 仍会结算 RenCredit");
+  expect(new Set([rootPackage.version, appPackage.version, desktopPackage.version, serverPackage.version])).toEqual(
+    new Set(["0.18.67"]),
+  );
 
   evidence.fact(
     "V48 candidate scope is explicit",

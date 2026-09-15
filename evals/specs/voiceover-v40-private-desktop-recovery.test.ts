@@ -3,13 +3,14 @@ import { expect } from "vitest";
 import { test } from "@openwork/testkit";
 
 test("Voiceover V40 recovers stale models and defines private Den-only candidates", async ({ evidence }) => {
-  const [voiceover, policy, route, migration, afterPack, server2016, desktopPackage] = await Promise.all([
+  const [voiceover, policy, route, migration, afterPack, server2016, rootPackage, desktopPackage] = await Promise.all([
     readFile("../evals/voiceovers/voiceover-v40-private-desktop-recovery.md", "utf8"),
     readFile("../apps/app/src/react-app/domains/connections/provider-auth/provider-policy.ts", "utf8"),
     readFile("../apps/app/src/react-app/shell/session-route.tsx", "utf8"),
     readFile("../apps/app/src/react-app/kernel/den-only-model-migration.ts", "utf8"),
     readFile("../apps/desktop/scripts/electron-after-pack.cjs", "utf8"),
     readFile("../apps/desktop/electron-builder.server2016-cloud.yml", "utf8"),
+    readFile("../package.json", "utf8").then((value) => JSON.parse(value) as { version: string }),
     readFile("../apps/desktop/package.json", "utf8").then((value) => JSON.parse(value) as { version: string }),
   ]);
 
@@ -23,7 +24,7 @@ test("Voiceover V40 recovers stale models and defines private Den-only candidate
   expect(migration).toContain("isCloudManagedProviderKey");
   expect(afterPack).toContain('["public", "cloud", "enterprise", "server2016-cloud"]');
   expect(server2016).not.toContain("sidecars/opencode");
-  expect(desktopPackage.version).toBe("0.18.66");
+  expect(desktopPackage.version).toBe(rootPackage.version);
 
   evidence.fact(
     "Stale model recovery",
