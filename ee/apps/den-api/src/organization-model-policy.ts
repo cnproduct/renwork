@@ -64,7 +64,34 @@ export const organizationModelPolicyInputSchema = z.object({
   }
 })
 
+// Organization Owners can tune only the published-model allowlist, default,
+// and RenCredit budgets. Provider/member routing remains a platform-admin
+// decision even when an older or malicious client submits extra fields.
+export const organizationOwnerModelPolicyInputSchema = z.object({
+  allowedModelSkus: z.array(z.string().trim().min(1).max(160)).max(500).nullable(),
+  defaultModelSku: z.string().trim().min(1).max(160).nullable(),
+  dailyBudgetMicroCredits: z.number().int().min(0).max(MAX_MICROCREDITS).nullable(),
+  monthlyBudgetMicroCredits: z.number().int().min(0).max(MAX_MICROCREDITS).nullable(),
+  memberMonthlyBudgetMicroCredits: z.record(
+    z.string().trim().min(1).max(160),
+    z.number().int().min(0).max(MAX_MICROCREDITS).nullable(),
+  ),
+}).superRefine((policy, ctx) => {
+  if (
+    policy.defaultModelSku &&
+    policy.allowedModelSkus &&
+    !policy.allowedModelSkus.includes(policy.defaultModelSku)
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["defaultModelSku"],
+      message: "The default model must be included in the organization allowlist.",
+    })
+  }
+})
+
 export type OrganizationModelPolicy = z.infer<typeof organizationModelPolicyInputSchema>
+export type OrganizationOwnerModelPolicy = z.infer<typeof organizationOwnerModelPolicyInputSchema>
 
 export const DEFAULT_ORGANIZATION_MODEL_POLICY: OrganizationModelPolicy = {
   allowedModelSkus: null,
@@ -107,6 +134,30 @@ export function writeOrganizationModelPolicy(
   return {
     ...parsed,
     renworkModelPolicy: policy,
+  }
+}
+
+export function toOrganizationOwnerModelPolicy(
+  policy: OrganizationModelPolicy,
+): OrganizationOwnerModelPolicy {
+  return {
+    allowedModelSkus: policy.allowedModelSkus,
+    defaultModelSku: policy.defaultModelSku,
+    dailyBudgetMicroCredits: policy.dailyBudgetMicroCredits,
+    monthlyBudgetMicroCredits: policy.monthlyBudgetMicroCredits,
+    memberMonthlyBudgetMicroCredits: policy.memberMonthlyBudgetMicroCredits,
+  }
+}
+
+export function applyOrganizationOwnerModelPolicy(
+  currentPolicy: OrganizationModelPolicy,
+  ownerPolicy: OrganizationOwnerModelPolicy,
+): OrganizationModelPolicy {
+  return {
+    ...currentPolicy,
+    ...ownerPolicy,
+    memberAllowedModelSkus: currentPolicy.memberAllowedModelSkus,
+    providerAssignments: currentPolicy.providerAssignments,
   }
 }
 

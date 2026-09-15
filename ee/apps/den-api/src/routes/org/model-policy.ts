@@ -7,8 +7,10 @@ import { parseOrganizationPlan } from "../../entitlements.js"
 import { orgRoleRoute } from "../../middleware/index.js"
 import { modelCatalogSchema, requestModelCatalog } from "../../model-catalog-service.js"
 import {
-  organizationModelPolicyInputSchema,
+  applyOrganizationOwnerModelPolicy,
+  organizationOwnerModelPolicyInputSchema,
   readOrganizationModelPolicy,
+  toOrganizationOwnerModelPolicy,
   writeOrganizationModelPolicy,
 } from "../../organization-model-policy.js"
 import type { OrgRouteVariables } from "./shared.js"
@@ -31,11 +33,14 @@ export function registerOrgModelPolicyRoutes<T extends { Variables: OrgRouteVari
     }
     const availableModels = toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier).models
     c.header("Cache-Control", "private, no-store")
-    return c.json({ policy: readOrganizationModelPolicy(organization.metadata), availableModels })
+    return c.json({
+      policy: toOrganizationOwnerModelPolicy(readOrganizationModelPolicy(organization.metadata)),
+      availableModels,
+    })
   })
 
   app.put("/v1/model-policy", orgRoleRoute(["owner"]), async (c) => {
-    const body = organizationModelPolicyInputSchema.safeParse(await c.req.json().catch(() => null))
+    const body = organizationOwnerModelPolicyInputSchema.safeParse(await c.req.json().catch(() => null))
     if (!body.success) {
       return c.json({
         error: "invalid_request",
@@ -51,7 +56,14 @@ export function registerOrgModelPolicyRoutes<T extends { Variables: OrgRouteVari
       return c.json({ error: "invalid_request", message: "A member quota references an unknown organization member." }, 400)
     }
 
-    const metadata = writeOrganizationModelPolicy(organization.metadata, body.data)
+    const currentPolicy = readOrganizationModelPolicy(organization.metadata)
+    // Unknown JSON fields are stripped by the Owner schema. The merge helper
+    // also copies platform-only fields from server state, so clients cannot
+    // smuggle a provider authorization or member route into this endpoint.
+    const metadata = writeOrganizationModelPolicy(
+      organization.metadata,
+      applyOrganizationOwnerModelPolicy(currentPolicy, body.data),
+    )
     await db.update(OrganizationTable).set({ metadata }).where(eq(OrganizationTable.id, organization.id))
     c.header("Cache-Control", "private, no-store")
     return c.json({ policy: body.data })

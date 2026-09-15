@@ -27,6 +27,9 @@ describe("Voiceover V13 release governance", () => {
     expect(memberCatalog).toContain('orgRoleRoute(["member"])')
     expect(memberCatalog).toContain("without provider, route, credential, or upstream model details")
     expect(ownerPolicy.match(/orgRoleRoute\(\["owner"\]\)/g)?.length).toBe(2)
+    expect(ownerPolicy).toContain("organizationOwnerModelPolicyInputSchema")
+    expect(ownerPolicy).toContain("applyOrganizationOwnerModelPolicy(currentPolicy, body.data)")
+    expect(ownerPolicy).toContain("toOrganizationOwnerModelPolicy")
   })
 
   test("keeps offline-paid local runtimes inside their purchased plan", () => {

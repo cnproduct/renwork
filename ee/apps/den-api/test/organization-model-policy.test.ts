@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test"
 import {
+  applyOrganizationOwnerModelPolicy,
   DEFAULT_ORGANIZATION_MODEL_POLICY,
   organizationModelPolicyInputSchema,
+  organizationOwnerModelPolicyInputSchema,
   readOrganizationModelPolicy,
   modelAllowedForMember,
   providerAssignmentAllowsModel,
   resolveMemberMonthlyBudget,
+  toOrganizationOwnerModelPolicy,
   writeOrganizationModelPolicy,
 } from "../src/organization-model-policy"
 
@@ -74,5 +77,47 @@ describe("organization model policy", () => {
       modelSku: "renwork-standard",
       memberId: "member_a",
     })).toBe(false)
+  })
+
+  test("strips platform-admin routing from the organization Owner policy", () => {
+    const policy = {
+      ...DEFAULT_ORGANIZATION_MODEL_POLICY,
+      allowedModelSkus: ["renwork-code-kimi-k3"],
+      providerAssignments: [{
+        id: "assignment_opencode_go",
+        providerId: "opencode-go-primary",
+        label: "Server-only OpenCode Go",
+        allowedModelSkus: null,
+        allowedMemberIds: null,
+        startsAt: null,
+        expiresAt: null,
+        enabled: true,
+      }],
+    }
+
+    expect(toOrganizationOwnerModelPolicy(policy)).toEqual({
+      allowedModelSkus: ["renwork-code-kimi-k3"],
+      defaultModelSku: null,
+      dailyBudgetMicroCredits: null,
+      monthlyBudgetMicroCredits: null,
+      memberMonthlyBudgetMicroCredits: {},
+    })
+    expect(organizationOwnerModelPolicyInputSchema.parse({
+      ...toOrganizationOwnerModelPolicy(policy),
+      providerAssignments: [],
+      memberAllowedModelSkus: { attacker: ["renwork-code-kimi-k3"] },
+    })).toEqual(toOrganizationOwnerModelPolicy(policy))
+    expect(applyOrganizationOwnerModelPolicy(
+      policy,
+      organizationOwnerModelPolicyInputSchema.parse({
+        ...toOrganizationOwnerModelPolicy(policy),
+        allowedModelSkus: ["renwork-standard"],
+        providerAssignments: [],
+        memberAllowedModelSkus: {},
+      }),
+    )).toEqual({
+      ...policy,
+      allowedModelSkus: ["renwork-standard"],
+    })
   })
 })
