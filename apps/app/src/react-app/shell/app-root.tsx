@@ -13,6 +13,7 @@ import {
 } from "../../app/lib/den";
 import { exchangeHandoffAndSignIn } from "../../app/lib/den-handoff";
 import {
+  dispatchDenSessionUpdated,
   denSettingsChangedEvent,
   denSessionUpdatedEvent,
 } from "../../app/lib/den-session-events";
@@ -272,6 +273,19 @@ function DenAuthControlActions() {
           activeOrgSlug: targetOrganization.slug,
           activeOrgName: targetOrganization.name,
         }, { persistBootstrap: false });
+        // The initial exchange emits a session-updated event before the
+        // requested organization is applied. A refresh already in flight can
+        // otherwise write the exchange-reported default organization back to
+        // localStorage after the explicit target switch. Start a superseding
+        // refresh now that the target org is durable, so auth state and all
+        // consumers converge on the requested tenant.
+        dispatchDenSessionUpdated({
+          status: "success",
+          baseUrl: targetBaseUrl,
+          token: signedInToken,
+          user: result.exchange.user,
+          email: result.exchange.user?.email ?? null,
+        });
       }
       return {
         email: result.exchange.user?.email,
