@@ -51,7 +51,7 @@ export async function signInDesktopAs(
     grant,
     baseUrl: den.webUrl,
     organizationId: options?.organizationId,
-  });
+  }, { timeoutMs: 60_000 });
   await waitForDenState(app, den, "Boolean((localStorage.getItem('openwork.den.authToken') ?? '').trim())", {
     timeoutMs: 45_000,
     label: "persisted den auth token",
