@@ -64,7 +64,7 @@ function deviceEvidence(targetId: string, index: number) {
 }
 
 test("Voiceover V49 replaces the simulated no-result test and guards release with exact-device evidence", async ({ evidence }) => {
-  const [voiceover, liveSpec, liveWorkflow, fleetWorkflow, candidateWorkflow, finalizer, baseReleaseWorkflow] = await Promise.all([
+  const [voiceover, liveSpec, liveWorkflow, fleetWorkflow, candidateWorkflow, finalizer, baseReleaseWorkflow, localHost] = await Promise.all([
     readFile(new URL("../voiceovers/voiceover-v49-real-den-fleet-acceptance.md", import.meta.url), "utf8"),
     readFile(new URL("./session-admission-no-result-recovery.e2e.test.ts", import.meta.url), "utf8"),
     readFile(new URL("../../.github/workflows/voiceover-v49-real-den-no-result.yml", import.meta.url), "utf8"),
@@ -72,6 +72,7 @@ test("Voiceover V49 replaces the simulated no-result test and guards release wit
     readFile(new URL("../../.github/workflows/build-voiceover-v49-candidates.yml", import.meta.url), "utf8"),
     readFile(new URL("../../scripts/acceptance/finalize-v49.mjs", import.meta.url), "utf8"),
     readFile(new URL("../../.github/workflows/release-macos-aarch64.yml", import.meta.url), "utf8"),
+    readFile(new URL("../packages/hosts/src/local.ts", import.meta.url), "utf8"),
   ]);
 
   expect(liveSpec).toContain("OPENWORK_EVAL_DEN_NO_RESULT_MODEL_SKU");
@@ -99,6 +100,7 @@ test("Voiceover V49 replaces the simulated no-result test and guards release wit
   expect(baseReleaseWorkflow).not.toContain("push:\n    tags:");
   expect(baseReleaseWorkflow).toContain("electron-builder.server2016-cloud.yml");
   expect(baseReleaseWorkflow).toContain("Expected 7 signed Windows installers");
+  expect(localHost).toContain("if (!packagedBinary) await prepareSharedElectronResources");
   expect(voiceover).toContain("Hosted build VMs prove packaging only");
 
   const complete = Object.keys(REQUIRED_TARGETS).map((targetId, index) => deviceEvidence(targetId, index + 1));

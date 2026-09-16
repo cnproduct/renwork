@@ -632,7 +632,12 @@ async function clearStaleSurfaces(rootDir: string, log: (message: string) => voi
     workspaceRoot: options.repoRoot,
 
     async spawnElectron(name: string, opts: ElectronSurfaceOptions = {}): Promise<SurfaceHandle> {
-      await prepareSharedElectronResources(options.repoRoot, log);
+      // Installed-candidate acceptance must exercise the resources bundled in
+      // that candidate. Preparing repository sidecars here both changes the
+      // subject under test and introduces an unrelated network download before
+      // launch, so only source/dev Electron surfaces prepare shared resources.
+      const packagedBinary = process.env.OPENWORK_EVAL_ELECTRON_BINARY?.trim();
+      if (!packagedBinary) await prepareSharedElectronResources(options.repoRoot, log);
       const spawnEnvForChecks: NodeJS.ProcessEnv = { ...process.env, ...opts.env };
       if (insideContainerSandbox() && (spawnEnvForChecks.DISPLAY ?? "").trim().length === 0) spawnEnvForChecks.DISPLAY = ":99";
       await ensureDisplay(options.repoRoot, spawnEnvForChecks, log);
@@ -662,7 +667,6 @@ async function clearStaleSurfaces(rootDir: string, log: (message: string) => voi
       // segfaults instead of opening a window.
       if (insideContainerSandbox() && (env.DISPLAY ?? "").trim().length === 0) env.DISPLAY = ":99";
       const logPath = join(profileRoot, "electron.log");
-      const packagedBinary = process.env.OPENWORK_EVAL_ELECTRON_BINARY?.trim();
       let spawned: SpawnedDetached;
       if (packagedBinary) {
         await access(packagedBinary, constants.F_OK).catch(() => {
