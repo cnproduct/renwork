@@ -79,6 +79,7 @@ test("Voiceover V49 replaces the simulated no-result test and guards release wit
   expect(liveSpec).toContain("OPENWORK_EVAL_INFERENCE_KEY");
   expect(liveSpec).toContain('executionChannel: "real-den-inference-gateway"');
   expect(liveSpec).toContain("async function readDenWithRetry");
+  expect(liveSpec).toContain("completeOnboarding: true");
   expect(liveSpec).toContain('"/v1/rencredit/ledger?limit=100"');
   expect(liveSpec).toContain('receipt.status).toBe("captured")');
   expect(liveSpec).not.toContain("createServer");

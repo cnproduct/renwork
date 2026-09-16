@@ -40,7 +40,7 @@ export async function signInDesktopAs(
   app: Surface,
   den: DenRef,
   member: DenSession,
-  options?: { organizationId?: string },
+  options?: { organizationId?: string; completeOnboarding?: boolean },
 ): Promise<void> {
   await waitFor(app, "Boolean(window.__openworkControl?.listActions?.().some((action) => action.id === 'auth.exchange-grant'))", {
     timeoutMs: 60_000,
@@ -74,6 +74,9 @@ export async function signInDesktopAs(
     timeoutMs: 60_000,
     label: "organization onboarding or workspace route",
   });
+  if (options?.completeOnboarding && (await currentHash(app)).includes("/onboarding")) {
+    await completeOrganizationOnboarding(app);
+  }
 }
 
 async function completeOrganizationOnboarding(app: Surface): Promise<void> {
