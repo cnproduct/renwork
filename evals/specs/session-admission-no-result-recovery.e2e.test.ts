@@ -58,6 +58,12 @@ function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isConnectTimeout(error: unknown): boolean {
+  return error instanceof TypeError
+    && isRecord(error.cause)
+    && error.cause.code === "UND_ERR_CONNECT_TIMEOUT";
+}
+
 function auth(session: DenSession, organizationId: string): Record<string, string> {
   return {
     authorization: `Bearer ${session.token}`,
@@ -256,22 +262,38 @@ async function invokeNoResultGateway(input: {
   modelSku: string;
   prompt: string;
 }) {
-  const response = await fetch(`${input.apiBaseUrl.replace(/\/+$/, "")}/api/v1/chat/completions`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${input.inferenceKey}`,
-      "content-type": "application/json",
-      "idempotency-key": `v49-real-den:${randomUUID()}`,
-      "x-openwork-org-id": input.organizationId,
-    },
-    body: JSON.stringify({
-      model: input.modelSku,
-      stream: false,
-      max_tokens: 16,
-      messages: [{ role: "user", content: input.prompt }],
-    }),
-    signal: AbortSignal.timeout(TERMINAL_RECEIPT_TIMEOUT_MS),
-  });
+  const idempotencyKey = `v49-real-den:${randomUUID()}`;
+  const url = `${input.apiBaseUrl.replace(/\/+$/, "")}/api/v1/chat/completions`;
+  let response: Response | null = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${input.inferenceKey}`,
+          "content-type": "application/json",
+          "idempotency-key": idempotencyKey,
+          "x-openwork-org-id": input.organizationId,
+        },
+        body: JSON.stringify({
+          model: input.modelSku,
+          stream: false,
+          max_tokens: 16,
+          messages: [{ role: "user", content: input.prompt }],
+        }),
+        signal: AbortSignal.timeout(TERMINAL_RECEIPT_TIMEOUT_MS),
+      });
+      break;
+    } catch (error) {
+      // A connection timeout means no socket was established and no request
+      // bytes were sent. Reusing the same idempotency key also keeps a retry
+      // fail-safe if a platform ever reports this error ambiguously. Never
+      // retry HTTP responses, aborts, or any other write failure here.
+      if (!isConnectTimeout(error) || attempt === 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1_000));
+    }
+  }
+  if (!response) throw new Error("Real Den gateway call did not return a response");
   const raw = await response.text();
   if (!response.ok) {
     throw new Error(`Real Den gateway call failed: HTTP ${response.status} ${raw.slice(0, 1_000)}`);
