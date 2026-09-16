@@ -65,11 +65,31 @@ function auth(session: DenSession, organizationId: string): Record<string, strin
   };
 }
 
+async function readDenWithRetry(
+  session: DenSession,
+  path: string,
+  headers: Record<string, string>,
+) {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const result = await denFetch(session, path, {
+        headers,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      if (result.response.status < 500 || attempt === 3) return result;
+      lastError = new Error(`${path} returned HTTP ${result.response.status}`);
+    } catch (error) {
+      lastError = error;
+      if (attempt === 3) throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, attempt * 1_000));
+  }
+  throw lastError instanceof Error ? lastError : new Error(`${path} failed after retries`);
+}
+
 async function orgRequest(session: DenSession, organizationId: string, path: string) {
-  const result = await denFetch(session, path, {
-    headers: auth(session, organizationId),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  const result = await readDenWithRetry(session, path, auth(session, organizationId));
   if (!result.response.ok) {
     throw new Error(`${path} failed: HTTP ${result.response.status} ${result.text.slice(0, 500)}`);
   }
@@ -357,10 +377,11 @@ test.skipIf(missingRequirements.length > 0)(title, { timeout: 600_000 }, async (
   }
 
   await using den = await server({ place });
-  const orgs = await denFetch(den.admin, "/v1/me/orgs", {
-    headers: { authorization: `Bearer ${den.admin.token}` },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  const orgs = await readDenWithRetry(
+    den.admin,
+    "/v1/me/orgs",
+    { authorization: `Bearer ${den.admin.token}` },
+  );
   const memberships = isRecord(orgs.body) && Array.isArray(orgs.body.orgs) ? orgs.body.orgs.filter(isRecord) : [];
   const membership = memberships.find((entry) => entry.id === organizationId);
   if (!orgs.response.ok || !membership) {
