@@ -78,6 +78,7 @@ const DESKTOP_CONFIG_CACHE_PREFIX = "openwork.den.desktopConfig:";
 export const CLOUD_MCP_SYNC_MARKER_STORAGE_KEY = "openwork.den.mcp.sync";
 const ORG_PROXY_HEADER = "x-openwork-legacy-org-id";
 const DEFAULT_DEN_TIMEOUT_MS = 12_000;
+const DEN_DESKTOP_HANDOFF_TIMEOUT_MS = 45_000;
 
 export const DEFAULT_DEN_AUTH_NAME = "RenWork User";
 const RENWORK_HOSTED_DEN_BASE_URL = "https://www.rrenn.com";
@@ -2937,6 +2938,10 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
       const payload = await requestJson<unknown>(baseUrls, "/v1/auth/desktop-handoff/exchange", {
         method: "POST",
         body: { grant },
+        // The first request from a freshly installed desktop can include a
+        // slow proxy/TLS warm-up. This one-time grant cannot be replayed, so
+        // give the original exchange enough time instead of retrying it.
+        timeoutMs: DEN_DESKTOP_HANDOFF_TIMEOUT_MS,
       });
       return {
         user: getUser(payload),
