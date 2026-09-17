@@ -70,7 +70,8 @@ export function registerOrgModelCatalogRoutes<T extends { Variables: OrgRouteVar
       || (typeof inference === "object" && inference !== null && !Array.isArray(inference) && inference.enabled === true)
     const policy = access.allowed && inferenceEnabled
       ? subscriptionCliAccessForMember({
-          organizationSlug: context.organization.slug,
+          organizationId: context.organization.id,
+          organizationName: context.organization.name,
           metadata: context.organization.metadata,
           memberId: context.currentMember.id,
         })

@@ -13,7 +13,7 @@ import {
   writeOrganizationModelPolicy,
 } from "../../organization-model-policy.js"
 import type { AuthContextVariables } from "../../session.js"
-import { readSubscriptionCliPolicy, subscriptionCliPolicySchema, writeSubscriptionCliPolicy } from "../../subscription-cli-policy.js"
+import { isWeijianSubscriptionCliOrganization, readSubscriptionCliPolicy, subscriptionCliPolicySchema, writeSubscriptionCliPolicy } from "../../subscription-cli-policy.js"
 
 async function loadOrganization(organizationId: string) {
   if (!isDenTypeId("organization", organizationId)) return null
@@ -75,14 +75,14 @@ async function loadAvailableCatalog(metadata: Record<string, unknown> | null) {
 export function registerAdminOrganizationModelPolicyRoutes<T extends { Variables: AuthContextVariables }>(app: Hono<T>) {
   app.get("/v1/admin/organizations/:organizationId/subscription-cli-policy", adminRoute(), async (c) => {
     const organization = await loadOrganization(c.req.param("organizationId"))
-    if (!organization || organization.slug !== "weijian") return c.json({ error: "not_found" }, 404)
+    if (!organization || !isWeijianSubscriptionCliOrganization({ organizationId: organization.id, organizationName: organization.name })) return c.json({ error: "not_found" }, 404)
     c.header("Cache-Control", "private, no-store")
     return c.json({ organization: { id: organization.id, name: organization.name, slug: organization.slug }, policy: readSubscriptionCliPolicy(organization.metadata) })
   })
 
   app.put("/v1/admin/organizations/:organizationId/subscription-cli-policy", adminRoute(), async (c) => {
     const organization = await loadOrganization(c.req.param("organizationId"))
-    if (!organization || organization.slug !== "weijian") return c.json({ error: "not_found" }, 404)
+    if (!organization || !isWeijianSubscriptionCliOrganization({ organizationId: organization.id, organizationName: organization.name })) return c.json({ error: "not_found" }, 404)
     const parsed = subscriptionCliPolicySchema.safeParse(await c.req.json().catch(() => null))
     if (!parsed.success) return c.json({ error: "invalid_request", message: parsed.error.issues[0]?.message ?? "Invalid policy." }, 400)
     if (parsed.data.enabled && Date.parse(parsed.data.expiresAt) <= Date.now()) {

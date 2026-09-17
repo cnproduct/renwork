@@ -21,7 +21,7 @@ import { parseOrganizationPlan } from "../entitlements.js"
 import { env } from "../env.js"
 import { adminRoute, publicRoute } from "../middleware/index.js"
 import { modelAllowedForMember, readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
-import { subscriptionCliAccessForMember, subscriptionCliModelForMember } from "../subscription-cli-policy.js"
+import { isWeijianSubscriptionCliOrganization, subscriptionCliAccessForMember, subscriptionCliModelForMember } from "../subscription-cli-policy.js"
 import { accessAllowsModel, resolveRenworkModelAccess } from "../renwork-access.js"
 import {
   authenticateInferenceKey,
@@ -88,7 +88,7 @@ async function loadProductionCatalog() {
 }
 
 async function localMeteringAccess(principal: InferencePrincipal, modelSku: string) {
-  const [organization] = await db.select({ slug: OrganizationTable.slug, metadata: OrganizationTable.metadata }).from(OrganizationTable)
+  const [organization] = await db.select({ id: OrganizationTable.id, name: OrganizationTable.name, metadata: OrganizationTable.metadata }).from(OrganizationTable)
     .where(eq(OrganizationTable.id, principal.organizationId)).limit(1)
   if (!organization) throw new Error("ORGANIZATION_NOT_FOUND")
   const inferenceMetadata = isRecord(organization?.metadata?.inference) ? organization.metadata.inference : null
@@ -96,7 +96,8 @@ async function localMeteringAccess(principal: InferencePrincipal, modelSku: stri
   if (!access.allowed) throw new Error("SUBSCRIPTION_REQUIRED")
   if (access.source === "subscription" && inferenceMetadata?.enabled !== true) throw new Error("INFERENCE_DISABLED")
   const cli = subscriptionCliModelForMember({
-    organizationSlug: organization.slug,
+    organizationId: organization.id,
+    organizationName: organization.name,
     metadata: organization.metadata,
     memberId: principal.memberId,
     modelSku,
@@ -108,7 +109,7 @@ async function localMeteringAccess(principal: InferencePrincipal, modelSku: stri
     if (!modelAllowedForMember(policy, principal.memberId, modelSku)) throw new Error("MODEL_NOT_ALLOWED_BY_MEMBER")
     return {
       catalog: {
-        version: `subscription-cli:${organization.slug}:${modelSku}`,
+        version: `subscription-cli:${organization.id}:${modelSku}`,
         billingPolicy: { local: "token_metered" as const, byok: "token_metered" as const, official: "token_metered" as const },
         providers: [cli.provider],
       },
@@ -165,15 +166,16 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
   app.all("/api/v1/metered-runtime/*", publicRoute, async (c, next) => {
     const principal = await principalForRequest(c.req.header("Authorization"))
     if (principal) {
-      const [organization] = await db.select({ slug: OrganizationTable.slug, metadata: OrganizationTable.metadata })
+      const [organization] = await db.select({ id: OrganizationTable.id, name: OrganizationTable.name, metadata: OrganizationTable.metadata })
         .from(OrganizationTable).where(eq(OrganizationTable.id, principal.organizationId)).limit(1)
       const finalizing = c.req.method === "POST" && (
         c.req.path === "/api/v1/metered-runtime/settlements"
         || /^\/api\/v1\/metered-runtime\/reservations\/[^/]+\/(heartbeat|release)$/.test(c.req.path)
       )
-      if (organization?.slug === "weijian" && finalizing) return next()
+      if (organization && isWeijianSubscriptionCliOrganization({ organizationId: organization.id, organizationName: organization.name }) && finalizing) return next()
       if (organization && subscriptionCliAccessForMember({
-        organizationSlug: organization.slug,
+        organizationId: organization.id,
+        organizationName: organization.name,
         metadata: organization.metadata,
         memberId: principal.memberId,
       })) return next()
@@ -209,10 +211,11 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
       .where(eq(RenCreditRuntimeDeviceTable.id, registrationId)).limit(1)
     if (!device) return c.json({ error: { code: "LOCAL_RUNTIME_DEVICE_NOT_FOUND" } }, 404)
     if (body.status === "active") {
-      const [organization] = await db.select({ slug: OrganizationTable.slug, metadata: OrganizationTable.metadata })
+      const [organization] = await db.select({ id: OrganizationTable.id, name: OrganizationTable.name, metadata: OrganizationTable.metadata })
         .from(OrganizationTable).where(eq(OrganizationTable.id, device.organization_id)).limit(1)
       if (!organization || !subscriptionCliAccessForMember({
-        organizationSlug: organization.slug,
+        organizationId: organization.id,
+        organizationName: organization.name,
         metadata: organization.metadata,
         memberId: device.org_membership_id,
       })) return c.json({ error: { code: "LOCAL_RUNTIME_DISABLED" } }, 409)

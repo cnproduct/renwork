@@ -68,20 +68,33 @@ export function writeSubscriptionCliPolicy(metadata: Record<string, unknown> | n
   return { ...metadataRecord(metadata), subscriptionCliPolicy: policy }
 }
 
+export function isWeijianSubscriptionCliOrganization(input: {
+  organizationId: string
+  organizationName: string
+  pilotOrganizationId?: string
+}): boolean {
+  const configuredId = input.pilotOrganizationId ?? process.env.RENWORK_WEIJIAN_ORGANIZATION_ID
+  return Boolean(configuredId) && input.organizationId === configuredId && input.organizationName === "weijian"
+}
+
 export function subscriptionCliAccessForMember(input: {
-  organizationSlug: string
+  organizationId: string
+  organizationName: string
+  pilotOrganizationId?: string
   metadata: Record<string, unknown> | null | undefined
   memberId: string
   now?: Date
 }): SubscriptionCliPolicy | null {
-  if (input.organizationSlug !== "weijian") return null
+  if (!isWeijianSubscriptionCliOrganization(input)) return null
   const policy = readSubscriptionCliPolicy(input.metadata)
   if (!policy?.enabled || Date.parse(policy.expiresAt) <= (input.now ?? new Date()).getTime()) return null
   return policy.allowedMemberIds.includes(input.memberId) ? policy : null
 }
 
 export function subscriptionCliModelForMember(input: {
-  organizationSlug: string
+  organizationId: string
+  organizationName: string
+  pilotOrganizationId?: string
   metadata: Record<string, unknown> | null | undefined
   memberId: string
   modelSku: string

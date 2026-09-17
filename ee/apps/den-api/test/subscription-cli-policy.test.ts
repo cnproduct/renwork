@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import {
   isChinaWeekdayPeak,
+  isWeijianSubscriptionCliOrganization,
   readSubscriptionCliPolicy,
   subscriptionCliAccessForMember,
   subscriptionCliModelForMember,
@@ -27,21 +28,24 @@ const policy = subscriptionCliPolicySchema.parse({
     },
   }],
 })
+const organization = { organizationId: "org_weijian", organizationName: "weijian", pilotOrganizationId: "org_weijian" }
 
 test("only an active weijian member resolves a metered personal CLI route", () => {
   const metadata = writeSubscriptionCliPolicy({ unrelated: true }, policy)
   expect(metadata.unrelated).toBe(true)
   expect(readSubscriptionCliPolicy(metadata)).toEqual(policy)
   const base = { metadata, memberId: "om_weijian_member", modelSku: "renwork-google-gemini-pro", now: new Date("2026-09-17T00:00:00.000Z") }
-  const granted = subscriptionCliModelForMember({ ...base, organizationSlug: "weijian" })
+  const granted = subscriptionCliModelForMember({ ...base, ...organization })
   expect(granted?.provider.protocol).toBe("antigravity_cli")
   expect(granted?.provider.credentialStore).toBe("device_vault")
   expect(granted?.model.routes[0]?.source).toBe("local")
-  expect(subscriptionCliModelForMember({ ...base, organizationSlug: "other" })).toBeNull()
-  expect(subscriptionCliModelForMember({ ...base, organizationSlug: "weijian", memberId: "om_other" })).toBeNull()
-  expect(subscriptionCliModelForMember({ ...base, organizationSlug: "weijian", modelSku: "renwork-code" })).toBeNull()
-  expect(subscriptionCliModelForMember({ ...base, organizationSlug: "weijian", now: new Date("2027-01-01T00:00:00.000Z") })).toBeNull()
-  expect(subscriptionCliAccessForMember({ organizationSlug: "other", metadata, memberId: "om_weijian_member" })).toBeNull()
+  expect(subscriptionCliModelForMember({ ...base, ...organization, organizationId: "org_other" })).toBeNull()
+  expect(subscriptionCliModelForMember({ ...base, ...organization, organizationName: "other" })).toBeNull()
+  expect(subscriptionCliModelForMember({ ...base, ...organization, memberId: "om_other" })).toBeNull()
+  expect(subscriptionCliModelForMember({ ...base, ...organization, modelSku: "renwork-code" })).toBeNull()
+  expect(subscriptionCliModelForMember({ ...base, ...organization, now: new Date("2027-01-01T00:00:00.000Z") })).toBeNull()
+  expect(subscriptionCliAccessForMember({ ...organization, organizationId: "org_other", metadata, memberId: "om_weijian_member" })).toBeNull()
+  expect(isWeijianSubscriptionCliOrganization({ organizationId: "org_weijian", organizationName: "weijian", pilotOrganizationId: "" })).toBe(false)
 })
 
 test("rejects a mismatched SKU or unmetered model", () => {
@@ -60,7 +64,7 @@ test("selects China weekday peak rates at reservation time", () => {
   })
   const metadata = writeSubscriptionCliPolicy({}, scheduled)
   const resolve = (now: string) => subscriptionCliModelForMember({
-    organizationSlug: "weijian", metadata, memberId: "om_weijian_member",
+    ...organization, metadata, memberId: "om_weijian_member",
     modelSku: "renwork-google-gemini-pro", now: new Date(now),
   })?.model.rates.inputMicroCreditsPerMillion
   expect(isChinaWeekdayPeak(new Date("2026-09-17T00:59:59Z"))).toBe(false)

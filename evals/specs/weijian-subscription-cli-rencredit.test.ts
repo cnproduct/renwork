@@ -20,10 +20,11 @@ test("weijian CLI authorization keeps organization and reported usage boundaries
   });
   const metadata = writeSubscriptionCliPolicy({}, policy);
   const request = { metadata, memberId: "om_weijian_member", modelSku: "renwork-google-gemini-pro", now: new Date("2026-09-17T00:00:00Z") };
-  expect(subscriptionCliModelForMember({ ...request, organizationSlug: "weijian" })?.provider.protocol).toBe("antigravity_cli");
-  expect(subscriptionCliModelForMember({ ...request, organizationSlug: "another-org" })).toBeNull();
-  expect(subscriptionCliModelForMember({ ...request, organizationSlug: "weijian", memberId: "om_other" })).toBeNull();
-  expect(subscriptionCliModelForMember({ ...request, organizationSlug: "weijian", now: new Date("2027-01-01T00:00:00Z") })).toBeNull();
+  const organization = { organizationId: "org_weijian", organizationName: "weijian", pilotOrganizationId: "org_weijian" };
+  expect(subscriptionCliModelForMember({ ...request, ...organization })?.provider.protocol).toBe("antigravity_cli");
+  expect(subscriptionCliModelForMember({ ...request, ...organization, organizationId: "org_other" })).toBeNull();
+  expect(subscriptionCliModelForMember({ ...request, ...organization, memberId: "om_other" })).toBeNull();
+  expect(subscriptionCliModelForMember({ ...request, ...organization, now: new Date("2027-01-01T00:00:00Z") })).toBeNull();
 
   const parsed = parseAntigravityResultEvent({ event: "result", result: {
     conversation_id: "run_1", status: "SUCCESS", response: "done",
