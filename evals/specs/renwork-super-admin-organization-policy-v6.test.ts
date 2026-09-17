@@ -13,7 +13,7 @@ test("V6 gives the platform super admin one cross-organization model governance 
   expect(dialog).toContain("成员额度与模型白名单");
   expect(dialog).toContain("超级管理员供应商授权");
   expect(route.match(/adminRoute\(\)/g)?.length ?? 0).toBe(4);
-  expect(route).toContain('organization.slug !== "weijian"');
+  expect(route).toContain("isWeijianSubscriptionCliOrganization");
   expect(route).toContain('subscription-cli-policy');
   expect(route).toContain("loadAvailableCatalog");
   expect(route).toContain("loadActiveMembers");

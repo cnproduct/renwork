@@ -26,8 +26,8 @@ test("Voiceover V9 device OAuth is denied by default with a bounded weijian pilo
   expect(gateway).toContain('app.all("/api/v1/metered-runtime/*"');
   expect(gateway).toContain('code: "LOCAL_RUNTIME_DISABLED"');
   expect(gateway).toContain("subscriptionCliAccessForMember");
-  expect(gateway).toContain('organization?.slug === "weijian"');
-  expect(pilotPolicy).toContain('input.organizationSlug !== "weijian"');
+  expect(gateway).toContain("isWeijianSubscriptionCliOrganization");
+  expect(pilotPolicy).toContain("RENWORK_WEIJIAN_ORGANIZATION_ID");
   expect(ledger).toContain("DEVICE_OAUTH_CONCURRENCY_EXCEEDED");
   expect(cloud).toContain("DEN_SERVER_EXCLUSIVE_CATALOG_MIGRATION");
   expect(cloud).toContain("validateDenServerCatalog");
