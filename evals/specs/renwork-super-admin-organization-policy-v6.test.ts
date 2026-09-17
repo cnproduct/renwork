@@ -12,11 +12,13 @@ test("V6 gives the platform super admin one cross-organization model governance 
   expect(dialog).toContain("组织 RenCredit 预算");
   expect(dialog).toContain("成员额度与模型白名单");
   expect(dialog).toContain("超级管理员供应商授权");
-  expect(route.match(/adminRoute\(\)/g)?.length ?? 0).toBe(2);
+  expect(route.match(/adminRoute\(\)/g)?.length ?? 0).toBe(4);
+  expect(route).toContain("isWeijianSubscriptionCliOrganization");
+  expect(route).toContain('subscription-cli-policy');
   expect(route).toContain("loadAvailableCatalog");
   expect(route).toContain("loadActiveMembers");
 
   evidence.fact("Cross-organization governance is visible", "Every organization row opens one RenWork-branded model, budget, and member quota dialog.", true);
-  evidence.fact("Platform administration is enforced server-side", "Both organization-policy endpoints require the platform admin allowlist and reject quotas for removed or unknown members.", true);
+  evidence.fact("Platform administration is enforced server-side", "The two organization-policy endpoints and two weijian pilot endpoints require the platform admin allowlist; member IDs are checked against active membership.", true);
   evidence.fact("Secrets stay global", "The organization dialog never receives provider keys; provider routes and secret references remain in the separate global model catalog.", true);
 });

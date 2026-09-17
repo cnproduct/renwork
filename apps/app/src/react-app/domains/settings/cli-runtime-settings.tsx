@@ -7,8 +7,8 @@ import type {
   RenWorkCliRun,
   RenWorkCliRuntimeStatus,
 } from "@/app/lib/openwork-server";
+import type { DenSubscriptionCliModel } from "@/app/lib/den";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SettingsNotice, SettingsStatusBadge } from "./settings-section";
 import {
@@ -24,11 +24,13 @@ import {
 export function CliRuntimeSettings(props: {
   client: OpenworkServerClient | null;
   workspaceId: string | null;
+  models: DenSubscriptionCliModel[];
 }) {
   const [runtimes, setRuntimes] = useState<RenWorkCliRuntimeStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modelSku, setModelSku] = useState("renwork-codex");
+  const [modelSku, setModelSku] = useState(props.models[0]?.sku ?? "");
+  const selectedModel = props.models.find((model) => model.sku === modelSku);
   const [prompt, setPrompt] = useState("");
   const [run, setRun] = useState<RenWorkCliRun | null>(null);
   const [runBusy, setRunBusy] = useState(false);
@@ -51,6 +53,10 @@ export function CliRuntimeSettings(props: {
   }, [refresh]);
 
   useEffect(() => {
+    if (!props.models.some((model) => model.sku === modelSku)) setModelSku(props.models[0]?.sku ?? "");
+  }, [modelSku, props.models]);
+
+  useEffect(() => {
     if (!props.client || !props.workspaceId || !run || !["running", "settling"].includes(run.state)) return;
     let cancelled = false;
     const poll = async () => {
@@ -70,12 +76,12 @@ export function CliRuntimeSettings(props: {
   }, [props.client, props.workspaceId, run?.runId, run?.state]);
 
   const start = useCallback(async () => {
-    if (!props.client || !props.workspaceId || !modelSku.trim() || !prompt.trim()) return;
+    if (!props.client || !props.workspaceId || !selectedModel || !prompt.trim()) return;
     setRunBusy(true);
     setError(null);
     try {
-      setRun(await props.client.startCliRuntimeRun(props.workspaceId, "codex", {
-        modelSku: modelSku.trim(),
+      setRun(await props.client.startCliRuntimeRun(props.workspaceId, selectedModel.runtime, {
+        modelSku: selectedModel.sku,
         prompt: prompt.trim(),
       }));
     } catch (nextError) {
@@ -83,7 +89,7 @@ export function CliRuntimeSettings(props: {
     } finally {
       setRunBusy(false);
     }
-  }, [modelSku, prompt, props.client, props.workspaceId]);
+  }, [prompt, props.client, props.workspaceId, selectedModel]);
 
   const cancel = useCallback(async () => {
     if (!props.client || !props.workspaceId || !run) return;
@@ -135,7 +141,9 @@ export function CliRuntimeSettings(props: {
                 </span>
                 <SettingsStatusBadge
                   tone={runtime.meteredExecutionReady ? "ready" : runtime.installed ? "warning" : "neutral"}
-                  label={runtime.meteredExecutionReady ? "可计费运行" : runtime.installed ? "待适配" : "未安装"}
+                  label={runtime.runtime === "antigravity" && runtime.meteredExecutionReady
+                    ? "已安装，登录待运行时验证"
+                    : runtime.meteredExecutionReady ? "可计费运行" : runtime.installed ? "待适配" : "未安装"}
                 />
               </div>
               <div className="mt-2 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
@@ -155,23 +163,25 @@ export function CliRuntimeSettings(props: {
             推荐命令
           </div>
           <code className="mt-2 block overflow-x-auto whitespace-nowrap rounded-lg bg-dls-surface px-3 py-2 text-xs text-dls-text">
-            renwork codex --model &lt;RenWork模型SKU&gt; "描述你的任务"
+            {selectedModel?.runtime === "antigravity" ? "Antigravity CLI 登录后从这里运行获授权模型" : "Codex CLI 登录后从这里运行获授权模型"}
           </code>
         </div>
 
         <div className="space-y-3 rounded-xl border border-dls-border bg-dls-surface px-3 py-3">
           <div>
-            <div className="text-sm font-medium text-dls-text">Codex OAuth 计费测试</div>
+            <div className="text-sm font-medium text-dls-text">个人订阅账号计费任务</div>
             <div className="mt-1 text-xs leading-5 text-muted-foreground">
               启动后先显示冻结额；任务完成后按结构化 Token 用量显示捕获、释放和不可变收据编号。
             </div>
           </div>
-          <Input
+          <select
             value={modelSku}
             onChange={(event) => setModelSku(event.target.value)}
-            placeholder="RenWork 模型 SKU"
+            className="w-full rounded-lg border border-dls-border bg-dls-surface px-3 py-2 text-sm text-dls-text"
             disabled={runBusy || run?.state === "running" || run?.state === "settling"}
-          />
+          >
+            {props.models.map((model) => <option key={model.sku} value={model.sku}>{model.displayName} · {model.multiplierBps / 10_000}× RenCredit</option>)}
+          </select>
           <Textarea
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
@@ -180,7 +190,7 @@ export function CliRuntimeSettings(props: {
             disabled={runBusy || run?.state === "running" || run?.state === "settling"}
           />
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => void start()} disabled={runBusy || !prompt.trim() || !modelSku.trim() || run?.state === "running" || run?.state === "settling"}>
+            <Button size="sm" onClick={() => void start()} disabled={runBusy || !prompt.trim() || !selectedModel || run?.state === "running" || run?.state === "settling"}>
               <Play className="mr-1.5 size-3.5" />运行并计费
             </Button>
             {run && ["running", "settling"].includes(run.state) ? (
@@ -195,7 +205,7 @@ export function CliRuntimeSettings(props: {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <SettingsStatusBadge
                   tone={run.state === "succeeded" ? "ready" : run.state === "failed" || run.state === "cancelled" ? "warning" : "neutral"}
-                  label={{ running: "执行中", settling: "结算中", succeeded: "已扣费", failed: "失败已释放", cancelled: "已取消" }[run.state]}
+                  label={{ running: "执行中", settling: "结算中", succeeded: "已扣费", failed: "失败", cancelled: "已取消" }[run.state]}
                 />
                 <span className="font-mono text-[10px] text-muted-foreground">
                   不可变预留/收据：{run.reservationId}
@@ -228,7 +238,7 @@ export function CliRuntimeSettings(props: {
         </div>
 
         <SettingsNotice>
-          直接运行原始 <code>codex</code> 或 <code>agy</code> 会绕过 RenWork，因此不会生成 RenCredit 收据。Antigravity 在获得可核验的结构化用量事件前保持禁用正式计费。
+          直接运行原始 <code>codex</code> 或 <code>agy</code> 不会生成 RenCredit 收据。请先在各自 CLI 中完成个人账号登录，再从此处启动获授权模型。
         </SettingsNotice>
         {error ? <SettingsNotice tone="error">{error}</SettingsNotice> : null}
       </LayoutSectionItem>

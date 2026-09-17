@@ -18,6 +18,7 @@ import {
   resolveMemberMonthlyBudget,
 } from "../../organization-model-policy.js"
 import { resolveRenworkModelAccess } from "../../renwork-access.js"
+import { subscriptionCliAccessForMember } from "../../subscription-cli-policy.js"
 import { forbiddenSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
 import type { OrgRouteVariables } from "./shared.js"
 
@@ -61,6 +62,37 @@ const unavailableSchema = z.object({
 })
 
 export function registerOrgModelCatalogRoutes<T extends { Variables: OrgRouteVariables }>(app: Hono<T>) {
+  app.get("/v1/models/subscription-cli", orgRoleRoute(["member"]), async (c) => {
+    const context = c.get("organizationContext")
+    const access = await resolveRenworkModelAccess({ organizationId: context.organization.id, metadata: context.organization.metadata })
+    const inference = context.organization.metadata?.inference
+    const inferenceEnabled = access.source !== "subscription"
+      || (typeof inference === "object" && inference !== null && !Array.isArray(inference) && inference.enabled === true)
+    const policy = access.allowed && inferenceEnabled
+      ? subscriptionCliAccessForMember({
+          organizationId: context.organization.id,
+          organizationName: context.organization.name,
+          metadata: context.organization.metadata,
+          memberId: context.currentMember.id,
+        })
+      : null
+    c.header("Cache-Control", "private, no-store")
+    const organizationPolicy = readOrganizationModelPolicy(context.organization.metadata)
+    return c.json({
+      models: policy?.models
+        .filter((model) => !access.allowedModelSkus || access.allowedModelSkus.includes(model.sku))
+        .filter((model) => !organizationPolicy.allowedModelSkus || organizationPolicy.allowedModelSkus.includes(model.sku))
+        .filter((model) => modelAllowedForMember(organizationPolicy, context.currentMember.id, model.sku))
+        .map((model) => ({
+        sku: model.sku,
+        displayName: model.displayName,
+        runtime: model.runtime,
+        multiplierBps: model.multiplierBps,
+      })) ?? [],
+      expiresAt: policy?.expiresAt ?? null,
+    })
+  })
+
   app.get(
     "/v1/models/catalog",
     describeRoute({

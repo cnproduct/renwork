@@ -10,6 +10,7 @@ import {
 } from "@/app/constants";
 import type { EnablementContext } from "@/app/enablement";
 import { createClient, unwrap } from "@/app/lib/opencode";
+import { createDenClient, type DenSubscriptionCliModel } from "@/app/lib/den";
 import {
   createOpenworkServerClient,
   isLoopbackOpenworkServerUrl,
@@ -818,6 +819,21 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     openLink: (url) => platform.openLink(url),
   });
   const cloudSession = useCloudSession();
+  const [subscriptionCliModels, setSubscriptionCliModels] = useState<DenSubscriptionCliModel[]>([]);
+  useEffect(() => {
+    const orgId = cloudSession.activeOrganization?.id?.trim();
+    if (!cloudSession.isSignedIn || !cloudSession.authToken.trim() || !orgId) {
+      setSubscriptionCliModels([]);
+      return;
+    }
+    let cancelled = false;
+    setSubscriptionCliModels([]);
+    const den = createDenClient({ baseUrl: cloudSession.baseUrl, token: cloudSession.authToken });
+    void den.getSubscriptionCliModels(orgId)
+      .then((models) => { if (!cancelled) setSubscriptionCliModels(models); })
+      .catch(() => { if (!cancelled) setSubscriptionCliModels([]); });
+    return () => { cancelled = true; };
+  }, [cloudSession.activeOrganization?.id, cloudSession.authToken, cloudSession.baseUrl, cloudSession.isSignedIn]);
   const localProviderManagementAllowed = canManageDesktopModelProviders({
     signedIn: cloudSession.isSignedIn,
     hasAuthToken: Boolean(cloudSession.authToken.trim()),
@@ -2308,10 +2324,11 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             showOpenWorkModelsSyncing={showOpenWorkModelsSyncing}
             onSubscribeOpenWorkModels={subscribeToOpenWorkModels}
             onDismissOpenWorkModels={dismissOpenWorkModelsPromo}
-            cliRuntimesView={personalSubscriptionOAuthAllowed ? (
+            cliRuntimesView={subscriptionCliModels.length > 0 ? (
               <CliRuntimeSettings
                 client={openworkServerSnapshot.openworkServerClient}
                 workspaceId={selectedWorkspaceId}
+                models={subscriptionCliModels}
               />
             ) : null}
             cloudProvidersView={

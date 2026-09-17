@@ -87,6 +87,7 @@ const EnvSchema = z.object({
   DEN_BOOTSTRAP_ADMIN_EMAILS: z.string().optional(),
   RENWORK_MODEL_CATALOG_BASE_URL: z.string().optional(),
   RENWORK_MODEL_CATALOG_ADMIN_TOKEN: z.string().optional(),
+  RENWORK_WEIJIAN_ORGANIZATION_ID: z.string().optional(),
   RENWORK_METASO_H3_COMMERCIAL_LICENSE_CONFIRMED: z.string().optional(),
   RENWORK_METASO_H3_API_KEY: z.string().optional(),
   RENWORK_METASO_H3_BASE_URL: z.string().optional(),

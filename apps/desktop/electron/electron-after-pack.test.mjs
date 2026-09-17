@@ -3,7 +3,14 @@ import { createRequire } from "node:module";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
-const { isDenOnlyBuild, isServer2016CloudBuild, normalizeArchivePath } = require("../scripts/electron-after-pack.cjs");
+const { isDenOnlyBuild, isServer2016CloudBuild, normalizeArchivePath, targetTriple } = require("../scripts/electron-after-pack.cjs");
+
+test("afterPack maps electron-builder numeric architecture values to sidecar targets", () => {
+  assert.equal(targetTriple("darwin", 3), "aarch64-apple-darwin");
+  assert.equal(targetTriple("darwin", 1), "x86_64-apple-darwin");
+  assert.equal(targetTriple("linux", 3), "aarch64-unknown-linux-gnu");
+  assert.equal(targetTriple("win32", 1), "x86_64-pc-windows-msvc");
+});
 
 test("afterPack removes sidecars only from the immutable Server 2016 cloud build", () => {
   assert.equal(isServer2016CloudBuild({

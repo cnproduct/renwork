@@ -169,7 +169,7 @@ export type AppBuildInfo = {
 };
 
 export type DesktopDistributionInfo = {
-  flavor: "standalone" | "public" | "cloud" | "enterprise" | "server2016-cloud";
+  flavor: "standalone" | "public" | "cloud" | "enterprise" | "server2016-cloud" | "weijian-pilot";
   appName: string;
   appIdentifier: string;
   protocolScheme: string;
@@ -177,7 +177,7 @@ export type DesktopDistributionInfo = {
   requireActivation: boolean;
   localRuntimeEnabled: boolean;
   cloudWorkspaceRequired: boolean;
-  updaterManifestChannel: "latest" | "cloud" | "enterprise" | "server2016-cloud";
+  updaterManifestChannel: "latest" | "cloud" | "enterprise" | "server2016-cloud" | "weijian-pilot";
 };
 
 /** Org + first-skill identity shared by the handoff and prepared records. */

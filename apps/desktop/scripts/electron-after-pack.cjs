@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const asar = require("@electron/asar");
+const { Arch } = require("electron-builder");
 
 const computerUseHelperAppName = "RenWork Computer Use.app";
 
@@ -10,17 +11,18 @@ const sidecarBases = [
 ];
 
 function targetTriple(platformName, arch) {
+  const architecture = typeof arch === "number" ? Arch[arch] : arch;
   if (platformName === "darwin") {
-    if (arch === "arm64") return "aarch64-apple-darwin";
-    if (arch === "x64") return "x86_64-apple-darwin";
+    if (architecture === "arm64") return "aarch64-apple-darwin";
+    if (architecture === "x64") return "x86_64-apple-darwin";
   }
   if (platformName === "linux") {
-    if (arch === "arm64") return "aarch64-unknown-linux-gnu";
-    if (arch === "x64") return "x86_64-unknown-linux-gnu";
+    if (architecture === "arm64") return "aarch64-unknown-linux-gnu";
+    if (architecture === "x64") return "x86_64-unknown-linux-gnu";
   }
   if (platformName === "win32") {
-    if (arch === "arm64") return "aarch64-pc-windows-msvc";
-    if (arch === "x64") return "x86_64-pc-windows-msvc";
+    if (architecture === "arm64") return "aarch64-pc-windows-msvc";
+    if (architecture === "x64") return "x86_64-pc-windows-msvc";
   }
   return null;
 }
@@ -196,3 +198,4 @@ module.exports.default = afterPack;
 module.exports.normalizeArchivePath = normalizeArchivePath;
 module.exports.isServer2016CloudBuild = isServer2016CloudBuild;
 module.exports.isDenOnlyBuild = isDenOnlyBuild;
+module.exports.targetTriple = targetTriple;

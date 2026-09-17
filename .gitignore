@@ -4,6 +4,7 @@ apps/desktop/dist-electron/
 apps/desktop/.electron-runtime/
 apps/desktop/dist-electron-demo-a/
 apps/desktop/dist-electron-demo-b/
+apps/desktop/dist-electron-weijian-pilot/
 packages/*/node_modules/
 apps/*/node_modules/
 ee/apps/*/node_modules/
