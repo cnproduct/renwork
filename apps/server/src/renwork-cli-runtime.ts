@@ -300,6 +300,7 @@ export class RenWorkCliRuntimeManager {
   constructor(private readonly options: {
     metering: RenCreditLocalRuntimePort;
     runTimeoutMs?: number;
+    heartbeatIntervalMs?: number;
   }) {}
 
   async statuses() {
@@ -434,6 +435,19 @@ export class RenWorkCliRuntimeManager {
       ? prompt
       : `${JSON.stringify({ event: "user", message: { content: prompt } })}\n`);
 
+    let heartbeatInFlight: Promise<void> | null = null;
+    const heartbeat = this.options.metering.heartbeat;
+    const heartbeatTimer = heartbeat ? setInterval(() => {
+      if (heartbeatInFlight) return;
+      heartbeatInFlight = heartbeat.call(this.options.metering, run.reservation)
+        .catch(() => {
+          streamFailure ||= "LOCAL_RUNTIME_HEARTBEAT_FAILED";
+          child.kill("SIGTERM");
+        })
+        .finally(() => { heartbeatInFlight = null; });
+    }, this.options.heartbeatIntervalMs ?? 30_000) : null;
+    heartbeatTimer?.unref?.();
+
     const timeout = setTimeout(() => {
       streamFailure ||= "CLI_TIMEOUT";
       child.kill("SIGTERM");
@@ -444,6 +458,8 @@ export class RenWorkCliRuntimeManager {
       child.once("close", (code) => resolve(code ?? 1));
     });
     clearTimeout(timeout);
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    if (heartbeatInFlight) await heartbeatInFlight;
     run.child = null;
     consumeLine(stdoutBuffer);
     if (run.state === "cancelled") return;

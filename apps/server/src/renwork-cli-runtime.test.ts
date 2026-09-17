@@ -165,6 +165,28 @@ echo '{"event":"result","result":{"conversation_id":"conversation_1","status":"S
   expect(calls.usage).toEqual({ inputTokens: 6, outputTokens: 3, reasoningTokens: 2, cacheReadTokens: 4, cacheWriteTokens: 0 });
 });
 
+test("renews the device lease during a long CLI run and releases it if renewal fails", async () => {
+  const directory = await fakeAntigravity(`
+if [ "$1" = "--version" ]; then echo "agy 1.0"; exit 0; fi
+cat >/dev/null
+sleep 0.2
+echo '{"event":"result","result":{"status":"SUCCESS","response":"done","usage":{"input_tokens":1,"output_tokens":1,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":2}}}'
+  `);
+  const { port, calls } = metering({ adapter: "antigravity_cli" });
+  let heartbeats = 0;
+  port.heartbeat = async () => {
+    heartbeats += 1;
+    throw new Error("lease renewal unavailable");
+  };
+  const manager = new RenWorkCliRuntimeManager({ metering: port, heartbeatIntervalMs: 10 });
+  const started = await manager.start({ runtime: "antigravity", workspaceId: "ws_1", workspacePath: directory, modelSku: "renwork-google", prompt: "do work" });
+  const completed = await terminalRun(manager, started.runId);
+  expect(heartbeats).toBeGreaterThan(0);
+  expect(completed.state).toBe("failed");
+  expect(completed.errorCode).toBe("LOCAL_RUNTIME_HEARTBEAT_FAILED");
+  expect(calls).toMatchObject({ reserved: 1, settled: 0, released: 1 });
+});
+
 test("releases Antigravity reservation when a terminal usage event is missing", async () => {
   const directory = await fakeAntigravity(`
 if [ "$1" = "--version" ]; then echo "agy 1.0"; exit 0; fi
