@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import type { RenCreditLocalRuntimePort } from "./rencredit-local-runtime.js";
 import {
+  parseAntigravityResultEvent,
   parseCodexExecEvent,
   RenWorkCliRuntimeManager,
   type RenWorkCliRunSnapshot,
@@ -12,10 +13,13 @@ import {
 
 const cleanup: string[] = [];
 const originalCodexBin = process.env.RENWORK_CODEX_BIN;
+const originalAntigravityBin = process.env.RENWORK_ANTIGRAVITY_BIN;
 
 afterEach(async () => {
   if (originalCodexBin === undefined) delete process.env.RENWORK_CODEX_BIN;
   else process.env.RENWORK_CODEX_BIN = originalCodexBin;
+  if (originalAntigravityBin === undefined) delete process.env.RENWORK_ANTIGRAVITY_BIN;
+  else process.env.RENWORK_ANTIGRAVITY_BIN = originalAntigravityBin;
   await Promise.all(cleanup.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
 });
 
@@ -26,6 +30,16 @@ async function fakeCodex(body: string) {
   await writeFile(executable, `#!/bin/sh\n${body}\n`, "utf8");
   await chmod(executable, 0o700);
   process.env.RENWORK_CODEX_BIN = executable;
+  return directory;
+}
+
+async function fakeAntigravity(body: string) {
+  const directory = await mkdtemp(join(tmpdir(), "renwork-antigravity-test-"));
+  cleanup.push(directory);
+  const executable = join(directory, "agy");
+  await writeFile(executable, `#!/bin/sh\n${body}\n`, "utf8");
+  await chmod(executable, 0o700);
+  process.env.RENWORK_ANTIGRAVITY_BIN = executable;
   return directory;
 }
 
@@ -78,8 +92,8 @@ test("parses Codex JSONL usage without reading OAuth credentials", () => {
       reasoning_output_tokens: 4,
     },
   }).usage).toEqual({
-    inputTokens: 10,
-    outputTokens: 5,
+    inputTokens: 5,
+    outputTokens: 1,
     reasoningTokens: 4,
     cacheReadTokens: 2,
     cacheWriteTokens: 3,
@@ -97,12 +111,57 @@ test("accepts current Codex TokenUsage events without a cache-write field", () =
       total_tokens: 21,
     },
   }).usage).toEqual({
-    inputTokens: 13,
-    outputTokens: 8,
+    inputTokens: 8,
+    outputTokens: 5,
     reasoningTokens: 3,
     cacheReadTokens: 5,
     cacheWriteTokens: 0,
   });
+});
+
+test("normalizes Antigravity terminal usage without charging cached or thinking tokens twice", () => {
+  expect(parseAntigravityResultEvent({ event: "result", result: {
+    conversation_id: "conversation_1", status: "SUCCESS", response: "done",
+    usage: { input_tokens: 10522, output_tokens: 354, thinking_tokens: 329, cache_read_tokens: 8112, total_tokens: 10876 },
+  } })).toEqual({
+    responseId: "conversation_1", responseText: "done",
+    usage: { inputTokens: 2410, outputTokens: 25, reasoningTokens: 329, cacheReadTokens: 8112, cacheWriteTokens: 0 },
+  });
+  expect(parseAntigravityResultEvent({ event: "result", result: {
+    status: "SUCCESS", response: "done",
+    usage: { input_tokens: 10, output_tokens: 2, thinking_tokens: 3, cache_read_tokens: 0, total_tokens: 12 },
+  } }).failed).toBe("ANTIGRAVITY_USAGE_EVENT_INVALID");
+});
+
+test("reserves before Antigravity execution and settles reported token usage", async () => {
+  const directory = await fakeAntigravity(`
+if [ "$1" = "--version" ]; then echo "agy 1.0"; exit 0; fi
+cat >/dev/null
+echo '{"event":"result","result":{"conversation_id":"conversation_1","status":"SUCCESS","response":"done","usage":{"input_tokens":10,"output_tokens":5,"thinking_tokens":2,"cache_read_tokens":4,"total_tokens":15}}}'
+  `);
+  const { port, calls } = metering({ adapter: "antigravity_cli" });
+  const manager = new RenWorkCliRuntimeManager({ metering: port });
+  const started = await manager.start({ runtime: "antigravity", workspaceId: "ws_1", workspacePath: directory, modelSku: "renwork-google", prompt: "do work" });
+  const completed = await terminalRun(manager, started.runId);
+  expect(completed.state).toBe("succeeded");
+  expect(completed.output).toBe("done");
+  expect(calls).toMatchObject({ reserved: 1, settled: 1, released: 0 });
+  expect(calls.usage).toEqual({ inputTokens: 6, outputTokens: 3, reasoningTokens: 2, cacheReadTokens: 4, cacheWriteTokens: 0 });
+});
+
+test("releases Antigravity reservation when a terminal usage event is missing", async () => {
+  const directory = await fakeAntigravity(`
+if [ "$1" = "--version" ]; then echo "agy 1.0"; exit 0; fi
+cat >/dev/null
+echo '{"event":"result","result":{"status":"SUCCESS","response":"done"}}'
+  `);
+  const { port, calls } = metering({ adapter: "antigravity_cli" });
+  const manager = new RenWorkCliRuntimeManager({ metering: port });
+  const started = await manager.start({ runtime: "antigravity", workspaceId: "ws_1", workspacePath: directory, modelSku: "renwork-google", prompt: "do work" });
+  const completed = await terminalRun(manager, started.runId);
+  expect(completed.state).toBe("failed");
+  expect(completed.errorCode).toBe("ANTIGRAVITY_USAGE_EVENT_MISSING");
+  expect(calls).toMatchObject({ reserved: 1, settled: 0, released: 1 });
 });
 
 test("reserves before Codex execution and settles one signed usage result", async () => {
@@ -124,7 +183,7 @@ echo '{"type":"turn.completed","usage":{"input_tokens":10,"cached_input_tokens":
   expect(completed.output).toBe("done");
   expect(completed.settlement?.capturedMicroCredits).toBe(123);
   expect(calls).toMatchObject({ reserved: 1, settled: 1, released: 0 });
-  expect(calls.usage).toEqual({ inputTokens: 10, outputTokens: 5, reasoningTokens: 4, cacheReadTokens: 2, cacheWriteTokens: 3 });
+  expect(calls.usage).toEqual({ inputTokens: 5, outputTokens: 1, reasoningTokens: 4, cacheReadTokens: 2, cacheWriteTokens: 3 });
 });
 
 test("releases the reservation when Codex fails before an authoritative usage event", async () => {
@@ -138,7 +197,7 @@ exit 2
   const started = await manager.start({ runtime: "codex", workspaceId: "ws_1", workspacePath: directory, modelSku: "renwork-code", prompt: "fail" });
   const completed = await terminalRun(manager, started.runId);
   expect(completed.state).toBe("failed");
-  expect(completed.errorCode).toBe("CODEX_CLI_EXIT_2");
+  expect(completed.errorCode).toBe("CLI_EXIT_2");
   expect(calls).toMatchObject({ reserved: 1, settled: 0, released: 1 });
   expect(completed.settlement?.releasedMicroCredits).toBe(200);
 });
@@ -152,7 +211,7 @@ exit 0
   const { port, calls } = metering({ adapter: "opencode" });
   const manager = new RenWorkCliRuntimeManager({ metering: port });
   await expect(manager.start({ runtime: "codex", workspaceId: "ws_1", workspacePath: tmpdir(), modelSku: "wrong-route", prompt: "no" }))
-    .rejects.toThrow("not bound to the Codex CLI adapter");
+    .rejects.toThrow("not bound to the requested CLI adapter");
   expect(calls).toMatchObject({ reserved: 1, settled: 0, released: 1 });
 });
 

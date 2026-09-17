@@ -74,6 +74,15 @@ describe("Electron distribution configs", () => {
     );
   });
 
+  it("keeps the weijian local CLI pilot separate from public release artifacts", async () => {
+    const config = await readConfig("electron-builder.weijian-pilot.yml");
+    assert.equal(config.appId, "com.renrenyi.renwork.weijianpilot");
+    assert.equal(config.extraMetadata.openworkDistribution, "weijian-pilot");
+    assert.equal(config.protocols[0].schemes[0], "renwork-weijian-pilot");
+    assert.equal(config.directories.output, "dist-electron-weijian-pilot");
+    assert.deepEqual(config.publish, []);
+  });
+
   it("defines a sidecar-free Windows Server 2016 cloud-only flavor", async () => {
     const packageMetadata = JSON.parse(
       await readFile(path.resolve(dirname, "..", "package.json"), "utf8"),

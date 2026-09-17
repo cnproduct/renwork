@@ -68,6 +68,25 @@ declare global {
   }
 }
 
+export type DenSubscriptionCliModel = {
+  sku: string;
+  displayName: string;
+  runtime: "codex" | "antigravity";
+  multiplierBps: number;
+};
+
+function parseSubscriptionCliModels(value: unknown): DenSubscriptionCliModel[] {
+  if (!value || typeof value !== "object" || !("models" in value) || !Array.isArray(value.models)) return [];
+  return value.models.flatMap((model: unknown) => {
+    if (!model || typeof model !== "object") return [];
+    if (!("sku" in model) || typeof model.sku !== "string") return [];
+    if (!("displayName" in model) || typeof model.displayName !== "string") return [];
+    if (!("runtime" in model) || (model.runtime !== "codex" && model.runtime !== "antigravity")) return [];
+    if (!("multiplierBps" in model) || typeof model.multiplierBps !== "number") return [];
+    return [{ sku: model.sku, displayName: model.displayName, runtime: model.runtime, multiplierBps: model.multiplierBps }];
+  });
+}
+
 export const STORAGE_BASE_URL = "openwork.den.baseUrl";
 const LEGACY_STORAGE_API_BASE_URL = "openwork.den.apiBaseUrl";
 const STORAGE_AUTH_TOKEN = "openwork.den.authToken";
@@ -2918,6 +2937,15 @@ export function createDenClient(options: { baseUrl: string; token?: string | nul
         throw new DenApiError(500, "invalid_model_catalog_payload", "RenWork model catalog response was invalid.");
       }
       return catalog;
+    },
+
+    async getSubscriptionCliModels(orgId: string): Promise<DenSubscriptionCliModel[]> {
+      const payload = await requestJson<unknown>(baseUrls, "/v1/models/subscription-cli", {
+        method: "GET",
+        token,
+        organizationId: orgId,
+      });
+      return parseSubscriptionCliModels(payload);
     },
 
     async getResourceSnapshot(orgId?: string | null): Promise<DenResourceSnapshot> {

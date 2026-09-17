@@ -21,6 +21,7 @@
     "package:electron:cloud": "pnpm run build:electron && pnpm exec electron-builder --config electron-builder.cloud.yml",
     "package:electron:enterprise": "pnpm run build:electron && pnpm exec electron-builder --config electron-builder.enterprise.yml",
     "package:electron:server2016-cloud": "pnpm run build:electron && pnpm exec electron-builder --config electron-builder.server2016-cloud.yml --win nsis zip --x64",
+    "package:electron:weijian-pilot": "pnpm run build:electron && pnpm exec electron-builder --config electron-builder.weijian-pilot.yml",
     "package:electron:dir": "pnpm run build:electron && pnpm exec electron-builder --config electron-builder.yml --dir",
     "electron": "pnpm run rebuild:electron-native && pnpm exec electron ./electron/main.mjs",
     "check:electron": "node ./scripts/check-electron-bridge.mjs",

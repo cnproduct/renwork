@@ -13,12 +13,14 @@ import {
   writeOrganizationModelPolicy,
 } from "../../organization-model-policy.js"
 import type { AuthContextVariables } from "../../session.js"
+import { readSubscriptionCliPolicy, subscriptionCliPolicySchema, writeSubscriptionCliPolicy } from "../../subscription-cli-policy.js"
 
 async function loadOrganization(organizationId: string) {
   if (!isDenTypeId("organization", organizationId)) return null
   return (await db.select({
     id: OrganizationTable.id,
     name: OrganizationTable.name,
+    slug: OrganizationTable.slug,
     metadata: OrganizationTable.metadata,
   }).from(OrganizationTable).where(eq(OrganizationTable.id, organizationId)).limit(1))[0] ?? null
 }
@@ -71,6 +73,32 @@ async function loadAvailableCatalog(metadata: Record<string, unknown> | null) {
 }
 
 export function registerAdminOrganizationModelPolicyRoutes<T extends { Variables: AuthContextVariables }>(app: Hono<T>) {
+  app.get("/v1/admin/organizations/:organizationId/subscription-cli-policy", adminRoute(), async (c) => {
+    const organization = await loadOrganization(c.req.param("organizationId"))
+    if (!organization || organization.slug !== "weijian") return c.json({ error: "not_found" }, 404)
+    c.header("Cache-Control", "private, no-store")
+    return c.json({ organization: { id: organization.id, name: organization.name, slug: organization.slug }, policy: readSubscriptionCliPolicy(organization.metadata) })
+  })
+
+  app.put("/v1/admin/organizations/:organizationId/subscription-cli-policy", adminRoute(), async (c) => {
+    const organization = await loadOrganization(c.req.param("organizationId"))
+    if (!organization || organization.slug !== "weijian") return c.json({ error: "not_found" }, 404)
+    const parsed = subscriptionCliPolicySchema.safeParse(await c.req.json().catch(() => null))
+    if (!parsed.success) return c.json({ error: "invalid_request", message: parsed.error.issues[0]?.message ?? "Invalid policy." }, 400)
+    if (parsed.data.enabled && Date.parse(parsed.data.expiresAt) <= Date.now()) {
+      return c.json({ error: "invalid_request", message: "An enabled policy must expire in the future." }, 400)
+    }
+    const activeMemberIds = new Set<string>((await loadActiveMembers(organization.id)).map((member) => member.id))
+    if (parsed.data.allowedMemberIds.some((memberId) => !activeMemberIds.has(memberId))) {
+      return c.json({ error: "invalid_request", message: "The policy references an inactive or unknown member." }, 400)
+    }
+    await db.update(OrganizationTable)
+      .set({ metadata: writeSubscriptionCliPolicy(organization.metadata, parsed.data) })
+      .where(eq(OrganizationTable.id, organization.id))
+    c.header("Cache-Control", "private, no-store")
+    return c.json({ organization: { id: organization.id, name: organization.name, slug: organization.slug }, policy: parsed.data })
+  })
+
   app.get("/v1/admin/organizations/:organizationId/model-policy", adminRoute(), async (c) => {
     const organization = await loadOrganization(c.req.param("organizationId"))
     if (!organization) return c.json({ error: "not_found", message: "Organization not found." }, 404)

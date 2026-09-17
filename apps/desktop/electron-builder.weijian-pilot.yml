@@ -1,0 +1,15 @@
+extends: ./electron-builder.base.yml
+appId: com.renrenyi.renwork.weijianpilot
+productName: RenWork Weijian Pilot
+extraMetadata:
+  openworkDistribution: weijian-pilot
+protocols:
+  - name: RenWork Weijian Pilot
+    schemes:
+      - renwork-weijian-pilot
+publish: []
+directories:
+  output: dist-electron-weijian-pilot
+linux:
+  executableName: renwork-weijian-pilot
+artifactName: renwork-weijian-pilot-${os}-${arch}-${version}.${ext}

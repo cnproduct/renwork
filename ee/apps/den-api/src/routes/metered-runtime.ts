@@ -20,7 +20,8 @@ import { db } from "../db.js"
 import { parseOrganizationPlan } from "../entitlements.js"
 import { env } from "../env.js"
 import { adminRoute, publicRoute } from "../middleware/index.js"
-import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
+import { modelAllowedForMember, readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
+import { subscriptionCliAccessForMember, subscriptionCliModelForMember } from "../subscription-cli-policy.js"
 import { accessAllowsModel, resolveRenworkModelAccess } from "../renwork-access.js"
 import {
   authenticateInferenceKey,
@@ -87,14 +88,37 @@ async function loadProductionCatalog() {
 }
 
 async function localMeteringAccess(principal: InferencePrincipal, modelSku: string) {
-  const catalog = await loadProductionCatalog()
-  const model = findPublishedAdminModel(catalog, modelSku)
-  const [organization] = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable)
+  const [organization] = await db.select({ slug: OrganizationTable.slug, metadata: OrganizationTable.metadata }).from(OrganizationTable)
     .where(eq(OrganizationTable.id, principal.organizationId)).limit(1)
+  if (!organization) throw new Error("ORGANIZATION_NOT_FOUND")
   const inferenceMetadata = isRecord(organization?.metadata?.inference) ? organization.metadata.inference : null
   const access = await resolveRenworkModelAccess({ organizationId: principal.organizationId, metadata: organization?.metadata })
   if (!access.allowed) throw new Error("SUBSCRIPTION_REQUIRED")
   if (access.source === "subscription" && inferenceMetadata?.enabled !== true) throw new Error("INFERENCE_DISABLED")
+  const cli = subscriptionCliModelForMember({
+    organizationSlug: organization.slug,
+    metadata: organization.metadata,
+    memberId: principal.memberId,
+    modelSku,
+  })
+  if (cli) {
+    const policy = readOrganizationModelPolicy(organization.metadata)
+    if (policy.allowedModelSkus && !policy.allowedModelSkus.includes(modelSku)) throw new Error("MODEL_NOT_ALLOWED_BY_ORGANIZATION")
+    if (access.allowedModelSkus && !access.allowedModelSkus.includes(modelSku)) throw new Error("MODEL_NOT_INCLUDED_IN_GRANT")
+    if (!modelAllowedForMember(policy, principal.memberId, modelSku)) throw new Error("MODEL_NOT_ALLOWED_BY_MEMBER")
+    return {
+      catalog: {
+        version: `subscription-cli:${organization.slug}:${modelSku}`,
+        billingPolicy: { local: "token_metered" as const, byok: "token_metered" as const, official: "token_metered" as const },
+        providers: [cli.provider],
+      },
+      model: cli.model,
+      route: cli.model.routes[0]!,
+      policy,
+    }
+  }
+  const catalog = await loadProductionCatalog()
+  const model = findPublishedAdminModel(catalog, modelSku)
   if (!accessAllowsModel(access, model.sku)) throw new Error("MODEL_NOT_INCLUDED_IN_GRANT")
   const plan = parseOrganizationPlan(organization?.metadata).tier
   if ((access.source === "subscription" || access.source === "offline_payment") && !modelAllowedForPlan(model, plan)) {
@@ -129,22 +153,33 @@ function canonicalPublicKey(input: string) {
 
 function statusForMeteringError(code: string) {
   if (["SUBSCRIPTION_REQUIRED", "PLAN_UPGRADE_REQUIRED", "INSUFFICIENT_RENCREDIT", "RENCREDIT_WALLET_UNAVAILABLE", "ORGANIZATION_DAILY_BUDGET_EXCEEDED", "ORGANIZATION_MONTHLY_BUDGET_EXCEEDED", "MEMBER_MONTHLY_QUOTA_EXCEEDED"].includes(code)) return 402
-  if (["INFERENCE_DISABLED", "MODEL_NOT_INCLUDED_IN_GRANT", "MODEL_NOT_ALLOWED_BY_ORGANIZATION", "LOCAL_MODEL_ROUTE_NOT_GRANTED"].includes(code)) return 403
+  if (["INFERENCE_DISABLED", "MODEL_NOT_INCLUDED_IN_GRANT", "MODEL_NOT_ALLOWED_BY_ORGANIZATION", "MODEL_NOT_ALLOWED_BY_MEMBER", "LOCAL_MODEL_ROUTE_NOT_GRANTED"].includes(code)) return 403
   if (code === "MODEL_CATALOG_UNAVAILABLE") return 503
   return 409
 }
 
 export function registerMeteredRuntimeRoutes<T extends { Variables: Record<string, unknown> }>(app: Hono<T>) {
-  // Voiceover V36: branded clients execute exclusively through Den's inference
-  // gateway. Keep the legacy implementation below for forensic compatibility
-  // with historical receipts, but make every device-side execution endpoint
-  // fail closed before it can register, reserve, heartbeat, settle or release.
-  app.all("/api/v1/metered-runtime/*", publicRoute, (c) => c.json({
-    error: {
-      code: "LOCAL_RUNTIME_DISABLED",
-      message: "RenWork model execution must use the Den inference gateway.",
-    },
-  }, 410))
+  // Only the explicitly granted weijian pilot can start device-side runs.
+  // Existing reservations may still finish after the grant is revoked, so
+  // RenCredit can capture measured usage or release the remaining hold.
+  app.all("/api/v1/metered-runtime/*", publicRoute, async (c, next) => {
+    const principal = await principalForRequest(c.req.header("Authorization"))
+    if (principal) {
+      const [organization] = await db.select({ slug: OrganizationTable.slug, metadata: OrganizationTable.metadata })
+        .from(OrganizationTable).where(eq(OrganizationTable.id, principal.organizationId)).limit(1)
+      const finalizing = c.req.method === "POST" && (
+        c.req.path === "/api/v1/metered-runtime/settlements"
+        || /^\/api\/v1\/metered-runtime\/reservations\/[^/]+\/(heartbeat|release)$/.test(c.req.path)
+      )
+      if (organization?.slug === "weijian" && finalizing) return next()
+      if (organization && subscriptionCliAccessForMember({
+        organizationSlug: organization.slug,
+        metadata: organization.metadata,
+        memberId: principal.memberId,
+      })) return next()
+    }
+    return c.json({ error: { code: "LOCAL_RUNTIME_DISABLED", message: "RenWork model execution must use the Den inference gateway." } }, 410)
+  })
 
   app.get("/v1/admin/metered-runtime/devices", adminRoute(), async (c) => {
     const organizationId = c.req.query("organizationId")?.trim()
@@ -169,13 +204,19 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     if (!isRecord(body) || !exactKeys(body, ["status"]) || (body.status !== "active" && body.status !== "revoked")) {
       return c.json({ error: { code: "VALIDATION_FAILED" } }, 400)
     }
-    if (body.status === "active") {
-      return c.json({ error: { code: "LOCAL_RUNTIME_DISABLED" } }, 409)
-    }
     const registrationId = c.req.param("registrationId")
     const [device] = await db.select().from(RenCreditRuntimeDeviceTable)
       .where(eq(RenCreditRuntimeDeviceTable.id, registrationId)).limit(1)
     if (!device) return c.json({ error: { code: "LOCAL_RUNTIME_DEVICE_NOT_FOUND" } }, 404)
+    if (body.status === "active") {
+      const [organization] = await db.select({ slug: OrganizationTable.slug, metadata: OrganizationTable.metadata })
+        .from(OrganizationTable).where(eq(OrganizationTable.id, device.organization_id)).limit(1)
+      if (!organization || !subscriptionCliAccessForMember({
+        organizationSlug: organization.slug,
+        metadata: organization.metadata,
+        memberId: device.org_membership_id,
+      })) return c.json({ error: { code: "LOCAL_RUNTIME_DISABLED" } }, 409)
+    }
     await db.update(RenCreditRuntimeDeviceTable).set({
       status: body.status,
       revoked_at: body.status === "revoked" ? new Date() : null,

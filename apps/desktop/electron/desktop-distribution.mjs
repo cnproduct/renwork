@@ -58,6 +58,18 @@ export const SERVER_2016_CLOUD_DESKTOP_DISTRIBUTION = Object.freeze({
   updaterManifestChannel: "server2016-cloud",
 });
 
+export const WEIJIAN_PILOT_DESKTOP_DISTRIBUTION = Object.freeze({
+  flavor: "weijian-pilot",
+  appName: "RenWork Weijian Pilot",
+  appIdentifier: "com.renrenyi.renwork.weijianpilot",
+  protocolScheme: "renwork-weijian-pilot",
+  requireSignin: true,
+  requireActivation: false,
+  localRuntimeEnabled: true,
+  cloudWorkspaceRequired: false,
+  updaterManifestChannel: "weijian-pilot",
+});
+
 function normalizeFlavor(value) {
   const flavor = value?.trim().toLowerCase();
   if (flavor === "standalone") return "standalone";
@@ -65,6 +77,7 @@ function normalizeFlavor(value) {
   if (flavor === "cloud") return "cloud";
   if (flavor === "enterprise") return "enterprise";
   if (flavor === "server2016-cloud") return "server2016-cloud";
+  if (flavor === "weijian-pilot") return "weijian-pilot";
   return "standalone";
 }
 
@@ -84,6 +97,7 @@ export function resolveDesktopDistribution({
   if (flavor === "cloud") return CLOUD_DESKTOP_DISTRIBUTION;
   if (flavor === "enterprise") return ENTERPRISE_DESKTOP_DISTRIBUTION;
   if (flavor === "server2016-cloud") return SERVER_2016_CLOUD_DESKTOP_DISTRIBUTION;
+  if (flavor === "weijian-pilot") return WEIJIAN_PILOT_DESKTOP_DISTRIBUTION;
   if (flavor === "public") return PUBLIC_DESKTOP_DISTRIBUTION;
   return STANDALONE_DESKTOP_DISTRIBUTION;
 }
