@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  isChinaWeekdayPeak,
   readSubscriptionCliPolicy,
   subscriptionCliAccessForMember,
   subscriptionCliModelForMember,
@@ -46,4 +47,30 @@ test("only an active weijian member resolves a metered personal CLI route", () =
 test("rejects a mismatched SKU or unmetered model", () => {
   expect(subscriptionCliPolicySchema.safeParse({ ...policy, models: [{ ...policy.models[0], sku: "renwork-codex-gpt" }] }).success).toBe(false)
   expect(subscriptionCliPolicySchema.safeParse({ ...policy, models: [{ ...policy.models[0], rates: Object.fromEntries(Object.keys(policy.models[0]!.rates).map((key) => [key, 0])) }] }).success).toBe(false)
+})
+
+test("selects China weekday peak rates at reservation time", () => {
+  const scheduled = subscriptionCliPolicySchema.parse({
+    ...policy,
+    models: [{
+      ...policy.models[0],
+      pricingSchedule: "deepseek_flash_cn",
+      peakRates: { ...policy.models[0]!.rates, inputMicroCreditsPerMillion: 57_971_014 },
+    }],
+  })
+  const metadata = writeSubscriptionCliPolicy({}, scheduled)
+  const resolve = (now: string) => subscriptionCliModelForMember({
+    organizationSlug: "weijian", metadata, memberId: "om_weijian_member",
+    modelSku: "renwork-google-gemini-pro", now: new Date(now),
+  })?.model.rates.inputMicroCreditsPerMillion
+  expect(isChinaWeekdayPeak(new Date("2026-09-17T00:59:59Z"))).toBe(false)
+  expect(resolve("2026-09-17T00:59:59Z")).toBe(1_000_000) // Thursday 08:59 CST
+  expect(resolve("2026-09-17T01:00:00Z")).toBe(57_971_014) // Thursday 09:00 CST
+  expect(resolve("2026-09-17T04:00:00Z")).toBe(1_000_000) // Thursday 12:00 CST
+  expect(resolve("2026-09-17T06:00:00Z")).toBe(57_971_014) // Thursday 14:00 CST
+  expect(resolve("2026-09-17T10:00:00Z")).toBe(1_000_000) // Thursday 18:00 CST
+  expect(resolve("2026-09-19T01:00:00Z")).toBe(1_000_000) // Saturday 09:00 CST
+  expect(subscriptionCliPolicySchema.safeParse({
+    ...policy, models: [{ ...policy.models[0], pricingSchedule: "deepseek_flash_cn" }],
+  }).success).toBe(false)
 })
