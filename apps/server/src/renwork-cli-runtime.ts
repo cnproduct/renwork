@@ -1,5 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -66,6 +66,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function safeTokenCount(value: unknown): number | null {
   return Number.isSafeInteger(value) && (value as number) >= 0 ? value as number : null;
+}
+
+export function antigravityPersonalAccountMode(settings: unknown, environment: Record<string, string | undefined>): boolean {
+  if (!isRecord(settings)) return false;
+  if (typeof settings.modelProvider === "string" && settings.modelProvider.trim()) return false;
+  if (environment.GOOGLE_GEMINI_BASE_URL?.trim()) return false;
+  if (["1", "true", "yes", "on"].includes(environment.AGY_ADC_AUTH?.trim().toLowerCase() ?? "")) return false;
+  return true;
+}
+
+export function codexPersonalAccountMode(loginOutput: string, environment: Record<string, string | undefined>): boolean {
+  if (!/^Logged in using ChatGPT\s*$/i.test(loginOutput.trim())) return false;
+  return !["OPENAI_API_KEY", "CODEX_API_KEY", "CODEX_ACCESS_TOKEN", "OPENAI_BASE_URL"]
+    .some((name) => Boolean(environment[name]?.trim()));
+}
+
+function personalSubscriptionEnvironment(runtime: RenWorkCliRuntime): NodeJS.ProcessEnv {
+  const environment = { ...process.env };
+  const keys = runtime === "codex"
+    ? ["OPENAI_API_KEY", "CODEX_API_KEY", "CODEX_ACCESS_TOKEN", "OPENAI_BASE_URL"]
+    : ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GEMINI_BASE_URL", "AGY_ADC_AUTH"];
+  for (const key of keys) delete environment[key];
+  return environment;
+}
+
+async function antigravityAccountModeStatus() {
+  let settings: unknown = {};
+  try {
+    settings = JSON.parse(await readFile(join(homedir(), ".gemini", "antigravity-cli", "settings.json"), "utf8"));
+  } catch (error) {
+    if (!isRecord(error) || error.code !== "ENOENT") return false;
+  }
+  return antigravityPersonalAccountMode(settings, process.env);
 }
 
 function runtimeErrorCode(error: unknown) {
@@ -144,19 +177,22 @@ export async function inspectCliRuntime(runtime: RenWorkCliRuntime): Promise<Ren
   }
   const version = await runProcess(executable, ["--version"]);
   if (runtime === "antigravity") {
+    const personalAccountMode = await antigravityAccountModeStatus();
     return {
       runtime,
       installed: version.code === 0,
       authenticated: null,
       version: version.code === 0 ? version.stdout || version.stderr : null,
-      meteredExecutionReady: version.code === 0,
-      message: version.code === 0
+      meteredExecutionReady: version.code === 0 && personalAccountMode,
+      message: version.code === 0 && !personalAccountMode
+        ? "Antigravity CLI 当前配置为 API Key、自定义端点或企业凭据模式；此试点只允许个人 Google 账号登录。"
+        : version.code === 0
         ? "Antigravity CLI 支持结构化 Token 用量；任务前须在 CLI 内登录，运行失败会释放预冻结额度。"
         : "Antigravity CLI 无法启动。",
     };
   }
   const login = await runProcess(executable, ["login", "status"]);
-  const authenticated = login.code === 0 && /logged in|authenticated/i.test(`${login.stdout}\n${login.stderr}`);
+  const authenticated = login.code === 0 && codexPersonalAccountMode(login.stdout || login.stderr, process.env);
   return {
     runtime,
     installed: version.code === 0,
@@ -346,11 +382,11 @@ export class RenWorkCliRuntimeManager {
       return;
     }
     const args = run.runtime === "codex"
-      ? ["exec", "--json", "--model", run.reservation.modelID, "--cd", workspacePath, "-"]
+      ? ["-c", 'model_provider="openai"', "exec", "--json", "--model", run.reservation.modelID, "--cd", workspacePath, "-"]
       : ["--input-format", "stream-json", "--output-format", "stream-json", "--model", run.reservation.modelID];
     const child = spawn(executable, args, {
       cwd: workspacePath,
-      env: process.env,
+      env: personalSubscriptionEnvironment(run.runtime),
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
     });

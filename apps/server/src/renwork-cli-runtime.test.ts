@@ -5,11 +5,27 @@ import { join } from "node:path";
 
 import type { RenCreditLocalRuntimePort } from "./rencredit-local-runtime.js";
 import {
+  antigravityPersonalAccountMode,
+  codexPersonalAccountMode,
   parseAntigravityResultEvent,
   parseCodexExecEvent,
   RenWorkCliRuntimeManager,
   type RenWorkCliRunSnapshot,
 } from "./renwork-cli-runtime.js";
+
+test("Antigravity pilot rejects API-key and enterprise credential modes", () => {
+  expect(antigravityPersonalAccountMode({}, {})).toBe(true);
+  expect(antigravityPersonalAccountMode({ modelProvider: "gemini" }, {})).toBe(false);
+  expect(antigravityPersonalAccountMode({}, { GOOGLE_GEMINI_BASE_URL: "https://example.com" })).toBe(false);
+  expect(antigravityPersonalAccountMode({}, { AGY_ADC_AUTH: "true" })).toBe(false);
+});
+
+test("Codex pilot accepts only ChatGPT account mode without API overrides", () => {
+  expect(codexPersonalAccountMode("Logged in using ChatGPT", {})).toBe(true);
+  expect(codexPersonalAccountMode("Logged in using an API key", {})).toBe(false);
+  expect(codexPersonalAccountMode("Logged in using ChatGPT", { OPENAI_API_KEY: "set" })).toBe(false);
+  expect(codexPersonalAccountMode("Logged in using ChatGPT", { OPENAI_BASE_URL: "https://example.com" })).toBe(false);
+});
 
 const cleanup: string[] = [];
 const originalCodexBin = process.env.RENWORK_CODEX_BIN;

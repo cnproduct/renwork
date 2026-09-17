@@ -17,7 +17,8 @@ test("Voiceover V45 makes provider authorization a Den-enforced super-admin boun
   expect(policy).toContain("memberAllowedModelSkus");
   expect(policy).toContain("providerAssignments: []");
   expect(policy).toContain("providerAssignmentAllowsModel");
-  expect(adminRoute.match(/adminRoute\(\)/g)?.length ?? 0).toBe(2);
+  expect(adminRoute.match(/adminRoute\(\)/g)?.length ?? 0).toBe(4);
+  expect(adminRoute).toContain('organization.slug !== "weijian"');
   expect(adminRoute).toContain("A provider authorization references an unavailable server provider.");
   expect(orgCatalog).toContain("providerAssignmentAllowsModel");
   expect(orgCatalog).toContain("modelAllowedForMember");

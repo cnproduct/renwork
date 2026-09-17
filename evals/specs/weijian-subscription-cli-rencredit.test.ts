@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 import { test } from "@openwork/testkit";
-import { parseAntigravityResultEvent, parseCodexExecEvent } from "../../apps/server/src/renwork-cli-runtime";
+import { antigravityPersonalAccountMode, codexPersonalAccountMode, parseAntigravityResultEvent, parseCodexExecEvent } from "../../apps/server/src/renwork-cli-runtime";
 import { subscriptionCliModelForMember, subscriptionCliPolicySchema, writeSubscriptionCliPolicy } from "../../ee/apps/den-api/src/subscription-cli-policy";
 
 test("weijian CLI authorization keeps organization and reported usage boundaries", async ({ evidence }) => {
@@ -36,8 +36,14 @@ test("weijian CLI authorization keeps organization and reported usage boundaries
     output_tokens: 40, reasoning_output_tokens: 15,
   } });
   expect(codex.usage).toEqual({ inputTokens: 60, outputTokens: 25, reasoningTokens: 15, cacheReadTokens: 30, cacheWriteTokens: 10 });
+  expect(antigravityPersonalAccountMode({}, {})).toBe(true);
+  expect(antigravityPersonalAccountMode({ modelProvider: "gemini" }, {})).toBe(false);
+  expect(codexPersonalAccountMode("Logged in using ChatGPT", {})).toBe(true);
+  expect(codexPersonalAccountMode("Logged in using an API key", {})).toBe(false);
 
   evidence.fact("CLI pilot is restricted to an authorized weijian member", "The same policy denies another organization, member, and expired grant.", true);
   evidence.fact("Antigravity terminal usage is normalized for RenCredit", "The reported input and output totals are split from cache and thinking tokens before settlement; missing usage fails closed.", true);
   evidence.fact("Codex terminal usage is normalized for RenCredit", "Input and output totals are split from cache and reasoning tokens before settlement.", true);
+  evidence.fact("Google API-key mode is excluded from the personal subscription pilot", "Antigravity settings with modelProvider gemini fail the account-mode guard before a reservation.", true);
+  evidence.fact("OpenAI API-key mode is excluded from the personal subscription pilot", "Codex must report ChatGPT login and have no API credential or alternate base URL override.", true);
 });

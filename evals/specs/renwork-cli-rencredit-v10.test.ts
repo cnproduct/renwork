@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect } from "vitest";
 import { test } from "@openwork/testkit";
 
-test("Voiceover V10 routes Codex CLI through signed RenCredit settlement and fails Antigravity closed", async ({ evidence }) => {
+test("Voiceover V10 routes approved CLI runs through signed RenCredit settlement", async ({ evidence }) => {
   const [runner, routes, metering, gateway, contracts, settings, wrapper] = await Promise.all([
     readFile("../apps/server/src/renwork-cli-runtime.ts", "utf8"),
     readFile("../apps/server/src/routes/cli-runtimes.ts", "utf8"),
@@ -17,12 +17,14 @@ test("Voiceover V10 routes Codex CLI through signed RenCredit settlement and fai
   expect(contracts).toContain('"antigravity_cli"');
   expect(gateway).toContain("adapter: provider?.protocol ?? null");
   expect(runner.indexOf("metering.reserve")).toBeLessThan(runner.indexOf("spawn(executable"));
-  expect(runner).toContain('reservation.adapter !== "codex_cli"');
+  expect(runner).toContain('reservation.adapter !== adapter');
   expect(runner).toContain('"--json"');
   expect(runner).toContain('value.type !== "turn.completed"');
   expect(runner).toContain("cached_input_tokens");
   expect(runner).toContain("cache_write_input_tokens");
   expect(runner).toContain("reasoning_output_tokens");
+  expect(runner).toContain("parseAntigravityResultEvent");
+  expect(runner).toContain('"--output-format", "stream-json"');
   expect(runner).toContain("this.options.metering.settle");
   expect(runner).toContain("this.options.metering.release");
   expect(runner).not.toContain("auth.json");
@@ -32,8 +34,8 @@ test("Voiceover V10 routes Codex CLI through signed RenCredit settlement and fai
   expect(routes).toContain('existing.workspaceId !== workspace.id');
   expect(metering).toContain("canonicalLocalRuntimeReceiptPayload");
   expect(settings).toContain("RenWork CLI 统一计费入口");
-  expect(settings).toContain("renwork codex --model");
-  expect(settings).toContain("Antigravity 在获得可核验的结构化用量事件前保持禁用正式计费");
+  expect(settings).toContain("startCliRuntimeRun");
+  expect(settings).toContain("selectedModel.runtime");
   expect(wrapper).toContain("capturedMicroCredits");
   expect(wrapper).toContain("releasedMicroCredits");
   expect(wrapper).toContain("receipt=");
@@ -49,8 +51,8 @@ test("Voiceover V10 routes Codex CLI through signed RenCredit settlement and fai
     true,
   );
   evidence.fact(
-    "Antigravity remains fail-closed",
-    "Antigravity can be detected, but metered execution stays disabled until a structured authoritative Token event is available.",
+    "Antigravity requires structured usage",
+    "Approved Antigravity CLI runs use stream-json output; a missing terminal Token event fails and releases the reservation.",
     true,
   );
 });
