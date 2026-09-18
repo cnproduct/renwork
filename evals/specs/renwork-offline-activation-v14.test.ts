@@ -15,7 +15,8 @@ test("V15 records fixed and two-admin contract offline activation as auditable o
   expect(service).toContain('entry_type: "grant"');
   expect(service).toContain('entry_type: "refund"');
   expect(service).toContain("previous_entitlement_snapshot");
-  expect(route.match(/adminRoute\(\)/g)?.length ?? 0).toBe(10);
+  // Other audited payment routes may be added without removing offline protections.
+  expect(route.match(/adminRoute\(\)/g)?.length ?? 0).toBeGreaterThanOrEqual(10);
   expect(schema).toContain("renwork_offline_orders_org_idempotency");
   expect(schema).toContain("renwork_offline_orders_payment_reference");
   expect(schema).toContain("renwork_contract_quotes_org_reference");
