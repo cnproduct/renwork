@@ -11,6 +11,7 @@ import { startTelegramUpdateDispatcher } from "./capability-sources/telegram-dis
 import { externalMcpClientRuntimeName } from "./capability-sources/external-mcp-client-runtime.js"
 import { startAutomationSchedulerLoop } from "./automations/scheduler-loop.js"
 import { startRenCreditReservationSweep } from "./rencredit-ledger.js"
+import { grantDueAlipayMonths } from "./renwork-alipay-order.js"
 
 const stopScimMaintenanceLoop = startScimMaintenanceLoop()
 const stopCloudIdleStopLoop = startCloudIdleStopLoop()
@@ -19,6 +20,13 @@ const stopGithubSyncWorker = startGithubSyncWorker()
 const stopTelegramUpdateDispatcher = startTelegramUpdateDispatcher()
 const automationScheduler = startAutomationSchedulerLoop()
 const stopRenCreditReservationSweep = startRenCreditReservationSweep()
+const alipayGrantTimer = env.renworkAlipay.enabled ? setInterval(() => {
+  void grantDueAlipayMonths().catch((error) => appLogger.error("Alipay monthly RenCredit grant failed", { component: "renwork-alipay", error }))
+}, 60 * 60 * 1000) : null
+alipayGrantTimer?.unref()
+if (alipayGrantTimer) {
+  void grantDueAlipayMonths().catch((error) => appLogger.error("Initial Alipay monthly grant failed", { component: "renwork-alipay", error }))
+}
 
 appLogger.info("external mcp implementation selected", { component: "server", runtime: externalMcpClientRuntimeName })
 
@@ -76,6 +84,7 @@ async function closeServer() {
 }
 
 async function stopBackgroundLoops() {
+  if (alipayGrantTimer) clearInterval(alipayGrantTimer)
   const results = await Promise.allSettled([
     stopScimMaintenanceLoop(),
     stopCloudIdleStopLoop(),

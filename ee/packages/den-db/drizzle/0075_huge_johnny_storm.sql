@@ -1,0 +1,1 @@
+ALTER TABLE `renwork_alipay_orders` ADD `granted_months` int DEFAULT 0 NOT NULL;

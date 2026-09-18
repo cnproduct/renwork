@@ -124,7 +124,7 @@ type AdminOrganization = {
   billableSeatCount: number;
   capabilities: AdminOrganizationCapabilities;
   renworkAccessGrant: {
-    source: "campaign" | "super_admin" | "offline_payment";
+    source: "campaign" | "super_admin" | "offline_payment" | "online_payment";
     expiresAt: string;
   } | null;
   renworkSubscriptionRequest: {
@@ -404,7 +404,7 @@ function parseAdminPayload(payload: unknown): AdminPayload | null {
             codemodeScripts: capabilities.codemodeScripts === true,
             cloud: capabilities.cloud === true
           },
-          renworkAccessGrant: accessGrant && (accessGrant.source === "campaign" || accessGrant.source === "super_admin" || accessGrant.source === "offline_payment") && typeof accessGrant.expiresAt === "string"
+          renworkAccessGrant: accessGrant && (accessGrant.source === "campaign" || accessGrant.source === "super_admin" || accessGrant.source === "offline_payment" || accessGrant.source === "online_payment") && typeof accessGrant.expiresAt === "string"
             ? { source: accessGrant.source, expiresAt: accessGrant.expiresAt }
             : null,
           renworkSubscriptionRequest: subscriptionRequest
@@ -2373,9 +2373,9 @@ export function DenAdminPanel() {
                       <button
                         type="button"
                         data-testid={`admin-org-renwork-access-${org.slug}`}
-                        disabled={savingAccessGrantOrgId === org.id || org.renworkAccessGrant?.source === "offline_payment"}
+                        disabled={savingAccessGrantOrgId === org.id || org.renworkAccessGrant?.source === "offline_payment" || org.renworkAccessGrant?.source === "online_payment"}
                         onClick={() => {
-                          if (org.renworkAccessGrant?.source !== "offline_payment") {
+                          if (org.renworkAccessGrant?.source !== "offline_payment" && org.renworkAccessGrant?.source !== "online_payment") {
                             void (org.renworkAccessGrant ? revokeTemporaryRenworkAccess(org) : grantTemporaryRenworkAccess(org));
                           }
                         }}
@@ -2383,7 +2383,7 @@ export function DenAdminPanel() {
                       >
                         {savingAccessGrantOrgId === org.id
                           ? "Saving…"
-                          : org.renworkAccessGrant?.source === "offline_payment"
+                          : org.renworkAccessGrant?.source === "offline_payment" || org.renworkAccessGrant?.source === "online_payment"
                             ? "线下套餐已开通"
                           : org.renworkAccessGrant
                             ? "撤销临时模型授权"
@@ -2408,7 +2408,7 @@ export function DenAdminPanel() {
                     <MetaCell
                       label="RenWork model access"
                       value={org.renworkAccessGrant
-                        ? `${org.renworkAccessGrant.source === "offline_payment" ? "线下套餐" : "特批"}至 ${formatDateTime(org.renworkAccessGrant.expiresAt)}`
+                        ? `${org.renworkAccessGrant.source === "offline_payment" ? "线下套餐" : org.renworkAccessGrant.source === "online_payment" ? "支付宝套餐" : "特批"}至 ${formatDateTime(org.renworkAccessGrant.expiresAt)}`
                         : "未开通或订阅校验"}
                     />
                     <MetaCell
