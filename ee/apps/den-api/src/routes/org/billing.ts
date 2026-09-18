@@ -11,6 +11,8 @@ import { ORGANIZATION_SUPER_ADMIN_ROLE, organizationRoleValueSatisfies } from ".
 import type { OrgRouteVariables } from "./shared.js"
 import { ensureOrganizationAdmin, ensureOrganizationSuperAdmin, orgAccessFailureStatus } from "./shared.js"
 import { createRenworkSubscriptionRequest } from "../../renwork-subscription-request.js"
+import { createAlipayOrder, readAlipayOrder } from "../../renwork-alipay-order.js"
+import { denTypeIdSchema } from "../../openapi.js"
 
 const stripeBillingResponseSchema = z.object({}).passthrough().meta({ ref: "OrgStripeBillingResponse" })
 const stripeCheckoutRequestSchema = z.object({ type: z.enum(["inference", "seat"]).optional() })
@@ -19,6 +21,7 @@ const stripeCheckoutSyncRequestSchema = z.object({ sessionId: z.string().trim().
 const stripeCheckoutSyncResponseSchema = z.object({ synced: z.boolean() }).meta({ ref: "OrgStripeCheckoutSyncResponse" })
 const stripePortalResponseSchema = z.object({ url: z.string() }).meta({ ref: "OrgStripePortalResponse" })
 const renworkAccessRequestSchema = z.object({ offerId: z.string().trim().min(1).max(160) })
+const alipayOrderRequestSchema = z.object({ offerId: z.string().trim().min(1).max(160), idempotencyKey: z.string().trim().min(8).max(160) })
 const renworkAccessRequestResponseSchema = z.object({
   ok: z.literal(true),
   created: z.boolean(),
@@ -89,6 +92,43 @@ function checkoutCancelUrl(c: { req: { raw: Request } }) {
 }
 
 export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariables }>(app: Hono<T>) {
+  app.get("/v1/renwork/commerce/alipay/status", orgRoleRoute(["admin"]), (c) => {
+    const { enabled, appId, sellerId, privateKey, publicKey } = env.renworkAlipay
+    return c.json({ available: Boolean(enabled && appId && sellerId && privateKey && publicKey) })
+  })
+
+  app.post("/v1/renwork/commerce/alipay/orders", orgRoleRoute(["admin"]), async (c) => {
+    const permission = ensureOrganizationAdmin(c, "Only workspace owners and admins can start payment.")
+    if (!permission.ok) return c.json(permission.response, orgAccessFailureStatus(permission.response))
+    const parsed = alipayOrderRequestSchema.safeParse(await c.req.json().catch(() => null))
+    if (!parsed.success) return c.json({ error: "invalid_request" }, 400)
+    const payload = c.get("organizationContext")
+    try {
+      return c.json(await createAlipayOrder({
+        organizationId: payload.organization.id,
+        actorUserId: c.get("user").id,
+        offerId: parsed.data.offerId,
+        idempotencyKey: parsed.data.idempotencyKey,
+      }))
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "RENWORK_ALIPAY_UNAVAILABLE"
+      if (code === "RENWORK_ALIPAY_UNAVAILABLE" || code === "RENWORK_ALIPAY_HTTPS_REQUIRED") {
+        return c.json({ error: "online_payment_unavailable", message: "Online payment is not ready. Use the offline plan request." }, 503)
+      }
+      if (code.startsWith("RENWORK_ALIPAY_")) return c.json({ error: code }, 409)
+      throw error
+    }
+  })
+
+  app.get("/v1/renwork/commerce/alipay/orders/:id", orgRoleRoute(["admin"]), async (c) => {
+    const permission = ensureOrganizationAdmin(c, "Only workspace owners and admins can read payment status.")
+    if (!permission.ok) return c.json(permission.response, orgAccessFailureStatus(permission.response))
+    const id = denTypeIdSchema("renworkAlipayOrder").safeParse(c.req.param("id"))
+    if (!id.success) return c.json({ error: "order_not_found" }, 404)
+    const order = await readAlipayOrder({ organizationId: c.get("organizationContext").organization.id, orderId: id.data })
+    if (!order) return c.json({ error: "order_not_found" }, 404)
+    return c.json({ order })
+  })
   app.post(
     "/v1/renwork/commerce/access-requests",
     describeRoute({
