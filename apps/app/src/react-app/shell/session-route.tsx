@@ -147,7 +147,6 @@ import { useSessionProviderAuth } from "@/react-app/domains/connections/provider
 import {
   canConnectPersonalSubscriptionOAuth,
   canManageDesktopModelProviders,
-  hasPlatformGrantedPersonalSubscriptionModel,
 } from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
 import {
   disabledProvidersFromConfig,
@@ -166,6 +165,7 @@ import {
   shouldShowOpenWorkModelsSyncing,
 } from "@/react-app/domains/cloud/openwork-models-promo";
 import {
+  hasPersonalSubscriptionCatalogModel,
   personalSubscriptionCatalogModelOptions,
   useRenWorkModelCatalog,
 } from "@/react-app/domains/models/renwork-model-catalog";
@@ -920,10 +920,10 @@ export function SessionRoute() {
     () => assignedModelOptions(sessionProviderAuthSnapshot.cloudOrgProviders),
     [sessionProviderAuthSnapshot.cloudOrgProviders],
   );
+  const renWorkModelCatalog = useRenWorkModelCatalog(true, denAuth.isSignedIn);
   const personalSubscriptionOAuthAllowed =
     personalSubscriptionOAuthPrerequisitesMet &&
-    hasPlatformGrantedPersonalSubscriptionModel(sessionProviderAuthSnapshot.cloudOrgProviders);
-  const renWorkModelCatalog = useRenWorkModelCatalog(true, denAuth.isSignedIn);
+    hasPersonalSubscriptionCatalogModel(renWorkModelCatalog);
   const personalSubscriptionModelOptions = useMemo(
     () => personalSubscriptionCatalogModelOptions(renWorkModelCatalog, providerConnectedIds),
     [providerConnectedIds, renWorkModelCatalog],

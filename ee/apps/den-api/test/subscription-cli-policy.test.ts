@@ -5,6 +5,7 @@ import {
   readSubscriptionCliPolicy,
   subscriptionCliAccessForMember,
   subscriptionCliModelForMember,
+  subscriptionOpenAiModelsForMember,
   subscriptionCliPolicySchema,
   writeSubscriptionCliPolicy,
 } from "../src/subscription-cli-policy.js"
@@ -51,6 +52,33 @@ test("only an active weijian member resolves a metered personal CLI route", () =
 test("rejects a mismatched SKU or unmetered model", () => {
   expect(subscriptionCliPolicySchema.safeParse({ ...policy, models: [{ ...policy.models[0], sku: "renwork-codex-gpt" }] }).success).toBe(false)
   expect(subscriptionCliPolicySchema.safeParse({ ...policy, models: [{ ...policy.models[0], rates: Object.fromEntries(Object.keys(policy.models[0]!.rates).map((key) => [key, 0])) }] }).success).toBe(false)
+})
+
+test("every active weijian member gets only their own device-local GPT route", () => {
+  const gpt = {
+    ...policy.models[0]!,
+    sku: "renwork-codex-gpt-5-6-sol",
+    runtime: "codex" as const,
+    upstreamModelId: "gpt-5.6-sol",
+    displayName: "GPT-5.6 Sol",
+  }
+  const metadata = writeSubscriptionCliPolicy({}, subscriptionCliPolicySchema.parse({
+    ...policy, models: [policy.models[0], gpt],
+  }))
+  const member = { ...organization, metadata, memberId: "om_another_active_member", now: new Date("2026-09-20T00:00:00.000Z") }
+  expect(subscriptionCliAccessForMember(member)).toBeNull()
+  const personal = subscriptionOpenAiModelsForMember(member)
+  expect(personal.map(({ model }) => model.sku)).toEqual(["renwork-openai-gpt-5-6-sol"])
+  expect(personal[0]?.provider).toMatchObject({
+    id: "openai", protocol: "opencode", authMode: "device_oauth",
+    credentialRef: null, sharingScope: "user_private",
+  })
+  expect(personal[0]?.model.routes[0]).toMatchObject({
+    providerId: "openai", upstreamModelId: "gpt-5.6-sol", source: "local",
+  })
+  expect(personal[0]?.model.rates).toEqual(gpt.rates)
+  expect(subscriptionOpenAiModelsForMember({ ...member, organizationId: "org_other" })).toEqual([])
+  expect(subscriptionOpenAiModelsForMember({ ...member, now: new Date("2027-01-01T00:00:00.000Z") })).toEqual([])
 })
 
 test("selects China weekday peak rates at reservation time", () => {

@@ -67,8 +67,8 @@ import ProviderAuthModal from "@/react-app/domains/connections/provider-auth/pro
 import {
   canConnectPersonalSubscriptionOAuth,
   canManageDesktopModelProviders,
-  hasPlatformGrantedPersonalSubscriptionModel,
 } from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
+import { hasPersonalSubscriptionCatalogModel, useRenWorkModelCatalog } from "@/react-app/domains/models/renwork-model-catalog";
 import ConnectionsModals from "@/react-app/domains/connections/modals";
 import { AiSettingsView } from "@/react-app/domains/settings/pages/ai-view";
 import { CliRuntimeSettings } from "@/react-app/domains/settings/cli-runtime-settings";
@@ -840,13 +840,14 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     hasActiveOrganization: cloudSession.hasActiveOrg,
     workspaceType: selectedWorkspace?.workspaceType,
   });
+  const personalSubscriptionCatalog = useRenWorkModelCatalog(true, cloudSession.isSignedIn);
   const personalSubscriptionOAuthAllowed = canConnectPersonalSubscriptionOAuth({
     desktopRuntime: isDesktopRuntime(),
     signedIn: cloudSession.isSignedIn,
     hasAuthToken: Boolean(cloudSession.authToken.trim()),
     hasActiveOrganization: cloudSession.hasActiveOrg,
     hasActiveRuntime: Boolean(activeClient && selectedWorkspaceId),
-    hasPlatformGrantedModel: hasPlatformGrantedPersonalSubscriptionModel(providerAuthSnapshot.cloudOrgProviders),
+    hasPlatformGrantedModel: hasPersonalSubscriptionCatalogModel(personalSubscriptionCatalog),
     workspaceType: selectedWorkspace?.workspaceType,
   });
   const connectScope = useMemo(
@@ -978,7 +979,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
       });
       return;
     }
-    void providerAuthStore.openProviderAuthModal({ scope: "personal_subscription_oauth" });
+    void providerAuthStore.openProviderAuthModal({ preferredProviderId: "openai", scope: "personal_subscription_oauth" });
   }, [personalSubscriptionOAuthAllowed, providerAuthStore, restrictionNotice]);
 
   useEffect(() => {

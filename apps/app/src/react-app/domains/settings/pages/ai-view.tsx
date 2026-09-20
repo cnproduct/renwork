@@ -129,6 +129,29 @@ export function AiSettingsView(props: AiSettingsViewProps) {
           </LayoutSectionItemHeader>
         </LayoutSectionItem>
 
+        {props.canConnectPersonalSubscriptions ? (
+          <LayoutSectionItem className="flex-row flex-wrap items-center justify-between gap-3 rounded-2xl border border-dls-border px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <ProviderIcon providerId="openai" size={20} className="text-dls-text" />
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-dls-text">个人 ChatGPT 账号</div>
+                <div className="text-xs text-muted-foreground">
+                  {props.personalSubscriptionProviderIds?.has("openai")
+                    ? "此电脑已连接；GPT 模型使用量计入组织 RenCredit。"
+                    : "每位成员在自己的电脑上登录后，即可使用组织授权的 GPT 模型。"}
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => void props.onOpenPersonalSubscriptionAuth?.()}
+              disabled={props.busy || props.providerAuthBusy}
+            >
+              {props.personalSubscriptionProviderIds?.has("openai") ? "重新连接" : "连接 ChatGPT"}
+            </Button>
+          </LayoutSectionItem>
+        ) : null}
+
         {props.showOpenWorkModelsSubscribe ? (
           <LayoutSectionItem className="relative overflow-hidden rounded-2xl border border-blue-6 bg-blue-2/30 px-4 py-4">
             <button

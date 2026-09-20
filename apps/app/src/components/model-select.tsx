@@ -56,9 +56,11 @@ import {
 import { newProvidersEvent } from "@/app/lib/provider-events";
 import {
   catalogModelOptions,
+  requiredPersonalSubscriptionProvider,
   renWorkTierLabel,
   useRenWorkModelCatalog,
 } from "@/react-app/domains/models/renwork-model-catalog";
+import { openProviderAuthEvent } from "@/react-app/shell/new-providers-listener";
 
 function getProviderDisplayName(providerId: string) {
   return providerId
@@ -326,6 +328,14 @@ export function ModelSelect({
 
   const handleSelect = (item: ModelSelectModelItem) => {
     const option = item.option;
+    const personalProvider = requiredPersonalSubscriptionProvider(item.billing);
+    if (personalProvider && !modelState.connectedProviderIds.has(personalProvider)) {
+      onOpenChange(false);
+      window.dispatchEvent(new CustomEvent(openProviderAuthEvent, {
+        detail: { preferredProviderId: personalProvider, scope: "personal_subscription_oauth" },
+      }));
+      return;
+    }
     onChange({ providerID: option.providerID, modelID: option.modelID });
     setSearch("");
     onOpenChange(false);
@@ -454,6 +464,8 @@ export function ModelSelect({
                     }
 
                     const option = item.option;
+                    const personalProvider = requiredPersonalSubscriptionProvider(item.billing);
+                    const needsConnection = personalProvider && !modelState.connectedProviderIds.has(personalProvider);
                     return (
                       <CommandItem
                         className="gap-2"
@@ -478,6 +490,7 @@ export function ModelSelect({
                         </span>
                         {item.billing ? (
                           <span className="flex shrink-0 items-center gap-1 text-xs">
+                            {needsConnection ? <span className="text-blue-11">连接账号</span> : null}
                             <span className="rounded border border-border px-1 py-0.5 text-[10px] text-muted-foreground">
                               {item.billing.executionLocation === "local" ? "本地" : "云端"}
                             </span>

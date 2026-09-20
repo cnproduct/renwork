@@ -7,7 +7,6 @@ declare const expect: (value: unknown) => {
 import {
   canConnectPersonalSubscriptionOAuth,
   canManageDesktopModelProviders,
-  hasPlatformGrantedPersonalSubscriptionModel,
 } from "./desktop-provider-management";
 import { isPersonalSubscriptionOAuthProvider } from "./store";
 
@@ -21,7 +20,7 @@ describe("desktop provider management", () => {
     })).toBe(false);
   });
 
-  test("disables personal subscription OAuth on a signed-in local desktop", () => {
+  test("allows personal subscription OAuth on a signed-in local desktop with a model grant", () => {
     expect(canConnectPersonalSubscriptionOAuth({
       desktopRuntime: true,
       signedIn: true,
@@ -30,7 +29,7 @@ describe("desktop provider management", () => {
       hasActiveRuntime: true,
       hasPlatformGrantedModel: true,
       workspaceType: "local",
-    })).toBe(false);
+    })).toBe(true);
   });
 
   test("does not expose personal subscription OAuth to web, remote, or signed-out contexts", () => {
@@ -83,16 +82,6 @@ describe("desktop provider management", () => {
       workspaceType: "local",
     })).toBe(false);
 
-    expect(hasPlatformGrantedPersonalSubscriptionModel([{
-      providerId: "renwork",
-      source: "openwork",
-      models: [{ id: "renwork-openai-gpt-5-6" }],
-    }])).toBe(true);
-    expect(hasPlatformGrantedPersonalSubscriptionModel([{
-      providerId: "renwork",
-      source: "openwork",
-      models: [{ id: "renwork-code-kimi-k3" }],
-    }])).toBe(false);
   });
 
   test("limits personal subscription OAuth to the approved local adapters", () => {

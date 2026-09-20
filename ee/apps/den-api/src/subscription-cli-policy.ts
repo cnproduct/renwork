@@ -143,3 +143,41 @@ export function subscriptionCliModelForMember(input: {
   }
   return { model, provider }
 }
+
+/** Each weijian member uses their own device-local OpenAI login; the CLI pilot's
+ * approved GPT list, rates and expiry remain the source of truth. */
+export function subscriptionOpenAiModelsForMember(input: {
+  organizationId: string
+  organizationName: string
+  pilotOrganizationId?: string
+  metadata: Record<string, unknown> | null | undefined
+  memberId: string
+  now?: Date
+}): Array<{ model: RenWorkAdminModel; provider: RenWorkAdminProvider }> {
+  if (!input.memberId || !isWeijianSubscriptionCliOrganization(input)) return []
+  const policy = readSubscriptionCliPolicy(input.metadata)
+  if (!policy?.enabled || Date.parse(policy.expiresAt) <= (input.now ?? new Date()).getTime()) return []
+  return policy.models.filter((configured) => configured.runtime === "codex").map((configured) => {
+    const sku = configured.sku.replace(/^renwork-codex-/, "renwork-openai-")
+    const rates = configured.pricingSchedule === "deepseek_flash_cn"
+      && configured.peakRates && isChinaWeekdayPeak(input.now ?? new Date())
+      ? configured.peakRates : configured.rates
+    const provider: RenWorkAdminProvider = {
+      id: "openai", displayName: "OpenAI (personal)", kind: "runtime", protocol: "opencode",
+      baseUrl: null, credentialRef: null, authMode: "device_oauth", credentialStore: "device_vault",
+      executionScope: "personal_device", sharingScope: "user_private",
+      deviceOAuthPolicy: { maxDevicesPerUser: 3, maxConcurrentRunsPerUser: 1 },
+      enabled: true, health: "unknown",
+    }
+    const model: RenWorkAdminModel = {
+      sku, displayName: configured.displayName,
+      description: "使用本机登录的个人 ChatGPT 账号，按成员计入 RenCredit。",
+      tier: "professional", status: "published", autoEligible: false, contextWindow: null,
+      tags: ["openai", "oauth", "personal-device"], sortOrder: 0,
+      displayMultiplierBps: configured.multiplierBps, priceMultiplierBps: configured.multiplierBps,
+      rates, promotion: null, allowedPlanIds: ["free", "team", "enterprise"],
+      routes: [{ id: `route-${sku}`, providerId: "openai", upstreamModelId: configured.upstreamModelId, priority: 0, enabled: true, source: "local" }],
+    }
+    return { model, provider }
+  })
+}
