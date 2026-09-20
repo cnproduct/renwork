@@ -54,7 +54,9 @@ export type InferencePrincipal = {
   inferenceKeyId: InferenceKeyId
 }
 
-export type ReserveInferenceInput = InferencePrincipal & {
+export type ReserveInferenceInput = Omit<InferencePrincipal, "inferenceKeyId"> & {
+  /** Cloud session calls do not expose or require a member API key. */
+  inferenceKeyId: InferenceKeyId | null
   runId: string
   idempotencyKey: string
   catalogVersion: string

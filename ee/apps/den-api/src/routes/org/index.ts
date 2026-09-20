@@ -28,6 +28,7 @@ import { registerOrgRoleRoutes } from "./roles.js"
 import { registerRemoteMcpAppRoutes } from "./remote-mcp-apps.js"
 import { registerOrgScimRoutes } from "./scim.js"
 import { registerOrgSsoRoutes } from "./sso.js"
+import { registerOrgSubscriptionCodexRoutes } from "./subscription-codex.js"
 import { registerOrgResourceRoutes } from "./resources.js"
 import { registerOrgTeamRoutes } from "./teams.js"
 import { registerTelegramOrgRoutes } from "./telegram.js"
@@ -70,6 +71,7 @@ export function registerOrgRoutes<T extends { Variables: OrgRouteVariables & Req
   registerOrgDesktopPolicyRoutes(app)
   registerOrgEgressDiagnosticRoutes(app)
   registerOrgInferenceRoutes(app)
+  registerOrgSubscriptionCodexRoutes(app)
   registerOrgScimRoutes(app)
   registerOrgSsoRoutes(app)
   registerOrgInvitationRoutes(app)

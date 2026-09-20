@@ -91,6 +91,9 @@ services:
       INFERENCE_PROXY_BASE_URL: https://www.rrenn.com/api/den
       RENCREDIT_RESERVATION_SWEEP_INTERVAL_MS: "60000"
       RENWORK_METASO_H3_COMMERCIAL_LICENSE_CONFIRMED: ${RENWORK_METASO_H3_COMMERCIAL_LICENSE_CONFIRMED:-false}
+      RENWORK_WEIJIAN_ORGANIZATION_ID: ${RENWORK_WEIJIAN_ORGANIZATION_ID:-}
+      RENWORK_WEIJIAN_CODEX_WORKER_URL: http://weijian-codex:8795
+      RENWORK_WEIJIAN_CODEX_WORKER_TOKEN: ${RENWORK_WEIJIAN_CODEX_WORKER_TOKEN:-}
       RENWORK_METASO_H3_LICENSE_EVIDENCE_ID: ${RENWORK_METASO_H3_LICENSE_EVIDENCE_ID:-}
       RENWORK_METASO_H3_API_KEY: ${RENWORK_METASO_H3_API_KEY:-}
       RENWORK_METASO_H3_BASE_URL: ${RENWORK_METASO_H3_BASE_URL:-}
@@ -158,6 +161,31 @@ services:
       retries: 30
       start_period: 90s
 
+  weijian-codex:
+    profiles: ["weijian-codex"]
+    image: ${RENWORK_WEIJIAN_CODEX_IMAGE:-ghcr.io/cnproduct/renwork-weijian-codex:dev}
+    restart: unless-stopped
+    environment:
+      PORT: "8795"
+      RENWORK_CODEX_WORKER_TOKEN: ${RENWORK_WEIJIAN_CODEX_WORKER_TOKEN:-}
+      RENWORK_CODEX_VAULT_KEY: ${RENWORK_WEIJIAN_CODEX_VAULT_KEY:-}
+      RENWORK_CODEX_VAULT_FILE: /data/auth.enc
+      RENWORK_CODEX_TMP_ROOT: /run/codex
+    volumes:
+      - weijian-codex-vault:/data
+    tmpfs:
+      - /run/codex:rw,noexec,nosuid,nodev,size=64m,uid=1000,gid=1000
+    read_only: true
+    pids_limit: 128
+    mem_limit: 2g
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8795/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # This narrow control-plane sidecar is the only service allowed to reach the
   # Docker socket. Den authenticates to it over the private Compose network;
   # it accepts only fixed worker lifecycle operations and one allowlisted image.
@@ -189,3 +217,4 @@ services:
 
 volumes:
   mysql-data:
+  weijian-codex-vault:
