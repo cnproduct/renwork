@@ -61,6 +61,10 @@ export async function createAlipayOrder(input: {
   offerId: string
   idempotencyKey: string
 }) {
+  if (env.renworkAlipay.canaryOrganizationId
+    && env.renworkAlipay.canaryOrganizationId !== input.organizationId) {
+    throw new Error("RENWORK_ALIPAY_CANARY_ONLY")
+  }
   const merchant = config()
   const offer = listOfflineOffers().find((candidate) => candidate.offerId === input.offerId)
   if (!offer || offer.source !== "catalog" || offer.priceMinor <= 0) throw new Error("RENWORK_ALIPAY_OFFER_UNAVAILABLE")

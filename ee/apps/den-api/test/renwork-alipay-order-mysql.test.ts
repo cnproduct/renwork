@@ -1,9 +1,18 @@
 import { createSign, generateKeyPairSync } from "node:crypto"
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { afterAll, beforeAll, expect, test } from "bun:test"
 import { createDenTypeId } from "@openwork-ee/utils/typeid"
 
 const merchant = generateKeyPairSync("rsa", { modulusLength: 2048 })
 const alipay = generateKeyPairSync("rsa", { modulusLength: 2048 })
+const organizationId = createDenTypeId("organization")
+const otherOrganizationId = createDenTypeId("organization")
+const userId = createDenTypeId("user")
+const secretDir = mkdtempSync(join(tmpdir(), "renwork-alipay-test-"))
+const privateKeyFile = join(secretDir, "merchant.pem")
+writeFileSync(privateKeyFile, merchant.privateKey.export({ type: "pkcs8", format: "pem" }).toString(), { mode: 0o600 })
 process.env.DATABASE_URL = "mysql://root:password@127.0.0.1:3306/renwork_alipay_v50_local_test"
 process.env.DB_MODE = "mysql"
 process.env.DEN_DB_ENCRYPTION_KEY = "alipay-test-encryption-key-1234567890"
@@ -11,14 +20,12 @@ process.env.BETTER_AUTH_SECRET = "alipay-test-auth-secret-1234567890"
 process.env.BETTER_AUTH_URL = "https://example.test"
 process.env.DEN_API_PUBLIC_URL = "https://api.example.test"
 process.env.RENWORK_ALIPAY_ONLINE_ENABLED = "true"
+process.env.RENWORK_ALIPAY_CANARY_ORGANIZATION_ID = organizationId
 process.env.RENWORK_ALIPAY_APP_ID = "2021000000000000"
 process.env.RENWORK_ALIPAY_SELLER_ID = "2088000000000000"
-process.env.RENWORK_ALIPAY_PRIVATE_KEY = merchant.privateKey.export({ type: "pkcs8", format: "pem" }).toString()
+process.env.RENWORK_ALIPAY_PRIVATE_KEY_FILE = privateKeyFile
 process.env.RENWORK_ALIPAY_PUBLIC_KEY = alipay.publicKey.export({ type: "spki", format: "pem" }).toString()
 
-const organizationId = createDenTypeId("organization")
-const otherOrganizationId = createDenTypeId("organization")
-const userId = createDenTypeId("user")
 let db: typeof import("../src/db.js").db
 let drizzle: typeof import("@openwork-ee/den-db/drizzle")
 let schema: typeof import("@openwork-ee/den-db/schema")
@@ -59,6 +66,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   globalThis.fetch = originalFetch
+  rmSync(secretDir, { recursive: true, force: true })
   if (!db) return
   await db.delete(schema.RenworkAlipayOrderTable).where(drizzle.eq(schema.RenworkAlipayOrderTable.organization_id, organizationId))
   await db.delete(schema.RenCreditLedgerEntryTable).where(drizzle.eq(schema.RenCreditLedgerEntryTable.organization_id, organizationId))
@@ -69,6 +77,9 @@ afterAll(async () => {
 })
 
 test("checkout cannot grant; signed callback grants once, annual month grants once, refund reverses once", async () => {
+  await expect(orders.createAlipayOrder({ organizationId: otherOrganizationId, actorUserId: userId,
+    offerId: "personal-light-annual", idempotencyKey: "other-org-canary-v50" }))
+    .rejects.toThrow("RENWORK_ALIPAY_CANARY_ONLY")
   const first = await orders.createAlipayOrder({ organizationId, actorUserId: userId,
     offerId: "personal-light-annual", idempotencyKey: "annual-v50-unique" })
   const replayCheckout = await orders.createAlipayOrder({ organizationId, actorUserId: userId,

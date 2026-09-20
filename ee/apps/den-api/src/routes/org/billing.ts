@@ -93,8 +93,10 @@ function checkoutCancelUrl(c: { req: { raw: Request } }) {
 
 export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariables }>(app: Hono<T>) {
   app.get("/v1/renwork/commerce/alipay/status", orgRoleRoute(["admin"]), (c) => {
-    const { enabled, appId, sellerId, privateKey, publicKey } = env.renworkAlipay
-    return c.json({ available: Boolean(enabled && appId && sellerId && privateKey && publicKey) })
+    const { enabled, appId, sellerId, privateKey, publicKey, canaryOrganizationId } = env.renworkAlipay
+    const organizationId = c.get("organizationContext").organization.id
+    return c.json({ available: Boolean(enabled && appId && sellerId && privateKey && publicKey
+      && (!canaryOrganizationId || canaryOrganizationId === organizationId)) })
   })
 
   app.post("/v1/renwork/commerce/alipay/orders", orgRoleRoute(["admin"]), async (c) => {
