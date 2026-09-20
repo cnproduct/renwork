@@ -54,35 +54,6 @@ type SubscriptionRequest = {
 
 type BillingInterval = "monthly" | "annual";
 
-type CodexCloudStatus = {
-  state: "disconnected" | "pending" | "connected" | "expired" | "error" | "unavailable";
-  email?: string | null;
-  planType?: string;
-  model?: string;
-  modelSku?: string | null;
-  verificationUrl?: string;
-  userCode?: string;
-  message?: string;
-};
-
-function parseCodexCloudStatus(value: unknown): CodexCloudStatus | null {
-  if (!value || typeof value !== "object" || !("state" in value)) return null;
-  const state = value.state;
-  if (state !== "disconnected" && state !== "pending" && state !== "connected"
-    && state !== "expired" && state !== "error" && state !== "unavailable") return null;
-  const field = (key: string) => key in value ? Reflect.get(value, key) : undefined;
-  return {
-    state,
-    email: typeof field("email") === "string" ? field("email") : null,
-    planType: typeof field("planType") === "string" ? field("planType") : undefined,
-    model: typeof field("model") === "string" ? field("model") : undefined,
-    modelSku: typeof field("modelSku") === "string" ? field("modelSku") : null,
-    verificationUrl: typeof field("verificationUrl") === "string" ? field("verificationUrl") : undefined,
-    userCode: typeof field("userCode") === "string" ? field("userCode") : undefined,
-    message: typeof field("message") === "string" ? field("message") : undefined,
-  };
-}
-
 const WINDOW_LABEL: Record<InferenceWindowType, string> = {
   five_hour: "5 hour usage limit",
   weekly: "Weekly usage limit",
@@ -534,11 +505,6 @@ export function InferenceScreen() {
   const [requestBusyOfferId, setRequestBusyOfferId] = useState<string | null>(null);
   const [subscriptionRequest, setSubscriptionRequest] = useState<SubscriptionRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [codexStatus, setCodexStatus] = useState<CodexCloudStatus | null>(null);
-  const [codexBusy, setCodexBusy] = useState(false);
-  const [codexPrompt, setCodexPrompt] = useState("");
-  const [codexResult, setCodexResult] = useState<string | null>(null);
-  const [codexError, setCodexError] = useState<string | null>(null);
 
   const access = getOrgAccessFlags(
     orgContext?.currentMember.role ?? "member",
@@ -550,93 +516,6 @@ export function InferenceScreen() {
   // (single-org) deployments manage their own LLM providers instead.
   const isSelfHosted = runtimeConfigLoaded && runtimeConfig.orgMode === "single_org";
   const activeOrgSlug = activeOrg?.slug ?? null;
-  const showWeijianCodex = orgContext?.organization.name === "weijian" && canManageModels;
-
-  async function loadCodexStatus(poll = false) {
-    try {
-      const { response, payload } = await requestJson(
-        poll ? "/v1/subscription-codex/connect" : "/v1/subscription-codex",
-        { method: "GET" },
-        12000,
-      );
-      const parsed = parseCodexCloudStatus(payload);
-      if (parsed) setCodexStatus(parsed);
-      else if (!response.ok) setCodexStatus({ state: "unavailable" });
-    } catch {
-      setCodexStatus({ state: "unavailable" });
-    }
-  }
-
-  useEffect(() => {
-    if (showWeijianCodex) void loadCodexStatus();
-  }, [showWeijianCodex, orgContext?.organization.id]);
-
-  useEffect(() => {
-    if (codexStatus?.state !== "pending") return;
-    const timer = window.setInterval(() => void loadCodexStatus(true), 3000);
-    return () => window.clearInterval(timer);
-  }, [codexStatus?.state]);
-
-  async function connectCodex() {
-    setCodexError(null);
-    try {
-      await runReauthableAction("weijian-codex-connect", async () => {
-        setCodexBusy(true);
-        const { response, payload } = await requestJson("/v1/subscription-codex/connect", { method: "POST" }, 30000);
-        if (!response.ok) throw getRequestError(payload, response, "无法开始 ChatGPT 授权。");
-        const status = parseCodexCloudStatus(payload);
-        if (!status) throw new Error("授权响应无效。");
-        setCodexStatus(status);
-      });
-    } catch (cause) {
-      setCodexError(cause instanceof Error ? cause.message : "无法开始 ChatGPT 授权。");
-    } finally {
-      setCodexBusy(false);
-    }
-  }
-
-  async function disconnectCodex() {
-    setCodexError(null);
-    try {
-      await runReauthableAction("weijian-codex-disconnect", async () => {
-        setCodexBusy(true);
-        const { response, payload } = await requestJson("/v1/subscription-codex/connect", { method: "DELETE" }, 20000);
-        if (!response.ok) throw getRequestError(payload, response, "无法断开 ChatGPT。");
-        setCodexStatus({ state: "disconnected" });
-        setCodexResult(null);
-      });
-    } catch (cause) {
-      setCodexError(cause instanceof Error ? cause.message : "无法断开 ChatGPT。");
-    } finally {
-      setCodexBusy(false);
-    }
-  }
-
-  async function runCodexTask() {
-    if (!codexStatus?.modelSku) {
-      setCodexError("weijian 尚未获授 GPT-5.6 模型权限。");
-      return;
-    }
-    setCodexError(null);
-    setCodexResult(null);
-    setCodexBusy(true);
-    try {
-      const { response, payload } = await requestJson("/v1/subscription-codex/tasks", {
-        method: "POST",
-        headers: { "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({ prompt: codexPrompt, modelSku: codexStatus.modelSku }),
-      }, 11 * 60_000);
-      if (!response.ok) throw getRequestError(payload, response, "GPT-5.6 云端任务失败。");
-      if (!payload || typeof payload !== "object" || !("text" in payload) || typeof payload.text !== "string") {
-        throw new Error("任务结果无效。");
-      }
-      setCodexResult(payload.text);
-    } catch (cause) {
-      setCodexError(cause instanceof Error ? cause.message : "GPT-5.6 云端任务失败。");
-    } finally {
-      setCodexBusy(false);
-    }
-  }
 
   useEffect(() => {
     if (!isSelfHosted) return;
@@ -791,66 +670,6 @@ export function InferenceScreen() {
       />
 
       {error ? <DenNotice message={error} tone="error" /> : null}
-
-      {showWeijianCodex ? (
-        <DenCard className="grid gap-4">
-          <DenSectionHeader
-            title="ChatGPT Pro 云端授权"
-            description="仅限 weijian 当前获授权成员。登录在 OpenAI 页面完成，任务使用 GPT-5.6 Sol，并记入组织 RenCredit。"
-          />
-          <div className="text-[13px] text-gray-700">
-            状态：{codexStatus?.state === "connected" ? `已连接 · ${codexStatus.model ?? "GPT-5.6 Sol"}`
-              : codexStatus?.state === "pending" ? "等待你在 OpenAI 页面完成授权"
-              : codexStatus?.state === "unavailable" ? "云端运行器暂不可用"
-              : codexStatus?.state === "error" ? "授权失败"
-              : "未连接"}
-            {codexStatus?.email ? ` · ${codexStatus.email}` : ""}
-          </div>
-          {codexStatus?.state === "pending" && codexStatus.userCode ? (
-            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-[13px]">
-              <p>在 OpenAI 页面输入此一次性代码：</p>
-              <p className="my-2 font-mono text-xl font-semibold tracking-wider">{codexStatus.userCode}</p>
-              <a href="https://auth.openai.com/codex/device" target="_blank" rel="noreferrer" className="font-medium text-blue-700 underline">
-                打开 OpenAI 授权页面
-              </a>
-            </div>
-          ) : null}
-          {codexStatus?.message ? <DenNotice tone="error" message={codexStatus.message} /> : null}
-          {codexError ? <DenNotice tone="error" message={codexError} /> : null}
-          <div className="flex flex-wrap gap-2">
-            {codexStatus?.state !== "connected" ? (
-              <DenButton type="button" loading={codexBusy} onClick={() => void connectCodex()}>
-                {codexStatus?.state === "pending" ? "重新发起授权" : "连接 ChatGPT Pro"}
-              </DenButton>
-            ) : (
-              <DenButton type="button" variant="secondary" loading={codexBusy} onClick={() => void disconnectCodex()}>
-                断开连接
-              </DenButton>
-            )}
-            <DenButton type="button" variant="secondary" onClick={() => void loadCodexStatus()}>
-              检查状态
-            </DenButton>
-          </div>
-          {codexStatus?.state === "connected" ? (
-            <div className="grid gap-2 border-t border-gray-100 pt-4">
-              <label htmlFor="weijian-codex-prompt" className="text-[13px] font-medium text-gray-900">试运行 GPT-5.6 Sol</label>
-              <textarea
-                id="weijian-codex-prompt"
-                value={codexPrompt}
-                onChange={(event) => setCodexPrompt(event.target.value)}
-                rows={4}
-                maxLength={50000}
-                className="w-full rounded-xl border border-gray-200 p-3 text-[13px]"
-                placeholder="输入要交给云端 GPT-5.6 完成的任务"
-              />
-              <DenButton type="button" loading={codexBusy} disabled={!codexPrompt.trim()} onClick={() => void runCodexTask()}>
-                运行并计入 RenCredit
-              </DenButton>
-              {codexResult ? <pre className="whitespace-pre-wrap rounded-xl bg-gray-50 p-4 text-[13px] text-gray-800">{codexResult}</pre> : null}
-            </div>
-          ) : null}
-        </DenCard>
-      ) : null}
 
       {canManageModels ? null : (
         <DenNotice
