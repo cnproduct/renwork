@@ -70,6 +70,7 @@ export const idTypesMapNameToPrefix = {
   renCreditLedgerEntry: "rcle",
   renCreditUsageEvent: "rcue",
   renworkOfflineOrder: "rwoo",
+  renworkAlipayOrder: "rwao",
   renworkContractQuote: "rwcq",
   videoGenerationQuote: "vgq",
   videoGenerationJob: "vgj",

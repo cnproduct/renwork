@@ -1,5 +1,6 @@
 import os from "node:os"
 import path from "node:path"
+import { readFileSync } from "node:fs"
 import { DEN_WORKER_POLL_INTERVAL_MS } from "./CONSTS.js"
 import { normalizeConfiguredPublicApiBaseUrl } from "./request-url.js"
 import { resolveDenServiceVersion } from "./service-version.js"
@@ -7,6 +8,16 @@ import { denApiAppVersion } from "./version.js"
 import { z } from "zod"
 
 export const DEFAULT_DEN_DIAGNOSTICS_ORIGIN = "https://diagnostic.openworklabs.com"
+
+function readAlipayPrivateKeyFile(file: string | undefined) {
+  if (!file) return undefined
+  try {
+    return readFileSync(file, "utf8").trim() || undefined
+  } catch {
+    // A missing or unreadable secret keeps checkout unavailable without taking Den down.
+    return undefined
+  }
+}
 
 const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1).optional(),
@@ -87,6 +98,13 @@ const EnvSchema = z.object({
   DEN_BOOTSTRAP_ADMIN_EMAILS: z.string().optional(),
   RENWORK_MODEL_CATALOG_BASE_URL: z.string().optional(),
   RENWORK_MODEL_CATALOG_ADMIN_TOKEN: z.string().optional(),
+  RENWORK_ALIPAY_ONLINE_ENABLED: z.string().optional(),
+  RENWORK_ALIPAY_CANARY_ORGANIZATION_ID: z.string().optional(),
+  RENWORK_ALIPAY_APP_ID: z.string().optional(),
+  RENWORK_ALIPAY_SELLER_ID: z.string().optional(),
+  RENWORK_ALIPAY_PRIVATE_KEY: z.string().optional(),
+  RENWORK_ALIPAY_PRIVATE_KEY_FILE: z.string().optional(),
+  RENWORK_ALIPAY_PUBLIC_KEY: z.string().optional(),
   RENWORK_METASO_H3_COMMERCIAL_LICENSE_CONFIRMED: z.string().optional(),
   RENWORK_METASO_H3_API_KEY: z.string().optional(),
   RENWORK_METASO_H3_BASE_URL: z.string().optional(),
@@ -716,6 +734,16 @@ export const env = {
     seatPriceId: optionalString(parsed.STRIPE_SEAT_PRICE_ID),
     billingSuccessUrl: optionalString(parsed.STRIPE_BILLING_SUCCESS_URL),
     billingCancelUrl: optionalString(parsed.STRIPE_BILLING_CANCEL_URL),
+  },
+  renworkAlipay: {
+    enabled: parsed.RENWORK_ALIPAY_ONLINE_ENABLED === "true",
+    canaryOrganizationId: optionalString(parsed.RENWORK_ALIPAY_CANARY_ORGANIZATION_ID),
+    appId: optionalString(parsed.RENWORK_ALIPAY_APP_ID),
+    sellerId: optionalString(parsed.RENWORK_ALIPAY_SELLER_ID),
+    privateKey: parsed.RENWORK_ALIPAY_ONLINE_ENABLED === "true" && optionalString(parsed.RENWORK_ALIPAY_PRIVATE_KEY_FILE)
+      ? readAlipayPrivateKeyFile(optionalString(parsed.RENWORK_ALIPAY_PRIVATE_KEY_FILE))
+      : optionalString(parsed.RENWORK_ALIPAY_PRIVATE_KEY),
+    publicKey: optionalString(parsed.RENWORK_ALIPAY_PUBLIC_KEY),
   },
   render: {
     apiBase: parsed.RENDER_API_BASE ?? "https://api.render.com/v1",

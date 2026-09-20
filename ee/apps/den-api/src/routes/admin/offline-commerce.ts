@@ -21,6 +21,7 @@ import {
   updateRenworkContractQuote,
 } from "../../renwork-contract-quote.js"
 import { syncInferenceForOrganizationMembers } from "../../inference.js"
+import { refundAlipayOrder } from "../../renwork-alipay-order.js"
 import type { AuthContextVariables } from "../../session.js"
 
 const createOrderSchema = z.object({
@@ -84,6 +85,22 @@ function serializeOrder<T extends { status: "active" | "reversed"; current_perio
 }
 
 export function registerAdminOfflineCommerceRoutes<T extends { Variables: AuthContextVariables }>(app: Hono<T>) {
+  app.post("/v1/admin/renwork/alipay-orders/:orderId/refund", adminRoute(), async (c) => {
+    const actor = c.get("user")
+    if (!actor) return c.json({ error: "unauthorized" }, 401)
+    const orderId = denTypeIdSchema("renworkAlipayOrder").safeParse(c.req.param("orderId"))
+    const reason = reverseOrderSchema.safeParse(await c.req.json().catch(() => null))
+    if (!orderId.success || !reason.success) return c.json({ error: "invalid_request" }, 400)
+    try {
+      const result = await refundAlipayOrder({ orderId: orderId.data, actorUserId: actor.id, reason: reason.data.reason })
+      await syncInferenceForOrganizationMembers({ organizationId: result.organizationId })
+      return c.json({ ok: true, replayed: result.replayed })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "RENWORK_ALIPAY_REFUND_UNCONFIRMED"
+      return c.json({ error: message }, message.endsWith("_NOT_FOUND") ? 404 : 409)
+    }
+  })
+
   app.get("/v1/admin/renwork/offline-orders/options", adminRoute(), async (c) => {
     const parsedOrganizationId = denTypeIdSchema("organization").safeParse(c.req.query("organizationId"))
     if (!parsedOrganizationId.success) return c.json({ error: "invalid_organization_id" }, 400)

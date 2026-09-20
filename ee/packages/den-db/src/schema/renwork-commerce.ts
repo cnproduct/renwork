@@ -4,6 +4,37 @@ import { denTypeIdColumn, timestamps } from "../columns"
 export const RenworkOfflineOrderStatus = ["active", "reversed"] as const
 export const RenworkOfflinePaymentMethods = ["bank_transfer", "wechat_offline", "alipay_offline", "cash", "other"] as const
 export const RenworkContractQuoteStatus = ["draft", "approved", "published", "revoked"] as const
+export const RenworkAlipayOrderStatus = ["pending", "paid", "paid_review", "refunded"] as const
+
+/** The checkout snapshot is immutable; the callback is the only path to paid. */
+export const RenworkAlipayOrderTable = mysqlTable(
+  "renwork_alipay_orders",
+  {
+    id: denTypeIdColumn("renworkAlipayOrder", "id").notNull().primaryKey(),
+    organization_id: denTypeIdColumn("organization", "organization_id").notNull(),
+    created_by_user_id: denTypeIdColumn("user", "created_by_user_id").notNull(),
+    offer_id: varchar("offer_id", { length: 160 }).notNull(),
+    catalog_version: varchar("catalog_version", { length: 255 }).notNull(),
+    catalog_snapshot: json("catalog_snapshot").notNull(),
+    amount_minor: int("amount_minor").notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("CNY"),
+    status: mysqlEnum("status", RenworkAlipayOrderStatus).notNull().default("pending"),
+    idempotency_key: varchar("idempotency_key", { length: 160 }).notNull(),
+    provider_trade_no: varchar("provider_trade_no", { length: 128 }),
+    paid_at: timestamp("paid_at", { fsp: 3 }),
+    granted_months: int("granted_months").notNull().default(0),
+    period_end: timestamp("period_end", { fsp: 3 }),
+    previous_entitlement_snapshot: json("previous_entitlement_snapshot"),
+    refunded_at: timestamp("refunded_at", { fsp: 3 }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("renwork_alipay_orders_org_idempotency").on(table.organization_id, table.idempotency_key),
+    uniqueIndex("renwork_alipay_orders_trade_no").on(table.provider_trade_no),
+    index("renwork_alipay_orders_org_created").on(table.organization_id, table.created_at),
+    index("renwork_alipay_orders_status").on(table.status),
+  ],
+)
 
 /**
  * Organization-bound commercial terms for the enterprise custom plan. A quote

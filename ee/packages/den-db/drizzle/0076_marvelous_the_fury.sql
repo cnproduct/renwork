@@ -1,0 +1,1 @@
+ALTER TABLE `renwork_alipay_orders` MODIFY COLUMN `status` enum('pending','paid','paid_review','refunded') NOT NULL DEFAULT 'pending';

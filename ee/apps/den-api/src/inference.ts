@@ -152,7 +152,7 @@ async function loadManagedRenWorkModels(organizationId: OrgId): Promise<ManagedR
   if (!parsed.success || parsed.data.status !== "active") throw new Error("MODEL_CATALOG_UNAVAILABLE")
   validateDenServerCatalog(parsed.data)
 
-  const publicCatalog = access.source === "subscription" || access.source === "offline_payment"
+  const publicCatalog = access.source === "subscription" || access.source === "offline_payment" || access.source === "online_payment"
     ? toPublicModelCatalogForPlan(parsed.data, parseOrganizationPlan(organization.metadata).tier)
     : toPublicModelCatalog(parsed.data)
   const policy = readOrganizationModelPolicy(organization.metadata)

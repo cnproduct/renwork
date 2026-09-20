@@ -1291,8 +1291,8 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
       if (!organization) {
         return c.json({ error: "not_found", message: "Organization not found." }, 404)
       }
-      if (readRenworkAccessGrant(organization.metadata)?.source === "offline_payment") {
-        return c.json({ error: "offline_order_reversal_required", message: "Reverse the active offline order instead of editing its plan directly." }, 409)
+      if (["offline_payment", "online_payment"].includes(readRenworkAccessGrant(organization.metadata)?.source ?? "")) {
+        return c.json({ error: "paid_order_reversal_required", message: "Reverse the paid order instead of editing its plan directly." }, 409)
       }
 
       const normalized = normalizeOrganizationMetadata(organization.metadata).metadata
@@ -1327,8 +1327,8 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
       const [organization] = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable)
         .where(eq(OrganizationTable.id, organizationId)).limit(1)
       if (!organization) return c.json({ error: "not_found", message: "Organization not found." }, 404)
-      if (readRenworkAccessGrant(organization.metadata)?.source === "offline_payment") {
-        return c.json({ error: "offline_order_reversal_required", message: "Reverse the active offline order before applying a temporary grant." }, 409)
+      if (["offline_payment", "online_payment"].includes(readRenworkAccessGrant(organization.metadata)?.source ?? "")) {
+        return c.json({ error: "paid_order_reversal_required", message: "Reverse the active paid order before applying a temporary grant." }, 409)
       }
 
       const currentUser = c.get("user")
@@ -1359,8 +1359,8 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
       const [organization] = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable)
         .where(eq(OrganizationTable.id, organizationId)).limit(1)
       if (!organization) return c.json({ error: "not_found", message: "Organization not found." }, 404)
-      if (readRenworkAccessGrant(organization.metadata)?.source === "offline_payment") {
-        return c.json({ error: "offline_order_reversal_required", message: "Paid access must be reversed through its offline order so the RenCredit refund is recorded." }, 409)
+      if (["offline_payment", "online_payment"].includes(readRenworkAccessGrant(organization.metadata)?.source ?? "")) {
+        return c.json({ error: "paid_order_reversal_required", message: "Paid access must be reversed through its order so the RenCredit refund is recorded." }, 409)
       }
       const metadata = normalizeMetadata(organization.metadata)
       delete metadata.renworkAccessGrant

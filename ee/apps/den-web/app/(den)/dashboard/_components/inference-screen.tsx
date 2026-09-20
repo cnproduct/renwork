@@ -308,6 +308,9 @@ function PlanRequestCard({
   pending,
   canManage,
   onRequest,
+  onlineAvailable,
+  onlineBusy,
+  onOnlinePay,
 }: {
   plan: RenworkPlan;
   offer: RenworkPlanOffer;
@@ -315,6 +318,9 @@ function PlanRequestCard({
   pending: boolean;
   canManage: boolean;
   onRequest: (offerId: string) => void;
+  onlineAvailable: boolean;
+  onlineBusy: boolean;
+  onOnlinePay: (offerId: string) => void;
 }) {
   const requestable = offer.purchaseMode === "request_access" || offer.purchaseMode === "contact_sales";
   return (
@@ -344,6 +350,12 @@ function PlanRequestCard({
       >
         {pending ? "Offline request submitted" : offer.purchaseMode === "contact_sales" ? "Contact sales for offline contract" : "Request offline activation"}
       </DenButton>
+      {onlineAvailable && offer.purchaseMode === "request_access" ? (
+        <DenButton className="mt-2 w-full" type="button" loading={onlineBusy}
+          disabled={!canManage || busy} variant="secondary" onClick={() => onOnlinePay(offer.id)}>
+          Pay with Alipay
+        </DenButton>
+      ) : null}
       {"paymentChannels" in offer && offer.paymentChannels.includes("offline_manual") ? (
         <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-800">
           {offer.purchaseMode === "contact_sales"
@@ -390,6 +402,9 @@ function PlanCatalog({
   onAudienceChange,
   onIntervalChange,
   onRequest,
+  onlineAvailable,
+  onlineBusyOfferId,
+  onOnlinePay,
   onRetry,
 }: {
   catalog: RenworkPlanCatalog | null;
@@ -403,6 +418,9 @@ function PlanCatalog({
   onAudienceChange: (audience: RenworkPlanAudience) => void;
   onIntervalChange: (interval: BillingInterval) => void;
   onRequest: (offerId: string) => void;
+  onlineAvailable: boolean;
+  onlineBusyOfferId: string | null;
+  onOnlinePay: (offerId: string) => void;
   onRetry: () => void;
 }) {
   const plans = catalog?.plans
@@ -463,6 +481,9 @@ function PlanCatalog({
               pending={request?.offerId === offer.id}
               canManage={canManage}
               onRequest={onRequest}
+              onlineAvailable={onlineAvailable}
+              onlineBusy={onlineBusyOfferId === offer.id}
+              onOnlinePay={onOnlinePay}
             />
           ))}
         </div>
@@ -503,6 +524,10 @@ export function InferenceScreen() {
   const [audience, setAudience] = useState<RenworkPlanAudience>("personal");
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [requestBusyOfferId, setRequestBusyOfferId] = useState<string | null>(null);
+  const [onlineAvailable, setOnlineAvailable] = useState(false);
+  const [onlineBusyOfferId, setOnlineBusyOfferId] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const paymentIdempotency = useRef<Record<string, string>>({});
   const [subscriptionRequest, setSubscriptionRequest] = useState<SubscriptionRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -567,6 +592,73 @@ export function InferenceScreen() {
   useEffect(() => {
     void loadCatalog();
   }, []);
+
+  useEffect(() => {
+    if (!canManageModels || !orgContext?.organization.id) return;
+    void requestJson("/v1/renwork/commerce/alipay/status", { method: "GET" }, 12000)
+      .then(({ response, payload }) => setOnlineAvailable(response.ok && payload !== null && typeof payload === "object"
+        && "available" in payload && payload.available === true))
+      .catch(() => setOnlineAvailable(false));
+  }, [canManageModels, orgContext?.organization.id]);
+
+  useEffect(() => {
+    const orderId = new URLSearchParams(window.location.search).get("alipay_order");
+    if (!orderId || !canManageModels || !orgContext?.organization.id) return;
+    setPaymentStatus("Waiting for Alipay to confirm payment…");
+    let attempts = 0;
+    const check = async () => {
+      const { response, payload } = await requestJson(
+        `/v1/renwork/commerce/alipay/orders/${encodeURIComponent(orderId)}`, { method: "GET" }, 12000,
+      );
+      if (!response.ok || !payload || typeof payload !== "object" || !("order" in payload)) return;
+      const order = payload.order;
+      if (!order || typeof order !== "object" || !("status" in order)) return;
+      if (order.status === "paid") {
+        setPaymentStatus("Alipay confirmed payment. RenCredit has been added to this workspace.");
+        window.clearInterval(timer);
+        void loadStatus();
+        void refreshOrgData();
+      } else if (order.status === "paid_review") {
+        setPaymentStatus("Payment was confirmed, but a newer workspace plan needs review. No RenCredit has been added; contact support for a refund.");
+        window.clearInterval(timer);
+      } else if (order.status === "refunded") {
+        setPaymentStatus("This Alipay payment was refunded.");
+        window.clearInterval(timer);
+      }
+    };
+    const timer = window.setInterval(() => {
+      if (++attempts > 40) {
+        setPaymentStatus("Payment has not been confirmed yet. Check this page again later; returning from Alipay alone does not activate a plan.");
+        window.clearInterval(timer);
+      } else void check().catch(() => {});
+    }, 3000);
+    void check().catch(() => {});
+    return () => window.clearInterval(timer);
+  }, [canManageModels, orgContext?.organization.id]);
+
+  async function startOnlinePayment(offerId: string) {
+    if (!canManageModels || !onlineAvailable) return;
+    setError(null);
+    const idempotencyKey = paymentIdempotency.current[offerId] ?? crypto.randomUUID();
+    paymentIdempotency.current[offerId] = idempotencyKey;
+    try {
+      await runReauthableAction("renwork-alipay-checkout", async () => {
+        setOnlineBusyOfferId(offerId);
+        const { response, payload } = await requestJson("/v1/renwork/commerce/alipay/orders",
+          { method: "POST", body: JSON.stringify({ offerId, idempotencyKey }) }, 15000);
+        if (!response.ok) throw getRequestError(payload, response, "Alipay checkout is unavailable.");
+        const url = payload && typeof payload === "object" && "url" in payload ? payload.url : null;
+        if (typeof url !== "string" || !url.startsWith("https://openapi.alipay.com/gateway.do?")) {
+          throw new Error("Payment URL was invalid.");
+        }
+        window.location.assign(url);
+      });
+    } catch (paymentError) {
+      setError(paymentError instanceof Error ? paymentError.message : "Alipay checkout failed.");
+    } finally {
+      setOnlineBusyOfferId(null);
+    }
+  }
 
   async function requestSubscriptionAccess(offerId: string) {
     if (!canManageModels) {
@@ -670,6 +762,7 @@ export function InferenceScreen() {
       />
 
       {error ? <DenNotice message={error} tone="error" /> : null}
+      {paymentStatus ? <DenNotice message={paymentStatus} tone="info" /> : null}
 
       {canManageModels ? null : (
         <DenNotice
@@ -704,6 +797,9 @@ export function InferenceScreen() {
             }}
             onIntervalChange={setInterval}
             onRequest={(offerId) => void requestSubscriptionAccess(offerId)}
+            onlineAvailable={onlineAvailable}
+            onlineBusyOfferId={onlineBusyOfferId}
+            onOnlinePay={(offerId) => void startOnlinePayment(offerId)}
             onRetry={() => void loadCatalog()}
           />
         </div>

@@ -5,7 +5,7 @@ type OrganizationId = Parameters<typeof organizationHasActiveInferenceSubscripti
 
 export type RenworkAccessGrant = {
   status: "active"
-  source: "campaign" | "super_admin" | "offline_payment"
+  source: "campaign" | "super_admin" | "offline_payment" | "online_payment"
   startsAt: string
   expiresAt: string
   modelSkus: string[] | null
@@ -16,7 +16,7 @@ export type RenworkAccessGrant = {
 
 export type RenworkModelAccess = {
   allowed: boolean
-  source: "subscription" | "campaign" | "super_admin" | "offline_payment" | null
+  source: "subscription" | "campaign" | "super_admin" | "offline_payment" | "online_payment" | null
   expiresAt: string | null
   allowedModelSkus: string[] | null
 }
@@ -48,7 +48,7 @@ export function readRenworkAccessGrant(
 ): RenworkAccessGrant | null {
   const raw = parseMetadata(metadata).renworkAccessGrant
   if (!isRecord(raw) || raw.status !== "active") return null
-  if (raw.source !== "campaign" && raw.source !== "super_admin" && raw.source !== "offline_payment") return null
+  if (raw.source !== "campaign" && raw.source !== "super_admin" && raw.source !== "offline_payment" && raw.source !== "online_payment") return null
 
   const startsAt = validIsoDate(raw.startsAt)
   const expiresAt = validIsoDate(raw.expiresAt)
