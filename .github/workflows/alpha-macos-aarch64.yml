@@ -41,7 +41,7 @@ jobs:
     timeout-minutes: 180
 
     env:
-      ALPHA_RELEASE_NAME: OpenWork Alpha (macOS arm64)
+      ALPHA_RELEASE_NAME: RenWork Alpha (macOS arm64)
       # Apple signing + notarization are required so alpha bundles install
       # and launch without Gatekeeper friction. Alpha builds are served
       # from GitHub Releases like stable, just from a different tag.
@@ -137,8 +137,28 @@ jobs:
         if: env.MACOS_NOTARIZE == 'true'
         env:
           APPLE_NOTARY_API_KEY_P8_BASE64: ${{ secrets.APPLE_NOTARY_API_KEY_P8_BASE64 }}
+          APPLE_NOTARY_API_KEY_ID: ${{ secrets.APPLE_NOTARY_API_KEY_ID }}
+          APPLE_NOTARY_API_ISSUER_ID: ${{ secrets.APPLE_NOTARY_API_ISSUER_ID }}
+          APPLE_CODESIGN_CERT_P12_BASE64: ${{ secrets.APPLE_CODESIGN_CERT_P12_BASE64 }}
+          APPLE_CODESIGN_CERT_PASSWORD: ${{ secrets.APPLE_CODESIGN_CERT_PASSWORD }}
         run: |
           set -euo pipefail
+
+          missing=()
+          for name in \
+            APPLE_NOTARY_API_KEY_P8_BASE64 \
+            APPLE_NOTARY_API_KEY_ID \
+            APPLE_NOTARY_API_ISSUER_ID \
+            APPLE_CODESIGN_CERT_P12_BASE64 \
+            APPLE_CODESIGN_CERT_PASSWORD; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing RenWork macOS notarization/signing secrets: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
 
           NOTARY_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
           printf '%s' "$APPLE_NOTARY_API_KEY_P8_BASE64" | base64 --decode > "$NOTARY_KEY_PATH"
@@ -200,7 +220,7 @@ jobs:
             gh release create "$CHANNEL_TAG" \
               --repo "$GITHUB_REPOSITORY" \
               --title "$ALPHA_RELEASE_NAME" \
-              --notes "Rolling alpha channel for OpenWork macOS arm64 builds. Each publish adds versioned updater assets and advances the channel manifest." \
+              --notes "Rolling alpha channel for RenWork macOS arm64 builds. Each publish adds versioned updater assets and advances the channel manifest." \
               --target "$GITHUB_SHA" \
               --prerelease
           fi
