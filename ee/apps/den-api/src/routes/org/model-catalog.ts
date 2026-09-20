@@ -18,6 +18,7 @@ import {
   resolveMemberMonthlyBudget,
 } from "../../organization-model-policy.js"
 import { resolveRenworkModelAccess } from "../../renwork-access.js"
+import { subscriptionCliAccessForMember, subscriptionOpenAiModelsForMember } from "../../subscription-cli-policy.js"
 import { forbiddenSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
 import type { OrgRouteVariables } from "./shared.js"
 
@@ -61,6 +62,37 @@ const unavailableSchema = z.object({
 })
 
 export function registerOrgModelCatalogRoutes<T extends { Variables: OrgRouteVariables }>(app: Hono<T>) {
+  app.get("/v1/models/subscription-cli", orgRoleRoute(["member"]), async (c) => {
+    const context = c.get("organizationContext")
+    const access = await resolveRenworkModelAccess({ organizationId: context.organization.id, metadata: context.organization.metadata })
+    const inference = context.organization.metadata?.inference
+    const inferenceEnabled = access.source !== "subscription"
+      || (typeof inference === "object" && inference !== null && !Array.isArray(inference) && inference.enabled === true)
+    const policy = access.allowed && inferenceEnabled
+      ? subscriptionCliAccessForMember({
+          organizationId: context.organization.id,
+          organizationName: context.organization.name,
+          metadata: context.organization.metadata,
+          memberId: context.currentMember.id,
+        })
+      : null
+    c.header("Cache-Control", "private, no-store")
+    const organizationPolicy = readOrganizationModelPolicy(context.organization.metadata)
+    return c.json({
+      models: policy?.models
+        .filter((model) => !access.allowedModelSkus || access.allowedModelSkus.includes(model.sku))
+        .filter((model) => !organizationPolicy.allowedModelSkus || organizationPolicy.allowedModelSkus.includes(model.sku))
+        .filter((model) => modelAllowedForMember(organizationPolicy, context.currentMember.id, model.sku))
+        .map((model) => ({
+        sku: model.sku,
+        displayName: model.displayName,
+        runtime: model.runtime,
+        multiplierBps: model.multiplierBps,
+      })) ?? [],
+      expiresAt: policy?.expiresAt ?? null,
+    })
+  })
+
   app.get(
     "/v1/models/catalog",
     describeRoute({
@@ -120,10 +152,34 @@ export function registerOrgModelCatalogRoutes<T extends { Variables: OrgRouteVar
             memberId: organizationContext.currentMember.id,
           })) ?? false
         })
+        const personalModels = subscriptionOpenAiModelsForMember({
+          organizationId: organization.id,
+          organizationName: organization.name,
+          metadata: organization.metadata,
+          memberId: organizationContext.currentMember.id,
+        }).map(({ model }) => ({
+          sku: model.sku,
+          providerID: "renwork" as const,
+          modelID: model.sku,
+          displayName: model.displayName,
+          description: model.description,
+          tier: model.tier,
+          autoEligible: false,
+          contextWindow: model.contextWindow,
+          tags: model.tags,
+          displayMultiplierBps: model.displayMultiplierBps,
+          effectiveDisplayMultiplierBps: model.displayMultiplierBps,
+          promotionLabel: null,
+          promotionEndsAt: null,
+          billingMode: "token_metered" as const,
+          executionLocation: "local" as const,
+        })).filter((model) =>
+          (!allowed || allowed.has(model.sku))
+          && modelAllowedForMember(policy, organizationContext.currentMember.id, model.sku))
         const grantModels = access.allowedModelSkus ? new Set(access.allowedModelSkus) : null
         const models = grantModels
-          ? providerModels.filter((model) => grantModels.has(model.sku))
-          : providerModels
+          ? [...providerModels, ...personalModels].filter((model) => grantModels.has(model.sku))
+          : [...providerModels, ...personalModels]
         const defaultModelSku = policy.defaultModelSku && models.some((model) => model.sku === policy.defaultModelSku)
           ? policy.defaultModelSku
           : models[0]?.sku ?? null

@@ -1,6 +1,7 @@
 import { and, eq } from "@openwork-ee/den-db/drizzle"
 import {
   OrganizationTable,
+  MemberTable,
   RenCreditRuntimeDeviceTable,
 } from "@openwork-ee/den-db/schema"
 import {
@@ -20,7 +21,8 @@ import { db } from "../db.js"
 import { parseOrganizationPlan } from "../entitlements.js"
 import { env } from "../env.js"
 import { adminRoute, publicRoute } from "../middleware/index.js"
-import { readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
+import { modelAllowedForMember, readOrganizationModelPolicy, resolveMemberMonthlyBudget } from "../organization-model-policy.js"
+import { isWeijianSubscriptionCliOrganization, subscriptionCliAccessForMember, subscriptionCliModelForMember, subscriptionOpenAiModelsForMember } from "../subscription-cli-policy.js"
 import { accessAllowsModel, resolveRenworkModelAccess } from "../renwork-access.js"
 import {
   authenticateInferenceKey,
@@ -87,14 +89,45 @@ async function loadProductionCatalog() {
 }
 
 async function localMeteringAccess(principal: InferencePrincipal, modelSku: string) {
-  const catalog = await loadProductionCatalog()
-  const model = findPublishedAdminModel(catalog, modelSku)
-  const [organization] = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable)
+  const [organization] = await db.select({ id: OrganizationTable.id, name: OrganizationTable.name, metadata: OrganizationTable.metadata }).from(OrganizationTable)
     .where(eq(OrganizationTable.id, principal.organizationId)).limit(1)
+  if (!organization) throw new Error("ORGANIZATION_NOT_FOUND")
   const inferenceMetadata = isRecord(organization?.metadata?.inference) ? organization.metadata.inference : null
   const access = await resolveRenworkModelAccess({ organizationId: principal.organizationId, metadata: organization?.metadata })
   if (!access.allowed) throw new Error("SUBSCRIPTION_REQUIRED")
   if (access.source === "subscription" && inferenceMetadata?.enabled !== true) throw new Error("INFERENCE_DISABLED")
+  const cli = subscriptionCliModelForMember({
+    organizationId: organization.id,
+    organizationName: organization.name,
+    metadata: organization.metadata,
+    memberId: principal.memberId,
+    modelSku,
+  })
+  const personal = subscriptionOpenAiModelsForMember({
+    organizationId: organization.id,
+    organizationName: organization.name,
+    metadata: organization.metadata,
+    memberId: principal.memberId,
+  }).find(({ model }) => model.sku === modelSku)
+  const local = cli ?? personal
+  if (local) {
+    const policy = readOrganizationModelPolicy(organization.metadata)
+    if (policy.allowedModelSkus && !policy.allowedModelSkus.includes(modelSku)) throw new Error("MODEL_NOT_ALLOWED_BY_ORGANIZATION")
+    if (access.allowedModelSkus && !access.allowedModelSkus.includes(modelSku)) throw new Error("MODEL_NOT_INCLUDED_IN_GRANT")
+    if (!modelAllowedForMember(policy, principal.memberId, modelSku)) throw new Error("MODEL_NOT_ALLOWED_BY_MEMBER")
+    return {
+      catalog: {
+        version: `subscription-local:${organization.id}:${modelSku}`,
+        billingPolicy: { local: "token_metered" as const, byok: "token_metered" as const, official: "token_metered" as const },
+        providers: [local.provider],
+      },
+      model: local.model,
+      route: local.model.routes[0]!,
+      policy,
+    }
+  }
+  const catalog = await loadProductionCatalog()
+  const model = findPublishedAdminModel(catalog, modelSku)
   if (!accessAllowsModel(access, model.sku)) throw new Error("MODEL_NOT_INCLUDED_IN_GRANT")
   const plan = parseOrganizationPlan(organization?.metadata).tier
   if ((access.source === "subscription" || access.source === "offline_payment") && !modelAllowedForPlan(model, plan)) {
@@ -129,22 +162,39 @@ function canonicalPublicKey(input: string) {
 
 function statusForMeteringError(code: string) {
   if (["SUBSCRIPTION_REQUIRED", "PLAN_UPGRADE_REQUIRED", "INSUFFICIENT_RENCREDIT", "RENCREDIT_WALLET_UNAVAILABLE", "ORGANIZATION_DAILY_BUDGET_EXCEEDED", "ORGANIZATION_MONTHLY_BUDGET_EXCEEDED", "MEMBER_MONTHLY_QUOTA_EXCEEDED"].includes(code)) return 402
-  if (["INFERENCE_DISABLED", "MODEL_NOT_INCLUDED_IN_GRANT", "MODEL_NOT_ALLOWED_BY_ORGANIZATION", "LOCAL_MODEL_ROUTE_NOT_GRANTED"].includes(code)) return 403
+  if (["INFERENCE_DISABLED", "MODEL_NOT_INCLUDED_IN_GRANT", "MODEL_NOT_ALLOWED_BY_ORGANIZATION", "MODEL_NOT_ALLOWED_BY_MEMBER", "LOCAL_MODEL_ROUTE_NOT_GRANTED"].includes(code)) return 403
   if (code === "MODEL_CATALOG_UNAVAILABLE") return 503
   return 409
 }
 
 export function registerMeteredRuntimeRoutes<T extends { Variables: Record<string, unknown> }>(app: Hono<T>) {
-  // Voiceover V36: branded clients execute exclusively through Den's inference
-  // gateway. Keep the legacy implementation below for forensic compatibility
-  // with historical receipts, but make every device-side execution endpoint
-  // fail closed before it can register, reserve, heartbeat, settle or release.
-  app.all("/api/v1/metered-runtime/*", publicRoute, (c) => c.json({
-    error: {
-      code: "LOCAL_RUNTIME_DISABLED",
-      message: "RenWork model execution must use the Den inference gateway.",
-    },
-  }, 410))
+  // Only the explicitly granted weijian pilot can start device-side runs.
+  // Existing reservations may still finish after the grant is revoked, so
+  // RenCredit can capture measured usage or release the remaining hold.
+  app.all("/api/v1/metered-runtime/*", publicRoute, async (c, next) => {
+    const principal = await principalForRequest(c.req.header("Authorization"))
+    if (principal) {
+      const [organization] = await db.select({ id: OrganizationTable.id, name: OrganizationTable.name, metadata: OrganizationTable.metadata })
+        .from(OrganizationTable).where(eq(OrganizationTable.id, principal.organizationId)).limit(1)
+      const finalizing = c.req.method === "POST" && (
+        c.req.path === "/api/v1/metered-runtime/settlements"
+        || /^\/api\/v1\/metered-runtime\/reservations\/[^/]+\/(heartbeat|release)$/.test(c.req.path)
+      )
+      if (organization && isWeijianSubscriptionCliOrganization({ organizationId: organization.id, organizationName: organization.name }) && finalizing) return next()
+      if (organization && (subscriptionCliAccessForMember({
+        organizationId: organization.id,
+        organizationName: organization.name,
+        metadata: organization.metadata,
+        memberId: principal.memberId,
+      }) || subscriptionOpenAiModelsForMember({
+        organizationId: organization.id,
+        organizationName: organization.name,
+        metadata: organization.metadata,
+        memberId: principal.memberId,
+      }).length > 0)) return next()
+    }
+    return c.json({ error: { code: "LOCAL_RUNTIME_DISABLED", message: "RenWork model execution must use the Den inference gateway." } }, 410)
+  })
 
   app.get("/v1/admin/metered-runtime/devices", adminRoute(), async (c) => {
     const organizationId = c.req.query("organizationId")?.trim()
@@ -169,13 +219,25 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     if (!isRecord(body) || !exactKeys(body, ["status"]) || (body.status !== "active" && body.status !== "revoked")) {
       return c.json({ error: { code: "VALIDATION_FAILED" } }, 400)
     }
-    if (body.status === "active") {
-      return c.json({ error: { code: "LOCAL_RUNTIME_DISABLED" } }, 409)
-    }
     const registrationId = c.req.param("registrationId")
     const [device] = await db.select().from(RenCreditRuntimeDeviceTable)
       .where(eq(RenCreditRuntimeDeviceTable.id, registrationId)).limit(1)
     if (!device) return c.json({ error: { code: "LOCAL_RUNTIME_DEVICE_NOT_FOUND" } }, 404)
+    if (body.status === "active") {
+      const [organization] = await db.select({ id: OrganizationTable.id, name: OrganizationTable.name, metadata: OrganizationTable.metadata })
+        .from(OrganizationTable).where(eq(OrganizationTable.id, device.organization_id)).limit(1)
+      if (!organization || !(subscriptionCliAccessForMember({
+        organizationId: organization.id,
+        organizationName: organization.name,
+        metadata: organization.metadata,
+        memberId: device.org_membership_id,
+      }) || subscriptionOpenAiModelsForMember({
+        organizationId: organization.id,
+        organizationName: organization.name,
+        metadata: organization.metadata,
+        memberId: device.org_membership_id,
+      }).length > 0)) return c.json({ error: { code: "LOCAL_RUNTIME_DISABLED" } }, 409)
+    }
     await db.update(RenCreditRuntimeDeviceTable).set({
       status: body.status,
       revoked_at: body.status === "revoked" ? new Date() : null,
@@ -186,6 +248,15 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
   app.put("/api/v1/metered-runtime/devices/:deviceId", publicRoute, async (c) => {
     const principal = await principalForRequest(c.req.header("Authorization"))
     if (!principal) return c.json({ error: { code: "UNAUTHORIZED" } }, 401)
+    const [organization] = await db.select({ id: OrganizationTable.id, name: OrganizationTable.name, metadata: OrganizationTable.metadata })
+      .from(OrganizationTable).where(eq(OrganizationTable.id, principal.organizationId)).limit(1)
+    const personalModels = organization ? subscriptionOpenAiModelsForMember({
+      organizationId: organization.id,
+      organizationName: organization.name,
+      metadata: organization.metadata,
+      memberId: principal.memberId,
+    }) : []
+    const personalDeviceLimit = personalModels[0]?.provider.deviceOAuthPolicy?.maxDevicesPerUser
     const deviceId = c.req.param("deviceId")
     const clientVersion = clientVersionForRequest(c.req.header("X-RenWork-Client-Version"))
     const body = await c.req.json().catch(() => null)
@@ -196,47 +267,58 @@ export function registerMeteredRuntimeRoutes<T extends { Variables: Record<strin
     try { publicKey = canonicalPublicKey(body.publicKeyPem) } catch (error) {
       return c.json({ error: { code: error instanceof Error ? error.message : "DEVICE_KEY_INVALID" } }, 400)
     }
-    const [existing] = await db.select().from(RenCreditRuntimeDeviceTable).where(and(
-      eq(RenCreditRuntimeDeviceTable.organization_id, principal.organizationId),
-      eq(RenCreditRuntimeDeviceTable.org_membership_id, principal.memberId),
-      eq(RenCreditRuntimeDeviceTable.device_id, deviceId),
-    )).limit(1)
-    if (existing?.public_key_fingerprint === publicKey.fingerprint) {
-      await db.update(RenCreditRuntimeDeviceTable).set({
-        inference_key_id: principal.inferenceKeyId,
-        client_version: clientVersion ?? existing.client_version,
-        last_seen_at: new Date(),
-      })
-        .where(eq(RenCreditRuntimeDeviceTable.id, existing.id))
-      return c.json({ deviceId, publicKeyFingerprint: publicKey.fingerprint, status: existing.status })
-    }
-    const id = existing?.id ?? randomUUID()
-    const values = {
-      organization_id: principal.organizationId,
-      org_membership_id: principal.memberId,
-      inference_key_id: principal.inferenceKeyId,
-      device_id: deviceId,
-      client_version: clientVersion,
-      public_key_pem: publicKey.pem,
-      public_key_fingerprint: publicKey.fingerprint,
-      status: "pending" as const,
-      revoked_at: null,
-      last_seen_at: new Date(),
-    }
-    if (existing) {
-      await db.update(RenCreditRuntimeDeviceTable).set({
-        inference_key_id: principal.inferenceKeyId,
-        client_version: clientVersion,
-        public_key_pem: publicKey.pem,
-        public_key_fingerprint: publicKey.fingerprint,
-        status: "pending",
-        revoked_at: null,
-        last_seen_at: new Date(),
-      }).where(eq(RenCreditRuntimeDeviceTable.id, existing.id))
-    } else {
-      await db.insert(RenCreditRuntimeDeviceTable).values({ id, ...values })
-    }
-    return c.json({ deviceId, publicKeyFingerprint: publicKey.fingerprint, status: "pending" }, 202)
+    const status = await db.transaction(async (tx) => {
+      // Serialize first-time registrations for this member before checking the device cap.
+      await tx.select({ id: MemberTable.id }).from(MemberTable)
+        .where(eq(MemberTable.id, principal.memberId)).for("update").limit(1)
+      const [existing] = await tx.select().from(RenCreditRuntimeDeviceTable).where(and(
+        eq(RenCreditRuntimeDeviceTable.organization_id, principal.organizationId),
+        eq(RenCreditRuntimeDeviceTable.org_membership_id, principal.memberId),
+        eq(RenCreditRuntimeDeviceTable.device_id, deviceId),
+      )).limit(1)
+      if (existing?.status === "revoked") return "revoked" as const
+      if (personalDeviceLimit) {
+        const activeDevices = await tx.select({ id: RenCreditRuntimeDeviceTable.id })
+          .from(RenCreditRuntimeDeviceTable).where(and(
+            eq(RenCreditRuntimeDeviceTable.organization_id, principal.organizationId),
+            eq(RenCreditRuntimeDeviceTable.org_membership_id, principal.memberId),
+            eq(RenCreditRuntimeDeviceTable.status, "active"),
+          ))
+        if (activeDevices.filter((device) => device.id !== existing?.id).length >= personalDeviceLimit) {
+          return "limit" as const
+        }
+      }
+      const nextStatus: "active" | "pending" = personalDeviceLimit ? "active" : "pending"
+      if (existing) {
+        await tx.update(RenCreditRuntimeDeviceTable).set({
+          inference_key_id: principal.inferenceKeyId,
+          client_version: clientVersion ?? existing.client_version,
+          public_key_pem: publicKey.pem,
+          public_key_fingerprint: publicKey.fingerprint,
+          status: nextStatus,
+          revoked_at: null,
+          last_seen_at: new Date(),
+        }).where(eq(RenCreditRuntimeDeviceTable.id, existing.id))
+      } else {
+        await tx.insert(RenCreditRuntimeDeviceTable).values({
+          id: randomUUID(),
+          organization_id: principal.organizationId,
+          org_membership_id: principal.memberId,
+          inference_key_id: principal.inferenceKeyId,
+          device_id: deviceId,
+          client_version: clientVersion,
+          public_key_pem: publicKey.pem,
+          public_key_fingerprint: publicKey.fingerprint,
+          status: nextStatus,
+          revoked_at: null,
+          last_seen_at: new Date(),
+        })
+      }
+      return nextStatus
+    })
+    if (status === "revoked") return c.json({ error: { code: "LOCAL_RUNTIME_DEVICE_REVOKED" } }, 403)
+    if (status === "limit") return c.json({ error: { code: "DEVICE_OAUTH_LIMIT_EXCEEDED" } }, 409)
+    return c.json({ deviceId, publicKeyFingerprint: publicKey.fingerprint, status }, status === "active" ? 200 : 202)
   })
 
   app.post("/api/v1/metered-runtime/reservations", publicRoute, async (c) => {

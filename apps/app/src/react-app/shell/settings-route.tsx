@@ -10,6 +10,7 @@ import {
 } from "@/app/constants";
 import type { EnablementContext } from "@/app/enablement";
 import { createClient, unwrap } from "@/app/lib/opencode";
+import { createDenClient, type DenSubscriptionCliModel } from "@/app/lib/den";
 import {
   createOpenworkServerClient,
   isLoopbackOpenworkServerUrl,
@@ -66,8 +67,8 @@ import ProviderAuthModal from "@/react-app/domains/connections/provider-auth/pro
 import {
   canConnectPersonalSubscriptionOAuth,
   canManageDesktopModelProviders,
-  hasPlatformGrantedPersonalSubscriptionModel,
 } from "@/react-app/domains/connections/provider-auth/desktop-provider-management";
+import { hasPersonalSubscriptionCatalogModel, useRenWorkModelCatalog } from "@/react-app/domains/models/renwork-model-catalog";
 import ConnectionsModals from "@/react-app/domains/connections/modals";
 import { AiSettingsView } from "@/react-app/domains/settings/pages/ai-view";
 import { CliRuntimeSettings } from "@/react-app/domains/settings/cli-runtime-settings";
@@ -818,19 +819,35 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     openLink: (url) => platform.openLink(url),
   });
   const cloudSession = useCloudSession();
+  const [subscriptionCliModels, setSubscriptionCliModels] = useState<DenSubscriptionCliModel[]>([]);
+  useEffect(() => {
+    const orgId = cloudSession.activeOrganization?.id?.trim();
+    if (!cloudSession.isSignedIn || !cloudSession.authToken.trim() || !orgId) {
+      setSubscriptionCliModels([]);
+      return;
+    }
+    let cancelled = false;
+    setSubscriptionCliModels([]);
+    const den = createDenClient({ baseUrl: cloudSession.baseUrl, token: cloudSession.authToken });
+    void den.getSubscriptionCliModels(orgId)
+      .then((models) => { if (!cancelled) setSubscriptionCliModels(models); })
+      .catch(() => { if (!cancelled) setSubscriptionCliModels([]); });
+    return () => { cancelled = true; };
+  }, [cloudSession.activeOrganization?.id, cloudSession.authToken, cloudSession.baseUrl, cloudSession.isSignedIn]);
   const localProviderManagementAllowed = canManageDesktopModelProviders({
     signedIn: cloudSession.isSignedIn,
     hasAuthToken: Boolean(cloudSession.authToken.trim()),
     hasActiveOrganization: cloudSession.hasActiveOrg,
     workspaceType: selectedWorkspace?.workspaceType,
   });
+  const personalSubscriptionCatalog = useRenWorkModelCatalog(true, cloudSession.isSignedIn);
   const personalSubscriptionOAuthAllowed = canConnectPersonalSubscriptionOAuth({
     desktopRuntime: isDesktopRuntime(),
     signedIn: cloudSession.isSignedIn,
     hasAuthToken: Boolean(cloudSession.authToken.trim()),
     hasActiveOrganization: cloudSession.hasActiveOrg,
     hasActiveRuntime: Boolean(activeClient && selectedWorkspaceId),
-    hasPlatformGrantedModel: hasPlatformGrantedPersonalSubscriptionModel(providerAuthSnapshot.cloudOrgProviders),
+    hasPlatformGrantedModel: hasPersonalSubscriptionCatalogModel(personalSubscriptionCatalog),
     workspaceType: selectedWorkspace?.workspaceType,
   });
   const connectScope = useMemo(
@@ -962,7 +979,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
       });
       return;
     }
-    void providerAuthStore.openProviderAuthModal({ scope: "personal_subscription_oauth" });
+    void providerAuthStore.openProviderAuthModal({ preferredProviderId: "openai", scope: "personal_subscription_oauth" });
   }, [personalSubscriptionOAuthAllowed, providerAuthStore, restrictionNotice]);
 
   useEffect(() => {
@@ -2308,10 +2325,11 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             showOpenWorkModelsSyncing={showOpenWorkModelsSyncing}
             onSubscribeOpenWorkModels={subscribeToOpenWorkModels}
             onDismissOpenWorkModels={dismissOpenWorkModelsPromo}
-            cliRuntimesView={personalSubscriptionOAuthAllowed ? (
+            cliRuntimesView={subscriptionCliModels.length > 0 ? (
               <CliRuntimeSettings
                 client={openworkServerSnapshot.openworkServerClient}
                 workspaceId={selectedWorkspaceId}
+                models={subscriptionCliModels}
               />
             ) : null}
             cloudProvidersView={

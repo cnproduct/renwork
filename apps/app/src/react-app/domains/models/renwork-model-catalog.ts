@@ -43,6 +43,10 @@ export function requiredPersonalSubscriptionProvider(
   return null;
 }
 
+export function hasPersonalSubscriptionCatalogModel(catalog: RenWorkPublicModelCatalog | null | undefined): boolean {
+  return catalog?.models.some((model) => requiredPersonalSubscriptionProvider(model) !== null) ?? false;
+}
+
 export function personalSubscriptionCatalogModelOptions(
   catalog: RenWorkPublicModelCatalog | null | undefined,
   connectedProviderIds: readonly string[],

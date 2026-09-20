@@ -6,6 +6,7 @@ import {
   ENTERPRISE_DESKTOP_DISTRIBUTION,
   PUBLIC_DESKTOP_DISTRIBUTION,
   SERVER_2016_CLOUD_DESKTOP_DISTRIBUTION,
+  WEIJIAN_PILOT_DESKTOP_DISTRIBUTION,
   desktopActivationRequired,
   enterpriseActivationComplete,
   enterprisePreactivationCommandAllowed,
@@ -87,6 +88,16 @@ describe("resolveDesktopDistribution", () => {
       }).flavor,
       "enterprise",
     );
+  });
+  it("packages a signed-in weijian pilot with a local metered runtime", () => {
+    assert.deepEqual(resolveDesktopDistribution({
+      isPackaged: true,
+      packageFlavor: "weijian-pilot",
+      environmentFlavor: "public",
+    }), WEIJIAN_PILOT_DESKTOP_DISTRIBUTION);
+    assert.equal(WEIJIAN_PILOT_DESKTOP_DISTRIBUTION.requireSignin, true);
+    assert.equal(WEIJIAN_PILOT_DESKTOP_DISTRIBUTION.localRuntimeEnabled, true);
+    assert.equal(WEIJIAN_PILOT_DESKTOP_DISTRIBUTION.appIdentifier, "com.renrenyi.renwork.weijianpilot");
   });
 });
 

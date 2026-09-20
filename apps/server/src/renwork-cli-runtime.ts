@@ -1,5 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -31,7 +31,7 @@ export type RenWorkCliRunSnapshot = {
   modelSku: string;
   state: RenWorkCliRunState;
   output: string;
-  usage: CodexReportedUsage | null;
+  usage: CliReportedUsage | null;
   reservationId: string;
   reservedMicroCredits: number;
   settlement: LocalRuntimeSettlement | null;
@@ -40,7 +40,7 @@ export type RenWorkCliRunSnapshot = {
   updatedAt: string;
 };
 
-type CodexReportedUsage = {
+type CliReportedUsage = {
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number;
@@ -66,6 +66,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function safeTokenCount(value: unknown): number | null {
   return Number.isSafeInteger(value) && (value as number) >= 0 ? value as number : null;
+}
+
+export function antigravityPersonalAccountMode(settings: unknown, environment: Record<string, string | undefined>): boolean {
+  if (!isRecord(settings)) return false;
+  if (typeof settings.modelProvider === "string" && settings.modelProvider.trim()) return false;
+  if (environment.GOOGLE_GEMINI_BASE_URL?.trim()) return false;
+  if (["1", "true", "yes", "on"].includes(environment.AGY_ADC_AUTH?.trim().toLowerCase() ?? "")) return false;
+  return true;
+}
+
+export function codexPersonalAccountMode(loginOutput: string, environment: Record<string, string | undefined>): boolean {
+  if (!/^Logged in using ChatGPT\s*$/i.test(loginOutput.trim())) return false;
+  return !["OPENAI_API_KEY", "CODEX_API_KEY", "CODEX_ACCESS_TOKEN", "OPENAI_BASE_URL"]
+    .some((name) => Boolean(environment[name]?.trim()));
+}
+
+function personalSubscriptionEnvironment(runtime: RenWorkCliRuntime): NodeJS.ProcessEnv {
+  const environment = { ...process.env };
+  const keys = runtime === "codex"
+    ? ["OPENAI_API_KEY", "CODEX_API_KEY", "CODEX_ACCESS_TOKEN", "OPENAI_BASE_URL"]
+    : ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GEMINI_BASE_URL", "AGY_ADC_AUTH"];
+  for (const key of keys) delete environment[key];
+  return environment;
+}
+
+async function antigravityAccountModeStatus() {
+  let settings: unknown = {};
+  try {
+    settings = JSON.parse(await readFile(join(homedir(), ".gemini", "antigravity-cli", "settings.json"), "utf8"));
+  } catch (error) {
+    if (!isRecord(error) || error.code !== "ENOENT") return false;
+  }
+  return antigravityPersonalAccountMode(settings, process.env);
 }
 
 function runtimeErrorCode(error: unknown) {
@@ -144,17 +177,22 @@ export async function inspectCliRuntime(runtime: RenWorkCliRuntime): Promise<Ren
   }
   const version = await runProcess(executable, ["--version"]);
   if (runtime === "antigravity") {
+    const personalAccountMode = await antigravityAccountModeStatus();
     return {
       runtime,
       installed: version.code === 0,
       authenticated: null,
       version: version.code === 0 ? version.stdout || version.stderr : null,
-      meteredExecutionReady: false,
-      message: "已检测到 Antigravity；正式计费适配需等待可验证的结构化 Token 用量事件。",
+      meteredExecutionReady: version.code === 0 && personalAccountMode,
+      message: version.code === 0 && !personalAccountMode
+        ? "Antigravity CLI 当前配置为 API Key、自定义端点或企业凭据模式；此试点只允许个人 Google 账号登录。"
+        : version.code === 0
+        ? "Antigravity CLI 支持结构化 Token 用量；任务前须在 CLI 内登录，运行失败会释放预冻结额度。"
+        : "Antigravity CLI 无法启动。",
     };
   }
   const login = await runProcess(executable, ["login", "status"]);
-  const authenticated = login.code === 0 && /logged in|authenticated/i.test(`${login.stdout}\n${login.stderr}`);
+  const authenticated = login.code === 0 && codexPersonalAccountMode(login.stdout || login.stderr, process.env);
   return {
     runtime,
     installed: version.code === 0,
@@ -170,7 +208,7 @@ export async function inspectCliRuntime(runtime: RenWorkCliRuntime): Promise<Ren
 export function parseCodexExecEvent(value: unknown): {
   responseText?: string;
   responseId?: string;
-  usage?: CodexReportedUsage;
+  usage?: CliReportedUsage;
   failed?: string;
 } {
   if (!isRecord(value) || typeof value.type !== "string") return {};
@@ -198,13 +236,55 @@ export function parseCodexExecEvent(value: unknown): {
   if ([inputTokens, outputTokens, reasoningTokens, cacheReadTokens, cacheWriteTokens].some((token) => token === null)) {
     return { failed: "CODEX_USAGE_EVENT_INVALID" };
   }
+  if (cacheReadTokens! + cacheWriteTokens! > inputTokens! || reasoningTokens! > outputTokens!) {
+    return { failed: "CODEX_USAGE_EVENT_INVALID" };
+  }
+  if (value.usage.total_tokens !== undefined && safeTokenCount(value.usage.total_tokens) !== inputTokens! + outputTokens!) {
+    return { failed: "CODEX_USAGE_EVENT_INVALID" };
+  }
   return {
     usage: {
-      inputTokens: inputTokens!,
-      outputTokens: outputTokens!,
+      inputTokens: inputTokens! - cacheReadTokens! - cacheWriteTokens!,
+      outputTokens: outputTokens! - reasoningTokens!,
       reasoningTokens: reasoningTokens!,
       cacheReadTokens: cacheReadTokens!,
       cacheWriteTokens: cacheWriteTokens!,
+    },
+  };
+}
+
+/** Antigravity's terminal result is cumulative for a single headless run. */
+export function parseAntigravityResultEvent(value: unknown): {
+  responseText?: string;
+  responseId?: string;
+  usage?: CliReportedUsage;
+  failed?: string;
+} {
+  if (!isRecord(value) || value.event !== "result" || !isRecord(value.result)) return {};
+  const result = value.result;
+  if (result.status !== "SUCCESS") return { failed: "ANTIGRAVITY_RUN_FAILED" };
+  if (typeof result.response !== "string" || !result.response.trim()) {
+    return { failed: "ANTIGRAVITY_RESULT_MISSING" };
+  }
+  if (!isRecord(result.usage)) return { failed: "ANTIGRAVITY_USAGE_EVENT_MISSING" };
+  const input = safeTokenCount(result.usage.input_tokens);
+  const output = safeTokenCount(result.usage.output_tokens);
+  const reasoning = safeTokenCount(result.usage.thinking_tokens);
+  const cacheRead = safeTokenCount(result.usage.cache_read_tokens);
+  const total = safeTokenCount(result.usage.total_tokens);
+  if (input === null || output === null || reasoning === null || cacheRead === null || total === null
+    || cacheRead > input || reasoning > output || total !== input + output) {
+    return { failed: "ANTIGRAVITY_USAGE_EVENT_INVALID" };
+  }
+  return {
+    responseText: result.response,
+    responseId: typeof result.conversation_id === "string" ? result.conversation_id : undefined,
+    usage: {
+      inputTokens: input - cacheRead,
+      outputTokens: output - reasoning,
+      reasoningTokens: reasoning,
+      cacheReadTokens: cacheRead,
+      cacheWriteTokens: 0,
     },
   };
 }
@@ -220,6 +300,7 @@ export class RenWorkCliRuntimeManager {
   constructor(private readonly options: {
     metering: RenCreditLocalRuntimePort;
     runTimeoutMs?: number;
+    heartbeatIntervalMs?: number;
   }) {}
 
   async statuses() {
@@ -233,25 +314,23 @@ export class RenWorkCliRuntimeManager {
     modelSku: string;
     prompt: string;
   }): Promise<RenWorkCliRunSnapshot> {
-    if (input.runtime !== "codex") {
-      throw new ApiError(409, "antigravity_metering_not_ready", "Antigravity does not yet expose verified structured Token usage for RenCredit settlement.");
-    }
     const prompt = input.prompt.trim();
     const promptBytes = new TextEncoder().encode(prompt);
     if (!prompt) throw new ApiError(400, "renwork_cli_prompt_required", "A task prompt is required.");
     if (promptBytes.byteLength > MAX_PROMPT_BYTES) {
       throw new ApiError(413, "renwork_cli_prompt_too_large", "The task prompt exceeds the 1 MiB safety limit.");
     }
-    const status = await inspectCliRuntime("codex");
+    const status = await inspectCliRuntime(input.runtime);
     if (!status.meteredExecutionReady) {
-      throw new ApiError(409, "codex_cli_not_ready", status.message);
+      throw new ApiError(409, "cli_runtime_not_ready", status.message);
     }
     const requestedRunId = randomUUID();
     const promptBuffer = new Uint8Array(promptBytes).buffer;
     const reservation = await this.options.metering.reserve({ modelSku: input.modelSku, body: promptBuffer, runId: requestedRunId });
-    if (reservation.adapter !== "codex_cli") {
+    const adapter = input.runtime === "codex" ? "codex_cli" : "antigravity_cli";
+    if (reservation.adapter !== adapter) {
       await this.options.metering.release(reservation, "LOCAL_RUNTIME_ADAPTER_MISMATCH").catch(() => undefined);
-      throw new ApiError(409, "renwork_cli_route_mismatch", "This RenWork model is not bound to the Codex CLI adapter.");
+      throw new ApiError(409, "renwork_cli_route_mismatch", "This RenWork model is not bound to the requested CLI adapter.");
     }
     const now = new Date().toISOString();
     const run: MutableRun = {
@@ -298,22 +377,17 @@ export class RenWorkCliRuntimeManager {
   }
 
   private async execute(run: MutableRun, workspacePath: string, prompt: string) {
-    const executable = await executableFor("codex");
+    const executable = await executableFor(run.runtime);
     if (!executable) {
-      await this.fail(run, "CODEX_CLI_NOT_FOUND");
+      await this.fail(run, "CLI_NOT_FOUND");
       return;
     }
-    const child = spawn(executable, [
-      "exec",
-      "--json",
-      "--model",
-      run.reservation.modelID,
-      "--cd",
-      workspacePath,
-      "-",
-    ], {
+    const args = run.runtime === "codex"
+      ? ["-c", 'model_provider="openai"', "exec", "--json", "--model", run.reservation.modelID, "--cd", workspacePath, "-"]
+      : ["--input-format", "stream-json", "--output-format", "stream-json", "--model", run.reservation.modelID];
+    const child = spawn(executable, args, {
       cwd: workspacePath,
-      env: process.env,
+      env: personalSubscriptionEnvironment(run.runtime),
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
     });
@@ -328,10 +402,10 @@ export class RenWorkCliRuntimeManager {
       if (!trimmed) return;
       let parsed: unknown;
       try { parsed = JSON.parse(trimmed); } catch {
-        streamFailure ||= "CODEX_JSONL_INVALID";
+        streamFailure ||= "CLI_JSONL_INVALID";
         return;
       }
-      const event = parseCodexExecEvent(parsed);
+      const event = run.runtime === "codex" ? parseCodexExecEvent(parsed) : parseAntigravityResultEvent(parsed);
       if (event.failed) streamFailure ||= event.failed;
       if (event.usage) run.usage = event.usage;
       if (event.responseId) responseId = event.responseId;
@@ -341,7 +415,7 @@ export class RenWorkCliRuntimeManager {
           run.output = event.responseText;
           capturedBytes += bytes;
         } else {
-          streamFailure ||= "CODEX_OUTPUT_TOO_LARGE";
+          streamFailure ||= "CLI_OUTPUT_TOO_LARGE";
         }
       }
     };
@@ -357,10 +431,25 @@ export class RenWorkCliRuntimeManager {
     child.stderr.on("data", (chunk: Buffer) => {
       if (stderr.length < 64_000) stderr += chunk.toString("utf8");
     });
-    child.stdin.end(prompt);
+    child.stdin.end(run.runtime === "codex"
+      ? prompt
+      : `${JSON.stringify({ event: "user", message: { content: prompt } })}\n`);
+
+    let heartbeatInFlight: Promise<void> | null = null;
+    const heartbeat = this.options.metering.heartbeat;
+    const heartbeatTimer = heartbeat ? setInterval(() => {
+      if (heartbeatInFlight) return;
+      heartbeatInFlight = heartbeat.call(this.options.metering, run.reservation)
+        .catch(() => {
+          streamFailure ||= "LOCAL_RUNTIME_HEARTBEAT_FAILED";
+          child.kill("SIGTERM");
+        })
+        .finally(() => { heartbeatInFlight = null; });
+    }, this.options.heartbeatIntervalMs ?? 30_000) : null;
+    heartbeatTimer?.unref?.();
 
     const timeout = setTimeout(() => {
-      streamFailure ||= "CODEX_CLI_TIMEOUT";
+      streamFailure ||= "CLI_TIMEOUT";
       child.kill("SIGTERM");
     }, this.options.runTimeoutMs ?? DEFAULT_RUN_TIMEOUT_MS);
     timeout.unref?.();
@@ -369,16 +458,18 @@ export class RenWorkCliRuntimeManager {
       child.once("close", (code) => resolve(code ?? 1));
     });
     clearTimeout(timeout);
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    if (heartbeatInFlight) await heartbeatInFlight;
     run.child = null;
     consumeLine(stdoutBuffer);
     if (run.state === "cancelled") return;
     if (exitCode !== 0 || streamFailure) {
-      const code = streamFailure || `CODEX_CLI_EXIT_${exitCode}`;
+      const code = streamFailure || `CLI_EXIT_${exitCode}`;
       await this.fail(run, code, stderr);
       return;
     }
     if (!run.usage || !run.output.trim()) {
-      await this.fail(run, !run.usage ? "CODEX_USAGE_EVENT_MISSING" : "CODEX_RESULT_MISSING");
+      await this.fail(run, !run.usage ? "CLI_USAGE_EVENT_MISSING" : "CLI_RESULT_MISSING");
       return;
     }
     run.state = "settling";
@@ -388,7 +479,7 @@ export class RenWorkCliRuntimeManager {
       run.settlement = await this.options.metering.settle(run.reservation, {
         usage: run.usage,
         hasResult: true,
-        providerResponseId: responseId || `codex:${run.runId}`,
+        providerResponseId: responseId || `${run.runtime}:${run.runId}`,
       });
       run.state = "succeeded";
     } catch (error) {

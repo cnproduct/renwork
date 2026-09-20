@@ -6,7 +6,7 @@ declare const expect: (value: unknown) => {
 
 import type { RenWorkPublicModelCatalog } from "@openwork/rencredit-metering";
 
-import { personalSubscriptionCatalogModelOptions } from "./renwork-model-catalog";
+import { hasPersonalSubscriptionCatalogModel, personalSubscriptionCatalogModelOptions } from "./renwork-model-catalog";
 
 const catalog: RenWorkPublicModelCatalog = {
   version: "v29-test",
@@ -64,6 +64,8 @@ const catalog: RenWorkPublicModelCatalog = {
 
 describe("personal subscription catalog model options", () => {
   test("only exposes local OAuth SKUs whose provider is connected on this device", () => {
+    expect(hasPersonalSubscriptionCatalogModel(catalog)).toEqual(true);
+    expect(hasPersonalSubscriptionCatalogModel({ ...catalog, models: catalog.models.slice(0, 1) })).toEqual(false);
     expect(personalSubscriptionCatalogModelOptions(catalog, ["openai"]).map((option) => option.modelID)).toEqual([
       "renwork-openai-gpt-5-6-luna",
     ]);

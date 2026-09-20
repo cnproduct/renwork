@@ -39,7 +39,8 @@ test("Voiceover V8 closes direct-model bypass and adds signed local settlement",
   expect(receipt).toContain("exactKeys(record, PAYLOAD_KEYS)");
   expect(receipt).not.toContain("prompt:");
   expect(gateway).toContain('createPublicKey(device.public_key_pem)');
-  expect(gateway).toContain('status: "pending"');
+  expect(gateway).toContain('const nextStatus: "active" | "pending"');
+  expect(gateway).toContain("DEVICE_OAUTH_LIMIT_EXCEEDED");
   expect(gateway).toContain('eq(RenCreditRuntimeDeviceTable.status, "active")');
   expect(gateway).toContain("canonicalLocalRuntimeReceiptPayload");
   expect(gateway).toContain("reserveInferenceCredits");
